@@ -2,7 +2,9 @@
 
 All notable changes to TimeTrack are documented here.
 
-## [Unreleased] — 2026-04-22
+## [1.0.0] — 2026-04-23
+
+First public release. Windows NSIS installer.
 
 ### Added
 
@@ -29,3 +31,14 @@ All notable changes to TimeTrack are documented here.
   manages DB interactions, tick interval, and heartbeat interval.
 - **Tailwind CSS 4** — Via `@tailwindcss/vite` plugin. Dark slate theme throughout.
 - **TypeScript** — Strict types shared across main + renderer via `src/shared/types.ts`.
+- **Windows Installer** — NSIS installer (`time-tracking-1.0.0-setup.exe`),
+  Desktop + Startmenu shortcuts, custom install directory.
+
+### Fixed
+
+- Stale hotkey hint in TimerView (was "F5", now correctly shows `Alt+Shift+S`).
+- Archived clients: action buttons (archive/edit/delete) are now always
+  fully visible — only the color dot and name dim.
+- Nav tabs gained a visible `focus-visible` ring for keyboard users.
+- Color-picker `aria-label`/`title` now uses German color names instead of hex.
+- Placeholder views (Kalender, Einstellungen) now show proper empty states.

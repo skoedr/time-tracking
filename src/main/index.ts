@@ -77,7 +77,7 @@ function createWindow(): void {
 }
 
 app.whenReady().then(() => {
-  electronApp.setAppUserModelId('com.timetrack')
+  electronApp.setAppUserModelId('com.timetrack.app')
 
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)
