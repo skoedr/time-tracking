@@ -16,6 +16,7 @@ function App(): React.JSX.Element {
             key={v}
             onClick={() => setView(v)}
             className={`px-4 py-1.5 rounded text-sm font-medium transition-colors
+              focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500
               ${view === v ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-700'}`}
           >
             {v === 'timer'
@@ -33,11 +34,19 @@ function App(): React.JSX.Element {
       <main className="flex-1 overflow-y-auto p-6">
         {view === 'timer' && <TimerView />}
         {view === 'calendar' && (
-          <div className="text-slate-500 text-center mt-16">Kalender-Ansicht — kommt bald</div>
+          <div className="flex flex-col items-center justify-center mt-24 gap-3 text-slate-600">
+            <span className="text-5xl">📅</span>
+            <p className="font-medium text-slate-400">Kalender-Ansicht</p>
+            <p className="text-sm">Kommt in der nächsten Session.</p>
+          </div>
         )}
         {view === 'clients' && <ClientsView />}
         {view === 'settings' && (
-          <div className="text-slate-500 text-center mt-16">Einstellungen — kommen bald</div>
+          <div className="flex flex-col items-center justify-center mt-24 gap-3 text-slate-600">
+            <span className="text-5xl">⚙️</span>
+            <p className="font-medium text-slate-400">Einstellungen</p>
+            <p className="text-sm">Kommen in einer späteren Session.</p>
+          </div>
         )}
       </main>
     </div>

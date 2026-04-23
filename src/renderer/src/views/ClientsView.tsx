@@ -14,6 +14,19 @@ const COLORS = [
   '#84cc16', // lime
 ]
 
+const COLOR_NAMES: Record<string, string> = {
+  '#6366f1': 'Indigo',
+  '#8b5cf6': 'Violett',
+  '#ec4899': 'Pink',
+  '#f59e0b': 'Amber',
+  '#10b981': 'Smaragd',
+  '#3b82f6': 'Blau',
+  '#ef4444': 'Rot',
+  '#f97316': 'Orange',
+  '#14b8a6': 'Teal',
+  '#84cc16': 'Lime',
+}
+
 export default function ClientsView() {
   const [clients, setClients] = useState<Client[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -152,14 +165,13 @@ function ClientList({
       {clients.map((c) => (
         <li
           key={c.id}
-          className={`flex items-center gap-3 bg-slate-800 border border-slate-700
-            rounded-xl px-4 py-3 ${dimmed ? 'opacity-50' : ''}`}
+          className="flex items-center gap-3 bg-slate-800 border border-slate-700 rounded-xl px-4 py-3"
         >
           <span
-            className="w-4 h-4 rounded-full shrink-0"
+            className={`w-4 h-4 rounded-full shrink-0 ${dimmed ? 'opacity-40' : ''}`}
             style={{ backgroundColor: c.color }}
           />
-          <span className="flex-1 text-slate-100 font-medium">{c.name}</span>
+          <span className={`flex-1 text-slate-100 font-medium ${dimmed ? 'opacity-50' : ''}`}>{c.name}</span>
           <button
             onClick={() => onToggleActive(c)}
             title={c.active ? 'Archivieren' : 'Reaktivieren'}
@@ -253,8 +265,8 @@ function ClientFormModal({
                 <button
                   key={c}
                   type="button"
-                  title={c}
-                  aria-label={`Farbe ${c}`}
+                  title={COLOR_NAMES[c] ?? c}
+                  aria-label={`Farbe ${COLOR_NAMES[c] ?? c}`}
                   onClick={() => setColor(c)}
                   className={`w-8 h-8 rounded-full transition-transform ${
                     color === c ? 'scale-125 ring-2 ring-white ring-offset-2 ring-offset-slate-800' : 'hover:scale-110'
