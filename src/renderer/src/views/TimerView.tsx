@@ -110,7 +110,7 @@ export default function TimerView() {
       {/* Running status hint */}
       {isRunning && (
         <p className="text-center text-slate-500 text-xs">
-          Timer läuft · F5 zum Stoppen (Hotkey folgt)
+          Timer läuft · <kbd className="font-mono text-slate-400">Alt+Shift+S</kbd> zum Stoppen
         </p>
       )}
     </div>
