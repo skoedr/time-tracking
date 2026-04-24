@@ -3,18 +3,24 @@ import { app } from 'electron'
 import { getDb, getDbPath } from './db'
 import { getBackupsDir } from './backup'
 import { createBackup, listBackups, restoreBackup as restoreBackupFile } from './backup'
+import { isSameLocalDay } from '../shared/date'
 import type {
   Client,
   Entry,
   CreateClientInput,
   UpdateClientInput,
   CreateEntryInput,
+  CreateManualEntryInput,
   UpdateEntryInput,
   MonthQuery,
   Settings,
   IpcResult,
-  BackupInfo
+  BackupInfo,
+  DashboardSummary
 } from '../shared/types'
+
+const MAX_DESCRIPTION_LEN = 500
+const MAX_DURATION_SECONDS = 24 * 3600
 
 export interface IpcHooks {
   refreshTrayClients(): void
@@ -138,7 +144,9 @@ export function registerIpcHandlers(hooks: IpcHooks): void {
       const row =
         (db
           .prepare(
-            `SELECT * FROM entries WHERE stopped_at IS NULL ORDER BY started_at DESC LIMIT 1`
+            `SELECT * FROM entries
+             WHERE stopped_at IS NULL AND deleted_at IS NULL
+             ORDER BY started_at DESC LIMIT 1`
           )
           .get() as Entry) ?? null
       return ok(row)
@@ -155,7 +163,9 @@ export function registerIpcHandlers(hooks: IpcHooks): void {
       const end = `${nextYear}-${String(nextMonth).padStart(2, '0')}-01T00:00:00.000Z`
       const rows = db
         .prepare(
-          `SELECT * FROM entries WHERE started_at >= ? AND started_at < ? ORDER BY started_at ASC`
+          `SELECT * FROM entries
+             WHERE started_at >= ? AND started_at < ? AND deleted_at IS NULL
+             ORDER BY started_at ASC`
         )
         .all(start, end) as Entry[]
       return ok(rows)
@@ -164,11 +174,59 @@ export function registerIpcHandlers(hooks: IpcHooks): void {
     }
   })
 
+  /**
+   * Manual-entry creation (Today "+ Eintrag nachtragen", Calendar Drawer
+   * "+ Eintrag hinzufügen"). Server-side validation per v1.2 plan E3 — UI
+   * may also pre-validate but must not be the only line of defence.
+   */
+  ipcMain.handle('entries:create', (_e, input: CreateManualEntryInput): IpcResult<Entry> => {
+    try {
+      const err = validateManualEntry(db, input)
+      if (err) return fail(err)
+      const info = db
+        .prepare(
+          `INSERT INTO entries (client_id, description, started_at, stopped_at, heartbeat_at, rounded_min)
+           VALUES (?, ?, ?, ?, ?, ?)`
+        )
+        .run(
+          input.client_id,
+          input.description.trim(),
+          input.started_at,
+          input.stopped_at,
+          input.stopped_at,
+          Math.round(
+            (new Date(input.stopped_at).getTime() - new Date(input.started_at).getTime()) / 60000
+          )
+        )
+      const row = db
+        .prepare(`SELECT * FROM entries WHERE id = ?`)
+        .get(info.lastInsertRowid) as Entry
+      return ok(row)
+    } catch (e) {
+      return fail(e)
+    }
+  })
+
   ipcMain.handle('entries:update', (_e, input: UpdateEntryInput): IpcResult<Entry> => {
     try {
+      // Reuse the same validation contract as create (excluding overlap with self).
+      const err = validateManualEntry(db, input, input.id)
+      if (err) return fail(err)
       db.prepare(
-        `UPDATE entries SET client_id = ?, description = ?, started_at = ?, stopped_at = ? WHERE id = ?`
-      ).run(input.client_id, input.description, input.started_at, input.stopped_at, input.id)
+        `UPDATE entries
+            SET client_id = ?, description = ?, started_at = ?, stopped_at = ?,
+                rounded_min = ?
+          WHERE id = ?`
+      ).run(
+        input.client_id,
+        input.description.trim(),
+        input.started_at,
+        input.stopped_at,
+        Math.round(
+          (new Date(input.stopped_at).getTime() - new Date(input.started_at).getTime()) / 60000
+        ),
+        input.id
+      )
       const row = db.prepare(`SELECT * FROM entries WHERE id = ?`).get(input.id) as Entry
       return ok(row)
     } catch (e) {
@@ -176,10 +234,24 @@ export function registerIpcHandlers(hooks: IpcHooks): void {
     }
   })
 
+  /**
+   * Soft-delete: flip deleted_at instead of removing the row, so the Toast
+   * "Rückgängig" path can restore the SAME id (preserves future PDF FKs — E10).
+   */
   ipcMain.handle('entries:delete', (_e, id: number): IpcResult<void> => {
     try {
-      db.prepare(`DELETE FROM entries WHERE id = ?`).run(id)
+      db.prepare(`UPDATE entries SET deleted_at = ? WHERE id = ?`).run(new Date().toISOString(), id)
       return ok(undefined)
+    } catch (e) {
+      return fail(e)
+    }
+  })
+
+  ipcMain.handle('entries:undelete', (_e, id: number): IpcResult<Entry> => {
+    try {
+      db.prepare(`UPDATE entries SET deleted_at = NULL WHERE id = ?`).run(id)
+      const row = db.prepare(`SELECT * FROM entries WHERE id = ?`).get(id) as Entry
+      return ok(row)
     } catch (e) {
       return fail(e)
     }
@@ -202,12 +274,110 @@ export function registerIpcHandlers(hooks: IpcHooks): void {
              END
            ), 0) AS seconds
            FROM entries
-           WHERE DATE(started_at, 'localtime') = DATE('now', 'localtime')
-              OR stopped_at IS NULL`
+           WHERE deleted_at IS NULL
+             AND (DATE(started_at, 'localtime') = DATE('now', 'localtime')
+                  OR stopped_at IS NULL)`
         )
         .get() as { seconds: number }
       const seconds = Math.max(0, Math.floor(row.seconds ?? 0))
       return ok(seconds)
+    } catch (e) {
+      return fail(e)
+    }
+  })
+
+  /**
+   * One-shot dashboard payload for the Today view. All four queries run in
+   * a single read transaction so the snapshot is consistent. Cross-midnight
+   * running entry counted via `stopped_at IS NULL` (matches todayTotal).
+   */
+  ipcMain.handle('dashboard:summary', (): IpcResult<DashboardSummary> => {
+    try {
+      const tx = db.transaction((): DashboardSummary => {
+        const today = db
+          .prepare(
+            `SELECT COALESCE(SUM(
+               CASE
+                 WHEN stopped_at IS NULL
+                   THEN (julianday('now') - julianday(started_at)) * 86400
+                 ELSE (julianday(stopped_at) - julianday(started_at)) * 86400
+               END
+             ), 0) AS seconds
+             FROM entries
+             WHERE deleted_at IS NULL
+               AND (DATE(started_at, 'localtime') = DATE('now', 'localtime')
+                    OR stopped_at IS NULL)`
+          )
+          .get() as { seconds: number }
+
+        // ISO week — Monday as first day. SQLite's strftime('%w') returns
+        // 0=Sunday, so we shift to start the window from the most recent
+        // Monday at local midnight.
+        const week = db
+          .prepare(
+            `SELECT COALESCE(SUM(
+               CASE
+                 WHEN stopped_at IS NULL
+                   THEN (julianday('now') - julianday(started_at)) * 86400
+                 ELSE (julianday(stopped_at) - julianday(started_at)) * 86400
+               END
+             ), 0) AS seconds
+             FROM entries
+             WHERE deleted_at IS NULL
+               AND (
+                 DATE(started_at, 'localtime')
+                   >= DATE('now', 'localtime', 'weekday 0', '-7 days')
+                 OR stopped_at IS NULL
+               )`
+          )
+          .get() as { seconds: number }
+
+        const recentEntries = db
+          .prepare(
+            `SELECT * FROM entries
+               WHERE deleted_at IS NULL
+               ORDER BY started_at DESC LIMIT 5`
+          )
+          .all() as Entry[]
+
+        const topClients30d = db
+          .prepare(
+            `SELECT c.id AS client_id, c.name, c.color,
+                    COALESCE(SUM(
+                      CASE
+                        WHEN e.stopped_at IS NULL
+                          THEN (julianday('now') - julianday(e.started_at)) * 86400
+                        ELSE (julianday(e.stopped_at) - julianday(e.started_at)) * 86400
+                      END
+                    ), 0) AS seconds
+               FROM clients c
+               LEFT JOIN entries e ON e.client_id = c.id
+                 AND e.deleted_at IS NULL
+                 AND DATE(e.started_at, 'localtime')
+                       >= DATE('now', 'localtime', '-30 days')
+              GROUP BY c.id
+              HAVING seconds > 0
+              ORDER BY seconds DESC
+              LIMIT 3`
+          )
+          .all() as Array<{
+          client_id: number
+          name: string
+          color: string
+          seconds: number
+        }>
+
+        return {
+          todaySeconds: Math.max(0, Math.floor(today.seconds ?? 0)),
+          weekSeconds: Math.max(0, Math.floor(week.seconds ?? 0)),
+          recentEntries,
+          topClients30d: topClients30d.map((r) => ({
+            ...r,
+            seconds: Math.max(0, Math.floor(r.seconds ?? 0))
+          }))
+        }
+      })
+      return ok(tx())
     } catch (e) {
       return fail(e)
     }
@@ -307,4 +477,66 @@ export function registerIpcHandlers(hooks: IpcHooks): void {
   ipcMain.handle('app:getVersion', (): IpcResult<string> => {
     return ok(app.getVersion())
   })
+}
+
+/**
+ * Server-side validation contract for manual entry create/update (E3).
+ * Returns an error string if invalid, `null` if valid. Single point of
+ * truth: UI may pre-validate but must not be the only line of defence
+ * (e.g. against malicious renderer code or future scripted clients).
+ *
+ * Rules:
+ *  - started_at <= now (no future entries)
+ *  - stopped_at > started_at
+ *  - same local day (cross-midnight rejected in v1.2; v1.3 will lift this)
+ *  - client_id exists
+ *  - description.length <= 500
+ *  - duration <= 24h
+ *  - no overlap with existing non-deleted entry of the same client
+ *    (excluding the entry itself when updating)
+ */
+function validateManualEntry(
+  db: ReturnType<typeof getDb>,
+  input: {
+    client_id: number
+    description: string
+    started_at: string
+    stopped_at: string
+  },
+  excludeId?: number
+): string | null {
+  const start = new Date(input.started_at)
+  const stop = new Date(input.stopped_at)
+  if (Number.isNaN(start.getTime())) return 'Startzeit ist ungültig'
+  if (Number.isNaN(stop.getTime())) return 'Endzeit ist ungültig'
+  const now = Date.now()
+  if (start.getTime() > now) return 'Startzeit darf nicht in der Zukunft liegen'
+  if (stop.getTime() <= start.getTime()) return 'Endzeit muss nach der Startzeit liegen'
+  if (!isSameLocalDay(start, stop)) {
+    return 'Einträge können aktuell nicht über Mitternacht gehen (folgt in v1.3)'
+  }
+  const durationSec = (stop.getTime() - start.getTime()) / 1000
+  if (durationSec > MAX_DURATION_SECONDS) return 'Dauer überschreitet 24 Stunden'
+  if ((input.description ?? '').length > MAX_DESCRIPTION_LEN) {
+    return `Beschreibung überschreitet ${MAX_DESCRIPTION_LEN} Zeichen`
+  }
+  const clientRow = db.prepare(`SELECT id FROM clients WHERE id = ?`).get(input.client_id) as
+    | { id: number }
+    | undefined
+  if (!clientRow) return 'Kunde existiert nicht'
+  // Overlap: any non-deleted entry of the same client whose time range
+  // intersects [start, stop). Two intervals overlap iff
+  //   existing.started_at < stop AND COALESCE(existing.stopped_at, now) > start
+  const params: Array<string | number> = [input.client_id, input.stopped_at, input.started_at]
+  let overlapSql = `SELECT id FROM entries
+                     WHERE client_id = ? AND deleted_at IS NULL
+                       AND started_at < ?
+                       AND COALESCE(stopped_at, datetime('now')) > ?`
+  if (excludeId !== undefined) {
+    overlapSql += ` AND id != ?`
+    params.push(excludeId)
+  }
+  const overlap = db.prepare(overlapSql).get(...params) as { id: number } | undefined
+  if (overlap) return 'Eintrag überlappt mit einem bestehenden Eintrag desselben Kunden'
+  return null
 }

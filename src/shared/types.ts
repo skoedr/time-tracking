@@ -5,6 +5,7 @@ export interface Client {
   name: string
   color: string
   active: number
+  rate_cent: number
   created_at: string
 }
 
@@ -16,6 +17,7 @@ export interface Entry {
   stopped_at: string | null
   heartbeat_at: string | null
   rounded_min: number | null
+  deleted_at: string | null
   created_at: string
 }
 
@@ -49,6 +51,19 @@ export interface CreateEntryInput {
   started_at: string
 }
 
+/**
+ * Manual-entry creation (Today "+ Eintrag nachtragen" / Calendar drawer
+ * "+ Eintrag hinzufügen"). Distinct from CreateEntryInput because manual
+ * entries always carry a stopped_at; running entries are created via
+ * `entries:start` only.
+ */
+export interface CreateManualEntryInput {
+  client_id: number
+  description: string
+  started_at: string
+  stopped_at: string
+}
+
 export interface UpdateEntryInput {
   id: number
   client_id: number
@@ -72,4 +87,12 @@ export interface BackupInfo {
   reason: BackupReason
   createdAt: string
   sizeBytes: number
+}
+
+/** Aggregated dashboard view returned by `dashboard:summary`. */
+export interface DashboardSummary {
+  todaySeconds: number
+  weekSeconds: number
+  recentEntries: Entry[]
+  topClients30d: Array<{ client_id: number; name: string; color: string; seconds: number }>
 }

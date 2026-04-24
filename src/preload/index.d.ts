@@ -5,11 +5,13 @@ import type {
   CreateClientInput,
   UpdateClientInput,
   CreateEntryInput,
+  CreateManualEntryInput,
   UpdateEntryInput,
   MonthQuery,
   Settings,
   IpcResult,
-  BackupInfo
+  BackupInfo,
+  DashboardSummary
 } from '../shared/types'
 
 declare global {
@@ -40,8 +42,10 @@ declare global {
         heartbeat(id: number): Promise<IpcResult<void>>
         getRunning(): Promise<IpcResult<Entry | null>>
         getByMonth(query: MonthQuery): Promise<IpcResult<Entry[]>>
+        create(input: CreateManualEntryInput): Promise<IpcResult<Entry>>
         update(input: UpdateEntryInput): Promise<IpcResult<Entry>>
         delete(id: number): Promise<IpcResult<void>>
+        undelete(id: number): Promise<IpcResult<Entry>>
       }
       settings: {
         getAll(): Promise<IpcResult<Settings>>
@@ -54,6 +58,7 @@ declare global {
       }
       dashboard: {
         todayTotal(): Promise<IpcResult<number>>
+        summary(): Promise<IpcResult<DashboardSummary>>
       }
       app: {
         relaunch(): Promise<IpcResult<void>>
