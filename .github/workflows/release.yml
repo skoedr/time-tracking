@@ -42,8 +42,8 @@ jobs:
       - name: Test
         run: pnpm test
 
-      - name: Rebuild native modules for Electron (packaging runtime)
-        run: pnpm exec electron-builder install-app-deps
+      - name: Rebuild better-sqlite3 for Electron ABI
+        run: pnpm exec electron-rebuild -f -w better-sqlite3
 
       - name: Build installer (NSIS)
         env:

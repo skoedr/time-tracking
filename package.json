@@ -1,6 +1,6 @@
 {
   "name": "time-tracking",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "Schlanker Desktop-Zeiterfasser für Windows — Toggl-Track-Style, lokal, ohne Cloud.",
   "main": "./out/main/index.js",
   "author": "skoedr",
@@ -34,6 +34,7 @@
     "@electron-toolkit/eslint-config-prettier": "^3.0.0",
     "@electron-toolkit/eslint-config-ts": "^3.1.0",
     "@electron-toolkit/tsconfig": "^2.0.0",
+    "@electron/rebuild": "^4.0.4",
     "@tailwindcss/vite": "^4.2.4",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
