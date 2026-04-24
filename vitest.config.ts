@@ -8,6 +8,11 @@ export default defineConfig({
     }
   },
   test: {
+    // CI Windows runners spend several seconds on the first better-sqlite3
+    // call (cold cache + native module). 30s leaves headroom without masking
+    // real perf regressions.
+    testTimeout: 30_000,
+    hookTimeout: 30_000,
     projects: [
       {
         extends: true,
