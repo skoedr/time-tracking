@@ -124,6 +124,64 @@ describe('buildPdfPayload', () => {
     expect(p.totals.minutes).toBe(30)
   })
 
+  it('aligns displayed Von/Bis with the rounded duration (step=30)', () => {
+    // The recipient must never see a row like "18:54 – 19:18 → 0:30" where
+    // the visible times disagree with the duration column. Rule:
+    //   displayedStart = round(rawStart) to nearest step
+    //   displayedStop  = displayedStart + roundedMinutes
+    db.prepare(`UPDATE settings SET value='30' WHERE key='pdf_round_minutes'`).run()
+    // Local 18:54 → 19:18 (raw 24 min, rounds to 30 with step=30) → 19:00 – 19:30
+    const a1 = new Date(2026, 3, 24, 18, 54, 0).toISOString()
+    const a2 = new Date(2026, 3, 24, 19, 18, 0).toISOString()
+    // Local 18:55 → 19:25 (raw 30 min, stays 30 with step=30) → 19:00 – 19:30
+    const b1 = new Date(2026, 3, 25, 18, 55, 0).toISOString()
+    const b2 = new Date(2026, 3, 25, 19, 25, 0).toISOString()
+    db.prepare(`INSERT INTO entries (client_id, started_at, stopped_at) VALUES (1, ?, ?)`).run(
+      a1,
+      a2
+    )
+    db.prepare(`INSERT INTO entries (client_id, started_at, stopped_at) VALUES (1, ?, ?)`).run(
+      b1,
+      b2
+    )
+    const p = buildPdfPayload(db, { clientId: 1, fromIso: '2026-04-01', toIso: '2026-04-30' }, '')
+    expect(p.rows[0].startTime).toBe('19:00')
+    expect(p.rows[0].stopTime).toBe('19:30')
+    expect(p.rows[0].minutes).toBe(30)
+    expect(p.rows[1].startTime).toBe('19:00')
+    expect(p.rows[1].stopTime).toBe('19:30')
+    expect(p.rows[1].minutes).toBe(30)
+  })
+
+  it('aligns displayed Von/Bis with rounding step=5', () => {
+    db.prepare(`UPDATE settings SET value='5' WHERE key='pdf_round_minutes'`).run()
+    // 18:54 → 19:18 (raw 24 min, rounds to 25 with step=5) → 18:55 – 19:20
+    const a1 = new Date(2026, 3, 24, 18, 54, 0).toISOString()
+    const a2 = new Date(2026, 3, 24, 19, 18, 0).toISOString()
+    db.prepare(`INSERT INTO entries (client_id, started_at, stopped_at) VALUES (1, ?, ?)`).run(
+      a1,
+      a2
+    )
+    const p = buildPdfPayload(db, { clientId: 1, fromIso: '2026-04-01', toIso: '2026-04-30' }, '')
+    expect(p.rows[0].startTime).toBe('18:55')
+    expect(p.rows[0].stopTime).toBe('19:20')
+    expect(p.rows[0].minutes).toBe(25)
+  })
+
+  it('keeps raw Von/Bis when rounding is disabled', () => {
+    // pdf_round_minutes default is '0'
+    const a1 = new Date(2026, 3, 24, 18, 54, 0).toISOString()
+    const a2 = new Date(2026, 3, 24, 19, 18, 0).toISOString()
+    db.prepare(`INSERT INTO entries (client_id, started_at, stopped_at) VALUES (1, ?, ?)`).run(
+      a1,
+      a2
+    )
+    const p = buildPdfPayload(db, { clientId: 1, fromIso: '2026-04-01', toIso: '2026-04-30' }, '')
+    expect(p.rows[0].startTime).toBe('18:54')
+    expect(p.rows[0].stopTime).toBe('19:18')
+    expect(p.rows[0].minutes).toBe(24)
+  })
+
   it('excludes soft-deleted entries', () => {
     db.prepare(
       `INSERT INTO entries (client_id, started_at, stopped_at, deleted_at)
@@ -272,8 +330,12 @@ describe('buildPdfHtml', () => {
     expect(html).toContain('class="logo"')
   })
 
-  it('emits the rounding hint only when roundMinutes > 0', () => {
-    expect(buildPdfHtml(makePayload({ roundMinutes: 0 }))).not.toContain('gerundet')
-    expect(buildPdfHtml(makePayload({ roundMinutes: 15 }))).toContain('15 Minuten')
+  it('never reveals the rounding to the recipient (no visible hint)', () => {
+    // The displayed Von/Bis times are aligned with the rounded duration
+    // in the payload builder; the recipient should see internally
+    // consistent rows but no "rounded to X minutes" disclosure.
+    expect(buildPdfHtml(makePayload({ roundMinutes: 0 }))).not.toMatch(/gerundet|rounded/i)
+    expect(buildPdfHtml(makePayload({ roundMinutes: 15 }))).not.toMatch(/gerundet|rounded/i)
+    expect(buildPdfHtml(makePayload({ roundMinutes: 30 }))).not.toMatch(/gerundet|rounded/i)
   })
 })
