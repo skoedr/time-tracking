@@ -117,6 +117,13 @@ describe('migration SQL execution', () => {
       { key: 'hotkey_toggle', value: 'Alt+Shift+S' },
       { key: 'idle_threshold_minutes', value: '5' },
       { key: 'language', value: 'de' },
+      // Migration 004 — PDF template seeds (v1.3 PR A)
+      { key: 'pdf_accent_color', value: '#4f46e5' },
+      { key: 'pdf_footer_text', value: '' },
+      { key: 'pdf_logo_path', value: '' },
+      { key: 'pdf_round_minutes', value: '0' },
+      { key: 'pdf_sender_address', value: '' },
+      { key: 'pdf_tax_id', value: '' },
       { key: 'rounding_minutes', value: '15' },
       { key: 'rounding_mode', value: 'none' }
     ])
