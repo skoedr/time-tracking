@@ -8,7 +8,8 @@ import type {
   UpdateEntryInput,
   MonthQuery,
   Settings,
-  IpcResult
+  IpcResult,
+  BackupInfo
 } from '../shared/types'
 
 declare global {
@@ -37,6 +38,14 @@ declare global {
       settings: {
         getAll(): Promise<IpcResult<Settings>>
         set(key: string, value: string): Promise<IpcResult<void>>
+      }
+      backups: {
+        list(): Promise<IpcResult<BackupInfo[]>>
+        create(): Promise<IpcResult<string>>
+        restore(filePath: string): Promise<IpcResult<{ safetyBackupPath: string }>>
+      }
+      app: {
+        relaunch(): Promise<IpcResult<void>>
       }
     }
   }
