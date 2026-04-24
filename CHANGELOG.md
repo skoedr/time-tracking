@@ -2,6 +2,48 @@
 
 All notable changes to TimeTrack are documented here.
 
+## [Unreleased] — v1.2
+
+### Added
+
+- **Heute-Ansicht** (neuer Default-Tab) — Aktiver-Timer-Pille mit Live-Counter,
+  zwei Stat-Cards (Heute / Diese Woche), Quick-Start-Reihe für die Top-3-Kunden
+  der letzten 30 Tage, Liste der letzten 5 Einträge mit Bearbeiten/Löschen
+  und „+ Eintrag nachtragen"-Dialog.
+- **Kalender-Ansicht** — 7×N-Monatsraster mit KW-Spalte, Tagessumme und bis zu
+  5 Mini-Bars pro Tag (mit „+N" für Überlauf), Tastatur-Navigation
+  (Pfeil/Enter/Esc), heutige Zelle hervorgehoben.
+- **Tages-Drawer** — Klick auf einen Kalendertag öffnet eine seitliche Liste
+  aller Einträge des Tages. Inline-Bearbeitung, Inline-Anlegen via Sticky-Footer,
+  Löschen mit Bestätigungsdialog.
+- **Manuelles Anlegen & Bearbeiten** von Einträgen mit Server-seitiger
+  Validierung (Überschneidungen, Beschreibungs-Länge, max. 24 h, Kunden-
+  Existenz).
+- **Soft-Delete + Rückgängig** — Gelöschte Einträge werden 5 Sekunden lang per
+  Toast wiederherstellbar; die Einträge werden nicht hart gelöscht (`deleted_at`-
+  Spalte) sodass spätere PDF-Referenzen stabil bleiben.
+- **Tray-Tooltip mit Heute-Total** (#31) — Format `● Kunde · HH:MM · Heute HH:MM`
+  bzw. `TimeTrack — Heute HH:MM` im Idle, aktualisiert über den 30-s-Heartbeat.
+- **DESIGN.md-Stub** — Tokens für Farben, Typografie und Spacing als
+  Design-Source-of-Truth.
+- **Migration 003** — Spalten `clients.rate_cent` (v1.3-PDF-Vorbereitung) und
+  `entries.deleted_at`, Index `idx_entries_started_at`, Backfill für legacy
+  `rounded_min`-Werte. Pre-/Post-Apply-Logging und Assertion (negative
+  Dauern lösen automatischen Rollback aus).
+- **`dashboard:summary`-IPC** — Heute, Woche, letzte 5 Einträge und Top-3-Kunden
+  in einer einzelnen Lese-Transaktion.
+- **CI Smoke-Test** — Die Release-Pipeline startet die gepackte `.exe` mit
+  `--smoke-test=…`, prüft Exit-Code, Schema-Version und Electron-ABI bevor das
+  Artefakt veröffentlicht wird. Schließt die Klasse von ABI-Crashes (v1.1.x)
+  vor dem Tag.
+
+### Notes
+
+- **Einträge über Mitternacht** werden in v1.2 abgelehnt; die Edit-Maske zeigt
+  einen permanenten Hinweis, eine Lösung folgt in v1.3.
+- **User-facing Rounding-UI** wurde aus v1.2 ausgenommen und kommt in v1.3
+  zusammen mit dem PDF-Export.
+
 ## [1.1.2] — 2026-04-24
 
 ### Fixed
@@ -27,13 +69,13 @@ All notable changes to TimeTrack are documented here.
 
 - **Idle-Detection** — When the system is idle longer than the configured
   threshold (default 5 minutes), a modal asks what to do with the time:
-  *Weiter laufen lassen*, *Bei Inaktivität stoppen*, or *Als Pause markieren*.
+  _Weiter laufen lassen_, _Bei Inaktivität stoppen_, or _Als Pause markieren_.
   Driven by `powerMonitor.getSystemIdleTime()` in the main process.
 - **Tray Quick-Start** — Right-click the tray icon to start a timer for any
   client directly, without opening the window. The menu rebuilds dynamically
-  from the active-clients list and shows a *Stop* entry while a timer runs.
-- **Settings-View** — New *Einstellungen* tab with sections *Allgemein*,
-  *Timer*, *Daten* and *Über*. Configure language, auto-start, idle threshold,
+  from the active-clients list and shows a _Stop_ entry while a timer runs.
+- **Settings-View** — New _Einstellungen_ tab with sections _Allgemein_,
+  _Timer_, _Daten_ and _Über_. Configure language, auto-start, idle threshold,
   global hotkey (with capture UI), and inspect data paths and backups.
 - **Auto-Backup** — A daily SQLite backup runs at app startup, kept rolling
   for the last 7 days under `%AppData%\TimeTrack\backups\`. Manual backups,
