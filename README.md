@@ -6,16 +6,21 @@ A personal Windows desktop time-tracking app for freelancers. Lightweight Toggl 
 
 - **Timer** — Start/stop with client selection and description. Crash-safe via heartbeat.
 - **Kunden-Verwaltung** — Create, edit, archive, and delete clients with color coding.
-- **Global Hotkey** — `Alt+Shift+S` starts/stops the timer from anywhere.
-- **Tray Icon** — Live status in the system tray. Minimize-to-tray on close.
+- **Global Hotkey** — `Alt+Shift+S` (configurable) starts/stops the timer from anywhere.
+- **Tray Icon + Quick-Start** — Right-click the tray to start a client timer without opening the window.
+- **Idle-Detection** — When the system is idle past your threshold, the app asks whether to keep, stop, or mark as break.
+- **Settings-View** — Language, auto-start, idle threshold, hotkey, and data paths in one place.
+- **Auto-Backup** — Rolling 7-day SQLite backups under `%AppData%\TimeTrack\backups\`. Manual backup + restore from Settings.
+- **DB Migrations** — Versioned schema with pre-migration backup, so updates never lose data.
+- **Auto-Update Releases** — Pushing a `v*` tag builds the Windows installer and publishes a GitHub Release automatically.
 - **Local SQLite** — All data stays on your machine under `%AppData%\TimeTrack\`.
 
 ### Coming soon
 
-- Kalender-Modus (monthly overview)
-- PDF Stundennachweis export
-- Mini-Modus always-on-top widget
-- electron-builder Windows installer
+- Kalender-Modus (monthly overview) — see [v1.2 issues](https://github.com/skoedr/time-tracking/labels/v1.2)
+- PDF Stundennachweis export — see [v1.3 issues](https://github.com/skoedr/time-tracking/labels/v1.3)
+- Mini-Modus always-on-top widget — see [v1.4 issues](https://github.com/skoedr/time-tracking/labels/v1.4)
+- Auto-Update + Onboarding — see [v1.5 issues](https://github.com/skoedr/time-tracking/labels/v1.5)
 
 ## Tech Stack
 
@@ -43,8 +48,34 @@ pnpm dev
 # Type check
 pnpm typecheck
 
+# Run tests
+pnpm test
+
 # Build Windows installer
 pnpm build:win
+```
+
+## Releases
+
+Releases are built automatically by `.github/workflows/release.yml` when a `v*` tag
+is pushed to `main`. The workflow rebuilds `better-sqlite3` against the Electron
+ABI via `@electron/rebuild`, packages an NSIS installer, and publishes a GitHub
+Release with the `.exe`, `.blockmap`, and `latest.yml` attached.
+
+- Download the latest installer:
+  [github.com/skoedr/time-tracking/releases/latest](https://github.com/skoedr/time-tracking/releases/latest)
+- Roadmap and per-version planning: see [ROADMAP.md](ROADMAP.md) and the
+  [open issues](https://github.com/skoedr/time-tracking/issues) grouped by `v1.x` labels.
+
+To cut a new release locally:
+
+```bash
+# 1. Bump version in package.json + add CHANGELOG entry
+# 2. Tag and push
+git tag v1.x.y
+git push origin v1.x.y
+# 3. The Release workflow does the rest. The release is created as a draft —
+#    publish it from the GitHub UI (or `gh release edit vX.Y.Z --draft=false`).
 ```
 
 ## Project Structure
@@ -52,18 +83,23 @@ pnpm build:win
 ```
 src/
   main/          # Electron main process
-    index.ts     # App entry, tray, global hotkey
-    db.ts        # SQLite schema + crash recovery
-    ipc.ts       # All IPC handlers
+    index.ts     # App entry, tray (with Quick-Start), global hotkey
+    db.ts        # SQLite open + WAL setup
+    ipc.ts       # All IPC handlers (clients, entries, settings, shell, paths)
+    idle.ts      # powerMonitor-based idle watcher
+    backup.ts    # Daily/manual/pre-migration backups + restore
+    migrations/  # Versioned schema migrations + runner
   preload/
     index.ts     # Context Bridge (window.api)
     index.d.ts   # TypeScript types for renderer
   renderer/src/
-    views/       # React page components
+    views/       # React page components (incl. SettingsView)
+    components/  # IdleModal etc.
     hooks/       # useTimer logic hook
     store/       # Zustand stores
   shared/
     types.ts     # Shared TypeScript interfaces
+    duration.ts  # Time-formatting helpers
 ```
 
 ## Data Storage

@@ -2,6 +2,71 @@
 
 All notable changes to TimeTrack are documented here.
 
+## [1.1.2] — 2026-04-24
+
+### Fixed
+
+- **Installer crash on first launch** — The Windows installer in v1.1.0 and v1.1.1
+  shipped a `better-sqlite3` binary compiled for Node.js (ABI 127) instead of
+  Electron (ABI 140). The app crashed at startup with a `NODE_MODULE_VERSION`
+  mismatch. The release workflow now uses `@electron/rebuild`, which handles
+  pnpm's symlinked `node_modules` correctly and rebuilds against the bundled
+  Electron version before packaging.
+
+## [1.1.1] — 2026-04-24
+
+### Fixed
+
+- Attempted fix for the v1.1.0 native-module mismatch using
+  `electron-builder install-app-deps` — turned out not to work reliably with
+  pnpm. Superseded by v1.1.2.
+
+## [1.1.0] — 2026-04-24
+
+### Added
+
+- **Idle-Detection** — When the system is idle longer than the configured
+  threshold (default 5 minutes), a modal asks what to do with the time:
+  *Weiter laufen lassen*, *Bei Inaktivität stoppen*, or *Als Pause markieren*.
+  Driven by `powerMonitor.getSystemIdleTime()` in the main process.
+- **Tray Quick-Start** — Right-click the tray icon to start a timer for any
+  client directly, without opening the window. The menu rebuilds dynamically
+  from the active-clients list and shows a *Stop* entry while a timer runs.
+- **Settings-View** — New *Einstellungen* tab with sections *Allgemein*,
+  *Timer*, *Daten* and *Über*. Configure language, auto-start, idle threshold,
+  global hotkey (with capture UI), and inspect data paths and backups.
+- **Auto-Backup** — A daily SQLite backup runs at app startup, kept rolling
+  for the last 7 days under `%AppData%\TimeTrack\backups\`. Manual backups,
+  pre-migration backups and restore are exposed in the Settings view. Manual
+  and pre-migration backups are never auto-rotated.
+- **DB Migrations** — Versioned migration system (`src/main/migrations/`) with
+  a `schema_version` table, transactional apply, and an automatic
+  pre-migration backup. v1.1 ships migration `002` which seeds the new
+  settings keys (`idle_threshold_minutes`, `language`, `auto_start`,
+  `hotkey_toggle`).
+- **Vitest setup** — First automated tests: shared `duration` helpers,
+  migration system (10 tests), and backup rotation/restore (8 tests). Two
+  Vitest projects (`node`, `jsdom`) so renderer hooks can use the DOM.
+- **Automated Windows Release** — `.github/workflows/release.yml` builds the
+  NSIS installer on Windows, runs the test suite, rebuilds native modules
+  for the Electron ABI, and publishes a GitHub Release with the installer
+  attached when a `v*` tag is pushed.
+
+### Changed
+
+- Hotkey is now configurable via the Settings view; failed re-binds revert
+  the change and surface an inline error.
+- The tray tooltip and context menu update on every `tray:update` IPC so the
+  Quick-Start menu always reflects the current client list.
+
+### For contributors
+
+- Native-module rebuild for tests: CI runs `pnpm rebuild better-sqlite3`
+  against Node 22 before `pnpm test`, then `pnpm exec electron-rebuild` against
+  Electron before `electron-builder`.
+- Vitest `testTimeout` and `hookTimeout` raised to 30 s — the Windows runner
+  needs the headroom for the first cold-start `better-sqlite3` call.
+
 ## [1.0.0] — 2026-04-23
 
 First public release. Windows NSIS installer.
