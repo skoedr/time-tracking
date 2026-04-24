@@ -255,6 +255,50 @@ describe('migration SQL execution', () => {
     expect(row.rate_cent).toBe(0)
   })
 
+  it('migration 004 seeds PDF template settings keys', () => {
+    applyAll()
+    const keys = (
+      db.prepare("SELECT key FROM settings WHERE key LIKE 'pdf_%' ORDER BY key").all() as Array<{
+        key: string
+      }>
+    ).map((r) => r.key)
+    expect(keys).toEqual([
+      'pdf_accent_color',
+      'pdf_footer_text',
+      'pdf_logo_path',
+      'pdf_round_minutes',
+      'pdf_sender_address',
+      'pdf_tax_id'
+    ])
+    const accent = db.prepare("SELECT value FROM settings WHERE key='pdf_accent_color'").get() as {
+      value: string
+    }
+    expect(accent.value).toBe('#4f46e5')
+    const round = db.prepare("SELECT value FROM settings WHERE key='pdf_round_minutes'").get() as {
+      value: string
+    }
+    expect(round.value).toBe('0')
+  })
+
+  it('migration 004 is idempotent (preserves user-overridden values)', () => {
+    applyAll()
+    db.prepare("UPDATE settings SET value='#ff0000' WHERE key='pdf_accent_color'").run()
+    // Re-running the same INSERT OR IGNORE statement must not reset the override.
+    db.exec(`
+      INSERT OR IGNORE INTO settings (key, value) VALUES
+        ('pdf_logo_path', ''),
+        ('pdf_sender_address', ''),
+        ('pdf_tax_id', ''),
+        ('pdf_accent_color', '#4f46e5'),
+        ('pdf_footer_text', ''),
+        ('pdf_round_minutes', '0');
+    `)
+    const accent = db.prepare("SELECT value FROM settings WHERE key='pdf_accent_color'").get() as {
+      value: string
+    }
+    expect(accent.value).toBe('#ff0000')
+  })
+
   it('rolls back migration on SQL failure (transactional)', () => {
     applyAll()
     const beforeCount = db
