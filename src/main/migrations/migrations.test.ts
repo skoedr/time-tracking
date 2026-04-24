@@ -106,27 +106,31 @@ describe('migration SQL execution', () => {
     expect(idx).toBeDefined()
   })
 
-  it('migration 001 seeds default settings', () => {
+  it('migrations seed default settings', () => {
     applyAll()
     const rows = db
       .prepare('SELECT key, value FROM settings ORDER BY key')
       .all()
     expect(rows).toEqual([
+      { key: 'auto_start', value: '0' },
       { key: 'backup_path', value: '' },
       { key: 'company_name', value: '' },
+      { key: 'hotkey_toggle', value: 'Alt+Shift+S' },
+      { key: 'idle_threshold_minutes', value: '5' },
+      { key: 'language', value: 'de' },
       { key: 'rounding_minutes', value: '15' },
       { key: 'rounding_mode', value: 'none' }
     ])
   })
 
-  it('migration 001 is idempotent', () => {
+  it('migrations are idempotent', () => {
     applyAll()
     db.exec('DELETE FROM schema_version')
     expect(() => applyAll()).not.toThrow()
     const count = db.prepare('SELECT COUNT(*) as n FROM settings').get() as {
       n: number
     }
-    expect(count.n).toBe(4)
+    expect(count.n).toBe(8)
   })
 
   it('foreign key cascade deletes entries when client is deleted', () => {
