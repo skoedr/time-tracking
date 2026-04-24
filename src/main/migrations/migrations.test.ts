@@ -306,6 +306,50 @@ describe('migration SQL execution', () => {
     expect(accent.value).toBe('#ff0000')
   })
 
+  it('migration 005 adds entries.link_id column (nullable)', () => {
+    applyAll()
+    const cols = db.prepare(`PRAGMA table_info(entries)`).all() as Array<{
+      name: string
+      notnull: number
+      dflt_value: string | null
+    }>
+    const linkCol = cols.find((c) => c.name === 'link_id')
+    expect(linkCol).toBeDefined()
+    // NULL is the "no split" sentinel — column must allow NULL.
+    expect(linkCol?.notnull).toBe(0)
+    expect(linkCol?.dflt_value).toBeNull()
+  })
+
+  it('migration 005 creates the partial idx_entries_link_id index', () => {
+    applyAll()
+    const idx = db
+      .prepare(
+        "SELECT name, sql FROM sqlite_master WHERE type='index' AND name='idx_entries_link_id'"
+      )
+      .get() as { name: string; sql: string } | undefined
+    expect(idx).toBeDefined()
+    // Partial index: WHERE clause means we don't index the (large) NULL set.
+    expect(idx?.sql).toMatch(/WHERE\s+link_id\s+IS\s+NOT\s+NULL/i)
+  })
+
+  it('migration 005 round-trips a UUID link_id on multiple rows', () => {
+    applyAll()
+    db.prepare(`INSERT INTO clients (id, name) VALUES (1, 'Acme')`).run()
+    const linkId = '11111111-2222-3333-4444-555555555555'
+    db.prepare(
+      `INSERT INTO entries (client_id, started_at, stopped_at, link_id)
+       VALUES (1, '2026-04-24T23:30:00Z', '2026-04-25T00:00:00Z', ?)`
+    ).run(linkId)
+    db.prepare(
+      `INSERT INTO entries (client_id, started_at, stopped_at, link_id)
+       VALUES (1, '2026-04-25T00:00:00Z', '2026-04-25T01:15:00Z', ?)`
+    ).run(linkId)
+    const linked = db
+      .prepare(`SELECT id FROM entries WHERE link_id = ? ORDER BY started_at`)
+      .all(linkId) as Array<{ id: number }>
+    expect(linked).toHaveLength(2)
+  })
+
   it('rolls back migration on SQL failure (transactional)', () => {
     applyAll()
     const beforeCount = db
