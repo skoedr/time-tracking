@@ -13,6 +13,8 @@ import { join } from 'path'
 import { writeFileSync } from 'fs'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
+import trayRunningIcon from '../../resources/tray-running.png?asset'
+import trayStoppedIcon from '../../resources/tray-stopped.png?asset'
 import { getDb, recoverZombieEntries, MigrationError } from './db'
 import { registerIpcHandlers } from './ipc'
 import {
@@ -107,6 +109,10 @@ function updateTray(running: boolean, label: string, todaySeconds: number): void
   isTimerRunning = running
   runningLabel = label
   lastTodaySeconds = todaySeconds
+  // State-aware tray glyph (PR D #16/#42 follow-up): green clock when running,
+  // grey clock when idle. Both files live in resources/ and are bundled by
+  // electron-vite's `?asset` resolver.
+  tray.setImage(running ? trayRunningIcon : trayStoppedIcon)
   // Tooltip format (v1.2 #31):
   //   running: `● {client} · {HH:MM} · Heute {HH:MM}`
   //   idle:    `TimeTrack — Heute {HH:MM}`
@@ -289,7 +295,7 @@ app.whenReady().then(() => {
   configureIdleWatcher({ getWindow: () => mainWindow })
   loadStartupSettings()
 
-  tray = new Tray(icon)
+  tray = new Tray(trayStoppedIcon)
   updateTray(false, '', 0)
   tray.on('click', () => {
     if (mainWindow?.isVisible()) {
