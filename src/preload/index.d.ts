@@ -17,7 +17,7 @@ declare global {
     electron: ElectronAPI
     api: {
       tray: {
-        update(isRunning: boolean, label: string): void
+        update(isRunning: boolean, label: string, todaySeconds: number): void
       }
       onHotkeyToggle(callback: () => void): () => void
       onTrayQuickStart(callback: (clientId: number) => void): () => void
@@ -51,6 +51,9 @@ declare global {
         list(): Promise<IpcResult<BackupInfo[]>>
         create(): Promise<IpcResult<string>>
         restore(filePath: string): Promise<IpcResult<{ safetyBackupPath: string }>>
+      }
+      dashboard: {
+        todayTotal(): Promise<IpcResult<number>>
       }
       app: {
         relaunch(): Promise<IpcResult<void>>

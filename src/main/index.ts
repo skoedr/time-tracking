@@ -31,6 +31,16 @@ let isQuitting = false
 let cachedActiveClients: Client[] = []
 let isTimerRunning = false
 let runningLabel = ''
+let lastTodaySeconds = 0
+
+/** Format seconds as `HH:MM` (no seconds) for the tray tooltip. */
+function fmtHHMM(seconds: number): string {
+  if (!Number.isFinite(seconds) || seconds < 0) seconds = 0
+  const total = Math.floor(seconds)
+  const h = Math.floor(total / 3600)
+  const m = Math.floor((total % 3600) / 60)
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
+}
 
 function refreshActiveClients(): void {
   try {
@@ -91,11 +101,20 @@ function buildTrayMenu(): Menu {
   return Menu.buildFromTemplate(items)
 }
 
-function updateTray(running: boolean, label: string): void {
+function updateTray(running: boolean, label: string, todaySeconds: number): void {
   if (!tray) return
   isTimerRunning = running
   runningLabel = label
-  tray.setToolTip(running ? `TimeTrack ● ${label}` : 'TimeTrack — Kein Timer aktiv')
+  lastTodaySeconds = todaySeconds
+  // Tooltip format (v1.2 #31):
+  //   running: `● {client} · {HH:MM} · Heute {HH:MM}`
+  //   idle:    `TimeTrack — Heute {HH:MM}`
+  // (i18n in tooltip deferred to v1.4 — see DESIGN.md known limitations.)
+  tray.setToolTip(
+    running
+      ? `● ${label} · Heute ${fmtHHMM(todaySeconds)}`
+      : `TimeTrack — Heute ${fmtHHMM(todaySeconds)}`
+  )
   tray.setContextMenu(buildTrayMenu())
 }
 
@@ -220,7 +239,7 @@ app.whenReady().then(() => {
   loadStartupSettings()
 
   tray = new Tray(icon)
-  updateTray(false, '')
+  updateTray(false, '', 0)
   tray.on('click', () => {
     if (mainWindow?.isVisible()) {
       mainWindow.focus()
@@ -231,8 +250,8 @@ app.whenReady().then(() => {
   })
 
   // Renderer notifies main to update tray state + drive idle watcher.
-  ipcMain.on('tray:update', (_event, running: boolean, label: string) => {
-    updateTray(running, label)
+  ipcMain.on('tray:update', (_event, running: boolean, label: string, todaySeconds: number) => {
+    updateTray(running, label, todaySeconds ?? lastTodaySeconds)
     if (running) startIdleWatcher()
     else stopIdleWatcher()
   })

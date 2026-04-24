@@ -16,8 +16,8 @@ import type {
 const api = {
   // Tray + hotkey
   tray: {
-    update: (isRunning: boolean, label: string): void =>
-      ipcRenderer.send('tray:update', isRunning, label)
+    update: (isRunning: boolean, label: string, todaySeconds: number): void =>
+      ipcRenderer.send('tray:update', isRunning, label, todaySeconds)
   },
   onHotkeyToggle: (callback: () => void): (() => void) => {
     const handler = () => callback()
@@ -37,10 +37,8 @@ const api = {
   onIdleDetected: (
     callback: (data: { idleSince: string; idleSeconds: number }) => void
   ): (() => void) => {
-    const handler = (
-      _e: unknown,
-      data: { idleSince: string; idleSeconds: number }
-    ): void => callback(data)
+    const handler = (_e: unknown, data: { idleSince: string; idleSeconds: number }): void =>
+      callback(data)
     ipcRenderer.on('timer:idle-detected', handler)
     return () => ipcRenderer.removeListener('timer:idle-detected', handler)
   },
@@ -76,12 +74,15 @@ const api = {
     set: (key: string, value: string): Promise<IpcResult<void>> =>
       ipcRenderer.invoke('settings:set', key, value)
   },
-  // Backups
   backups: {
     list: (): Promise<IpcResult<BackupInfo[]>> => ipcRenderer.invoke('backup:list'),
     create: (): Promise<IpcResult<string>> => ipcRenderer.invoke('backup:create'),
     restore: (filePath: string): Promise<IpcResult<{ safetyBackupPath: string }>> =>
       ipcRenderer.invoke('backup:restore', filePath)
+  },
+  // Dashboard
+  dashboard: {
+    todayTotal: (): Promise<IpcResult<number>> => ipcRenderer.invoke('dashboard:todayTotal')
   },
   app: {
     relaunch: (): Promise<IpcResult<void>> => ipcRenderer.invoke('app:relaunch'),
@@ -94,8 +95,7 @@ const api = {
       ipcRenderer.invoke('shell:showItemInFolder', path)
   },
   paths: {
-    get: (): Promise<IpcResult<{ db: string; backups: string }>> =>
-      ipcRenderer.invoke('paths:get')
+    get: (): Promise<IpcResult<{ db: string; backups: string }>> => ipcRenderer.invoke('paths:get')
   }
 }
 
