@@ -14,6 +14,7 @@ import { getQuickRange, QUICK_RANGE_LABELS, type QuickRangeKind } from '../../..
 import { useEntriesStore } from '../store/entriesStore'
 import { useTimer } from '../hooks/useTimer'
 import { CalendarDrawer } from '../components/CalendarDrawer'
+import { PdfExportModal } from '../components/PdfExportModal'
 
 /**
  * Month-grid calendar view. 7×N rows, KW column on the left.
@@ -84,15 +85,13 @@ export default function CalendarView(): React.JSX.Element {
     setFocusDay(today)
   }, [])
 
-  /**
-   * Quick-filter pre-selects a date range for the upcoming PDF export modal
-   * (#21). v1.3 PR C wires this into the actual modal; for now we just log
-   * so the buttons are visible + interactable while the data layer lands.
-   */
+  // PDF export modal state — opened by the quick-filter pills with the
+  // selected range pre-filled (#21).
+  const [pdfRange, setPdfRange] = useState<{ fromIso: string; toIso: string } | null>(null)
+
   const onQuickRange = useCallback((kind: QuickRangeKind) => {
     const range = getQuickRange(kind, new Date())
-    // eslint-disable-next-line no-console
-    console.info('[v1.3] PDF quick-range selected:', kind, range)
+    setPdfRange({ fromIso: localDateKey(range.from), toIso: localDateKey(range.to) })
   }, [])
 
   // Keyboard navigation on the grid.
@@ -228,6 +227,13 @@ export default function CalendarView(): React.JSX.Element {
         entries={drawerEntries}
         clients={clients}
         onClose={() => setSelectedDay(null)}
+      />
+
+      <PdfExportModal
+        key={pdfRange ? `${pdfRange.fromIso}-${pdfRange.toIso}` : 'closed'}
+        open={pdfRange !== null}
+        prefilledRange={pdfRange ?? undefined}
+        onClose={() => setPdfRange(null)}
       />
     </div>
   )

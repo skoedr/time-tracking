@@ -115,6 +115,29 @@ export default function SettingsView(): React.JSX.Element {
     }
   }
 
+  async function pickLogo(): Promise<void> {
+    setStatusMsg('Logo wird gewählt …')
+    const res = await window.api.logo.set()
+    if (res.ok) {
+      setSettings((prev) => (prev ? { ...prev, pdf_logo_path: res.data.path } : prev))
+      setStatusMsg('Logo gespeichert.')
+    } else if (res.error === 'Auswahl abgebrochen') {
+      setStatusMsg(null)
+    } else {
+      setStatusMsg(`Logo-Fehler: ${res.error}`)
+    }
+  }
+
+  async function clearLogo(): Promise<void> {
+    const res = await window.api.logo.clear()
+    if (res.ok) {
+      setSettings((prev) => (prev ? { ...prev, pdf_logo_path: '' } : prev))
+      setStatusMsg('Logo entfernt.')
+    } else {
+      setStatusMsg(`Fehler: ${res.error}`)
+    }
+  }
+
   if (!settings || !paths) {
     return <div className="text-slate-400">Lade Einstellungen …</div>
   }
@@ -284,6 +307,87 @@ export default function SettingsView(): React.JSX.Element {
           <p className="mt-1 text-xs text-slate-500">
             Lesbares Format zum Backup oder zur Weiterverarbeitung. CSV/PDF folgen.
           </p>
+        </Row>
+      </Section>
+
+      {/* PDF-Vorlage (v1.3 PR C, issues #16 + #19) */}
+      <Section title="PDF-Vorlage">
+        <Row label="Logo" hint="PNG, JPG, SVG oder WebP, max. 1 MB.">
+          <div className="flex items-center gap-3">
+            {settings.pdf_logo_path ? (
+              <code className="flex-1 truncate rounded bg-slate-800 px-3 py-1.5 text-xs text-slate-300">
+                {settings.pdf_logo_path}
+              </code>
+            ) : (
+              <span className="flex-1 text-sm text-slate-500">Kein Logo gesetzt.</span>
+            )}
+            <button type="button" onClick={pickLogo} className={btnSecondaryClass}>
+              Logo wählen …
+            </button>
+            {settings.pdf_logo_path && (
+              <button type="button" onClick={clearLogo} className={btnSecondaryClass}>
+                Entfernen
+              </button>
+            )}
+          </div>
+        </Row>
+        <Row label="Absenderadresse" hint="Erscheint rechts oben im PDF.">
+          <textarea
+            rows={4}
+            value={settings.pdf_sender_address}
+            onChange={(e) => update('pdf_sender_address', e.target.value)}
+            placeholder={'Robin GmbH\nMusterstr. 1\n12345 Berlin'}
+            className={`${inputClass} resize-y font-sans`}
+          />
+        </Row>
+        <Row label="Steuernummer">
+          <input
+            type="text"
+            value={settings.pdf_tax_id}
+            onChange={(e) => update('pdf_tax_id', e.target.value)}
+            placeholder="DE123456789"
+            className={inputClass}
+          />
+        </Row>
+        <Row label="Akzentfarbe" hint="Tabellenkopf, Linien, Hervorhebungen.">
+          <div className="flex items-center gap-3">
+            <input
+              type="color"
+              value={
+                /^#[0-9a-fA-F]{6}$/.test(settings.pdf_accent_color)
+                  ? settings.pdf_accent_color
+                  : '#4f46e5'
+              }
+              onChange={(e) => update('pdf_accent_color', e.target.value)}
+              className="h-10 w-16 cursor-pointer rounded border border-slate-700 bg-slate-800"
+              aria-label="Akzentfarbe wählen"
+            />
+            <code className="rounded bg-slate-800 px-3 py-1.5 text-xs text-slate-300">
+              {settings.pdf_accent_color || '#4f46e5'}
+            </code>
+          </div>
+        </Row>
+        <Row label="Footer-Text" hint="Z. B. Bankverbindung oder Zahlungshinweis.">
+          <textarea
+            rows={3}
+            value={settings.pdf_footer_text}
+            onChange={(e) => update('pdf_footer_text', e.target.value)}
+            placeholder="Bitte überweisen Sie bis zum 15. des Folgemonats."
+            className={`${inputClass} resize-y font-sans`}
+          />
+        </Row>
+        <Row label="Stunden runden auf" hint="Auf Wunsch werden alle Einträge im PDF gerundet.">
+          <select
+            value={settings.pdf_round_minutes || '0'}
+            onChange={(e) => update('pdf_round_minutes', e.target.value)}
+            className={inputClass}
+          >
+            <option value="0">Keine Rundung</option>
+            <option value="5">5 Minuten</option>
+            <option value="10">10 Minuten</option>
+            <option value="15">15 Minuten</option>
+            <option value="30">30 Minuten</option>
+          </select>
         </Row>
       </Section>
 

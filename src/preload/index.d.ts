@@ -74,6 +74,17 @@ declare global {
       exporter: {
         json(): Promise<IpcResult<{ path: string; bytes: number }>>
       }
+      pdf: {
+        export(req: {
+          clientId: number
+          fromIso: string
+          toIso: string
+        }): Promise<IpcResult<{ path: string }>>
+      }
+      logo: {
+        set(): Promise<IpcResult<{ path: string }>>
+        clear(): Promise<IpcResult<void>>
+      }
     }
   }
 }
