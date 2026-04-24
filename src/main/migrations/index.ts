@@ -1,4 +1,5 @@
 import { migration001 } from './001-initial'
+import { migration002 } from './002-v11-settings'
 
 export interface Migration {
   /** Monotonically increasing integer. Never reused, never reordered. */
@@ -13,6 +14,6 @@ export interface Migration {
  * All migrations in order. New migrations must be APPENDED, never inserted
  * in the middle. Once shipped, a migration is immutable.
  */
-export const migrations: Migration[] = [migration001].sort(
+export const migrations: Migration[] = [migration001, migration002].sort(
   (a, b) => a.version - b.version
 )
