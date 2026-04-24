@@ -29,27 +29,27 @@ aussieht.
 
 ## Prämissen (bestätigt)
 
-| # | Prämisse |
-|---|----------|
-| 1 | Solo-Freelancer-Tool. Kein Team, keine Cloud, alles lokal. |
-| 2 | Mini-Modus ist der tägliche Workflow. Kalender ist für Nachtragen & Monatsabschluss. |
-| 3 | Primäres Artefakt: PDF-Stundennachweis. Keine Rechnungsstellung, kein Buchhaltungsexport. |
-| 4 | Electron + React als Basis. Outlook-Integration (Graph API) kommt in Phase 2. |
+| #   | Prämisse                                                                                  |
+| --- | ----------------------------------------------------------------------------------------- |
+| 1   | Solo-Freelancer-Tool. Kein Team, keine Cloud, alles lokal.                                |
+| 2   | Mini-Modus ist der tägliche Workflow. Kalender ist für Nachtragen & Monatsabschluss.      |
+| 3   | Primäres Artefakt: PDF-Stundennachweis. Keine Rechnungsstellung, kein Buchhaltungsexport. |
+| 4   | Electron + React als Basis. Outlook-Integration (Graph API) kommt in Phase 2.             |
 
 ---
 
 ## Tech-Stack
 
-| Schicht | Technologie | Begründung |
-|---------|-------------|------------|
-| Shell | **Electron** | Native Windows-Fenster, System-Tray, kein Browser nötig |
-| UI | **React** + Tailwind CSS | Nutzer kennt Web-Stack, schnelle Iteration |
-| Datenbank | **SQLite** (via `better-sqlite3`) | Lokal, zero-config, kein Server |
-| PDF | **Electron `webContents.printToPDF()`** | Nutzt Chromium das Electron bereits eingebaut hat — kein Puppeteer (+300MB) nötig |
-| Build | **electron-builder** | `.exe`-Installer für Windows, Auto-Update vorbereitet |
-| Paket-Manager | **npm** / **pnpm** | Standard für Electron-Projekte |
-| IPC-Sicherheit | **Context Bridge** (`contextIsolation: true`) | HTML-Templates werden gerendert — nodeIntegration bleibt aus |
-| Datenpfad | **`app.getPath('userData')`** | `%AppData%\TimeTrack\` — Updates überschreiben Daten nie |
+| Schicht        | Technologie                                   | Begründung                                                                        |
+| -------------- | --------------------------------------------- | --------------------------------------------------------------------------------- |
+| Shell          | **Electron**                                  | Native Windows-Fenster, System-Tray, kein Browser nötig                           |
+| UI             | **React** + Tailwind CSS                      | Nutzer kennt Web-Stack, schnelle Iteration                                        |
+| Datenbank      | **SQLite** (via `better-sqlite3`)             | Lokal, zero-config, kein Server                                                   |
+| PDF            | **Electron `webContents.printToPDF()`**       | Nutzt Chromium das Electron bereits eingebaut hat — kein Puppeteer (+300MB) nötig |
+| Build          | **electron-builder**                          | `.exe`-Installer für Windows, Auto-Update vorbereitet                             |
+| Paket-Manager  | **npm** / **pnpm**                            | Standard für Electron-Projekte                                                    |
+| IPC-Sicherheit | **Context Bridge** (`contextIsolation: true`) | HTML-Templates werden gerendert — nodeIntegration bleibt aus                      |
+| Datenpfad      | **`app.getPath('userData')`**                 | `%AppData%\TimeTrack\` — Updates überschreiben Daten nie                          |
 
 > **Warum nicht Tauri?** Rust-Lernkurve würde Phase 1 verlangsamen. Tauri bleibt
 > Option für Phase 3, wenn Executable-Größe wichtig wird.
@@ -64,6 +64,7 @@ aussieht.
 ### Phase 1 — Das Kernprodukt
 
 #### Mini-Modus (Timer-Widget)
+
 - **Always-on-top**, kleines Fenster (~300×150px)
 - **Start / Pause / Stop**-Buttons mit Tastenkürzel (`F5` / `F6`)
 - **Globaler Hotkey** (`F5`/`F6`) — funktioniert auch wenn das Fenster im Hintergrund ist (`globalShortcut`)
@@ -75,6 +76,7 @@ aussieht.
 - **Tray-Icon:** Grün = Timer läuft, Grau = gestoppt (via `nativeImage` + Electron Tray API)
 
 #### Kalender-Modus
+
 - **Monatsansicht** (Kalender-Grid, ein Block pro Eintrag)
 - **Farb-Kodierung** nach Kunde
 - **Eintrag erstellen/bearbeiten/löschen** (manuell, für Nachträge)
@@ -83,11 +85,13 @@ aussieht.
 - **Liste-Ansicht** alternativ zur Kalender-Ansicht
 
 #### Kunden-Verwaltung
+
 - Name, Farbe, Kurzbezeichnung (für den PDF-Header)
 - Stundensatz (optional, für spätere Berechnungen)
 - Archivieren (nicht löschen)
 
 #### Einstellungen
+
 - **Rundungsmodus:** 5 / 10 / 15 / 30 Minuten; Ceil / Floor / Round
 - **Branding:** Logo (PNG/SVG), Firmenname, Adresse, USt-Nr. (für PDF-Footer)
 - **Standard-Tätigkeiten:** vordefinierte Texte als Quickselect
@@ -96,6 +100,7 @@ aussieht.
 - **Auto-Backup:** Konfigurierbarer Zielordner (z.B. OneDrive); SQLite-DB wird täglich kopiert
 
 #### PDF-Export
+
 - **Zeitraum** wählen (Monat-Picker oder benutzerdefiniert)
 - **Kunde** wählen
 - **HTML-Template** (anpassbar, liegt im App-Datenordner)
@@ -171,6 +176,7 @@ CREATE TABLE settings (
 ## UI-Skizzen
 
 ### Mini-Modus
+
 ```
 ┌─────────────────────────────┐
 │ ▶ Kunde GmbH          00:47 │
@@ -180,6 +186,7 @@ CREATE TABLE settings (
 ```
 
 ### Kalender-Modus (Header)
+
 ```
 ┌──────────────────────────────────────────────────┐
 │ ← April 2026 →          [+ Eintrag] [📄 Export]  │
@@ -243,32 +250,32 @@ time-tracking/
 
 ## Offene Entscheidungen
 
-| Frage | Empfehlung | Alternative |
-|-------|------------|-------------|
-| State-Management | Zustand (minimal, kein Redux-Overhead) | Jotai |
-| Datumslib | `date-fns` (tree-shakeable) | `dayjs` |
-| Kalender-Komponente | Eigenbau (simpler Grid) | `react-big-calendar` |
-| PDF-Preview | Browser-Vorschau-Fenster (BrowserWindow mit `printToPDF`) | direkt speichern |
-| Update-Mechanismus | electron-updater (GitHub Releases) | manuell |
+| Frage               | Empfehlung                                                | Alternative          |
+| ------------------- | --------------------------------------------------------- | -------------------- |
+| State-Management    | Zustand (minimal, kein Redux-Overhead)                    | Jotai                |
+| Datumslib           | `date-fns` (tree-shakeable)                               | `dayjs`              |
+| Kalender-Komponente | Eigenbau (simpler Grid)                                   | `react-big-calendar` |
+| PDF-Preview         | Browser-Vorschau-Fenster (BrowserWindow mit `printToPDF`) | direkt speichern     |
+| Update-Mechanismus  | electron-updater (GitHub Releases)                        | manuell              |
 
 ## Architektur-Entscheidungen (aus Reviews)
 
-| Entscheidung | Gewählt | Begründung |
-|---|---|---|
-| IPC-Sicherheit | Context Bridge | HTML-Templates werden gerendert, nodeIntegration aus |
-| PDF-Engine | `webContents.printToPDF()` | Electron hat Chromium bereits — kein Puppeteer |
-| Datenpfad | `app.getPath('userData')` | Updates-sicher, kein Datenverlust |
-| Crash-Recovery | Heartbeat + Auto-Stop | `heartbeat_at` alle 30s, beim Start offene Einträge schließen |
+| Entscheidung   | Gewählt                    | Begründung                                                    |
+| -------------- | -------------------------- | ------------------------------------------------------------- |
+| IPC-Sicherheit | Context Bridge             | HTML-Templates werden gerendert, nodeIntegration aus          |
+| PDF-Engine     | `webContents.printToPDF()` | Electron hat Chromium bereits — kein Puppeteer                |
+| Datenpfad      | `app.getPath('userData')`  | Updates-sicher, kein Datenverlust                             |
+| Crash-Recovery | Heartbeat + Auto-Stop      | `heartbeat_at` alle 30s, beim Start offene Einträge schließen |
 
 ## Pflicht-Tests (aus Eng-Review)
 
-| Test | Typ | Priorität |
-|------|-----|-----------|
-| Rundungsmodus (alle 3 Modi × alle Intervalle) | Unit | P1 |
-| Crash-Recovery: App-Start mit offenem Eintrag | Integration | P1 |
-| PDF-Export: korrekter Zeitraum, korrekte Stunden | Integration | P1 |
-| Auto-Backup: Zielordner nicht existent | Unit | P2 |
-| Zombie-Erkennung: heartbeat > 5 min alt | Unit | P1 |
+| Test                                             | Typ         | Priorität |
+| ------------------------------------------------ | ----------- | --------- |
+| Rundungsmodus (alle 3 Modi × alle Intervalle)    | Unit        | P1        |
+| Crash-Recovery: App-Start mit offenem Eintrag    | Integration | P1        |
+| PDF-Export: korrekter Zeitraum, korrekte Stunden | Integration | P1        |
+| Auto-Backup: Zielordner nicht existent           | Unit        | P2        |
+| Zombie-Erkennung: heartbeat > 5 min alt          | Unit        | P1        |
 
 ---
 
@@ -289,6 +296,76 @@ time-tracking/
 
 ---
 
-*Design-Status: REVIEWED — CEO + Eng Review abgeschlossen. Bereit zum Bauen.*
+_Design-Status: REVIEWED — CEO + Eng Review abgeschlossen. Bereit zum Bauen._
 
 **Reviews:** /office-hours ✓ | /plan-ceo-review ✓ (SELECTIVE EXPANSION) | /plan-eng-review ✓
+
+---
+
+## v1.2 Visual Tokens (stub)
+
+Minimal token sheet introduced with v1.2 (#26 Calendar, #30 Today, #28 Edit/Delete).
+Full state-matrix and component catalogue follow in v1.3.
+
+### Color tokens
+
+**Surfaces (Tailwind slate scale)**
+
+- `slate-900` `#0f172a` — page background
+- `slate-800` `#1e293b` — card background
+- `slate-700` `#334155` — raised surface, drawer body
+- `slate-600` `#475569` — focused/expanded row
+- `slate-400` `#94a3b8` — secondary text
+- `slate-300` `#cbd5e1` — body text
+- `slate-100` `#f1f5f9` — primary text / numerics
+
+**Accent**
+
+- `indigo-500` `#6366f1` — primary action, today-highlight border, active links
+- `indigo-400` `#818cf8` — hover
+
+**Semantic**
+
+- `emerald-500` `#10b981` — success / save flash
+- `amber-500` `#f59e0b` — warning (cross-midnight banner)
+- `red-500` `#ef4444` — destructive / delete confirm
+
+**Client palette (10 presets, locked in v1.1)**
+`#6366f1` `#8b5cf6` `#ec4899` `#f59e0b` `#10b981`
+`#3b82f6` `#ef4444` `#f97316` `#14b8a6` `#84cc16`
+
+### Typography scale
+
+- Display (timer numerics): 56px / 64px (mono, e.g. `font-mono text-7xl`)
+- h1: 24px / 32px, semibold
+- h2: 20px / 28px, semibold
+- body: 14px / 20px, regular
+- small: 12px / 16px, regular (KW column, tagessumme)
+
+### Spacing tokens
+
+4 / 8 / 12 / 16 / 24 / 32 px (`gap-1 / gap-2 / gap-3 / gap-4 / gap-6 / gap-8`).
+
+### Calendar mini-bars (locked v1.2)
+
+- Bar height: **3 px**, gap **2 px**
+- Max **5 visible** per cell; overflow as clickable `+N` (opens Drawer)
+- Bar color = `client.color`; running entry has 1px white border
+
+### Drawer (locked v1.2)
+
+- Position: `fixed right-0 top-0 w-96 h-screen`
+- Sticky header (date + total, close X)
+- Sticky footer ("+ Eintrag für [Date] hinzufügen")
+- Inline-edit row expands to ~200 px max with `scrollIntoView({block:'center'})`
+
+### Known limitations (deferred)
+
+| #   | Limitation                                                                  | Defer-to  | Reason                                                       |
+| --- | --------------------------------------------------------------------------- | --------- | ------------------------------------------------------------ |
+| L1  | Tray-tooltip is German-only (ignores `settings.language`)                   | v1.4      | Full i18n pass scoped together                               |
+| L2  | Client color palette not colorblind-safe (Indigo/Violet, Blue/Teal cluster) | v1.4      | Palette change requires migration of saved per-client colors |
+| L3  | No mobile/tablet layout (<1024 px); Calendar grid breaks below that width   | v1.4      | App is Windows-desktop-first; web build not on roadmap       |
+| L4  | No light mode                                                               | post-v1.5 | Single user, dark-only tested                                |
+| L5  | Cross-midnight entries blocked (warning banner shown in EntryEditForm)      | v1.3      | Needs entry-splitting logic + PDF impact                     |
+| L6  | Full ARIA / screen-reader pass                                              | v1.3      | Keyboard nav for Calendar already in v1.2                    |

@@ -2,11 +2,7 @@ import { ipcMain, shell } from 'electron'
 import { app } from 'electron'
 import { getDb, getDbPath } from './db'
 import { getBackupsDir } from './backup'
-import {
-  createBackup,
-  listBackups,
-  restoreBackup as restoreBackupFile
-} from './backup'
+import { createBackup, listBackups, restoreBackup as restoreBackupFile } from './backup'
 import type {
   Client,
   Entry,
@@ -141,7 +137,9 @@ export function registerIpcHandlers(hooks: IpcHooks): void {
     try {
       const row =
         (db
-          .prepare(`SELECT * FROM entries WHERE stopped_at IS NULL ORDER BY started_at DESC LIMIT 1`)
+          .prepare(
+            `SELECT * FROM entries WHERE stopped_at IS NULL ORDER BY started_at DESC LIMIT 1`
+          )
           .get() as Entry) ?? null
       return ok(row)
     } catch (e) {
@@ -182,6 +180,34 @@ export function registerIpcHandlers(hooks: IpcHooks): void {
     try {
       db.prepare(`DELETE FROM entries WHERE id = ?`).run(id)
       return ok(undefined)
+    } catch (e) {
+      return fail(e)
+    }
+  })
+
+  // ── Dashboard ─────────────────────────────────────────────────
+  // Sum of today's tracked seconds, including the running entry up to now.
+  // Cross-midnight: a running entry started yesterday is counted via the
+  // `stopped_at IS NULL` branch (E7 in v1.2 plan) so the tray total never
+  // shows 0h while a 6h timer is visibly running.
+  ipcMain.handle('dashboard:todayTotal', (): IpcResult<number> => {
+    try {
+      const row = db
+        .prepare(
+          `SELECT COALESCE(SUM(
+             CASE
+               WHEN stopped_at IS NULL
+                 THEN (julianday('now') - julianday(started_at)) * 86400
+               ELSE (julianday(stopped_at) - julianday(started_at)) * 86400
+             END
+           ), 0) AS seconds
+           FROM entries
+           WHERE DATE(started_at, 'localtime') = DATE('now', 'localtime')
+              OR stopped_at IS NULL`
+        )
+        .get() as { seconds: number }
+      const seconds = Math.max(0, Math.floor(row.seconds ?? 0))
+      return ok(seconds)
     } catch (e) {
       return fail(e)
     }
