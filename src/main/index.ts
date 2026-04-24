@@ -10,6 +10,7 @@ import {
   type MenuItemConstructorOptions
 } from 'electron'
 import { join } from 'path'
+import { writeFileSync } from 'fs'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { getDb, recoverZombieEntries, MigrationError } from './db'
@@ -196,6 +197,56 @@ function createWindow(): void {
 
 app.whenReady().then(() => {
   electronApp.setAppUserModelId('com.timetrack.app')
+
+  // Smoke-test mode (CI release pipeline). When invoked with
+  // `--smoke-test=<path>`, open the DB (which runs migrations against
+  // the Electron-ABI better-sqlite3 binary), write a JSON status to
+  // <path>, and exit. No window, no tray, no IPC handlers.
+  // This is the v1.2 packaged-binary smoke check (E11) that catches
+  // ABI / native-module regressions before we publish a release.
+  const smokeArg = process.argv.find((a) => a.startsWith('--smoke-test'))
+  if (smokeArg) {
+    const outPath = smokeArg.includes('=') ? smokeArg.split('=').slice(1).join('=') : ''
+    try {
+      const db = getDb()
+      const row = db.prepare('SELECT MAX(version) as v FROM schema_version').get() as {
+        v: number | null
+      }
+      const result = {
+        ok: true as const,
+        schemaVersion: row.v ?? 0,
+        dbPath: app.getPath('userData'),
+        electronVersion: process.versions.electron,
+        nodeVersion: process.versions.node
+      }
+      const payload = JSON.stringify(result)
+      console.log(`[smoke] ${payload}`)
+      if (outPath) {
+        try {
+          writeFileSync(outPath, payload, 'utf8')
+        } catch (e) {
+          console.warn('[smoke] could not write to outPath:', (e as Error).message)
+        }
+      }
+      app.exit(0)
+    } catch (err) {
+      const payload = JSON.stringify({
+        ok: false,
+        error: (err as Error).message,
+        electronVersion: process.versions.electron
+      })
+      console.error(`[smoke] ${payload}`)
+      if (outPath) {
+        try {
+          writeFileSync(outPath, payload, 'utf8')
+        } catch {
+          /* ignore — exit code is the source of truth */
+        }
+      }
+      app.exit(1)
+    }
+    return
+  }
 
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)

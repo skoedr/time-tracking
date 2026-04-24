@@ -50,6 +50,46 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: pnpm build:win
 
+      - name: Smoke test packaged binary (DB + migrations against Electron ABI)
+        shell: pwsh
+        run: |
+          $exe = Get-ChildItem -Path "dist/win-unpacked" -Filter "*.exe" |
+                 Where-Object { $_.Name -notmatch '(uninstall|crashpad|elevate)' } |
+                 Select-Object -First 1
+          if (-not $exe) {
+            Write-Error "No packaged exe found in dist/win-unpacked"
+            exit 1
+          }
+          $out = Join-Path $env:RUNNER_TEMP "smoke.json"
+          if (Test-Path $out) { Remove-Item $out -Force }
+          Write-Host "Running smoke test: $($exe.FullName) --smoke-test=$out"
+          $proc = Start-Process -FilePath $exe.FullName -ArgumentList "--smoke-test=$out" -PassThru -NoNewWindow
+          if (-not $proc.WaitForExit(60000)) {
+            Stop-Process -Id $proc.Id -Force
+            Write-Error "Smoke test timed out after 60s"
+            exit 1
+          }
+          if ($proc.ExitCode -ne 0) {
+            Write-Error "Smoke test exited with code $($proc.ExitCode)"
+            if (Test-Path $out) { Get-Content $out }
+            exit 1
+          }
+          if (-not (Test-Path $out)) {
+            Write-Error "Smoke test did not produce $out"
+            exit 1
+          }
+          $payload = Get-Content $out -Raw | ConvertFrom-Json
+          Write-Host "Smoke result: $($payload | ConvertTo-Json -Compress)"
+          if (-not $payload.ok) {
+            Write-Error "Smoke test reported ok=false: $($payload.error)"
+            exit 1
+          }
+          if ($payload.schemaVersion -lt 3) {
+            Write-Error "Expected schemaVersion >= 3 (v1.2 migrations), got $($payload.schemaVersion)"
+            exit 1
+          }
+          Write-Host "Smoke test passed (schema v$($payload.schemaVersion), Electron $($payload.electronVersion))"
+
       - name: Upload installer artifact
         uses: actions/upload-artifact@v4
         with:
