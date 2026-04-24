@@ -45,10 +45,7 @@ export function runMigrations(db: Database.Database, dbPath: string): MigrationR
       applied.push(migration.version)
       console.log(`[migrations] Applied #${migration.version} (${migration.name})`)
     } catch (err) {
-      console.error(
-        `[migrations] FAILED #${migration.version} (${migration.name}):`,
-        err
-      )
+      console.error(`[migrations] FAILED #${migration.version} (${migration.name}):`, err)
       restoreBackup(backupPath, dbPath)
       throw new MigrationError(migration, err as Error, backupPath)
     }
@@ -58,21 +55,61 @@ export function runMigrations(db: Database.Database, dbPath: string): MigrationR
 }
 
 function getCurrentVersion(db: Database.Database): number {
-  const row = db
-    .prepare('SELECT MAX(version) as v FROM schema_version')
-    .get() as { v: number | null }
+  const row = db.prepare('SELECT MAX(version) as v FROM schema_version').get() as {
+    v: number | null
+  }
   return row.v ?? 0
 }
 
 function applyMigration(db: Database.Database, m: Migration): void {
+  // Pre-apply observability: surface clock-skew and running-entry counts so
+  // we can correlate post-deploy support tickets with the pre-state.
+  if (m.version === 3) {
+    logPreV3State(db)
+  }
+
   const tx = db.transaction(() => {
     db.exec(m.up)
-    db.prepare('INSERT INTO schema_version (version, name) VALUES (?, ?)').run(
-      m.version,
-      m.name
-    )
+    db.prepare('INSERT INTO schema_version (version, name) VALUES (?, ?)').run(m.version, m.name)
+    // Post-apply invariants (run inside the same transaction so a failing
+    // assertion rolls back the migration cleanly — runner's catch will then
+    // restore from the pre-migration backup).
+    if (m.version === 3) {
+      assertNoNegativeRoundedMin(db)
+    }
   })
   tx()
+}
+
+function logPreV3State(db: Database.Database): void {
+  try {
+    const skew = db
+      .prepare(
+        `SELECT COUNT(*) AS n FROM entries
+          WHERE stopped_at IS NOT NULL AND stopped_at < started_at`
+      )
+      .get() as { n: number }
+    const running = db
+      .prepare(`SELECT COUNT(*) AS n FROM entries WHERE stopped_at IS NULL`)
+      .get() as { n: number }
+    console.log(
+      `[migrations] pre-003: ${skew.n} clock-skew row(s) skipped; ${running.n} running entry/entries skipped`
+    )
+  } catch (err) {
+    // Pre-apply logging must never block the migration itself.
+    console.warn('[migrations] pre-003 log failed:', err)
+  }
+}
+
+function assertNoNegativeRoundedMin(db: Database.Database): void {
+  const row = db.prepare(`SELECT COUNT(*) AS n FROM entries WHERE rounded_min < 0`).get() as {
+    n: number
+  }
+  if (row.n > 0) {
+    throw new Error(
+      `Post-migration assertion failed: ${row.n} entry/entries have negative rounded_min`
+    )
+  }
 }
 
 function restoreBackup(backupPath: string, dbPath: string): void {
@@ -94,9 +131,7 @@ export class MigrationError extends Error {
     public readonly cause: Error,
     public readonly backupPath: string
   ) {
-    super(
-      `Migration #${migration.version} (${migration.name}) failed: ${cause.message}`
-    )
+    super(`Migration #${migration.version} (${migration.name}) failed: ${cause.message}`)
     this.name = 'MigrationError'
   }
 }

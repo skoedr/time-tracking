@@ -6,11 +6,13 @@ import type {
   CreateClientInput,
   UpdateClientInput,
   CreateEntryInput,
+  CreateManualEntryInput,
   UpdateEntryInput,
   MonthQuery,
   Settings,
   IpcResult,
-  BackupInfo
+  BackupInfo,
+  DashboardSummary
 } from '../shared/types'
 
 const api = {
@@ -64,9 +66,12 @@ const api = {
     getRunning: (): Promise<IpcResult<Entry | null>> => ipcRenderer.invoke('entries:getRunning'),
     getByMonth: (query: MonthQuery): Promise<IpcResult<Entry[]>> =>
       ipcRenderer.invoke('entries:getByMonth', query),
+    create: (input: CreateManualEntryInput): Promise<IpcResult<Entry>> =>
+      ipcRenderer.invoke('entries:create', input),
     update: (input: UpdateEntryInput): Promise<IpcResult<Entry>> =>
       ipcRenderer.invoke('entries:update', input),
-    delete: (id: number): Promise<IpcResult<void>> => ipcRenderer.invoke('entries:delete', id)
+    delete: (id: number): Promise<IpcResult<void>> => ipcRenderer.invoke('entries:delete', id),
+    undelete: (id: number): Promise<IpcResult<Entry>> => ipcRenderer.invoke('entries:undelete', id)
   },
   // Settings
   settings: {
@@ -82,7 +87,8 @@ const api = {
   },
   // Dashboard
   dashboard: {
-    todayTotal: (): Promise<IpcResult<number>> => ipcRenderer.invoke('dashboard:todayTotal')
+    todayTotal: (): Promise<IpcResult<number>> => ipcRenderer.invoke('dashboard:todayTotal'),
+    summary: (): Promise<IpcResult<DashboardSummary>> => ipcRenderer.invoke('dashboard:summary')
   },
   app: {
     relaunch: (): Promise<IpcResult<void>> => ipcRenderer.invoke('app:relaunch'),

@@ -3,6 +3,7 @@ import TimerView from './views/TimerView'
 import ClientsView from './views/ClientsView'
 import SettingsView from './views/SettingsView'
 import { IdleModal } from './components/IdleModal'
+import { ToastTray } from './components/Toast'
 import { useTimer } from './hooks/useTimer'
 
 type View = 'timer' | 'calendar' | 'clients' | 'settings'
@@ -57,10 +58,10 @@ function App(): React.JSX.Element {
           onMarkPause={idleMarkPause}
         />
       )}
+
+      <ToastTray />
     </div>
   )
 }
 
 export default App
-
-
