@@ -1,0 +1,92 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to release (e.g. v1.1.0)'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Rebuild native modules for Node (test runtime)
+        run: pnpm rebuild better-sqlite3
+
+      - name: Test
+        run: pnpm test
+
+      - name: Build installer (NSIS)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: pnpm build:win
+
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: timetrack-windows-installer
+          path: |
+            dist/*.exe
+            dist/*.exe.blockmap
+            dist/latest.yml
+          if-no-files-found: error
+
+  publish-release:
+    needs: build-windows
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+
+      - name: Download installer artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: timetrack-windows-installer
+          path: dist
+
+      - name: Resolve tag
+        id: tag
+        run: echo "name=${{ inputs.tag || github.ref_name }}" >> "$GITHUB_OUTPUT"
+
+      - name: Create / update GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          TAG="${{ steps.tag.outputs.name }}"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG already exists — uploading assets."
+            gh release upload "$TAG" dist/* --clobber
+          else
+            gh release create "$TAG" \
+              --title "TimeTrack $TAG" \
+              --generate-notes \
+              dist/*
+          fi
