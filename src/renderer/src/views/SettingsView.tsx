@@ -112,9 +112,7 @@ export default function SettingsView(): React.JSX.Element {
       <h1 className="text-2xl font-semibold text-slate-100">Einstellungen</h1>
 
       {statusMsg && (
-        <div className="rounded-md bg-slate-800 px-3 py-2 text-sm text-slate-300">
-          {statusMsg}
-        </div>
+        <div className="rounded-md bg-slate-800 px-3 py-2 text-sm text-slate-300">{statusMsg}</div>
       )}
 
       {/* Allgemein */}
@@ -147,7 +145,7 @@ export default function SettingsView(): React.JSX.Element {
             value={settings.company_name}
             onChange={(e) => update('company_name', e.target.value)}
             className={inputClass}
-            placeholder="z.\u202fB. Meine Firma GmbH"
+            placeholder={'z.\u202fB. Meine Firma GmbH'}
           />
         </Row>
       </Section>

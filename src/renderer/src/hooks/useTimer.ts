@@ -2,6 +2,18 @@ import { useEffect, useRef, useCallback } from 'react'
 import { useTimerStore } from '../store/timerStore'
 import { formatDuration as _formatDuration } from '../../../shared/duration'
 
+/**
+ * Fetch today's total seconds from main and push it to the tray together with
+ * the current running label. Centralised so every callsite (start, stop,
+ * heartbeat, init, idle handlers) keeps the tray tooltip in sync — no second
+ * polling interval is needed (E5 in v1.2 plan).
+ */
+async function pushTrayUpdate(running: boolean, label: string): Promise<void> {
+  const totalRes = await window.api.dashboard.todayTotal()
+  const seconds = totalRes.ok ? totalRes.data : 0
+  window.api.tray.update(running, label, seconds)
+}
+
 // Refs shared across all useTimer() instances so listeners are registered ONCE
 // globally and always invoke the latest callback.
 const globalToggleRef: { current: () => void } = { current: () => {} }
@@ -9,7 +21,9 @@ const globalQuickStartRef: { current: (clientId: number) => void } = { current: 
 const globalStopRef: { current: () => void } = { current: () => {} }
 let listenersInstalled = false
 
-function installGlobalListenersOnce(setIdleEvent: (e: { idleSince: string; idleSeconds: number } | null) => void): void {
+function installGlobalListenersOnce(
+  setIdleEvent: (e: { idleSince: string; idleSeconds: number } | null) => void
+): void {
   if (listenersInstalled) return
   listenersInstalled = true
   window.api.onHotkeyToggle(() => globalToggleRef.current())
@@ -66,7 +80,10 @@ export function useTimer() {
         setElapsedSeconds(Math.floor((Date.now() - started) / 1000))
         const allClients = clientsRes.ok ? clientsRes.data : []
         const clientName = allClients.find((c) => c.id === entry.client_id)?.name ?? ''
-        window.api.tray.update(true, clientName)
+        await pushTrayUpdate(true, clientName)
+      } else {
+        // Idle on launch: still surface today's total in the tray tooltip.
+        await pushTrayUpdate(false, '')
       }
     }
     init()
@@ -82,9 +99,13 @@ export function useTimer() {
         )
       }, 1000)
 
-      // Heartbeat every 30s
+      // Heartbeat every 30s — also refreshes the tray today-total so the
+      // tooltip stays current without a second timer (v1.2 plan, E5).
       heartbeatRef.current = setInterval(() => {
         window.api.entries.heartbeat(runningEntry.id)
+        const clientName =
+          useTimerStore.getState().clients.find((c) => c.id === runningEntry.client_id)?.name ?? ''
+        void pushTrayUpdate(true, clientName)
       }, 30_000)
     } else {
       if (!runningEntry) setElapsedSeconds(0)
@@ -108,7 +129,7 @@ export function useTimer() {
     if (res.ok) {
       setRunningEntry(res.data)
       const clientName = clients.find((c) => c.id === selectedClientId)?.name ?? ''
-      window.api.tray.update(true, clientName)
+      await pushTrayUpdate(true, clientName)
     }
   }, [selectedClientId, description, clients])
 
@@ -120,7 +141,7 @@ export function useTimer() {
     if (res.ok) {
       setRunningEntry(null)
       setDescription('')
-      window.api.tray.update(false, '')
+      await pushTrayUpdate(false, '')
       // If user manually stops, dismiss any pending idle event.
       if (useTimerStore.getState().idleEvent) {
         setIdleEvent(null)
@@ -144,7 +165,7 @@ export function useTimer() {
         setRunningEntry(res.data)
         setDescription('')
         const clientName = clients.find((c) => c.id === clientId)?.name ?? ''
-        window.api.tray.update(true, clientName)
+        await pushTrayUpdate(true, clientName)
       }
     },
     [clients]
@@ -178,7 +199,7 @@ export function useTimer() {
     if (res.ok) {
       setRunningEntry(null)
       setDescription('')
-      window.api.tray.update(false, '')
+      await pushTrayUpdate(false, '')
     }
     dismissIdle()
   }, [dismissIdle])
@@ -219,7 +240,7 @@ export function useTimer() {
       }
       setRunningEntry(null)
       setDescription('')
-      window.api.tray.update(false, '')
+      await pushTrayUpdate(false, '')
     }
     setIsLoading(false)
     dismissIdle()
