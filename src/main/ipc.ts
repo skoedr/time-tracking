@@ -1,5 +1,11 @@
 import { ipcMain } from 'electron'
-import { getDb } from './db'
+import { app } from 'electron'
+import { getDb, getDbPath } from './db'
+import {
+  createBackup,
+  listBackups,
+  restoreBackup as restoreBackupFile
+} from './backup'
 import type {
   Client,
   Entry,
@@ -9,7 +15,8 @@ import type {
   UpdateEntryInput,
   MonthQuery,
   Settings,
-  IpcResult
+  IpcResult,
+  BackupInfo
 } from '../shared/types'
 
 function ok<T>(data: T): IpcResult<T> {
@@ -190,5 +197,46 @@ export function registerIpcHandlers(): void {
     } catch (e) {
       return fail(e)
     }
+  })
+
+  // ── Backups ───────────────────────────────────
+  ipcMain.handle('backup:list', (): IpcResult<BackupInfo[]> => {
+    try {
+      return ok(listBackups())
+    } catch (e) {
+      return fail(e)
+    }
+  })
+
+  ipcMain.handle('backup:create', async (): Promise<IpcResult<string>> => {
+    try {
+      const path = await createBackup(db, 'manual')
+      return ok(path)
+    } catch (e) {
+      return fail(e)
+    }
+  })
+
+  ipcMain.handle(
+    'backup:restore',
+    (_e, filePath: string): IpcResult<{ safetyBackupPath: string }> => {
+      try {
+        // Close the live DB so the file can be replaced. App must restart
+        // afterwards; the renderer is expected to call app.relaunch via a
+        // separate IPC or a manual user action.
+        const dbPath = getDbPath()
+        db.close()
+        const result = restoreBackupFile(filePath, dbPath)
+        return ok(result)
+      } catch (e) {
+        return fail(e)
+      }
+    }
+  )
+
+  ipcMain.handle('app:relaunch', (): IpcResult<void> => {
+    app.relaunch()
+    app.exit(0)
+    return ok(undefined)
   })
 }

@@ -58,3 +58,13 @@ export interface MonthQuery {
 }
 
 export type IpcResult<T> = { ok: true; data: T } | { ok: false; error: string }
+
+export type BackupReason = 'daily' | 'manual' | 'pre-migration'
+
+export interface BackupInfo {
+  filename: string
+  fullPath: string
+  reason: BackupReason
+  createdAt: string
+  sizeBytes: number
+}
