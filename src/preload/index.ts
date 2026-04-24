@@ -107,6 +107,17 @@ const api = {
   exporter: {
     json: (): Promise<IpcResult<{ path: string; bytes: number }>> =>
       ipcRenderer.invoke('export:json')
+  },
+  pdf: {
+    export: (req: {
+      clientId: number
+      fromIso: string
+      toIso: string
+    }): Promise<IpcResult<{ path: string }>> => ipcRenderer.invoke('pdf:export', req)
+  },
+  logo: {
+    set: (): Promise<IpcResult<{ path: string }>> => ipcRenderer.invoke('logo:set'),
+    clear: (): Promise<IpcResult<void>> => ipcRenderer.invoke('logo:clear')
   }
 }
 

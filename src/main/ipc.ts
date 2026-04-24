@@ -8,6 +8,9 @@ import { getBackupsDir } from './backup'
 import { createBackup, listBackups, restoreBackup as restoreBackupFile } from './backup'
 import { splitAtMidnight } from '../shared/midnightSplit'
 import { buildJsonExportPayload } from './jsonExport'
+import { buildPdfHtml, buildPdfPayload, type PdfRequest } from './pdf'
+import { renderPdfBuffer } from './pdfWindow'
+import { readLogoAsDataUrl, removeLogo, saveLogo } from './logo'
 import type {
   Client,
   Entry,
@@ -527,6 +530,93 @@ export function registerIpcHandlers(hooks: IpcHooks): void {
       const json = JSON.stringify(payload, null, 2)
       writeFileSync(result.filePath, json, 'utf8')
       return ok({ path: result.filePath, bytes: Buffer.byteLength(json, 'utf8') })
+    } catch (e) {
+      return fail(e)
+    }
+  })
+
+  // === PDF export (v1.3 PR C, issues #16 + #19) ===========================
+  // The hero feature: client + date range → printable A4 PDF.
+  // Pipeline: gather payload from DB → render template HTML → hidden
+  // BrowserWindow + printToPDF → write to user-chosen path.
+
+  ipcMain.handle(
+    'pdf:export',
+    async (_e, req: PdfRequest): Promise<IpcResult<{ path: string }>> => {
+      try {
+        if (!req || typeof req.clientId !== 'number' || !req.fromIso || !req.toIso) {
+          return fail('Ungültige PDF-Anfrage')
+        }
+        const client = db.prepare(`SELECT id, name FROM clients WHERE id = ?`).get(req.clientId) as
+          | { id: number; name: string }
+          | undefined
+        if (!client) return fail(`Kunde ${req.clientId} nicht gefunden`)
+
+        const monthHint = req.fromIso.slice(0, 7) // YYYY-MM
+        // Strip filesystem-hostile chars from the client name for the suggested filename.
+        const safeName = client.name.replace(/[\\/:*?"<>|]/g, '_').trim() || 'Kunde'
+        const result = await dialog.showSaveDialog({
+          title: 'Stundennachweis speichern',
+          defaultPath: `Stundennachweis-${safeName}-${monthHint}.pdf`,
+          filters: [{ name: 'PDF', extensions: ['pdf'] }]
+        })
+        if (result.canceled || !result.filePath) {
+          return fail('Export abgebrochen')
+        }
+
+        const settingsRows = db.prepare(`SELECT key, value FROM settings`).all() as Array<{
+          key: string
+          value: string
+        }>
+        const settings = Object.fromEntries(
+          settingsRows.map((r) => [r.key, r.value])
+        ) as unknown as Settings
+        const logoDataUrl = readLogoAsDataUrl(settings.pdf_logo_path ?? '')
+
+        const payload = buildPdfPayload(db, req, logoDataUrl)
+        const html = buildPdfHtml(payload)
+        const buf = await renderPdfBuffer({ html })
+        writeFileSync(result.filePath, buf)
+        return ok({ path: result.filePath })
+      } catch (e) {
+        return fail(e)
+      }
+    }
+  )
+
+  // Logo picker — copies user-chosen image into userData/pdf-logo.<ext>
+  // and persists the path into settings.pdf_logo_path.
+  ipcMain.handle('logo:set', async (): Promise<IpcResult<{ path: string }>> => {
+    try {
+      const result = await dialog.showOpenDialog({
+        title: 'Logo auswählen',
+        properties: ['openFile'],
+        filters: [{ name: 'Bilder', extensions: ['png', 'jpg', 'jpeg', 'svg', 'webp'] }]
+      })
+      if (result.canceled || result.filePaths.length === 0) {
+        return fail('Auswahl abgebrochen')
+      }
+      const userDataDir = app.getPath('userData')
+      const target = saveLogo(result.filePaths[0], userDataDir)
+      db.prepare(
+        `INSERT INTO settings (key, value) VALUES ('pdf_logo_path', ?)
+           ON CONFLICT(key) DO UPDATE SET value = excluded.value`
+      ).run(target)
+      return ok({ path: target })
+    } catch (e) {
+      return fail(e)
+    }
+  })
+
+  ipcMain.handle('logo:clear', async (): Promise<IpcResult<void>> => {
+    try {
+      const userDataDir = app.getPath('userData')
+      removeLogo(userDataDir)
+      db.prepare(
+        `INSERT INTO settings (key, value) VALUES ('pdf_logo_path', '')
+           ON CONFLICT(key) DO UPDATE SET value = excluded.value`
+      ).run()
+      return ok(undefined)
     } catch (e) {
       return fail(e)
     }
