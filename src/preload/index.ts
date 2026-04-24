@@ -9,7 +9,8 @@ import type {
   UpdateEntryInput,
   MonthQuery,
   Settings,
-  IpcResult
+  IpcResult,
+  BackupInfo
 } from '../shared/types'
 
 const api = {
@@ -51,6 +52,16 @@ const api = {
     getAll: (): Promise<IpcResult<Settings>> => ipcRenderer.invoke('settings:getAll'),
     set: (key: string, value: string): Promise<IpcResult<void>> =>
       ipcRenderer.invoke('settings:set', key, value)
+  },
+  // Backups
+  backups: {
+    list: (): Promise<IpcResult<BackupInfo[]>> => ipcRenderer.invoke('backup:list'),
+    create: (): Promise<IpcResult<string>> => ipcRenderer.invoke('backup:create'),
+    restore: (filePath: string): Promise<IpcResult<{ safetyBackupPath: string }>> =>
+      ipcRenderer.invoke('backup:restore', filePath)
+  },
+  app: {
+    relaunch: (): Promise<IpcResult<void>> => ipcRenderer.invoke('app:relaunch')
   }
 }
 

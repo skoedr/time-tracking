@@ -1,8 +1,7 @@
 import type Database from 'better-sqlite3'
-import { app } from 'electron'
-import { join } from 'path'
-import { mkdirSync, copyFileSync, existsSync } from 'fs'
+import { existsSync, copyFileSync } from 'fs'
 import { migrations, type Migration } from './index'
+import { createBackupSync } from '../backup'
 
 const SCHEMA_VERSION_TABLE = `
   CREATE TABLE IF NOT EXISTS schema_version (
@@ -37,7 +36,7 @@ export function runMigrations(db: Database.Database, dbPath: string): MigrationR
     return { applied: [], backupPath: null }
   }
 
-  const backupPath = createPreMigrationBackup(dbPath, currentVersion)
+  const backupPath = createBackupSync(dbPath, 'pre-migration', currentVersion) ?? ''
   const applied: number[] = []
 
   for (const migration of pending) {
@@ -74,23 +73,6 @@ function applyMigration(db: Database.Database, m: Migration): void {
     )
   })
   tx()
-}
-
-function createPreMigrationBackup(dbPath: string, fromVersion: number): string {
-  if (!existsSync(dbPath)) {
-    // Fresh install — nothing to back up. Return placeholder path.
-    return ''
-  }
-  const backupsDir = join(app.getPath('userData'), 'backups')
-  mkdirSync(backupsDir, { recursive: true })
-  const ts = new Date().toISOString().replace(/[:.]/g, '-')
-  const backupPath = join(
-    backupsDir,
-    `pre-migration-v${fromVersion}-${ts}.sqlite`
-  )
-  copyFileSync(dbPath, backupPath)
-  console.log(`[migrations] Pre-migration backup: ${backupPath}`)
-  return backupPath
 }
 
 function restoreBackup(backupPath: string, dbPath: string): void {
