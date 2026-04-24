@@ -1,40 +1,140 @@
-import { app, shell, BrowserWindow, globalShortcut, Tray, Menu, ipcMain, dialog } from 'electron'
+import {
+  app,
+  shell,
+  BrowserWindow,
+  globalShortcut,
+  Tray,
+  Menu,
+  ipcMain,
+  dialog,
+  type MenuItemConstructorOptions
+} from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { getDb, recoverZombieEntries, MigrationError } from './db'
 import { registerIpcHandlers } from './ipc'
+import {
+  configureIdleWatcher,
+  setIdleThresholdMinutes,
+  startIdleWatcher,
+  stopIdleWatcher,
+  rearmIdleWatcher
+} from './idle'
+import type { Client } from '../shared/types'
 
 let mainWindow: BrowserWindow | null = null
 let tray: Tray | null = null
 let isQuitting = false
 
-function updateTray(isRunning: boolean, label: string): void {
-  if (!tray) return
-  tray.setToolTip(isRunning ? `TimeTrack ● ${label}` : 'TimeTrack — Kein Timer aktiv')
-  const menu = Menu.buildFromTemplate([
-    {
-      label: isRunning ? `● ${label}` : 'Kein Timer aktiv',
-      enabled: false
-    },
-    { type: 'separator' },
-    {
-      label: 'Fenster anzeigen',
-      click: () => {
-        mainWindow?.show()
-        mainWindow?.focus()
-      }
-    },
-    { type: 'separator' },
-    {
-      label: 'Beenden',
-      click: () => {
-        isQuitting = true
-        app.quit()
-      }
+// ── State for tray quick-start ──────────────────────────────────
+let cachedActiveClients: Client[] = []
+let isTimerRunning = false
+let runningLabel = ''
+
+function refreshActiveClients(): void {
+  try {
+    const db = getDb()
+    cachedActiveClients = db
+      .prepare(`SELECT * FROM clients WHERE active = 1 ORDER BY name ASC`)
+      .all() as Client[]
+  } catch (err) {
+    console.warn('[tray] could not refresh client cache:', err)
+    cachedActiveClients = []
+  }
+}
+
+function buildTrayMenu(): Menu {
+  const items: MenuItemConstructorOptions[] = []
+
+  items.push({
+    label: isTimerRunning ? `● ${runningLabel}` : 'Kein Timer aktiv',
+    enabled: false
+  })
+  items.push({ type: 'separator' })
+
+  if (isTimerRunning) {
+    items.push({
+      label: 'Stop',
+      click: () => mainWindow?.webContents.send('timer:tray-stop')
+    })
+  } else if (cachedActiveClients.length > 0) {
+    const quickStart: MenuItemConstructorOptions[] = cachedActiveClients
+      .slice(0, 10) // soft limit so menu stays usable
+      .map((c) => ({
+        label: `▶ ${c.name}`,
+        click: () => mainWindow?.webContents.send('timer:tray-quick-start', c.id)
+      }))
+    items.push({ label: 'Quick-Start', enabled: false })
+    items.push(...quickStart)
+  } else {
+    items.push({ label: 'Keine aktiven Kunden', enabled: false })
+  }
+
+  items.push({ type: 'separator' })
+  items.push({
+    label: 'Fenster anzeigen',
+    click: () => {
+      mainWindow?.show()
+      mainWindow?.focus()
     }
-  ])
-  tray.setContextMenu(menu)
+  })
+  items.push({ type: 'separator' })
+  items.push({
+    label: 'Beenden',
+    click: () => {
+      isQuitting = true
+      app.quit()
+    }
+  })
+
+  return Menu.buildFromTemplate(items)
+}
+
+function updateTray(running: boolean, label: string): void {
+  if (!tray) return
+  isTimerRunning = running
+  runningLabel = label
+  tray.setToolTip(running ? `TimeTrack ● ${label}` : 'TimeTrack — Kein Timer aktiv')
+  tray.setContextMenu(buildTrayMenu())
+}
+
+function registerHotkey(accelerator: string): boolean {
+  globalShortcut.unregisterAll()
+  if (!accelerator) return false
+  const ok = globalShortcut.register(accelerator, () => {
+    mainWindow?.webContents.send('timer:hotkey-toggle')
+  })
+  if (!ok) console.warn(`[hotkey] Could not register ${accelerator}`)
+  return ok
+}
+
+function applyAutoStart(enabled: boolean): void {
+  app.setLoginItemSettings({
+    openAtLogin: enabled,
+    path: process.execPath,
+    args: []
+  })
+}
+
+function loadStartupSettings(): void {
+  try {
+    const db = getDb()
+    const rows = db.prepare(`SELECT key, value FROM settings`).all() as Array<{
+      key: string
+      value: string
+    }>
+    const map = Object.fromEntries(rows.map((r) => [r.key, r.value]))
+    const idleMin = parseInt(map.idle_threshold_minutes ?? '5', 10)
+    setIdleThresholdMinutes(Number.isFinite(idleMin) ? idleMin : 5)
+    const hotkey = map.hotkey_toggle ?? 'Alt+Shift+S'
+    registerHotkey(hotkey)
+    const auto = map.auto_start === '1'
+    applyAutoStart(auto)
+  } catch (err) {
+    console.warn('[startup] settings load failed (using defaults):', err)
+    registerHotkey('Alt+Shift+S')
+  }
 }
 
 function createWindow(): void {
@@ -56,7 +156,6 @@ function createWindow(): void {
     mainWindow!.show()
   })
 
-  // Minimize to tray on close
   mainWindow.on('close', (e) => {
     if (!isQuitting) {
       e.preventDefault()
@@ -105,10 +204,21 @@ app.whenReady().then(() => {
     return
   }
   recoverZombieEntries()
-  registerIpcHandlers()
+  registerIpcHandlers({
+    refreshTrayClients: () => {
+      refreshActiveClients()
+      tray?.setContextMenu(buildTrayMenu())
+    },
+    setHotkey: (accelerator) => registerHotkey(accelerator),
+    setAutoStart: (enabled) => applyAutoStart(enabled),
+    setIdleThreshold: (minutes) => setIdleThresholdMinutes(minutes)
+  })
   createWindow()
 
-  // System tray
+  refreshActiveClients()
+  configureIdleWatcher({ getWindow: () => mainWindow })
+  loadStartupSettings()
+
   tray = new Tray(icon)
   updateTray(false, '')
   tray.on('click', () => {
@@ -120,20 +230,17 @@ app.whenReady().then(() => {
     }
   })
 
-  // Global hotkey Alt+Shift+S → toggle timer in renderer
-  const registered = globalShortcut.register('Alt+Shift+S', () => {
-    mainWindow?.webContents.send('timer:hotkey-toggle')
-  })
-  if (!registered) {
-    console.warn('Global hotkey Alt+Shift+S could not be registered')
-  }
-
-  // Renderer notifies main to update tray state
-  ipcMain.on('tray:update', (_event, isRunning: boolean, label: string) => {
-    updateTray(isRunning, label)
+  // Renderer notifies main to update tray state + drive idle watcher.
+  ipcMain.on('tray:update', (_event, running: boolean, label: string) => {
+    updateTray(running, label)
+    if (running) startIdleWatcher()
+    else stopIdleWatcher()
   })
 
-  app.on('activate', function () {
+  // Renderer dismissed idle modal — re-arm.
+  ipcMain.on('idle:dismiss', () => rearmIdleWatcher())
+
+  app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
 })
@@ -144,6 +251,7 @@ app.on('before-quit', () => {
 
 app.on('will-quit', () => {
   globalShortcut.unregisterAll()
+  stopIdleWatcher()
 })
 
 app.on('window-all-closed', () => {
@@ -151,6 +259,3 @@ app.on('window-all-closed', () => {
     app.quit()
   }
 })
-
-// In this file you can include the rest of your app's specific main process
-// code. You can also put them in separate files and require them here.
