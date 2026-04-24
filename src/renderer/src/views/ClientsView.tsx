@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import type { Client, CreateClientInput, UpdateClientInput } from '../../../shared/types'
+import { formatRateInput, parseRateInput } from '../../../shared/rate'
 
 const COLORS = [
   '#6366f1', // indigo
@@ -11,7 +12,7 @@ const COLORS = [
   '#ef4444', // red
   '#f97316', // orange
   '#14b8a6', // teal
-  '#84cc16', // lime
+  '#84cc16' // lime
 ]
 
 const COLOR_NAMES: Record<string, string> = {
@@ -24,7 +25,7 @@ const COLOR_NAMES: Record<string, string> = {
   '#ef4444': 'Rot',
   '#f97316': 'Orange',
   '#14b8a6': 'Teal',
-  '#84cc16': 'Lime',
+  '#84cc16': 'Lime'
 }
 
 export default function ClientsView() {
@@ -66,7 +67,7 @@ export default function ClientsView() {
     await loadClients()
   }
 
-  async function handleSave(data: { name: string; color: string }) {
+  async function handleSave(data: { name: string; color: string; rate_cent: number }) {
     if (editingClient) {
       const input: UpdateClientInput = { ...editingClient, ...data }
       await window.api.clients.update(input)
@@ -171,7 +172,9 @@ function ClientList({
             className={`w-4 h-4 rounded-full shrink-0 ${dimmed ? 'opacity-40' : ''}`}
             style={{ backgroundColor: c.color }}
           />
-          <span className={`flex-1 text-slate-100 font-medium ${dimmed ? 'opacity-50' : ''}`}>{c.name}</span>
+          <span className={`flex-1 text-slate-100 font-medium ${dimmed ? 'opacity-50' : ''}`}>
+            {c.name}
+          </span>
           <button
             onClick={() => onToggleActive(c)}
             title={c.active ? 'Archivieren' : 'Reaktivieren'}
@@ -203,13 +206,15 @@ function ClientFormModal({
   onClose
 }: {
   client: Client | null
-  onSave: (data: { name: string; color: string }) => Promise<void>
+  onSave: (data: { name: string; color: string; rate_cent: number }) => Promise<void>
   onClose: () => void
 }) {
   const [name, setName] = useState(client?.name ?? '')
   const [color, setColor] = useState(client?.color ?? COLORS[0])
+  const [rateInput, setRateInput] = useState(() => formatRateInput(client?.rate_cent ?? 0))
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState('')
+  const [rateError, setRateError] = useState('')
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -218,8 +223,17 @@ function ClientFormModal({
       setError('Name ist erforderlich.')
       return
     }
+    const parsed = parseRateInput(rateInput)
+    if (parsed === 'invalid') {
+      setRateError('Bitte eine Zahl eingeben (z.B. 85,00).')
+      return
+    }
+    if (parsed === 'negative') {
+      setRateError('Stundensatz darf nicht negativ sein.')
+      return
+    }
     setIsSaving(true)
-    await onSave({ name: trimmed, color })
+    await onSave({ name: trimmed, color, rate_cent: parsed })
     setIsSaving(false)
   }
 
@@ -269,12 +283,49 @@ function ClientFormModal({
                   aria-label={`Farbe ${COLOR_NAMES[c] ?? c}`}
                   onClick={() => setColor(c)}
                   className={`w-8 h-8 rounded-full transition-transform ${
-                    color === c ? 'scale-125 ring-2 ring-white ring-offset-2 ring-offset-slate-800' : 'hover:scale-110'
+                    color === c
+                      ? 'scale-125 ring-2 ring-white ring-offset-2 ring-offset-slate-800'
+                      : 'hover:scale-110'
                   }`}
                   style={{ backgroundColor: c }}
                 />
               ))}
             </div>
+          </div>
+
+          {/* Hourly rate (optional, used by v1.3 PDF export) */}
+          <div className="flex flex-col gap-1.5">
+            <label
+              htmlFor="client-rate"
+              className="text-slate-400 text-xs font-medium uppercase tracking-wide"
+            >
+              Stundensatz (€/h)
+            </label>
+            <div className="relative">
+              <input
+                id="client-rate"
+                type="text"
+                inputMode="decimal"
+                value={rateInput}
+                onChange={(e) => {
+                  setRateInput(e.target.value)
+                  setRateError('')
+                }}
+                placeholder="Optional, z.B. 85,00"
+                className="bg-slate-900 border border-slate-600 rounded-lg pl-3 pr-10 py-2.5 w-full
+                  text-slate-100 placeholder:text-slate-600 focus:outline-none
+                  focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              />
+              <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm text-slate-500">
+                €
+              </span>
+            </div>
+            {rateError && <p className="text-red-400 text-xs">{rateError}</p>}
+            {!rateError && (
+              <p className="text-slate-500 text-xs">
+                Leer lassen oder 0, wenn kein Honorar berechnet werden soll.
+              </p>
+            )}
           </div>
 
           {/* Buttons */}

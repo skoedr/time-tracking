@@ -2,7 +2,27 @@
 
 All notable changes to TimeTrack are documented here.
 
-## [Unreleased] — v1.2
+## [Unreleased] — v1.3
+
+### Added
+
+- **Stundensatz pro Kunde** (#20) — Optionales Honorar-Feld in der Kunden­maske,
+  gespeichert als Integer-Cents in `clients.rate_cent` (0 = kein Satz hinterlegt).
+  Eingabe als deutsche Dezimalzahl (`85,00`); wird in PR C als €-Spalte im PDF
+  ausgegeben. Reuse der bereits in v1.2-Migration 003 angelegten Spalte — keine
+  zusätzliche Migration nötig.
+- **Quick-Filter-Pillen im Kalender** (#21) — Vier Buttons („Diese Woche",
+  „Letzte Woche", „Diesen Monat", „Letzter Monat") plus farbiger
+  Hero-Button „📄 Letzter Monat als PDF" über dem Kalender. PR A liefert die
+  Buttons + DST-sichere Range-Berechnung (`getQuickRange`); das eigentliche
+  PDF-Modal landet in PR C.
+- **Migration 004** — Seedet Settings-Schlüssel für die kommende
+  PDF-Pipeline (`pdf_logo_path`, `pdf_sender_address`, `pdf_tax_id`,
+  `pdf_accent_color` mit Default `#4f46e5`, `pdf_footer_text`,
+  `pdf_round_minutes` mit Default `0`). Idempotent via `INSERT OR IGNORE`,
+  überschreibt also keine vom User gesetzten Werte beim Replay.
+
+## [1.2.0] — 2026-04-24
 
 ### Added
 

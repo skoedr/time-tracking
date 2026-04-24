@@ -117,6 +117,13 @@ describe('migration SQL execution', () => {
       { key: 'hotkey_toggle', value: 'Alt+Shift+S' },
       { key: 'idle_threshold_minutes', value: '5' },
       { key: 'language', value: 'de' },
+      // Migration 004 — PDF template seeds (v1.3 PR A)
+      { key: 'pdf_accent_color', value: '#4f46e5' },
+      { key: 'pdf_footer_text', value: '' },
+      { key: 'pdf_logo_path', value: '' },
+      { key: 'pdf_round_minutes', value: '0' },
+      { key: 'pdf_sender_address', value: '' },
+      { key: 'pdf_tax_id', value: '' },
       { key: 'rounding_minutes', value: '15' },
       { key: 'rounding_mode', value: 'none' }
     ])
@@ -253,6 +260,50 @@ describe('migration SQL execution', () => {
     db.prepare("INSERT INTO clients (name) VALUES ('Acme')").run()
     const row = db.prepare('SELECT rate_cent FROM clients').get() as { rate_cent: number }
     expect(row.rate_cent).toBe(0)
+  })
+
+  it('migration 004 seeds PDF template settings keys', () => {
+    applyAll()
+    const keys = (
+      db.prepare("SELECT key FROM settings WHERE key LIKE 'pdf_%' ORDER BY key").all() as Array<{
+        key: string
+      }>
+    ).map((r) => r.key)
+    expect(keys).toEqual([
+      'pdf_accent_color',
+      'pdf_footer_text',
+      'pdf_logo_path',
+      'pdf_round_minutes',
+      'pdf_sender_address',
+      'pdf_tax_id'
+    ])
+    const accent = db.prepare("SELECT value FROM settings WHERE key='pdf_accent_color'").get() as {
+      value: string
+    }
+    expect(accent.value).toBe('#4f46e5')
+    const round = db.prepare("SELECT value FROM settings WHERE key='pdf_round_minutes'").get() as {
+      value: string
+    }
+    expect(round.value).toBe('0')
+  })
+
+  it('migration 004 is idempotent (preserves user-overridden values)', () => {
+    applyAll()
+    db.prepare("UPDATE settings SET value='#ff0000' WHERE key='pdf_accent_color'").run()
+    // Re-running the same INSERT OR IGNORE statement must not reset the override.
+    db.exec(`
+      INSERT OR IGNORE INTO settings (key, value) VALUES
+        ('pdf_logo_path', ''),
+        ('pdf_sender_address', ''),
+        ('pdf_tax_id', ''),
+        ('pdf_accent_color', '#4f46e5'),
+        ('pdf_footer_text', ''),
+        ('pdf_round_minutes', '0');
+    `)
+    const accent = db.prepare("SELECT value FROM settings WHERE key='pdf_accent_color'").get() as {
+      value: string
+    }
+    expect(accent.value).toBe('#ff0000')
   })
 
   it('rolls back migration on SQL failure (transactional)', () => {

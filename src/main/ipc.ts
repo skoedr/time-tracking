@@ -36,6 +36,20 @@ function fail(error: unknown): IpcResult<never> {
   return { ok: false, error: String(error) }
 }
 
+/**
+ * Coerce optional `rate_cent` from the renderer into a non-negative integer.
+ * `undefined` (legacy callers) → 0; negative or NaN → throws so the IPC
+ * surfaces the error instead of silently saving garbage.
+ */
+function normaliseRateCent(value: unknown): number {
+  if (value === undefined || value === null) return 0
+  const n = Number(value)
+  if (!Number.isFinite(n) || n < 0) {
+    throw new Error('Stundensatz darf nicht negativ sein')
+  }
+  return Math.round(n)
+}
+
 export function registerIpcHandlers(hooks: IpcHooks): void {
   const db = getDb()
 
@@ -51,9 +65,10 @@ export function registerIpcHandlers(hooks: IpcHooks): void {
 
   ipcMain.handle('clients:create', (_e, input: CreateClientInput): IpcResult<Client> => {
     try {
+      const rate = normaliseRateCent(input.rate_cent)
       const info = db
-        .prepare(`INSERT INTO clients (name, color) VALUES (?, ?)`)
-        .run(input.name.trim(), input.color)
+        .prepare(`INSERT INTO clients (name, color, rate_cent) VALUES (?, ?, ?)`)
+        .run(input.name.trim(), input.color, rate)
       const row = db
         .prepare(`SELECT * FROM clients WHERE id = ?`)
         .get(info.lastInsertRowid) as Client
@@ -66,12 +81,10 @@ export function registerIpcHandlers(hooks: IpcHooks): void {
 
   ipcMain.handle('clients:update', (_e, input: UpdateClientInput): IpcResult<Client> => {
     try {
-      db.prepare(`UPDATE clients SET name = ?, color = ?, active = ? WHERE id = ?`).run(
-        input.name.trim(),
-        input.color,
-        input.active,
-        input.id
-      )
+      const rate = normaliseRateCent(input.rate_cent)
+      db.prepare(
+        `UPDATE clients SET name = ?, color = ?, active = ?, rate_cent = ? WHERE id = ?`
+      ).run(input.name.trim(), input.color, input.active, rate, input.id)
       const row = db.prepare(`SELECT * FROM clients WHERE id = ?`).get(input.id) as Client
       hooks.refreshTrayClients()
       return ok(row)
