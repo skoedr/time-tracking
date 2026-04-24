@@ -20,6 +20,14 @@ declare global {
         update(isRunning: boolean, label: string): void
       }
       onHotkeyToggle(callback: () => void): () => void
+      onTrayQuickStart(callback: (clientId: number) => void): () => void
+      onTrayStop(callback: () => void): () => void
+      onIdleDetected(
+        callback: (data: { idleSince: string; idleSeconds: number }) => void
+      ): () => void
+      idle: {
+        dismiss(): void
+      }
       clients: {
         getAll(): Promise<IpcResult<Client[]>>
         create(input: CreateClientInput): Promise<IpcResult<Client>>
@@ -46,6 +54,14 @@ declare global {
       }
       app: {
         relaunch(): Promise<IpcResult<void>>
+        getVersion(): Promise<IpcResult<string>>
+      }
+      shell: {
+        openPath(path: string): Promise<IpcResult<void>>
+        showItemInFolder(path: string): Promise<IpcResult<void>>
+      }
+      paths: {
+        get(): Promise<IpcResult<{ db: string; backups: string }>>
       }
     }
   }

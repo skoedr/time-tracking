@@ -24,6 +24,29 @@ const api = {
     ipcRenderer.on('timer:hotkey-toggle', handler)
     return () => ipcRenderer.removeListener('timer:hotkey-toggle', handler)
   },
+  onTrayQuickStart: (callback: (clientId: number) => void): (() => void) => {
+    const handler = (_e: unknown, clientId: number): void => callback(clientId)
+    ipcRenderer.on('timer:tray-quick-start', handler)
+    return () => ipcRenderer.removeListener('timer:tray-quick-start', handler)
+  },
+  onTrayStop: (callback: () => void): (() => void) => {
+    const handler = (): void => callback()
+    ipcRenderer.on('timer:tray-stop', handler)
+    return () => ipcRenderer.removeListener('timer:tray-stop', handler)
+  },
+  onIdleDetected: (
+    callback: (data: { idleSince: string; idleSeconds: number }) => void
+  ): (() => void) => {
+    const handler = (
+      _e: unknown,
+      data: { idleSince: string; idleSeconds: number }
+    ): void => callback(data)
+    ipcRenderer.on('timer:idle-detected', handler)
+    return () => ipcRenderer.removeListener('timer:idle-detected', handler)
+  },
+  idle: {
+    dismiss: (): void => ipcRenderer.send('idle:dismiss')
+  },
   // Clients
   clients: {
     getAll: (): Promise<IpcResult<Client[]>> => ipcRenderer.invoke('clients:getAll'),
@@ -61,7 +84,18 @@ const api = {
       ipcRenderer.invoke('backup:restore', filePath)
   },
   app: {
-    relaunch: (): Promise<IpcResult<void>> => ipcRenderer.invoke('app:relaunch')
+    relaunch: (): Promise<IpcResult<void>> => ipcRenderer.invoke('app:relaunch'),
+    getVersion: (): Promise<IpcResult<string>> => ipcRenderer.invoke('app:getVersion')
+  },
+  shell: {
+    openPath: (path: string): Promise<IpcResult<void>> =>
+      ipcRenderer.invoke('shell:openPath', path),
+    showItemInFolder: (path: string): Promise<IpcResult<void>> =>
+      ipcRenderer.invoke('shell:showItemInFolder', path)
+  },
+  paths: {
+    get: (): Promise<IpcResult<{ db: string; backups: string }>> =>
+      ipcRenderer.invoke('paths:get')
   }
 }
 

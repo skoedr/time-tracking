@@ -1,11 +1,15 @@
 import { useState } from 'react'
 import TimerView from './views/TimerView'
 import ClientsView from './views/ClientsView'
+import SettingsView from './views/SettingsView'
+import { IdleModal } from './components/IdleModal'
+import { useTimer } from './hooks/useTimer'
 
 type View = 'timer' | 'calendar' | 'clients' | 'settings'
 
 function App(): React.JSX.Element {
   const [view, setView] = useState<View>('timer')
+  const { idleEvent, idleKeep, idleStopAtIdle, idleMarkPause } = useTimer()
 
   return (
     <div className="h-screen bg-slate-900 text-slate-100 flex flex-col overflow-hidden">
@@ -41,14 +45,18 @@ function App(): React.JSX.Element {
           </div>
         )}
         {view === 'clients' && <ClientsView />}
-        {view === 'settings' && (
-          <div className="flex flex-col items-center justify-center mt-24 gap-3 text-slate-600">
-            <span className="text-5xl">⚙️</span>
-            <p className="font-medium text-slate-400">Einstellungen</p>
-            <p className="text-sm">Kommen in einer späteren Session.</p>
-          </div>
-        )}
+        {view === 'settings' && <SettingsView />}
       </main>
+
+      {idleEvent && (
+        <IdleModal
+          idleSince={idleEvent.idleSince}
+          idleSeconds={idleEvent.idleSeconds}
+          onKeep={idleKeep}
+          onStopAtIdle={idleStopAtIdle}
+          onMarkPause={idleMarkPause}
+        />
+      )}
     </div>
   )
 }

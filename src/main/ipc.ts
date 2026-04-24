@@ -1,6 +1,7 @@
-import { ipcMain } from 'electron'
+import { ipcMain, shell } from 'electron'
 import { app } from 'electron'
 import { getDb, getDbPath } from './db'
+import { getBackupsDir } from './backup'
 import {
   createBackup,
   listBackups,
@@ -19,6 +20,13 @@ import type {
   BackupInfo
 } from '../shared/types'
 
+export interface IpcHooks {
+  refreshTrayClients(): void
+  setHotkey(accelerator: string): boolean
+  setAutoStart(enabled: boolean): void
+  setIdleThreshold(minutes: number): void
+}
+
 function ok<T>(data: T): IpcResult<T> {
   return { ok: true, data }
 }
@@ -26,7 +34,7 @@ function fail(error: unknown): IpcResult<never> {
   return { ok: false, error: String(error) }
 }
 
-export function registerIpcHandlers(): void {
+export function registerIpcHandlers(hooks: IpcHooks): void {
   const db = getDb()
 
   // ── Clients ──────────────────────────────────────────────────
@@ -47,6 +55,7 @@ export function registerIpcHandlers(): void {
       const row = db
         .prepare(`SELECT * FROM clients WHERE id = ?`)
         .get(info.lastInsertRowid) as Client
+      hooks.refreshTrayClients()
       return ok(row)
     } catch (e) {
       return fail(e)
@@ -62,6 +71,7 @@ export function registerIpcHandlers(): void {
         input.id
       )
       const row = db.prepare(`SELECT * FROM clients WHERE id = ?`).get(input.id) as Client
+      hooks.refreshTrayClients()
       return ok(row)
     } catch (e) {
       return fail(e)
@@ -71,6 +81,7 @@ export function registerIpcHandlers(): void {
   ipcMain.handle('clients:delete', (_e, id: number): IpcResult<void> => {
     try {
       db.prepare(`DELETE FROM clients WHERE id = ?`).run(id)
+      hooks.refreshTrayClients()
       return ok(undefined)
     } catch (e) {
       return fail(e)
@@ -193,6 +204,16 @@ export function registerIpcHandlers(): void {
   ipcMain.handle('settings:set', (_e, key: string, value: string): IpcResult<void> => {
     try {
       db.prepare(`INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)`).run(key, value)
+      // Apply side-effects for known keys.
+      if (key === 'idle_threshold_minutes') {
+        const n = parseInt(value, 10)
+        if (Number.isFinite(n)) hooks.setIdleThreshold(n)
+      } else if (key === 'auto_start') {
+        hooks.setAutoStart(value === '1')
+      } else if (key === 'hotkey_toggle') {
+        const okHotkey = hooks.setHotkey(value)
+        if (!okHotkey) return fail(`Hotkey "${value}" konnte nicht registriert werden`)
+      }
       return ok(undefined)
     } catch (e) {
       return fail(e)
@@ -238,5 +259,26 @@ export function registerIpcHandlers(): void {
     app.relaunch()
     app.exit(0)
     return ok(undefined)
+  })
+
+  // ── Shell helpers ────────────────────────────────
+  ipcMain.handle('shell:openPath', async (_e, path: string): Promise<IpcResult<void>> => {
+    const err = await shell.openPath(path)
+    if (err) return fail(err)
+    return ok(undefined)
+  })
+
+  ipcMain.handle('shell:showItemInFolder', (_e, path: string): IpcResult<void> => {
+    shell.showItemInFolder(path)
+    return ok(undefined)
+  })
+
+  // ── Paths (for Settings-View) ──────────────────────────
+  ipcMain.handle('paths:get', (): IpcResult<{ db: string; backups: string }> => {
+    return ok({ db: getDbPath(), backups: getBackupsDir() })
+  })
+
+  ipcMain.handle('app:getVersion', (): IpcResult<string> => {
+    return ok(app.getVersion())
   })
 }

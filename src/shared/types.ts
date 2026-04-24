@@ -24,6 +24,11 @@ export interface Settings {
   rounding_minutes: '5' | '10' | '15' | '30'
   company_name: string
   backup_path: string
+  // v1.1
+  idle_threshold_minutes: string
+  language: string
+  auto_start: string
+  hotkey_toggle: string
 }
 
 export interface CreateClientInput {

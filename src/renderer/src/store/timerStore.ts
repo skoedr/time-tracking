@@ -12,6 +12,9 @@ interface TimerState {
   elapsedSeconds: number
   isLoading: boolean
 
+  // Idle modal
+  idleEvent: { idleSince: string; idleSeconds: number } | null
+
   // Actions
   setClients: (clients: Client[]) => void
   setRunningEntry: (entry: Entry | null) => void
@@ -19,6 +22,7 @@ interface TimerState {
   setDescription: (desc: string) => void
   setElapsedSeconds: (s: number) => void
   setIsLoading: (v: boolean) => void
+  setIdleEvent: (e: { idleSince: string; idleSeconds: number } | null) => void
 }
 
 export const useTimerStore = create<TimerState>((set) => ({
@@ -28,11 +32,13 @@ export const useTimerStore = create<TimerState>((set) => ({
   description: '',
   elapsedSeconds: 0,
   isLoading: false,
+  idleEvent: null,
 
   setClients: (clients) => set({ clients }),
   setRunningEntry: (runningEntry) => set({ runningEntry }),
   setSelectedClientId: (selectedClientId) => set({ selectedClientId }),
   setDescription: (description) => set({ description }),
   setElapsedSeconds: (elapsedSeconds) => set({ elapsedSeconds }),
-  setIsLoading: (isLoading) => set({ isLoading })
+  setIsLoading: (isLoading) => set({ isLoading }),
+  setIdleEvent: (idleEvent) => set({ idleEvent })
 }))
