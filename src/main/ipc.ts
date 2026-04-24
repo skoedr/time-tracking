@@ -1,9 +1,13 @@
 import { ipcMain, shell } from 'electron'
 import { app } from 'electron'
+import { dialog } from 'electron'
+import { writeFileSync } from 'fs'
+import { randomUUID } from 'crypto'
 import { getDb, getDbPath } from './db'
 import { getBackupsDir } from './backup'
 import { createBackup, listBackups, restoreBackup as restoreBackupFile } from './backup'
-import { isSameLocalDay } from '../shared/date'
+import { splitAtMidnight } from '../shared/midnightSplit'
+import { buildJsonExportPayload } from './jsonExport'
 import type {
   Client,
   Entry,
@@ -191,30 +195,19 @@ export function registerIpcHandlers(hooks: IpcHooks): void {
    * Manual-entry creation (Today "+ Eintrag nachtragen", Calendar Drawer
    * "+ Eintrag hinzufügen"). Server-side validation per v1.2 plan E3 — UI
    * may also pre-validate but must not be the only line of defence.
+   *
+   * v1.3 PR B: Cross-midnight entries are auto-split at local midnight
+   * into linked halves sharing a `link_id` (UUID). The first half's row
+   * is returned for UI selection; the renderer's `getByMonth` query will
+   * surface the second half on its own day.
    */
   ipcMain.handle('entries:create', (_e, input: CreateManualEntryInput): IpcResult<Entry> => {
     try {
       const err = validateManualEntry(db, input)
       if (err) return fail(err)
-      const info = db
-        .prepare(
-          `INSERT INTO entries (client_id, description, started_at, stopped_at, heartbeat_at, rounded_min)
-           VALUES (?, ?, ?, ?, ?, ?)`
-        )
-        .run(
-          input.client_id,
-          input.description.trim(),
-          input.started_at,
-          input.stopped_at,
-          input.stopped_at,
-          Math.round(
-            (new Date(input.stopped_at).getTime() - new Date(input.started_at).getTime()) / 60000
-          )
-        )
-      const row = db
-        .prepare(`SELECT * FROM entries WHERE id = ?`)
-        .get(info.lastInsertRowid) as Entry
-      return ok(row)
+      const segments = splitAtMidnight(new Date(input.started_at), new Date(input.stopped_at))
+      const insertedRow = insertEntrySegments(db, input, segments)
+      return ok(insertedRow)
     } catch (e) {
       return fail(e)
     }
@@ -222,25 +215,28 @@ export function registerIpcHandlers(hooks: IpcHooks): void {
 
   ipcMain.handle('entries:update', (_e, input: UpdateEntryInput): IpcResult<Entry> => {
     try {
-      // Reuse the same validation contract as create (excluding overlap with self).
-      const err = validateManualEntry(db, input, input.id)
+      // Reuse the same validation contract as create. We exclude both the
+      // current row (`input.id`) and any sibling sharing its link_id so the
+      // overlap check doesn't fire against the about-to-be-deleted halves.
+      const existing = db.prepare(`SELECT link_id FROM entries WHERE id = ?`).get(input.id) as
+        | { link_id: string | null }
+        | undefined
+      const existingLinkId = existing?.link_id ?? undefined
+      const err = validateManualEntry(db, input, input.id, existingLinkId ?? undefined)
       if (err) return fail(err)
-      db.prepare(
-        `UPDATE entries
-            SET client_id = ?, description = ?, started_at = ?, stopped_at = ?,
-                rounded_min = ?
-          WHERE id = ?`
-      ).run(
-        input.client_id,
-        input.description.trim(),
-        input.started_at,
-        input.stopped_at,
-        Math.round(
-          (new Date(input.stopped_at).getTime() - new Date(input.started_at).getTime()) / 60000
-        ),
-        input.id
-      )
-      const row = db.prepare(`SELECT * FROM entries WHERE id = ?`).get(input.id) as Entry
+      const segments = splitAtMidnight(new Date(input.started_at), new Date(input.stopped_at))
+      const tx = db.transaction((): Entry => {
+        // Drop the original row + any linked sibling, then re-insert. This
+        // keeps the cross-midnight bookkeeping in one place rather than
+        // distinguishing "edit one half" vs "edit a single-day row".
+        if (existingLinkId) {
+          db.prepare(`DELETE FROM entries WHERE link_id = ?`).run(existingLinkId)
+        } else {
+          db.prepare(`DELETE FROM entries WHERE id = ?`).run(input.id)
+        }
+        return insertEntrySegments(db, input, segments)
+      })
+      const row = tx()
       return ok(row)
     } catch (e) {
       return fail(e)
@@ -250,10 +246,24 @@ export function registerIpcHandlers(hooks: IpcHooks): void {
   /**
    * Soft-delete: flip deleted_at instead of removing the row, so the Toast
    * "Rückgängig" path can restore the SAME id (preserves future PDF FKs — E10).
+   *
+   * v1.3 PR B: when `cascadeLinked` is true and the row has a `link_id`,
+   * all rows sharing that id are soft-deleted in one transaction (used by
+   * the Drawer's "auch zweite Hälfte löschen" confirm).
    */
-  ipcMain.handle('entries:delete', (_e, id: number): IpcResult<void> => {
+  ipcMain.handle('entries:delete', (_e, id: number, cascadeLinked = false): IpcResult<void> => {
     try {
-      db.prepare(`UPDATE entries SET deleted_at = ? WHERE id = ?`).run(new Date().toISOString(), id)
+      const now = new Date().toISOString()
+      if (cascadeLinked) {
+        const row = db.prepare(`SELECT link_id FROM entries WHERE id = ?`).get(id) as
+          | { link_id: string | null }
+          | undefined
+        if (row?.link_id) {
+          db.prepare(`UPDATE entries SET deleted_at = ? WHERE link_id = ?`).run(now, row.link_id)
+          return ok(undefined)
+        }
+      }
+      db.prepare(`UPDATE entries SET deleted_at = ? WHERE id = ?`).run(now, id)
       return ok(undefined)
     } catch (e) {
       return fail(e)
@@ -490,6 +500,37 @@ export function registerIpcHandlers(hooks: IpcHooks): void {
   ipcMain.handle('app:getVersion', (): IpcResult<string> => {
     return ok(app.getVersion())
   })
+
+  /**
+   * Full JSON export (#17, v1.3 PR B). Bundles every client + entry
+   * (including soft-deleted + linked halves) + every settings row, plus a
+   * meta header (`schemaVersion`, `exportedAt`, `appVersion`). Output is
+   * intentionally human-readable (2-space indent) so the file is also a
+   * trust-building artefact: open it in any text editor, see your data,
+   * confidence in the app goes up.
+   *
+   * Pure data dump — no transforms, no PII filtering, no field renaming.
+   * Future v1.3.x or v1.4 CSV/PDF exports build on top of this snapshot.
+   */
+  ipcMain.handle('export:json', async (): Promise<IpcResult<{ path: string; bytes: number }>> => {
+    try {
+      const today = new Date().toISOString().slice(0, 10)
+      const result = await dialog.showSaveDialog({
+        title: 'Datenexport speichern',
+        defaultPath: `timetrack-export-${today}.json`,
+        filters: [{ name: 'JSON', extensions: ['json'] }]
+      })
+      if (result.canceled || !result.filePath) {
+        return fail('Export abgebrochen')
+      }
+      const payload = buildJsonExportPayload(db, app.getVersion())
+      const json = JSON.stringify(payload, null, 2)
+      writeFileSync(result.filePath, json, 'utf8')
+      return ok({ path: result.filePath, bytes: Buffer.byteLength(json, 'utf8') })
+    } catch (e) {
+      return fail(e)
+    }
+  })
 }
 
 /**
@@ -501,12 +542,17 @@ export function registerIpcHandlers(hooks: IpcHooks): void {
  * Rules:
  *  - started_at <= now (no future entries)
  *  - stopped_at > started_at
- *  - same local day (cross-midnight rejected in v1.2; v1.3 will lift this)
  *  - client_id exists
  *  - description.length <= 500
  *  - duration <= 24h
  *  - no overlap with existing non-deleted entry of the same client
- *    (excluding the entry itself when updating)
+ *    (excluding the entry itself when updating; for cross-midnight splits
+ *    the caller passes `excludeLinkId` so the second half doesn't claim
+ *    its sibling overlaps)
+ *
+ * Cross-midnight is allowed since v1.3 PR B — entries that cross local
+ * midnight are auto-split into linked halves by the create/update IPC
+ * before insertion (see `splitAtMidnight`).
  */
 function validateManualEntry(
   db: ReturnType<typeof getDb>,
@@ -516,7 +562,8 @@ function validateManualEntry(
     started_at: string
     stopped_at: string
   },
-  excludeId?: number
+  excludeId?: number,
+  excludeLinkId?: string
 ): string | null {
   const start = new Date(input.started_at)
   const stop = new Date(input.stopped_at)
@@ -525,9 +572,6 @@ function validateManualEntry(
   const now = Date.now()
   if (start.getTime() > now) return 'Startzeit darf nicht in der Zukunft liegen'
   if (stop.getTime() <= start.getTime()) return 'Endzeit muss nach der Startzeit liegen'
-  if (!isSameLocalDay(start, stop)) {
-    return 'Einträge können aktuell nicht über Mitternacht gehen (folgt in v1.3)'
-  }
   const durationSec = (stop.getTime() - start.getTime()) / 1000
   if (durationSec > MAX_DURATION_SECONDS) return 'Dauer überschreitet 24 Stunden'
   if ((input.description ?? '').length > MAX_DESCRIPTION_LEN) {
@@ -549,7 +593,55 @@ function validateManualEntry(
     overlapSql += ` AND id != ?`
     params.push(excludeId)
   }
+  if (excludeLinkId !== undefined) {
+    overlapSql += ` AND (link_id IS NULL OR link_id != ?)`
+    params.push(excludeLinkId)
+  }
   const overlap = db.prepare(overlapSql).get(...params) as { id: number } | undefined
   if (overlap) return 'Eintrag überlappt mit einem bestehenden Eintrag desselben Kunden'
   return null
+}
+
+/**
+ * Insert one or more time segments produced by `splitAtMidnight`. Single
+ * segment → plain insert (link_id stays NULL). Multiple segments → all
+ * rows share a fresh UUID `link_id` so the UI / delete flow can find
+ * siblings later. Returns the FIRST inserted row (the one whose start
+ * matches the user's input.started_at), so the renderer can reveal the
+ * correct day in the calendar.
+ *
+ * Caller must have already run `validateManualEntry` against the full
+ * (un-split) range. Runs inside a single transaction so a failed insert
+ * leaves no half-state behind.
+ */
+function insertEntrySegments(
+  db: ReturnType<typeof getDb>,
+  input: { client_id: number; description: string },
+  segments: Array<{ start: Date; stop: Date }>
+): Entry {
+  const linkId = segments.length > 1 ? randomUUID() : null
+  const description = input.description.trim()
+  const insertStmt = db.prepare(
+    `INSERT INTO entries (client_id, description, started_at, stopped_at, heartbeat_at, rounded_min, link_id)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`
+  )
+  const tx = db.transaction((): Entry => {
+    let firstId = 0
+    for (const seg of segments) {
+      const startedAt = seg.start.toISOString()
+      const stoppedAt = seg.stop.toISOString()
+      const info = insertStmt.run(
+        input.client_id,
+        description,
+        startedAt,
+        stoppedAt,
+        stoppedAt,
+        Math.round((seg.stop.getTime() - seg.start.getTime()) / 60000),
+        linkId
+      )
+      if (firstId === 0) firstId = Number(info.lastInsertRowid)
+    }
+    return db.prepare(`SELECT * FROM entries WHERE id = ?`).get(firstId) as Entry
+  })
+  return tx()
 }

@@ -44,7 +44,7 @@ declare global {
         getByMonth(query: MonthQuery): Promise<IpcResult<Entry[]>>
         create(input: CreateManualEntryInput): Promise<IpcResult<Entry>>
         update(input: UpdateEntryInput): Promise<IpcResult<Entry>>
-        delete(id: number): Promise<IpcResult<void>>
+        delete(id: number, cascadeLinked?: boolean): Promise<IpcResult<void>>
         undelete(id: number): Promise<IpcResult<Entry>>
       }
       settings: {
@@ -70,6 +70,9 @@ declare global {
       }
       paths: {
         get(): Promise<IpcResult<{ db: string; backups: string }>>
+      }
+      exporter: {
+        json(): Promise<IpcResult<{ path: string; bytes: number }>>
       }
     }
   }

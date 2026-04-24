@@ -21,6 +21,21 @@ All notable changes to TimeTrack are documented here.
   `pdf_accent_color` mit Default `#4f46e5`, `pdf_footer_text`,
   `pdf_round_minutes` mit Default `0`). Idempotent via `INSERT OR IGNORE`,
   überschreibt also keine vom User gesetzten Werte beim Replay.
+- **Cross-Midnight Auto-Split** — Einträge, die lokale Mitternacht überqueren,
+  werden im IPC-Layer automatisch in zwei (oder mehr) verlinkte Hälften
+  aufgeteilt. Beide Hälften teilen sich eine UUID in der neuen Spalte
+  `entries.link_id` (Migration 005, partieller Index `idx_entries_link_id`).
+  Tagessummen, KW-Aggregate und PDF-Reports rechnen damit automatisch korrekt
+  pro Tag. Der „nicht über Mitternacht möglich"-Hinweis im Eintrag-Dialog
+  ist entfernt; DST-sicher (Frühling/Herbst getestet via `date-fns`).
+  Löschen kaskadiert optional auf die Geschwister-Hälfte (`cascadeLinked`-Flag
+  in `entries:delete`).
+- **JSON-Vollexport** (#17) — Neuer Button „Export speichern …" in
+  Einstellungen → Daten. Schreibt eine lesbare JSON-Datei mit `meta`
+  (Schema-Version, Zeitstempel, App-Version), allen Kunden, allen Einträgen
+  (inkl. soft-gelöschter und verlinkter Hälften) und allen Settings.
+  Trust-Artefakt: User können ihre Daten byte-genau verifizieren; CSV/PDF
+  bauen in PR C/D darauf auf.
 
 ## [1.2.0] — 2026-04-24
 

@@ -12,7 +12,6 @@ import { tmpdir } from 'os'
 import { join } from 'path'
 import type Database from 'better-sqlite3'
 import { migrations } from './migrations'
-import { isSameLocalDay } from '../shared/date'
 
 const MAX_DESCRIPTION_LEN = 500
 const MAX_DURATION_SECONDS = 24 * 3600
@@ -50,9 +49,6 @@ function validateManualEntry(
   if (Number.isNaN(stop.getTime())) return 'Endzeit ist ungültig'
   if (start.getTime() > Date.now()) return 'Startzeit darf nicht in der Zukunft liegen'
   if (stop.getTime() <= start.getTime()) return 'Endzeit muss nach der Startzeit liegen'
-  if (!isSameLocalDay(start, stop)) {
-    return 'Einträge können aktuell nicht über Mitternacht gehen (folgt in v1.3)'
-  }
   const durationSec = (stop.getTime() - start.getTime()) / 1000
   if (durationSec > MAX_DURATION_SECONDS) return 'Dauer überschreitet 24 Stunden'
   if ((input.description ?? '').length > MAX_DESCRIPTION_LEN) {
@@ -155,7 +151,7 @@ describe('entries:create / entries:update validation contract', () => {
     expect(err).toMatch(/Endzeit/)
   })
 
-  it('rejects cross-midnight (different local day)', () => {
+  it('accepts cross-midnight entries (v1.3 PR B — IPC auto-splits before insert)', () => {
     const start = new Date(yesterday)
     start.setHours(23, 30, 0, 0)
     const stop = new Date(yesterday)
@@ -167,7 +163,7 @@ describe('entries:create / entries:update validation contract', () => {
       started_at: start.toISOString(),
       stopped_at: stop.toISOString()
     })
-    expect(err).toMatch(/Mitternacht/)
+    expect(err).toBeNull()
   })
 
   it('rejects unknown client', () => {

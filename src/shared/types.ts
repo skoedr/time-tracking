@@ -19,6 +19,13 @@ export interface Entry {
   rounded_min: number | null
   deleted_at: string | null
   created_at: string
+  /**
+   * v1.3 PR B: when an entry crosses local midnight, it's stored as
+   * multiple rows that share the same UUID. NULL for plain single-day
+   * entries. The Drawer offers a "auch zweite Hälfte löschen?" prompt
+   * when the user deletes a row with a non-null link_id.
+   */
+  link_id: string | null
 }
 
 export interface Settings {
