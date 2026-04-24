@@ -1,8 +1,8 @@
-import { app, shell, BrowserWindow, globalShortcut, Tray, Menu, ipcMain } from 'electron'
+import { app, shell, BrowserWindow, globalShortcut, Tray, Menu, ipcMain, dialog } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
-import { getDb, recoverZombieEntries } from './db'
+import { getDb, recoverZombieEntries, MigrationError } from './db'
 import { registerIpcHandlers } from './ipc'
 
 let mainWindow: BrowserWindow | null = null
@@ -83,7 +83,27 @@ app.whenReady().then(() => {
     optimizer.watchWindowShortcuts(window)
   })
 
-  getDb()
+  try {
+    getDb()
+  } catch (err) {
+    if (err instanceof MigrationError) {
+      dialog.showErrorBox(
+        'TimeTrack — Datenbank-Migration fehlgeschlagen',
+        `Migration #${err.migration.version} (${err.migration.name}) ist fehlgeschlagen:\n\n` +
+          `${err.cause.message}\n\n` +
+          `Deine Datenbank wurde aus dem Pre-Migration-Backup wiederhergestellt:\n${err.backupPath}\n\n` +
+          `Die App wird jetzt beendet. Bitte melde diesen Fehler.`
+      )
+    } else {
+      dialog.showErrorBox(
+        'TimeTrack — Datenbankfehler',
+        `Datenbank konnte nicht geöffnet werden:\n\n${(err as Error).message}`
+      )
+    }
+    isQuitting = true
+    app.quit()
+    return
+  }
   recoverZombieEntries()
   registerIpcHandlers()
   createWindow()
