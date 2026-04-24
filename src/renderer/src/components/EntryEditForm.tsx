@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { Client, Entry } from '../../../shared/types'
-import { formatTimeHHMM, isSameLocalDay, parseTimeToDate } from '../../../shared/date'
+import { formatTimeHHMM, parseTimeToDate } from '../../../shared/date'
 import { useEntriesStore } from '../store/entriesStore'
 
 interface Props {
@@ -31,8 +31,9 @@ function toDateInputValue(d: Date): string {
  * for fast feedback; the server enforces the same rules authoritatively
  * (see `validateManualEntry` in src/main/ipc.ts).
  *
- * v1.2 limitation: cross-midnight entries are rejected. The persistent
- * info banner above the time fields tells the user this and points to v1.3.
+ * v1.3 PR B: cross-midnight entries are now allowed — the IPC auto-splits
+ * them into linked halves at local midnight. The previous "folgt in v1.3"
+ * banner has been removed.
  */
 export function EntryEditForm({
   entry,
@@ -74,9 +75,6 @@ export function EntryEditForm({
       return (e as Error).message
     }
     if (stop.getTime() <= start.getTime()) return 'Endzeit muss nach der Startzeit liegen'
-    if (!isSameLocalDay(start, stop)) {
-      return 'Einträge können aktuell nicht über Mitternacht gehen (folgt in v1.3)'
-    }
     if (start.getTime() > Date.now()) return 'Startzeit darf nicht in der Zukunft liegen'
     if (description.length > MAX_DESCRIPTION_LEN) {
       return `Beschreibung überschreitet ${MAX_DESCRIPTION_LEN} Zeichen`
@@ -130,13 +128,6 @@ export function EntryEditForm({
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-3 text-sm">
-      <div
-        role="note"
-        className="rounded border border-amber-700/40 bg-amber-900/20 px-3 py-2 text-xs text-amber-200"
-      >
-        ℹ️ Einträge können aktuell nicht über Mitternacht gehen. Lösung folgt in v1.3.
-      </div>
-
       <div className="grid grid-cols-3 gap-2">
         <label className="flex flex-col gap-1">
           <span className="text-xs text-zinc-400">Datum</span>

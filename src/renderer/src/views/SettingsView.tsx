@@ -101,6 +101,20 @@ export default function SettingsView(): React.JSX.Element {
     }
   }
 
+  async function exportJson(): Promise<void> {
+    setStatusMsg('Export wird vorbereitet …')
+    const res = await window.api.exporter.json()
+    if (res.ok) {
+      const kb = (res.data.bytes / 1024).toFixed(1)
+      setStatusMsg(`Export gespeichert (${kb} KB).`)
+    } else if (res.error === 'Export abgebrochen') {
+      // User cancelled the save dialog; surface no error noise.
+      setStatusMsg(null)
+    } else {
+      setStatusMsg(`Export fehlgeschlagen: ${res.error}`)
+    }
+  }
+
   if (!settings || !paths) {
     return <div className="text-slate-400">Lade Einstellungen …</div>
   }
@@ -257,6 +271,19 @@ export default function SettingsView(): React.JSX.Element {
               Insgesamt {backups.length} Backup{backups.length === 1 ? '' : 's'} gespeichert.
             </p>
           )}
+        </Row>
+        <Row label="JSON-Vollexport">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-sm text-slate-300">
+              Alle Kunden, Einträge und Einstellungen als JSON-Datei.
+            </span>
+            <button type="button" onClick={exportJson} className={btnSecondaryClass}>
+              Export speichern …
+            </button>
+          </div>
+          <p className="mt-1 text-xs text-slate-500">
+            Lesbares Format zum Backup oder zur Weiterverarbeitung. CSV/PDF folgen.
+          </p>
         </Row>
       </Section>
 

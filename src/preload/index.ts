@@ -70,7 +70,8 @@ const api = {
       ipcRenderer.invoke('entries:create', input),
     update: (input: UpdateEntryInput): Promise<IpcResult<Entry>> =>
       ipcRenderer.invoke('entries:update', input),
-    delete: (id: number): Promise<IpcResult<void>> => ipcRenderer.invoke('entries:delete', id),
+    delete: (id: number, cascadeLinked = false): Promise<IpcResult<void>> =>
+      ipcRenderer.invoke('entries:delete', id, cascadeLinked),
     undelete: (id: number): Promise<IpcResult<Entry>> => ipcRenderer.invoke('entries:undelete', id)
   },
   // Settings
@@ -102,6 +103,10 @@ const api = {
   },
   paths: {
     get: (): Promise<IpcResult<{ db: string; backups: string }>> => ipcRenderer.invoke('paths:get')
+  },
+  exporter: {
+    json: (): Promise<IpcResult<{ path: string; bytes: number }>> =>
+      ipcRenderer.invoke('export:json')
   }
 }
 
