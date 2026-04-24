@@ -263,6 +263,7 @@ export function useTimer() {
     setDescription,
     start,
     stop,
+    startWithClient,
     idleKeep,
     idleStopAtIdle,
     idleMarkPause
