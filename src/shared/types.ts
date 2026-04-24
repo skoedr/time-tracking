@@ -38,6 +38,15 @@ export interface Settings {
   language: string
   auto_start: string
   hotkey_toggle: string
+  // v1.3 PR A — PDF template settings (seeded by migration 004).
+  // All stored as strings in the key-value `settings` table; the renderer
+  // parses pdf_round_minutes back to a number when needed.
+  pdf_logo_path: string
+  pdf_sender_address: string
+  pdf_tax_id: string
+  pdf_accent_color: string
+  pdf_footer_text: string
+  pdf_round_minutes: string
 }
 
 export interface CreateClientInput {

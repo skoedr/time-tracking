@@ -36,6 +36,20 @@ All notable changes to TimeTrack are documented here.
   (inkl. soft-gelöschter und verlinkter Hälften) und allen Settings.
   Trust-Artefakt: User können ihre Daten byte-genau verifizieren; CSV/PDF
   bauen in PR C/D darauf auf.
+- **PDF-Stundennachweis** (#16, #19) — Hero-Path: 1-Klick aus dem Kalender
+  („📄 Letzter Monat als PDF" oder eine Quick-Filter-Pille) öffnet ein
+  Modal, in dem Kunde + Zeitraum vorbelegt sind, und schreibt nach
+  Bestätigung ein druckbares A4-PDF im deutschen Stundennachweis-Layout
+  (Datum / Von / Bis / Tätigkeit / Dauer, optional Honorar wenn der Kunde
+  einen Stundensatz hat). Logo, Absenderadresse, Steuernummer,
+  Akzentfarbe, Footer-Text und optionale Stunden-Rundung
+  (5/10/15/30 min) konfigurierbar in **Einstellungen → PDF-Vorlage**.
+  Implementierung: Hidden `BrowserWindow` + `printToPDF`; das HTML-Template
+  ist eine String-Render-Funktion mit base64-eingebettetem Logo und CSP
+  `default-src 'none'; img-src data:; style-src 'unsafe-inline'` —
+  kein `webSecurity:false` nötig, kein dritter Vite-Renderer-Entry.
+  Honorar-Berechnung integer-cent: `Math.round(min × rateCent / 60)`,
+  Ausgabe als deutsches Format `1.234,56 €`.
 
 ## [1.2.0] — 2026-04-24
 
