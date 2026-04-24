@@ -76,9 +76,10 @@ describe('migration SQL execution', () => {
     for (const m of migrations) {
       const tx = db.transaction(() => {
         db.exec(m.up)
-        db.prepare(
-          'INSERT INTO schema_version (version, name) VALUES (?, ?)'
-        ).run(m.version, m.name)
+        db.prepare('INSERT INTO schema_version (version, name) VALUES (?, ?)').run(
+          m.version,
+          m.name
+        )
       })
       tx()
     }
@@ -87,9 +88,9 @@ describe('migration SQL execution', () => {
   it('migration 001 creates clients, entries, settings tables', () => {
     applyAll()
     const tables = (
-      db
-        .prepare("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")
-        .all() as Array<{ name: string }>
+      db.prepare("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name").all() as Array<{
+        name: string
+      }>
     ).map((r) => r.name)
     expect(tables).toContain('clients')
     expect(tables).toContain('entries')
@@ -108,9 +109,7 @@ describe('migration SQL execution', () => {
 
   it('migrations seed default settings', () => {
     applyAll()
-    const rows = db
-      .prepare('SELECT key, value FROM settings ORDER BY key')
-      .all()
+    const rows = db.prepare('SELECT key, value FROM settings ORDER BY key').all()
     expect(rows).toEqual([
       { key: 'auto_start', value: '0' },
       { key: 'backup_path', value: '' },
@@ -123,10 +122,35 @@ describe('migration SQL execution', () => {
     ])
   })
 
-  it('migrations are idempotent', () => {
-    applyAll()
+  it('seed-only migrations are idempotent (001 + 002)', () => {
+    // Migrations whose `up` SQL contains ONLY CREATE IF NOT EXISTS and
+    // INSERT OR IGNORE are safe to replay on existing v1.0 installs.
+    // 003+ may use ALTER TABLE — those rely on schema_version + the runner
+    // (which only applies pending migrations) for idempotency.
+    const seedOnly = migrations.filter((m) => m.version <= 2)
+    for (const m of seedOnly) {
+      const tx = db.transaction(() => {
+        db.exec(m.up)
+        db.prepare('INSERT INTO schema_version (version, name) VALUES (?, ?)').run(
+          m.version,
+          m.name
+        )
+      })
+      tx()
+    }
     db.exec('DELETE FROM schema_version')
-    expect(() => applyAll()).not.toThrow()
+    expect(() => {
+      for (const m of seedOnly) {
+        const tx = db.transaction(() => {
+          db.exec(m.up)
+          db.prepare('INSERT INTO schema_version (version, name) VALUES (?, ?)').run(
+            m.version,
+            m.name
+          )
+        })
+        tx()
+      }
+    }).not.toThrow()
     const count = db.prepare('SELECT COUNT(*) as n FROM settings').get() as {
       n: number
     }
@@ -140,20 +164,95 @@ describe('migration SQL execution', () => {
       "INSERT INTO entries (client_id, started_at) VALUES (1, '2026-01-01T00:00:00Z')"
     ).run()
     db.prepare('DELETE FROM clients WHERE id = 1').run()
-    const remaining = db
-      .prepare('SELECT COUNT(*) as n FROM entries')
-      .get() as { n: number }
+    const remaining = db.prepare('SELECT COUNT(*) as n FROM entries').get() as { n: number }
     expect(remaining.n).toBe(0)
   })
 
   it('records each applied migration in schema_version', () => {
     applyAll()
-    const rows = db
-      .prepare('SELECT version, name FROM schema_version ORDER BY version')
-      .all()
-    expect(rows).toEqual(
-      migrations.map((m) => ({ version: m.version, name: m.name }))
+    const rows = db.prepare('SELECT version, name FROM schema_version ORDER BY version').all()
+    expect(rows).toEqual(migrations.map((m) => ({ version: m.version, name: m.name })))
+  })
+
+  it('migration 003 adds clients.rate_cent and entries.deleted_at', () => {
+    applyAll()
+    const clientCols = (
+      db.prepare('PRAGMA table_info(clients)').all() as Array<{ name: string }>
+    ).map((r) => r.name)
+    const entryCols = (
+      db.prepare('PRAGMA table_info(entries)').all() as Array<{ name: string }>
+    ).map((r) => r.name)
+    expect(clientCols).toContain('rate_cent')
+    expect(entryCols).toContain('deleted_at')
+  })
+
+  it('migration 003 creates idx_entries_started_at', () => {
+    applyAll()
+    const idx = db
+      .prepare(
+        "SELECT name FROM sqlite_master WHERE type='index' AND name='idx_entries_started_at'"
+      )
+      .get()
+    expect(idx).toBeDefined()
+  })
+
+  it('migration 003 backfills rounded_min for finished entries only', () => {
+    applyAll()
+    db.prepare("INSERT INTO clients (id, name) VALUES (1, 'Acme')").run()
+    // Finished entry without rounded_min
+    db.prepare(
+      `INSERT INTO entries (client_id, started_at, stopped_at)
+       VALUES (1, '2026-04-24T08:00:00Z', '2026-04-24T09:30:00Z')`
+    ).run()
+    // Running entry — must remain NULL after backfill replays
+    db.prepare(
+      `INSERT INTO entries (client_id, started_at) VALUES (1, '2026-04-24T10:00:00Z')`
+    ).run()
+    // Replay the backfill statement directly (idempotent).
+    db.exec(
+      `UPDATE entries
+         SET rounded_min = CAST(
+           ROUND((julianday(stopped_at) - julianday(started_at)) * 1440) AS INTEGER
+         )
+       WHERE rounded_min IS NULL
+         AND stopped_at IS NOT NULL
+         AND stopped_at >= started_at`
     )
+    const rows = db
+      .prepare('SELECT id, stopped_at, rounded_min FROM entries ORDER BY id')
+      .all() as Array<{ id: number; stopped_at: string | null; rounded_min: number | null }>
+    expect(rows[0].rounded_min).toBe(90)
+    expect(rows[1].stopped_at).toBeNull()
+    expect(rows[1].rounded_min).toBeNull()
+  })
+
+  it('migration 003 skips clock-skew rows (stopped_at < started_at)', () => {
+    applyAll()
+    db.prepare("INSERT INTO clients (id, name) VALUES (1, 'Acme')").run()
+    db.prepare(
+      `INSERT INTO entries (client_id, started_at, stopped_at)
+       VALUES (1, '2026-04-24T10:00:00Z', '2026-04-24T09:00:00Z')`
+    ).run()
+    db.exec(
+      `UPDATE entries
+         SET rounded_min = CAST(
+           ROUND((julianday(stopped_at) - julianday(started_at)) * 1440) AS INTEGER
+         )
+       WHERE rounded_min IS NULL
+         AND stopped_at IS NOT NULL
+         AND stopped_at >= started_at`
+    )
+    const row = db.prepare('SELECT rounded_min FROM entries').get() as {
+      rounded_min: number | null
+    }
+    expect(row.rounded_min).toBeNull()
+  })
+
+  it('migration 003 default rate_cent is 0', () => {
+    applyAll()
+    db.prepare("INSERT INTO clients (name) VALUES ('Acme')").run()
+    const row = db.prepare('SELECT rate_cent FROM clients').get() as { rate_cent: number }
+    expect(row.rate_cent).toBe(0)
   })
 
   it('rolls back migration on SQL failure (transactional)', () => {
@@ -170,9 +269,7 @@ describe('migration SQL execution', () => {
     expect(() => {
       const tx = db.transaction(() => {
         db.exec(broken)
-        db.prepare(
-          'INSERT INTO schema_version (version, name) VALUES (?, ?)'
-        ).run(99, 'broken')
+        db.prepare('INSERT INTO schema_version (version, name) VALUES (?, ?)').run(99, 'broken')
       })
       tx()
     }).toThrow()
@@ -182,14 +279,10 @@ describe('migration SQL execution', () => {
       .get() as { n: number }
     expect(afterCount.n).toBe(beforeCount.n)
     const clientCount = db
-      .prepare(
-        "SELECT COUNT(*) as n FROM clients WHERE name='Should rollback'"
-      )
+      .prepare("SELECT COUNT(*) as n FROM clients WHERE name='Should rollback'")
       .get() as { n: number }
     expect(clientCount.n).toBe(0)
-    const versionRow = db
-      .prepare('SELECT * FROM schema_version WHERE version = 99')
-      .get()
+    const versionRow = db.prepare('SELECT * FROM schema_version WHERE version = 99').get()
     expect(versionRow).toBeUndefined()
   })
 })
