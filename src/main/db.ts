@@ -2,6 +2,7 @@ import Database from 'better-sqlite3'
 import { app } from 'electron'
 import { join } from 'path'
 import { mkdirSync } from 'fs'
+import { runMigrations, MigrationError } from './migrations/runner'
 
 let db: Database.Database
 
@@ -16,49 +17,17 @@ export function getDb(): Database.Database {
   db.pragma('journal_mode = WAL')
   db.pragma('foreign_keys = ON')
 
-  initSchema(db)
+  const result = runMigrations(db, dbPath)
+  if (result.applied.length > 0) {
+    console.log(
+      `[db] Applied ${result.applied.length} migration(s): ${result.applied.join(', ')}`
+    )
+  }
+
   return db
 }
 
-function initSchema(db: Database.Database): void {
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS clients (
-      id        INTEGER PRIMARY KEY AUTOINCREMENT,
-      name      TEXT NOT NULL,
-      color     TEXT NOT NULL DEFAULT '#6366f1',
-      active    INTEGER NOT NULL DEFAULT 1,
-      created_at TEXT NOT NULL DEFAULT (datetime('now'))
-    );
-
-    CREATE TABLE IF NOT EXISTS entries (
-      id           INTEGER PRIMARY KEY AUTOINCREMENT,
-      client_id    INTEGER NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
-      description  TEXT NOT NULL DEFAULT '',
-      started_at   TEXT NOT NULL,
-      stopped_at   TEXT,
-      heartbeat_at TEXT,
-      rounded_min  INTEGER,
-      created_at   TEXT NOT NULL DEFAULT (datetime('now'))
-    );
-
-    CREATE INDEX IF NOT EXISTS idx_entries_client_started
-      ON entries(client_id, started_at);
-
-    CREATE TABLE IF NOT EXISTS settings (
-      key   TEXT PRIMARY KEY,
-      value TEXT NOT NULL
-    );
-  `)
-
-  // Default-Settings
-  const insertSetting = db.prepare(
-    `INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)`
-  )
-  insertSetting.run('rounding_mode', 'none')
-  insertSetting.run('rounding_minutes', '15')
-  insertSetting.run('company_name', '')
-  insertSetting.run('backup_path', '')
-}
+export { MigrationError }
 
 export function recoverZombieEntries(): void {
   const db = getDb()
