@@ -11,27 +11,30 @@ geschlossenen Schleife. Keine Tabs, keine Browser, kein zweites Programm nötig.
 
 ---
 
-## v1.1 — Daily Trust (Schmerzstellen lösen)
+## v1.1 — Daily Trust (Schmerzstellen lösen) ✅ ausgeliefert v1.1.0–v1.1.2 (2026-04-24)
 
 **Thema:** Was den Freelancer Geld kostet, wenn die App es nicht macht.
 
-- **Idle Detection** — PC >5 Min inaktiv? Modal "Timer noch laufen lassen, bei XY:XX
+- ✅ **Idle Detection** — PC >5 Min inaktiv? Modal "Timer noch laufen lassen, bei XY:XX
   stoppen, oder als Pause markieren?". Verhindert die größte Datenverluststelle:
   Mittagspause vergessen.
-- **Tray Quick-Start** — aktive Kunden direkt im Tray-Kontextmenü als Buttons. 1 Klick
+- ✅ **Tray Quick-Start** — aktive Kunden direkt im Tray-Kontextmenü als Buttons. 1 Klick
   → Timer läuft. Heute braucht es: Tray → Fenster anzeigen → Kunde wählen → Start. 4 Klicks.
-- **Settings-View** — Hotkey ändern, DB-Pfad anzeigen + öffnen, Idle-Schwelle einstellen,
-  Sprache (DE/EN), "Beim Windows-Start automatisch starten" Toggle.
-- **Auto-Backup** — rollierend 7 Tage SQLite-Snapshots in `%AppData%\TimeTrack\backups\`.
+- ✅ **Settings-View** — Hotkey ändern, DB-Pfad anzeigen + öffnen, Idle-Schwelle einstellen,
+  Sprache (DE/EN — i18n-Strings folgen in v1.2), "Beim Windows-Start automatisch starten" Toggle.
+- ✅ **Auto-Backup** — rollierend 7 Tage SQLite-Snapshots in `%AppData%\TimeTrack\backups\`.
   Wiederherstellung über Settings.
-- **DB-Migrationen** — `migrations/`-Ordner mit nummerierten `.sql`-Dateien, ausgeführt
+- ✅ **DB-Migrationen** — `migrations/`-Ordner mit TypeScript-Migration-Modulen, ausgeführt
   beim App-Start nach Schema-Version. Pflicht bevor v1.2 neue Spalten hinzufügt.
+- ✅ **Bonus:** Vitest-Setup mit ersten Tests + automatisierter Windows-Release-Workflow.
 
-**Ship-Kriterium:** Du kannst dem Tool über einen ganzen Arbeitstag ohne Babysitting trauen.
+**Ship-Kriterium:** Du kannst dem Tool über einen ganzen Arbeitstag ohne Babysitting trauen. ✅
 
 ---
 
 ## v1.2 — Calendar & Edit (das Original-Backlog)
+
+📂 [Issues mit Label `v1.2`](https://github.com/skoedr/time-tracking/labels/v1.2)
 
 **Thema:** Was war, wann war es, und kann ich es korrigieren?
 
@@ -50,6 +53,8 @@ geschlossenen Schleife. Keine Tabs, keine Browser, kein zweites Programm nötig.
 ---
 
 ## v1.3 — PDF Export & Reporting (das Geld-verdienen-Feature)
+
+📂 [Issues mit Label `v1.3`](https://github.com/skoedr/time-tracking/labels/v1.3)
 
 **Thema:** Daten → fertige Rechnungs-Anlage in 30 Sekunden.
 
@@ -70,6 +75,8 @@ geschlossenen Schleife. Keine Tabs, keine Browser, kein zweites Programm nötig.
 
 ## v1.4 — Mini Mode & Flow
 
+📂 [Issues mit Label `v1.4`](https://github.com/skoedr/time-tracking/labels/v1.4)
+
 **Thema:** App soll im Workflow verschwinden, nicht stören.
 
 - **Mini-Widget** — Always-on-top, **200×40px horizontal** (Toggl-Style), zeigt Zeit + Kunde +
@@ -85,6 +92,8 @@ geschlossenen Schleife. Keine Tabs, keine Browser, kein zweites Programm nötig.
 ---
 
 ## v1.5 — Trust at Scale
+
+📂 [Issues mit Label `v1.5`](https://github.com/skoedr/time-tracking/labels/v1.5)
 
 **Thema:** Wenn jemand außer dir das Tool nutzt, soll es nicht peinlich sein.
 
