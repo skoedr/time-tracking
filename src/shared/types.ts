@@ -36,6 +36,11 @@ export interface Settings {
 export interface CreateClientInput {
   name: string
   color: string
+  /**
+   * Hourly rate in cents. 0 = "no rate set" (PDF export omits the fee
+   * column). Integer arithmetic prevents float drift on totals.
+   */
+  rate_cent?: number
 }
 
 export interface UpdateClientInput {
@@ -43,6 +48,7 @@ export interface UpdateClientInput {
   name: string
   color: string
   active: number
+  rate_cent?: number
 }
 
 export interface CreateEntryInput {

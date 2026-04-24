@@ -10,6 +10,7 @@ import {
   startOfWeek
 } from 'date-fns'
 import type { Entry } from '../../../shared/types'
+import { getQuickRange, QUICK_RANGE_LABELS, type QuickRangeKind } from '../../../shared/dateRanges'
 import { useEntriesStore } from '../store/entriesStore'
 import { useTimer } from '../hooks/useTimer'
 import { CalendarDrawer } from '../components/CalendarDrawer'
@@ -83,6 +84,17 @@ export default function CalendarView(): React.JSX.Element {
     setFocusDay(today)
   }, [])
 
+  /**
+   * Quick-filter pre-selects a date range for the upcoming PDF export modal
+   * (#21). v1.3 PR C wires this into the actual modal; for now we just log
+   * so the buttons are visible + interactable while the data layer lands.
+   */
+  const onQuickRange = useCallback((kind: QuickRangeKind) => {
+    const range = getQuickRange(kind, new Date())
+    // eslint-disable-next-line no-console
+    console.info('[v1.3] PDF quick-range selected:', kind, range)
+  }, [])
+
   // Keyboard navigation on the grid.
   function handleKey(e: React.KeyboardEvent): void {
     let next: Date | null = null
@@ -146,6 +158,30 @@ export default function CalendarView(): React.JSX.Element {
             Fehler beim Laden
           </span>
         )}
+      </div>
+
+      {/* PDF quick-filter row (#21). Hero "Letzter Monat" gets the accent
+          colour to draw the eye on the most common rechnungs-flow. */}
+      <div className="flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          onClick={() => onQuickRange('lastMonth')}
+          className="rounded-full bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+          title="Letzten Monat als PDF exportieren"
+        >
+          📄 Letzter Monat als PDF
+        </button>
+        <span className="ml-1 text-xs uppercase tracking-wide text-slate-500">oder Zeitraum:</span>
+        {(['thisWeek', 'lastWeek', 'thisMonth'] as const).map((k) => (
+          <button
+            key={k}
+            type="button"
+            onClick={() => onQuickRange(k)}
+            className="rounded-full border border-slate-700 bg-slate-800 px-3 py-1.5 text-xs font-medium text-slate-300 hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+          >
+            {QUICK_RANGE_LABELS[k]}
+          </button>
+        ))}
       </div>
 
       {/* Header row: KW + Mo–So */}
