@@ -6,3 +6,4 @@ out
 *.log*
 .gstack/
 .design-review/
+.icon-build/

@@ -56,6 +56,17 @@ All notable changes to TimeTrack are documented here.
   PDF-Empfänger:in nie eine Zeile wie „18:54 – 19:18 → 0:30" sieht.
   Die Rundung selbst wird im PDF nicht erwähnt — Datenbank speichert
   weiterhin die echten Start/Stopp-Zeitstempel.
+- **App- + Tray-Icons** (#16) — Neue Glass-Style-Icons aus dem
+  Master-SVG `timetrack_icon_glass_final.svg`. `build/icon.png` (1024×1024)
+  - `build/icon.ico` (16/24/32/48/64/128/256) für electron-builder,
+    `resources/tray-running.png` (grün, läuft) und
+    `resources/tray-stopped.png` (grau, idle) für die System-Tray. Die Tray
+    wechselt das Glyph je nach Timer-State. Generator-Skript:
+    `node scripts/generate-icons.mjs` (deps: `sharp`, `png-to-ico`).
+- **GitHub Actions auf v5** (#42) — `actions/checkout`, `actions/setup-node`,
+  `actions/upload-artifact`, `actions/download-artifact` jeweils auf `@v5`
+  in `release.yml` und `test.yml`. `pnpm/action-setup@v4` bleibt (kein v5
+  veröffentlicht).
 
 ## [1.2.0] — 2026-04-24
 
