@@ -141,6 +141,28 @@ All notable changes to TimeTrack are documented here.
     (kein IPC-Polling).
   - Migration 006: seedet `mini_enabled='0'`, `mini_hotkey='Alt+Shift+M'`,
     `mini_x='-1'`, `mini_y='-1'` via `INSERT OR IGNORE`.
+- **Tags pro Eintrag** (#24) — Freitextlabels, die jedem Zeitblock zugeordnet
+  werden können und für schnelles Filtern, Auswerten und PDF-Gruppierung dienen.
+  - Tags werden als `,tag1,tag2,` in einer neuen `entries.tags`-Spalte
+    (Migration 007, `NOT NULL DEFAULT ''`) gespeichert; exakte LIKE-Suche
+    via `,tag,` verhindert Fehlpositive.
+  - **`TagInput`-Komponente** — Chip-Liste + Texteingabe in einem Feld.
+    Tab/Enter/Komma übernimmt den getippten Tag, Backspace entfernt den
+    letzten Chip. Autocomplete-Dropdown mit Vorschlägen aus den letzten
+    90 Tagen (freq-sortiert via `tags:recent` IPC). Deterministische
+    8-Farben-Chip-Palette (Tag-Name → `charCode % 8`). Validierung:
+    Regex `[a-z0-9._-]`, max. 32 Zeichen/Tag, max. 10 Tags/Eintrag.
+  - **`EntryEditForm`** — `TagInput` integriert; `tags`-Feld wird beim
+    Anlegen und Bearbeiten via `entries:create` / `entries:update` gespeichert.
+  - **Kalender-Drawer-Filter** — Jeder Eintrag zeigt Farb-Chips für seine
+    Tags. Über die Tag-Pille-Bar im Header lässt sich die Tagesansicht
+    auf einen einzelnen Tag filtern (Toggle); Zähler wechselt zu
+    „X von Y Einträge" und der Leer-State zeigt „Keine Einträge mit Tag #x".
+  - **PDF-Gruppen-Export** — Neue Checkbox „Nach Tag gruppieren" im
+    PDF-Export-Modal. Bei aktiver Gruppierung rendert das PDF Abschnitte
+    pro Tag (alphabetisch sortiert), jeder mit eigenem Subtotal-Bereich;
+    Einträge ohne Tag landen in der Gruppe „Ohne Tag" (immer am Ende).
+    Silent Fallback auf Flat-Layout wenn kein Eintrag im Zeitraum Tags hat.
 
 ## [1.2.0] — 2026-04-24
 
