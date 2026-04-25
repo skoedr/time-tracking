@@ -88,7 +88,11 @@ jobs:
             Write-Error "Expected schemaVersion >= 3 (v1.2 migrations), got $($payload.schemaVersion)"
             exit 1
           }
-          Write-Host "Smoke test passed (schema v$($payload.schemaVersion), Electron $($payload.electronVersion))"
+          if (-not $payload.pdfBytes -or $payload.pdfBytes -lt 1000) {
+            Write-Error "Expected pdfBytes >= 1000 (v1.3 PDF pipeline), got $($payload.pdfBytes)"
+            exit 1
+          }
+          Write-Host "Smoke test passed (schema v$($payload.schemaVersion), Electron $($payload.electronVersion), PDF $($payload.pdfBytes) bytes)"
 
       - name: Upload installer artifact
         uses: actions/upload-artifact@v5

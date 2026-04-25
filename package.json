@@ -1,6 +1,6 @@
 {
   "name": "time-tracking",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "Schlanker Desktop-Zeiterfasser für Windows — Toggl-Track-Style, lokal, ohne Cloud.",
   "main": "./out/main/index.js",
   "author": "skoedr",
@@ -16,6 +16,8 @@
     "test:ui": "vitest --ui",
     "start": "electron-vite preview",
     "dev": "electron-vite dev",
+    "sync-icon": "node scripts/sync-icon.mjs",
+    "prebuild": "npm run sync-icon",
     "build": "npm run typecheck && electron-vite build",
     "postinstall": "electron-builder install-app-deps",
     "build:unpack": "npm run build && electron-builder --dir",
