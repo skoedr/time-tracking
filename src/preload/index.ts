@@ -15,6 +15,7 @@ import type {
   DashboardSummary,
   UpdateStatus
 } from '../shared/types'
+import type { CsvRequest } from '../main/csvExport'
 
 const api = {
   // Tray + hotkey
@@ -150,6 +151,11 @@ const api = {
   logo: {
     set: (): Promise<IpcResult<{ path: string }>> => ipcRenderer.invoke('logo:set'),
     clear: (): Promise<IpcResult<void>> => ipcRenderer.invoke('logo:clear')
+  },
+  // v1.5 PR C — CSV export
+  csv: {
+    export: (req: CsvRequest): Promise<IpcResult<{ path: string }>> =>
+      ipcRenderer.invoke('csv:export', req)
   },
   // v1.5 PR B — auto-updater
   update: {
