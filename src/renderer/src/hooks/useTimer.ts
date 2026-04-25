@@ -52,13 +52,15 @@ export function useTimer() {
     elapsedSeconds,
     isLoading,
     idleEvent,
+    quickNoteEntry,
     setClients,
     setRunningEntry,
     setSelectedClientId,
     setDescription,
     setElapsedSeconds,
     setIsLoading,
-    setIdleEvent
+    setIdleEvent,
+    setQuickNoteEntry
   } = useTimerStore()
 
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -148,6 +150,7 @@ export function useTimer() {
 
   const stop = useCallback(async () => {
     if (!runningEntry) return
+    const wasEmpty = runningEntry.description.trim() === ''
     setIsLoading(true)
     const res = await window.api.entries.stop(runningEntry.id)
     setIsLoading(false)
@@ -159,6 +162,10 @@ export function useTimer() {
       if (useTimerStore.getState().idleEvent) {
         setIdleEvent(null)
         window.api.idle.dismiss()
+      }
+      // Prompt for description if the entry had none.
+      if (wasEmpty) {
+        setQuickNoteEntry(res.data)
       }
     }
   }, [runningEntry])
@@ -272,8 +279,10 @@ export function useTimer() {
     elapsedSeconds,
     isLoading,
     idleEvent,
+    quickNoteEntry,
     setSelectedClientId,
     setDescription,
+    setQuickNoteEntry,
     start,
     stop,
     startWithClient,
