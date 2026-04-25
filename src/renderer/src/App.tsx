@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import TodayView from './views/TodayView'
 import TimerView from './views/TimerView'
 import CalendarView from './views/CalendarView'
@@ -8,6 +8,7 @@ import { IdleModal } from './components/IdleModal'
 import { QuickNoteModal } from './components/QuickNoteModal'
 import { ToastTray } from './components/Toast'
 import { UpdateBanner } from './components/UpdateBanner'
+import { OnboardingWizard } from './components/OnboardingWizard'
 import { useTimer } from './hooks/useTimer'
 
 type View = 'today' | 'timer' | 'calendar' | 'clients' | 'settings'
@@ -22,8 +23,23 @@ const NAV_LABEL: Record<View, string> = {
 
 function App(): React.JSX.Element {
   const [view, setView] = useState<View>('today')
+  const [showOnboarding, setShowOnboarding] = useState(false)
   const { idleEvent, idleKeep, idleStopAtIdle, idleMarkPause, quickNoteEntry, setQuickNoteEntry } =
     useTimer()
+
+  // Check onboarding flag on mount — show wizard only for fresh installs.
+  useEffect(() => {
+    void window.api.settings.getAll().then((res) => {
+      if (res.ok && res.data.onboarding_completed === '0') {
+        setShowOnboarding(true)
+      }
+    })
+  }, [])
+
+  async function finishOnboarding(): Promise<void> {
+    setShowOnboarding(false)
+    await window.api.settings.set('onboarding_completed', '1')
+  }
 
   return (
     <div className="h-screen bg-slate-900 text-slate-100 flex flex-col overflow-hidden">
@@ -66,6 +82,8 @@ function App(): React.JSX.Element {
       )}
 
       <ToastTray />
+
+      <OnboardingWizard open={showOnboarding} onFinish={() => void finishOnboarding()} />
     </div>
   )
 }

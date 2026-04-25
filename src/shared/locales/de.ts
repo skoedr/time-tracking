@@ -41,6 +41,39 @@ export const de = {
   'settings.language.title': 'Sprache',
   'settings.language.de': 'Deutsch',
   'settings.language.en': 'English',
-} as const
+  // ── Onboarding-Wizard ───────────────────────────────────────
+  'onboarding.step': 'Schritt {current} von {total}',
+  'onboarding.skip': 'Überspringen',
+  'onboarding.next': 'Weiter',
+  'onboarding.finish': 'Loslegen',
+
+  // Step 1 — Willkommen
+  'onboarding.welcome.title': 'Willkommen bei TimeTrack',
+  'onboarding.welcome.body':
+    'Erfasse deine Arbeitszeiten sekundengenau — für Kunden, Stundennachweise und den Überblick am Ende des Monats.',
+  'onboarding.welcome.languageLabel': 'Sprache',
+
+  // Step 2 — Erster Kunde
+  'onboarding.client.title': 'Erster Kunde',
+  'onboarding.client.body': 'Lege direkt deinen ersten Kunden an oder überspringe diesen Schritt.',
+  'onboarding.client.namePlaceholder': 'z. B. Acme GmbH',
+  'onboarding.client.nameLabel': 'Kundenname',
+  'onboarding.client.rateLabel': 'Stundensatz (optional)',
+  'onboarding.client.ratePlaceholder': 'z. B. 85',
+  'onboarding.client.rateUnit': '€ / Stunde',
+  'onboarding.client.colorLabel': 'Farbe',
+  'onboarding.client.create': 'Kunden anlegen',
+
+  // Step 3 — Hotkey
+  'onboarding.hotkey.title': 'Globaler Hotkey',
+  'onboarding.hotkey.body':
+    'Starte und stoppe den Timer von überall — auch wenn TimeTrack im Hintergrund läuft.',
+  'onboarding.hotkey.default': 'Standard-Hotkey: {hotkey}',
+  'onboarding.hotkey.mini':
+    'Das Mini-Widget bleibt immer im Bild und zeigt den laufenden Timer. Einblenden mit {hotkey}.',
+  'onboarding.hotkey.hint': 'Beide Hotkeys sind in Einstellungen änderbar.',
+
+  // Settings — Re-Trigger
+  'settings.onboarding.retrigger': 'Onboarding erneut anzeigen',} as const
 
 export type TranslationKey = keyof typeof de

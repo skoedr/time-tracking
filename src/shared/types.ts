@@ -60,6 +60,9 @@ export interface Settings {
   mini_hotkey: string
   mini_x: string
   mini_y: string
+  // v1.5 PR E — Onboarding wizard.
+  // '0' = not yet completed, '1' = done (or existing user after upgrade).
+  onboarding_completed: string
 }
 
 export interface CreateClientInput {

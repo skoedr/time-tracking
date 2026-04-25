@@ -6,6 +6,17 @@ All notable changes to TimeTrack are documented here.
 
 ### Added
 
+- **Onboarding-Wizard** (#32, PR E) — Neuen Installationen wird beim ersten
+  Start automatisch ein 3-stufiger Assistent angezeigt. **Schritt 1** wählt
+  die Sprache (DE/EN, Umschalter wirkt live). **Schritt 2** legt optional den
+  ersten Kunden an (Name, Stundensatz, Farbe). **Schritt 3** erklärt die
+  globalen Hotkeys (Standard-Fenster `Alt+Shift+S`, Mini-Widget `Alt+Shift+M`)
+  und bestätigt ggf. den erstellten Kunden. Der Assistent kann per "Überspringen"
+  jederzeit abgebrochen werden. Bereits bestehende Installs (Upgrade von v1.4)
+  zeigen den Wizard nicht — das Flag `onboarding_completed` wird via
+  Migration 008 automatisch auf `1` gesetzt, wenn Einträge vorhanden sind.
+  Unter Einstellungen → Allgemein → Onboarding kann der Wizard erneut ausgelöst
+  werden (setzt das Flag zurück und zeigt den Wizard beim nächsten Start).
 - **i18n-Foundation** (neu, PR D) — Mini-Übersetzungs-Infrastruktur ohne externe
   Abhängigkeiten. Locale-Dateien sind typsichere TypeScript-Objekte
   (`src/shared/locales/de.ts`, `en.ts`); TypeScript stellt sicher, dass EN
