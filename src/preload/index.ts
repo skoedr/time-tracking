@@ -42,6 +42,10 @@ const api = {
     requestStart: (): void => ipcRenderer.send('mini:request-start'),
     requestStop: (): void => ipcRenderer.send('mini:request-stop')
   },
+  hotkeyCapture: {
+    begin: (): void => ipcRenderer.send('hotkey:beginCapture'),
+    end: (): void => ipcRenderer.send('hotkey:endCapture')
+  },
   onHotkeyToggle: (callback: () => void): (() => void) => {
     const handler = () => callback()
     ipcRenderer.on('timer:hotkey-toggle', handler)

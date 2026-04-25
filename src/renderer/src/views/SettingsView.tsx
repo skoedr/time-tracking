@@ -60,6 +60,10 @@ export default function SettingsView(): React.JSX.Element {
   useEffect(() => {
     if (!capturingHotkey) return
     const targetKey = capturingHotkey
+    // Pause registered global shortcuts while we capture, otherwise pressing
+    // an already-bound combo (e.g. Alt+Shift+S) fires its handler instead of
+    // reaching this listener.
+    window.api.hotkeyCapture.begin()
     const handler = async (e: KeyboardEvent): Promise<void> => {
       e.preventDefault()
       e.stopPropagation()
@@ -80,7 +84,14 @@ export default function SettingsView(): React.JSX.Element {
       }
     }
     window.addEventListener('keydown', handler, true)
-    return () => window.removeEventListener('keydown', handler, true)
+    return () => {
+      window.removeEventListener('keydown', handler, true)
+      // Re-register the previously-bound shortcuts. Safe to call even if
+      // the capture succeeded — settings:set will have already re-registered
+      // the new accelerator via its hook side-effect, and resume only
+      // re-binds whatever the main process currently has stored.
+      window.api.hotkeyCapture.end()
+    }
   }, [capturingHotkey])
 
   async function update<K extends keyof Settings>(key: K, value: Settings[K]): Promise<void> {

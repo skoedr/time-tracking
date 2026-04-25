@@ -37,6 +37,10 @@ declare global {
         requestStart(): void
         requestStop(): void
       }
+      hotkeyCapture: {
+        begin(): void
+        end(): void
+      }
       onHotkeyToggle(callback: () => void): () => void
       onTrayQuickStart(callback: (clientId: number) => void): () => void
       onTrayStop(callback: () => void): () => void

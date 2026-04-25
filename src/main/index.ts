@@ -133,6 +133,14 @@ function updateTray(running: boolean, label: string, todaySeconds: number): void
 }
 
 function registerHotkey(accelerator: string): boolean {
+  // Cross-slot collision check (v1.4 PR B). Without this, suspending
+  // shortcuts during capture would let the user silently steal the
+  // mini-widget's accelerator, since the OS-level register call would
+  // succeed while the other slot is paused.
+  if (accelerator && accelerator === currentMiniHotkey) {
+    console.warn(`[hotkey] ${accelerator} is already bound to mini_hotkey`)
+    return false
+  }
   if (currentToggleHotkey) {
     globalShortcut.unregister(currentToggleHotkey)
     currentToggleHotkey = ''
@@ -152,6 +160,10 @@ function registerHotkey(accelerator: string): boolean {
  * one doesn't clobber the other (we used to call `unregisterAll`).
  */
 function registerMiniHotkey(accelerator: string): boolean {
+  if (accelerator && accelerator === currentToggleHotkey) {
+    console.warn(`[mini-hotkey] ${accelerator} is already bound to hotkey_toggle`)
+    return false
+  }
   if (currentMiniHotkey) {
     globalShortcut.unregister(currentMiniHotkey)
     currentMiniHotkey = ''
@@ -163,6 +175,30 @@ function registerMiniHotkey(accelerator: string): boolean {
   if (ok) currentMiniHotkey = accelerator
   else console.warn(`[mini-hotkey] Could not register ${accelerator}`)
   return ok
+}
+
+/**
+ * Suspend all global shortcuts — used while the Settings view is capturing
+ * a new hotkey, otherwise pressing the existing combo (e.g. Alt+Shift+S)
+ * fires the registered handler instead of being captured by the renderer.
+ * Restored via {@link resumeGlobalShortcuts}.
+ */
+function suspendGlobalShortcuts(): void {
+  if (currentToggleHotkey) globalShortcut.unregister(currentToggleHotkey)
+  if (currentMiniHotkey) globalShortcut.unregister(currentMiniHotkey)
+}
+
+function resumeGlobalShortcuts(): void {
+  if (currentToggleHotkey) {
+    globalShortcut.register(currentToggleHotkey, () => {
+      mainWindow?.webContents.send('timer:hotkey-toggle')
+    })
+  }
+  if (currentMiniHotkey) {
+    globalShortcut.register(currentMiniHotkey, () => {
+      toggleMini()
+    })
+  }
 }
 
 function applyAutoStart(enabled: boolean): void {
@@ -425,6 +461,12 @@ app.whenReady().then(async () => {
     // first active client — exactly what we want for the play button.
     mainWindow?.webContents.send('timer:hotkey-toggle')
   })
+
+  // Settings view → main: pause/resume registered global shortcuts during
+  // hotkey capture so the user can rebind a key (e.g. Alt+Shift+S) without
+  // the existing handler firing first and swallowing the keystroke.
+  ipcMain.on('hotkey:beginCapture', () => suspendGlobalShortcuts())
+  ipcMain.on('hotkey:endCapture', () => resumeGlobalShortcuts())
 
   // Renderer dismissed idle modal — re-arm.
   ipcMain.on('idle:dismiss', () => rearmIdleWatcher())
