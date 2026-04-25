@@ -211,7 +211,7 @@ export function registerIpcHandlers(hooks: IpcHooks): void {
       const err = validateManualEntry(db, input)
       if (err) return fail(err)
       const segments = splitAtMidnight(new Date(input.started_at), new Date(input.stopped_at))
-      const insertedRow = insertEntrySegments(db, input, segments)
+      const insertedRow = insertEntrySegments(db, input, segments, input.tags ?? '')
       return ok(insertedRow)
     } catch (e) {
       return fail(e)
@@ -239,7 +239,7 @@ export function registerIpcHandlers(hooks: IpcHooks): void {
         } else {
           db.prepare(`DELETE FROM entries WHERE id = ?`).run(input.id)
         }
-        return insertEntrySegments(db, input, segments)
+        return insertEntrySegments(db, input, segments, input.tags ?? '')
       })
       const row = tx()
       return ok(row)
@@ -280,6 +280,38 @@ export function registerIpcHandlers(hooks: IpcHooks): void {
       db.prepare(`UPDATE entries SET deleted_at = NULL WHERE id = ?`).run(id)
       const row = db.prepare(`SELECT * FROM entries WHERE id = ?`).get(id) as Entry
       return ok(row)
+    } catch (e) {
+      return fail(e)
+    }
+  })
+
+  /**
+   * Return distinct tag names used in entries from the last 90 days,
+   * sorted by frequency descending. Used for TagInput autocomplete.
+   * Only non-empty tags columns are considered.
+   */
+  ipcMain.handle('tags:recent', (): IpcResult<string[]> => {
+    try {
+      const cutoff = new Date(Date.now() - 90 * 24 * 3600 * 1000).toISOString()
+      const rows = db
+        .prepare(
+          `SELECT tags FROM entries
+           WHERE deleted_at IS NULL
+             AND tags != ''
+             AND started_at >= ?`
+        )
+        .all(cutoff) as Array<{ tags: string }>
+
+      const freq = new Map<string, number>()
+      for (const { tags } of rows) {
+        for (const tag of tags.split(',').filter((t: string) => t.length > 0)) {
+          freq.set(tag, (freq.get(tag) ?? 0) + 1)
+        }
+      }
+      const sorted = [...freq.entries()]
+        .sort((a, b) => b[1] - a[1])
+        .map(([tag]) => tag)
+      return ok(sorted)
     } catch (e) {
       return fail(e)
     }
@@ -714,13 +746,14 @@ function validateManualEntry(
 function insertEntrySegments(
   db: ReturnType<typeof getDb>,
   input: { client_id: number; description: string },
-  segments: Array<{ start: Date; stop: Date }>
+  segments: Array<{ start: Date; stop: Date }>,
+  tags = ''
 ): Entry {
   const linkId = segments.length > 1 ? randomUUID() : null
   const description = input.description.trim()
   const insertStmt = db.prepare(
-    `INSERT INTO entries (client_id, description, started_at, stopped_at, heartbeat_at, rounded_min, link_id)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`
+    `INSERT INTO entries (client_id, description, started_at, stopped_at, heartbeat_at, rounded_min, link_id, tags)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
   )
   const tx = db.transaction((): Entry => {
     let firstId = 0
@@ -734,7 +767,8 @@ function insertEntrySegments(
         stoppedAt,
         stoppedAt,
         Math.round((seg.stop.getTime() - seg.start.getTime()) / 60000),
-        linkId
+        linkId,
+        tags
       )
       if (firstId === 0) firstId = Number(info.lastInsertRowid)
     }

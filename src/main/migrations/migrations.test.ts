@@ -355,6 +355,76 @@ describe('migration SQL execution', () => {
     expect(linked).toHaveLength(2)
   })
 
+  it('migration 006 seeds mini-widget settings keys', () => {
+    applyAll()
+    const keys = (
+      db.prepare("SELECT key FROM settings WHERE key LIKE 'mini_%' ORDER BY key").all() as Array<{
+        key: string
+      }>
+    ).map((r) => r.key)
+    expect(keys).toEqual(['mini_enabled', 'mini_hotkey', 'mini_x', 'mini_y'])
+    const enabled = db.prepare("SELECT value FROM settings WHERE key='mini_enabled'").get() as {
+      value: string
+    }
+    expect(enabled.value).toBe('0')
+  })
+
+  it('migration 007 adds entries.tags column (NOT NULL, default empty string)', () => {
+    applyAll()
+    const cols = db.prepare(`PRAGMA table_info(entries)`).all() as Array<{
+      name: string
+      notnull: number
+      dflt_value: string | null
+      type: string
+    }>
+    const tagsCol = cols.find((c) => c.name === 'tags')
+    expect(tagsCol).toBeDefined()
+    expect(tagsCol?.notnull).toBe(1)
+    expect(tagsCol?.dflt_value).toBe("''")
+    expect(tagsCol?.type.toUpperCase()).toBe('TEXT')
+  })
+
+  it('migration 007 — existing entries have empty tags by default', () => {
+    applyAll()
+    db.prepare(`INSERT INTO clients (id, name) VALUES (1, 'Acme')`).run()
+    db.prepare(
+      `INSERT INTO entries (client_id, started_at, stopped_at)
+       VALUES (1, '2026-05-01T08:00:00Z', '2026-05-01T09:00:00Z')`
+    ).run()
+    const row = db.prepare('SELECT tags FROM entries').get() as { tags: string }
+    expect(row.tags).toBe('')
+  })
+
+  it('migration 007 — tags column stores comma-delimited values', () => {
+    applyAll()
+    db.prepare(`INSERT INTO clients (id, name) VALUES (1, 'Acme')`).run()
+    db.prepare(
+      `INSERT INTO entries (client_id, started_at, stopped_at, tags)
+       VALUES (1, '2026-05-01T08:00:00Z', '2026-05-01T09:00:00Z', ',bug,ux,')`
+    ).run()
+    const row = db.prepare('SELECT tags FROM entries').get() as { tags: string }
+    expect(row.tags).toBe(',bug,ux,')
+  })
+
+  it('migration 007 — LIKE search finds exact tag match without false positives', () => {
+    applyAll()
+    db.prepare(`INSERT INTO clients (id, name) VALUES (1, 'Acme')`).run()
+    db.prepare(
+      `INSERT INTO entries (client_id, started_at, stopped_at, tags)
+       VALUES (1, '2026-05-01T08:00:00Z', '2026-05-01T09:00:00Z', ',bugfix,ux,')`
+    ).run()
+    db.prepare(
+      `INSERT INTO entries (client_id, started_at, stopped_at, tags)
+       VALUES (1, '2026-05-02T08:00:00Z', '2026-05-02T09:00:00Z', ',bug,feature,')`
+    ).run()
+    // Searching for 'bug' should only match the second row, not 'bugfix'
+    const rows = db
+      .prepare(`SELECT id FROM entries WHERE tags LIKE '%,bug,%' ORDER BY id`)
+      .all() as Array<{ id: number }>
+    expect(rows).toHaveLength(1)
+    expect(rows[0].id).toBe(2)
+  })
+
   it('rolls back migration on SQL failure (transactional)', () => {
     applyAll()
     const beforeCount = db
