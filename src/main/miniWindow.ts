@@ -9,15 +9,20 @@ import { getDb } from './db'
  * `settings` table; sentinel `-1/-1` means "never positioned, use the
  * bottom-right of the primary display".
  *
- * B2 (this commit): window factory + show/hide/destroy + position
- * persistence. The renderer mounts the static "Kein Timer" stub from B1.
- *
- * B3 will wire the global shortcut, push-state-sync from main, and the
- * Stop button.
+ * B2: window factory + show/hide/destroy + position persistence.
+ * B3 (this commit): push-state-sync from main, hotkey toggle helper,
+ *   cached last state so a freshly-shown widget renders immediately.
  */
+
+export interface MiniState {
+  running: boolean
+  label: string
+  startedAt: string | null
+}
 
 let miniWindow: BrowserWindow | null = null
 let positionDebounce: NodeJS.Timeout | null = null
+let lastState: MiniState = { running: false, label: '', startedAt: null }
 
 const MINI_WIDTH = 200
 const MINI_HEIGHT = 40
@@ -128,6 +133,14 @@ export function showMini(): void {
 
   miniWindow.on('ready-to-show', () => {
     miniWindow?.show()
+    // Render the cached state immediately so the user doesn't see the
+    // "Kein Timer" stub for a tick when a timer is actually running.
+    miniWindow?.webContents.send('mini:state-changed', lastState)
+  })
+
+  // Renderer (mini) requests a fresh push (e.g. after HMR reload).
+  miniWindow.webContents.on('did-finish-load', () => {
+    miniWindow?.webContents.send('mini:state-changed', lastState)
   })
 
   // Debounced position persistence on drag.
@@ -179,4 +192,44 @@ export function destroyMini(): void {
 export function applyMiniEnabled(enabled: boolean): void {
   if (enabled) showMini()
   else destroyMini()
+}
+
+/** True when the widget exists and is currently visible. */
+export function isMiniVisible(): boolean {
+  return !!miniWindow && !miniWindow.isDestroyed() && miniWindow.isVisible()
+}
+
+/**
+ * Toggle visibility — used by the global hotkey. Only does anything when
+ * the user has enabled the widget in Settings; we don't want a hotkey to
+ * silently "opt the user in" to a feature they disabled.
+ */
+export function toggleMini(): void {
+  if (!isMiniEnabledInDb()) return
+  if (isMiniVisible()) hideMini()
+  else showMini()
+}
+
+function isMiniEnabledInDb(): boolean {
+  try {
+    const db = getDb()
+    const row = db
+      .prepare(`SELECT value FROM settings WHERE key = 'mini_enabled'`)
+      .get() as { value: string } | undefined
+    return row?.value === '1'
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Update the cached state and forward it to the mini renderer (if mounted).
+ * Called from index.ts on every `tray:update` so the widget stays in sync
+ * with the main window without polling.
+ */
+export function pushMiniState(state: MiniState): void {
+  lastState = state
+  if (miniWindow && !miniWindow.isDestroyed()) {
+    miniWindow.webContents.send('mini:state-changed', state)
+  }
 }

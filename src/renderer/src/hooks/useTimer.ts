@@ -11,7 +11,10 @@ import { formatDuration as _formatDuration } from '../../../shared/duration'
 async function pushTrayUpdate(running: boolean, label: string): Promise<void> {
   const totalRes = await window.api.dashboard.todayTotal()
   const seconds = totalRes.ok ? totalRes.data : 0
-  window.api.tray.update(running, label, seconds)
+  // v1.4 PR B — also forward `started_at` so the mini-widget can tick the
+  // elapsed time locally without round-trips. `null` when no timer is running.
+  const startedAt = useTimerStore.getState().runningEntry?.started_at ?? null
+  window.api.tray.update(running, label, seconds, startedAt)
 }
 
 // Refs shared across all useTimer() instances so listeners are registered ONCE
