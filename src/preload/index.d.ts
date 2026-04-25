@@ -94,12 +94,16 @@ declare global {
       exporter: {
         json(): Promise<IpcResult<{ path: string; bytes: number }>>
       }
+      tags: {
+        recent(): Promise<IpcResult<string[]>>
+      }
       pdf: {
         export(req: {
           clientId: number
           fromIso: string
           toIso: string
           includeSignatures?: boolean
+          groupByTag?: boolean
         }): Promise<IpcResult<{ path: string }>>
       }
       logo: {

@@ -133,12 +133,16 @@ const api = {
     json: (): Promise<IpcResult<{ path: string; bytes: number }>> =>
       ipcRenderer.invoke('export:json')
   },
+  tags: {
+    recent: (): Promise<IpcResult<string[]>> => ipcRenderer.invoke('tags:recent')
+  },
   pdf: {
     export: (req: {
       clientId: number
       fromIso: string
       toIso: string
       includeSignatures?: boolean
+      groupByTag?: boolean
     }): Promise<IpcResult<{ path: string }>> => ipcRenderer.invoke('pdf:export', req)
   },
   logo: {

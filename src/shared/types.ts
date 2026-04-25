@@ -26,6 +26,12 @@ export interface Entry {
    * when the user deletes a row with a non-null link_id.
    */
   link_id: string | null
+  /**
+   * v1.4 PR C: comma-delimited serialized tags, e.g. `,bug,ux,`.
+   * Empty string means untagged. Use `deserializeTags` from shared/tags.ts
+   * to convert to an array for UI consumption.
+   */
+  tags: string
 }
 
 export interface Settings {
@@ -91,6 +97,8 @@ export interface CreateManualEntryInput {
   description: string
   started_at: string
   stopped_at: string
+  /** Serialized tags string (e.g. `,bug,ux,`). Optional — defaults to '' */
+  tags?: string
 }
 
 export interface UpdateEntryInput {
@@ -99,6 +107,8 @@ export interface UpdateEntryInput {
   description: string
   started_at: string
   stopped_at: string
+  /** Serialized tags string (e.g. `,bug,ux,`). Optional — defaults to '' */
+  tags?: string
 }
 
 export interface MonthQuery {
