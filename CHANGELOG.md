@@ -109,7 +109,7 @@ All notable changes to TimeTrack are documented here.
   hängt jetzt nur noch an `open`, Fokus-Selector priorisiert
   Form-Inputs vor Buttons.
 
-## [Unreleased] — v1.4
+## [1.4.0] — 2026-04-25
 
 ### Added
 
