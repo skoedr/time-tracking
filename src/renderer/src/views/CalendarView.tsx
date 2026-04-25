@@ -10,6 +10,7 @@ import {
   startOfWeek
 } from 'date-fns'
 import type { Entry } from '../../../shared/types'
+import type { Client } from '../../../shared/types'
 import { getQuickRange, QUICK_RANGE_LABELS, type QuickRangeKind } from '../../../shared/dateRanges'
 import { useEntriesStore } from '../store/entriesStore'
 import { useTimer } from '../hooks/useTimer'
@@ -212,6 +213,7 @@ export default function CalendarView(): React.JSX.Element {
             week={week}
             cursor={cursor}
             byDay={byDay}
+            clients={clients}
             focusDay={focusDay}
             onSelect={(d) => {
               setFocusDay(d)
@@ -249,12 +251,14 @@ function Week({
   week,
   cursor,
   byDay,
+  clients,
   focusDay,
   onSelect
 }: {
   week: WeekData
   cursor: Date
   byDay: Map<string, Entry[]>
+  clients: Client[]
   focusDay: Date
   onSelect: (d: Date) => void
 }): React.JSX.Element {
@@ -300,7 +304,7 @@ function Week({
                 </span>
               )}
             </div>
-            <DayBars entries={dayEntries} />
+            <DayBars entries={dayEntries} clients={clients} />
           </button>
         )
       })}
@@ -310,20 +314,37 @@ function Week({
 
 const MAX_BARS = 5
 
-function DayBars({ entries }: { entries: Entry[] }): React.JSX.Element | null {
+/** Indigo fallback when an entry's client_id no longer resolves
+ *  (deleted client, race during reload, etc.) — same accent as the
+ *  rest of the calendar UI so it still reads as "an entry". */
+const DEFAULT_BAR_COLOR = '#6366f1'
+
+function DayBars({
+  entries,
+  clients
+}: {
+  entries: Entry[]
+  clients: Client[]
+}): React.JSX.Element | null {
   if (entries.length === 0) return null
   const visible = entries.slice(0, MAX_BARS)
   const overflow = entries.length - visible.length
+  const colorById = new Map(clients.map((c) => [c.id, c.color]))
   return (
     <div className="mt-auto flex flex-col gap-[2px]">
-      {visible.map((e) => (
-        <div
-          key={e.id}
-          className="h-[3px] rounded-sm"
-          style={{ backgroundColor: '#6366f1' }}
-          title={`${e.description || 'Eintrag'} (${formatHHMM(entryDurationSeconds(e))})`}
-        />
-      ))}
+      {visible.map((e) => {
+        const color = colorById.get(e.client_id) ?? DEFAULT_BAR_COLOR
+        const clientName = clients.find((c) => c.id === e.client_id)?.name ?? 'Eintrag'
+        const label = e.description ? `${clientName} — ${e.description}` : clientName
+        return (
+          <div
+            key={e.id}
+            className="h-[3px] rounded-sm"
+            style={{ backgroundColor: color }}
+            title={`${label} (${formatHHMM(entryDurationSeconds(e))})`}
+          />
+        )
+      })}
       {overflow > 0 && <span className="text-[10px] text-slate-400">+{overflow}</span>}
     </div>
   )

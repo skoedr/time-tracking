@@ -113,6 +113,7 @@ const api = {
       clientId: number
       fromIso: string
       toIso: string
+      includeSignatures?: boolean
     }): Promise<IpcResult<{ path: string }>> => ipcRenderer.invoke('pdf:export', req)
   },
   logo: {

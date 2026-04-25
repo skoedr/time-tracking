@@ -20,6 +20,13 @@ export interface PdfRequest {
   /** ISO-date strings, inclusive. e.g. '2026-04-01' to '2026-04-30'. */
   fromIso: string
   toIso: string
+  /**
+   * Render the two signature lines ("Datum, Auftragnehmer" / "Datum,
+   * Auftraggeber") at the bottom of the document. Default `false` —
+   * most users never need them, and an empty signature row at the end
+   * looks like an unfinished template. Toggled per-export from the modal.
+   */
+  includeSignatures?: boolean
 }
 
 export interface PdfRow {
@@ -50,6 +57,12 @@ export interface PdfPayload {
   logoDataUrl: string
   /** Rounding step in minutes; 0 = no rounding. */
   roundMinutes: number
+  /**
+   * When true, the rendered HTML includes a bottom signature row with
+   * lines for Auftragnehmer / Auftraggeber. Defaults to false at the
+   * payload level so existing call-sites / tests don't have to opt out.
+   */
+  includeSignatures?: boolean
   /** Used for the "erstellt am" footer line. */
   generatedAtIso: string
 }
@@ -152,7 +165,12 @@ export function buildPdfPayload(
   const rows: PdfRow[] = entries.map((e) => {
     const start = new Date(e.started_at)
     const stop = new Date(e.stopped_at as string)
-    const rawMin = Math.max(0, Math.round((stop.getTime() - start.getTime()) / 60000))
+    // Use ceil here so that a sub-minute entry (e.g. a quick test toggle of
+    // a few seconds) is reported as 1 raw minute instead of vanishing to 0.
+    // Combined with the ceil-based `roundMinutes` below, this matches the
+    // conventional billing rule: any started step gets charged in full.
+    const rawMs = Math.max(0, stop.getTime() - start.getTime())
+    const rawMin = rawMs > 0 ? Math.ceil(rawMs / 60000) : 0
     const minutes = roundMinutes(rawMin, roundStep)
     const fee = client.rate_cent > 0 ? feeCent(minutes, client.rate_cent) : null
     // When rounding is on, we also adjust the displayed times so the
@@ -199,6 +217,7 @@ export function buildPdfPayload(
     footerText: settings.pdf_footer_text ?? '',
     logoDataUrl,
     roundMinutes: roundStep,
+    includeSignatures: req.includeSignatures === true,
     generatedAtIso
   }
 }
@@ -284,6 +303,16 @@ export function buildPdfHtml(p: PdfPayload): string {
   // so the row arithmetic is internally consistent.
 
   const footer = p.footerText ? `<div class="footer-text">${esc(p.footerText)}</div>` : ''
+
+  // Signature lines are opt-in: most exports don't need them, and an
+  // unsigned signature row at the end of an otherwise clean document
+  // looks like a forgotten template.
+  const signatureBlock = p.includeSignatures
+    ? `<div class="signature-row">
+      <div class="sig">Datum, Auftragnehmer</div>
+      <div class="sig">Datum, Auftraggeber</div>
+    </div>`
+    : ''
 
   return `<!doctype html>
 <html lang="de">
@@ -439,10 +468,7 @@ export function buildPdfHtml(p: PdfPayload): string {
       </tbody>
     </table>
 
-    <div class="signature-row">
-      <div class="sig">Datum, Auftragnehmer</div>
-      <div class="sig">Datum, Auftraggeber</div>
-    </div>
+    ${signatureBlock}
 
     <footer class="doc-foot">
       ${footer}

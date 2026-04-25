@@ -79,6 +79,7 @@ declare global {
           clientId: number
           fromIso: string
           toIso: string
+          includeSignatures?: boolean
         }): Promise<IpcResult<{ path: string }>>
       }
       logo: {

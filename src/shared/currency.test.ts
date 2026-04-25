@@ -58,16 +58,26 @@ describe('roundMinutes', () => {
     expect(roundMinutes(83, -5)).toBe(83)
   })
 
-  it('rounds to 5-minute steps (half-up)', () => {
-    expect(roundMinutes(82, 5)).toBe(80)
+  it('keeps zero at zero (no work, no billable time)', () => {
+    expect(roundMinutes(0, 15)).toBe(0)
+    expect(roundMinutes(-5, 15)).toBe(0)
+  })
+
+  it('ceils to 5-minute steps (every started step counts)', () => {
+    expect(roundMinutes(1, 5)).toBe(5)
+    expect(roundMinutes(5, 5)).toBe(5)
+    expect(roundMinutes(82, 5)).toBe(85)
     expect(roundMinutes(83, 5)).toBe(85)
     expect(roundMinutes(85, 5)).toBe(85)
   })
 
-  it('rounds to 15-minute steps', () => {
-    expect(roundMinutes(7, 15)).toBe(0)
+  it('ceils to 15-minute steps (angebrochene Viertelstunde voll)', () => {
+    expect(roundMinutes(1, 15)).toBe(15)
+    expect(roundMinutes(7, 15)).toBe(15)
     expect(roundMinutes(8, 15)).toBe(15)
-    expect(roundMinutes(22, 15)).toBe(15)
+    expect(roundMinutes(15, 15)).toBe(15)
+    expect(roundMinutes(16, 15)).toBe(30)
+    expect(roundMinutes(22, 15)).toBe(30)
     expect(roundMinutes(23, 15)).toBe(30)
   })
 })
