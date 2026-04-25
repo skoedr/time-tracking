@@ -73,4 +73,15 @@ export const en: Record<TranslationKey, string> = {
   'onboarding.hotkey.hint': 'Both hotkeys can be changed in Settings.',
 
   // Settings — Re-Trigger
-  'settings.onboarding.retrigger': 'Show onboarding again',}
+  'settings.onboarding.retrigger': 'Show onboarding again',
+
+  // ── About-Dialog ─────────────────────────────────────────────
+  'about.title': 'About TimeTrack',
+  'about.version': 'Version',
+  'about.ownLicense': 'License',
+  'about.thirdParty': 'Third-party packages',
+  'about.loading': 'Loading license information …',
+  'about.noLicenseText': 'No license text available.',
+  'about.close': 'Close',
+  'about.open': 'Licenses & About',
+} as const satisfies Record<TranslationKey, string>

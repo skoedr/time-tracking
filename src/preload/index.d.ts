@@ -12,7 +12,8 @@ import type {
   IpcResult,
   BackupInfo,
   DashboardSummary,
-  UpdateStatus
+  UpdateStatus,
+  LicenseEntry
 } from '../shared/types'
 
 declare global {
@@ -84,6 +85,7 @@ declare global {
       app: {
         relaunch(): Promise<IpcResult<void>>
         getVersion(): Promise<IpcResult<string>>
+        getLicenses(): Promise<IpcResult<LicenseEntry[]>>
       }
       shell: {
         openPath(path: string): Promise<IpcResult<void>>

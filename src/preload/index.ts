@@ -13,7 +13,8 @@ import type {
   IpcResult,
   BackupInfo,
   DashboardSummary,
-  UpdateStatus
+  UpdateStatus,
+  LicenseEntry
 } from '../shared/types'
 import type { CsvRequest } from '../main/csvExport'
 
@@ -120,7 +121,8 @@ const api = {
   },
   app: {
     relaunch: (): Promise<IpcResult<void>> => ipcRenderer.invoke('app:relaunch'),
-    getVersion: (): Promise<IpcResult<string>> => ipcRenderer.invoke('app:getVersion')
+    getVersion: (): Promise<IpcResult<string>> => ipcRenderer.invoke('app:getVersion'),
+    getLicenses: (): Promise<IpcResult<LicenseEntry[]>> => ipcRenderer.invoke('app:getLicenses')
   },
   shell: {
     openPath: (path: string): Promise<IpcResult<void>> =>

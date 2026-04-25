@@ -3,6 +3,7 @@ import type { Settings, BackupInfo } from '../../../shared/types'
 import { useUpdateStore } from '../store/updateStore'
 import { useT, useLocale } from '../contexts/I18nContext'
 import type { Locale } from '../../../shared/i18n'
+import { AboutDialog } from '../components/AboutDialog'
 
 const DEFAULT_HOTKEY = 'Alt+Shift+S'
 const DEFAULT_MINI_HOTKEY = 'Alt+Shift+M'
@@ -48,6 +49,7 @@ export default function SettingsView(): React.JSX.Element {
   const [capturingHotkey, setCapturingHotkey] = useState<HotkeyKey | null>(null)
   const [hotkeyError, setHotkeyError] = useState<string | null>(null)
   const [statusMsg, setStatusMsg] = useState<string | null>(null)
+  const [showAbout, setShowAbout] = useState(false)
 
   async function loadAll(): Promise<void> {
     const [s, p, v, b] = await Promise.all([
@@ -541,7 +543,18 @@ export default function SettingsView(): React.JSX.Element {
         <Row label="Version">
           <span className="text-sm text-slate-300">{version || '—'}</span>
         </Row>
+        <Row label={t('about.open')}>
+          <button
+            type="button"
+            onClick={() => setShowAbout(true)}
+            className={btnSecondaryClass}
+          >
+            {t('about.open')}
+          </button>
+        </Row>
       </Section>
+
+      <AboutDialog open={showAbout} onClose={() => setShowAbout(false)} version={version} />
     </div>
   )
 }
