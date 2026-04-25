@@ -191,6 +191,18 @@ export default function SettingsView(): React.JSX.Element {
             <option value="en">{t('settings.language.en')}</option>
           </select>
         </Row>
+        <Row label="Onboarding">
+          <button
+            type="button"
+            onClick={async () => {
+              await window.api.settings.set('onboarding_completed', '0')
+              setStatusMsg('Onboarding zurückgesetzt — App neu starten oder Seite neu laden.')
+            }}
+            className={btnSecondaryClass}
+          >
+            {t('settings.onboarding.retrigger')}
+          </button>
+        </Row>
         <Row label="Mit Windows starten">
           <label className="inline-flex items-center gap-2">
             <input
