@@ -30,6 +30,7 @@
     "@electron-toolkit/utils": "^4.0.0",
     "better-sqlite3": "^12.9.0",
     "date-fns": "^4.1.0",
+    "electron-log": "^5.4.3",
     "zustand": "^5.0.12"
   },
   "devDependencies": {
