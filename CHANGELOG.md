@@ -2,6 +2,15 @@
 
 All notable changes to TimeTrack are documented here.
 
+## [1.5.1] — 2026-04-25
+
+### Changed
+
+- **Dokumentation** — README und ROADMAP auf v1.5.0-Stand gebracht: alle neuen
+  Features (Auto-Update, Crash-Logging, Onboarding, CSV, i18n, Lizenz-Dialog) in
+  der Feature-Liste, Project-Structure aktualisiert (schema v8, neue Dateien),
+  Release-Anleitung korrigiert. ROADMAP markiert v1.5 als shipped.
+
 ## [1.5.0] — 2026-04-25
 
 ### Added
