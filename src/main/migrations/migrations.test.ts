@@ -122,6 +122,8 @@ describe('migration SQL execution', () => {
       { key: 'mini_hotkey', value: 'Alt+Shift+M' },
       { key: 'mini_x', value: '-1' },
       { key: 'mini_y', value: '-1' },
+      // Migration 008 — Onboarding wizard (v1.5 PR E)
+      { key: 'onboarding_completed', value: '0' },
       // Migration 004 — PDF template seeds (v1.3 PR A)
       { key: 'pdf_accent_color', value: '#4f46e5' },
       { key: 'pdf_footer_text', value: '' },
@@ -454,5 +456,57 @@ describe('migration SQL execution', () => {
     expect(clientCount.n).toBe(0)
     const versionRow = db.prepare('SELECT * FROM schema_version WHERE version = 99').get()
     expect(versionRow).toBeUndefined()
+  })
+
+  it("migration 008 seeds onboarding_completed = '0'", () => {
+    applyAll()
+    const row = db
+      .prepare("SELECT value FROM settings WHERE key='onboarding_completed'")
+      .get() as { value: string } | undefined
+    expect(row).toBeDefined()
+    expect(row?.value).toBe('0')
+  })
+
+  it('migration 008 backfills onboarding_completed to 1 for installs with existing entries', () => {
+    // Simulate an install that already has entries (upgrade from v1.4).
+    // Apply migrations 001-007 first, insert an entry, then apply 008.
+    const pre = migrations.filter((m) => m.version < 8)
+    for (const m of pre) {
+      const tx = db.transaction(() => {
+        db.exec(m.up)
+        db.prepare('INSERT INTO schema_version (version, name) VALUES (?, ?)').run(
+          m.version,
+          m.name
+        )
+      })
+      tx()
+    }
+    db.prepare("INSERT INTO clients (id, name) VALUES (1, 'Acme')").run()
+    db.prepare(
+      `INSERT INTO entries (client_id, started_at, stopped_at)
+       VALUES (1, '2026-01-01T08:00:00Z', '2026-01-01T09:00:00Z')`
+    ).run()
+    // Now apply migration 008.
+    const m008 = migrations.find((m) => m.version === 8)!
+    db.transaction(() => {
+      db.exec(m008.up)
+      db.prepare('INSERT INTO schema_version (version, name) VALUES (?, ?)').run(
+        m008.version,
+        m008.name
+      )
+    })()
+    const row = db
+      .prepare("SELECT value FROM settings WHERE key='onboarding_completed'")
+      .get() as { value: string }
+    expect(row.value).toBe('1')
+  })
+
+  it('migration 008 keeps onboarding_completed = 0 for fresh installs (no entries)', () => {
+    applyAll()
+    // applyAll() on an empty DB → no entries → backfill should leave value as '0'.
+    const row = db
+      .prepare("SELECT value FROM settings WHERE key='onboarding_completed'")
+      .get() as { value: string }
+    expect(row.value).toBe('0')
   })
 })

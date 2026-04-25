@@ -7,7 +7,7 @@ import { en } from '../../../shared/locales/en'
 
 const localeMap: Record<Locale, Record<string, string>> = { de, en }
 
-type TFunction = (key: TranslationKey, vars?: Record<string, string | number>) => string
+export type TFunction = (key: TranslationKey, vars?: Record<string, string | number>) => string
 
 interface I18nCtx {
   locale: Locale
