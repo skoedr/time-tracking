@@ -2,6 +2,10 @@ import { useEffect, useState } from 'react'
 import type { Settings, BackupInfo } from '../../../shared/types'
 
 const DEFAULT_HOTKEY = 'Alt+Shift+S'
+const DEFAULT_MINI_HOTKEY = 'Alt+Shift+M'
+
+/** Settings keys that hold a global accelerator string. */
+type HotkeyKey = 'hotkey_toggle' | 'mini_hotkey'
 
 function parseAccelerator(e: KeyboardEvent): string | null {
   // Need at least one modifier and a non-modifier key.
@@ -31,7 +35,7 @@ export default function SettingsView(): React.JSX.Element {
   const [paths, setPaths] = useState<{ db: string; backups: string } | null>(null)
   const [version, setVersion] = useState<string>('')
   const [backups, setBackups] = useState<BackupInfo[]>([])
-  const [capturingHotkey, setCapturingHotkey] = useState(false)
+  const [capturingHotkey, setCapturingHotkey] = useState<HotkeyKey | null>(null)
   const [hotkeyError, setHotkeyError] = useState<string | null>(null)
   const [statusMsg, setStatusMsg] = useState<string | null>(null)
 
@@ -55,21 +59,22 @@ export default function SettingsView(): React.JSX.Element {
   // Capture next key combo for hotkey change.
   useEffect(() => {
     if (!capturingHotkey) return
+    const targetKey = capturingHotkey
     const handler = async (e: KeyboardEvent): Promise<void> => {
       e.preventDefault()
       e.stopPropagation()
       if (e.key === 'Escape') {
-        setCapturingHotkey(false)
+        setCapturingHotkey(null)
         setHotkeyError(null)
         return
       }
       const accel = parseAccelerator(e)
       if (!accel) return // wait for valid combo
-      const res = await window.api.settings.set('hotkey_toggle', accel)
+      const res = await window.api.settings.set(targetKey, accel)
       if (res.ok) {
-        setSettings((prev) => (prev ? { ...prev, hotkey_toggle: accel } : prev))
+        setSettings((prev) => (prev ? { ...prev, [targetKey]: accel } : prev))
         setHotkeyError(null)
-        setCapturingHotkey(false)
+        setCapturingHotkey(null)
       } else {
         setHotkeyError(res.error)
       }
@@ -209,17 +214,19 @@ export default function SettingsView(): React.JSX.Element {
         >
           <div className="flex items-center gap-2">
             <code className="rounded bg-slate-800 px-3 py-1.5 text-sm text-slate-200">
-              {capturingHotkey ? 'Drücke eine Tastenkombi …' : settings.hotkey_toggle}
+              {capturingHotkey === 'hotkey_toggle'
+                ? 'Drücke eine Tastenkombi …'
+                : settings.hotkey_toggle}
             </code>
             <button
               type="button"
               onClick={() => {
-                setCapturingHotkey((v) => !v)
+                setCapturingHotkey((v) => (v === 'hotkey_toggle' ? null : 'hotkey_toggle'))
                 setHotkeyError(null)
               }}
               className={btnSecondaryClass}
             >
-              {capturingHotkey ? 'Abbrechen' : 'Ändern'}
+              {capturingHotkey === 'hotkey_toggle' ? 'Abbrechen' : 'Ändern'}
             </button>
             {settings.hotkey_toggle !== DEFAULT_HOTKEY && (
               <button
@@ -231,7 +238,9 @@ export default function SettingsView(): React.JSX.Element {
               </button>
             )}
           </div>
-          {hotkeyError && <p className="mt-1 text-xs text-red-400">{hotkeyError}</p>}
+          {hotkeyError && capturingHotkey === 'hotkey_toggle' && (
+            <p className="mt-1 text-xs text-red-400">{hotkeyError}</p>
+          )}
         </Row>
         <Row label="Rundung" hint="Aktuell nur intern verfügbar — UI-Auswahl folgt.">
           <select
@@ -245,6 +254,75 @@ export default function SettingsView(): React.JSX.Element {
             <option value="floor">Abrunden</option>
             <option value="round">Kaufmännisch</option>
           </select>
+        </Row>
+      </Section>
+
+      {/* Mini-Widget (v1.4) */}
+      <Section title="Mini-Widget">
+        <Row
+          label="Aktivieren"
+          hint="Always-on-top 200×40-Overlay mit Timer und Stop-Button. Standardmäßig deaktiviert."
+        >
+          <label className="inline-flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={settings.mini_enabled === '1'}
+              onChange={(e) => update('mini_enabled', e.target.checked ? '1' : '0')}
+              className="h-4 w-4 rounded border-slate-600 bg-slate-800"
+            />
+            <span className="text-sm text-slate-300">Mini-Widget anzeigen</span>
+          </label>
+        </Row>
+        <Row
+          label="Hotkey"
+          hint="Mini-Widget ein-/ausblenden. Modifier + Buchstabe oder F-Taste."
+        >
+          <div className="flex items-center gap-2">
+            <code className="rounded bg-slate-800 px-3 py-1.5 text-sm text-slate-200">
+              {capturingHotkey === 'mini_hotkey'
+                ? 'Drücke eine Tastenkombi …'
+                : settings.mini_hotkey}
+            </code>
+            <button
+              type="button"
+              onClick={() => {
+                setCapturingHotkey((v) => (v === 'mini_hotkey' ? null : 'mini_hotkey'))
+                setHotkeyError(null)
+              }}
+              className={btnSecondaryClass}
+            >
+              {capturingHotkey === 'mini_hotkey' ? 'Abbrechen' : 'Ändern'}
+            </button>
+            {settings.mini_hotkey !== DEFAULT_MINI_HOTKEY && (
+              <button
+                type="button"
+                onClick={() => update('mini_hotkey', DEFAULT_MINI_HOTKEY)}
+                className={btnSecondaryClass}
+              >
+                Zurücksetzen
+              </button>
+            )}
+          </div>
+          {hotkeyError && capturingHotkey === 'mini_hotkey' && (
+            <p className="mt-1 text-xs text-red-400">{hotkeyError}</p>
+          )}
+        </Row>
+        <Row
+          label="Position"
+          hint="Setzt das Mini-Widget beim nächsten Anzeigen wieder auf rechts unten."
+        >
+          <button
+            type="button"
+            onClick={async () => {
+              await window.api.settings.set('mini_x', '-1')
+              await window.api.settings.set('mini_y', '-1')
+              setSettings((prev) => (prev ? { ...prev, mini_x: '-1', mini_y: '-1' } : prev))
+              setStatusMsg('Mini-Widget-Position zurückgesetzt.')
+            }}
+            className={btnSecondaryClass}
+          >
+            Position zurücksetzen
+          </button>
         </Row>
       </Section>
 

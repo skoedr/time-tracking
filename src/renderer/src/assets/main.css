@@ -21,3 +21,14 @@ textarea {
   user-select: text;
 }
 
+/* v1.4 Mini-Widget — Electron's frameless window drag regions.
+   Using CSS classes instead of inline styles so the linter stays happy.
+   The Webkit-prefixed property is the only way to control drag in Chromium. */
+.drag-region {
+  -webkit-app-region: drag;
+}
+
+.no-drag-region {
+  -webkit-app-region: no-drag;
+}
+
