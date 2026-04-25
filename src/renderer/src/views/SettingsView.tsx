@@ -32,7 +32,12 @@ function parseAccelerator(e: KeyboardEvent): string | null {
 
 export default function SettingsView(): React.JSX.Element {
   const [settings, setSettings] = useState<Settings | null>(null)
-  const [paths, setPaths] = useState<{ db: string; backups: string } | null>(null)
+  const [paths, setPaths] = useState<{
+    db: string
+    backups: string
+    logs: string
+    logFile: string
+  } | null>(null)
   const [version, setVersion] = useState<string>('')
   const [backups, setBackups] = useState<BackupInfo[]>([])
   const [capturingHotkey, setCapturingHotkey] = useState<HotkeyKey | null>(null)
@@ -395,6 +400,37 @@ export default function SettingsView(): React.JSX.Element {
           </div>
           <p className="mt-1 text-xs text-slate-500">
             Lesbares Format zum Backup oder zur Weiterverarbeitung. CSV/PDF folgen.
+          </p>
+        </Row>
+      </Section>
+
+      {/* Diagnose (v1.5 PR A, issue #34) */}
+      <Section title="Diagnose">
+        <Row
+          label="Log-Datei"
+          hint="Bei Problemen: Datei kopieren und beim Bug-Report anhängen."
+        >
+          <div className="flex items-center gap-2">
+            <code className="flex-1 truncate rounded bg-slate-800 px-3 py-1.5 text-xs text-slate-300">
+              {paths.logFile}
+            </code>
+            <button
+              type="button"
+              onClick={() => window.api.shell.showItemInFolder(paths.logFile)}
+              className={btnSecondaryClass}
+            >
+              Im Explorer zeigen
+            </button>
+            <button
+              type="button"
+              onClick={() => window.api.shell.openPath(paths.logs)}
+              className={btnSecondaryClass}
+            >
+              Ordner öffnen
+            </button>
+          </div>
+          <p className="mt-1 text-xs text-slate-500">
+            Rotiert automatisch bei 5 MB. Enthält App-Ereignisse und Fehler aus Main- und Renderer-Process.
           </p>
         </Row>
       </Section>

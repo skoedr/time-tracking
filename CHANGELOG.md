@@ -2,6 +2,19 @@
 
 All notable changes to TimeTrack are documented here.
 
+## [Unreleased] — v1.5
+
+### Added
+
+- **Crash-Logging** (#34, PR A) — `electron-log` schreibt App-Ereignisse und
+  Fehler nach `%AppData%\TimeTrack\logs\main.log` (Windows; analoge Pfade auf
+  macOS/Linux). Renderer-`console.*`-Aufrufe werden via IPC in dieselbe Datei
+  gespiegelt, sodass Bug-Reports ein vollständiges Bild liefern. Globale
+  Handler für `uncaughtException` und `unhandledRejection` erfassen Crashes,
+  die sonst silent verschwinden würden. Log-Datei rotiert automatisch bei 5 MB.
+  Settings → "Diagnose" zeigt den Pfad und bietet Buttons "Im Explorer zeigen"
+  + "Ordner öffnen" zum schnellen Anhängen an Issue-Reports.
+
 ## [1.3.0] — 2026-04-25
 
 ### Added

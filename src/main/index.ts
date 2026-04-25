@@ -9,6 +9,7 @@ import {
   dialog,
   type MenuItemConstructorOptions
 } from 'electron'
+import log from 'electron-log/main'
 import { join } from 'path'
 import { writeFileSync } from 'fs'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
@@ -26,6 +27,27 @@ import {
   rearmIdleWatcher
 } from './idle'
 import type { Client } from '../shared/types'
+
+// ── Logging (v1.5 PR A) ─────────────────────────────────────────
+// electron-log writes to %AppData%\TimeTrack\logs\main.log on Windows
+// (~/Library/Logs/TimeTrack on macOS, ~/.config/TimeTrack/logs on Linux).
+// `spyRendererConsole: true` mirrors renderer console.* into the same
+// file via IPC — no separate channel needed. `Object.assign(console, …)`
+// routes main-process console.* through the logger too, so existing
+// console.error/warn/info calls in db.ts/ipc.ts/etc. land in the file
+// without code changes.
+log.initialize({ preload: true, spyRendererConsole: true })
+log.transports.file.level = 'info'
+log.transports.file.maxSize = 5 * 1024 * 1024 // 5 MB, rotates to .old
+Object.assign(console, log.functions)
+
+// Catch-all for crashes that escape try/catch.
+process.on('uncaughtException', (err) => {
+  log.error('uncaughtException:', err)
+})
+process.on('unhandledRejection', (reason) => {
+  log.error('unhandledRejection:', reason)
+})
 
 let mainWindow: BrowserWindow | null = null
 let tray: Tray | null = null
