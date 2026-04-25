@@ -1,26 +1,30 @@
 # TimeTrack
 
-A personal Windows desktop time-tracking app for freelancers. Lightweight Toggl alternative with a local SQLite database, always-on-top mini widget, and PDF Stundennachweis export.
+A personal Windows desktop time-tracking app for freelancers. Lightweight Toggl alternative with a local SQLite database, calendar view, and PDF Stundennachweis export.
 
 ## Features
 
-- **Timer** — Start/stop with client selection and description. Crash-safe via heartbeat.
-- **Kunden-Verwaltung** — Create, edit, archive, and delete clients with color coding.
-- **Global Hotkey** — `Alt+Shift+S` (configurable) starts/stops the timer from anywhere.
-- **Tray Icon + Quick-Start** — Right-click the tray to start a client timer without opening the window.
-- **Idle-Detection** — When the system is idle past your threshold, the app asks whether to keep, stop, or mark as break.
-- **Settings-View** — Language, auto-start, idle threshold, hotkey, and data paths in one place.
-- **Auto-Backup** — Rolling 7-day SQLite backups under `%AppData%\TimeTrack\backups\`. Manual backup + restore from Settings.
-- **DB Migrations** — Versioned schema with pre-migration backup, so updates never lose data.
-- **Auto-Update Releases** — Pushing a `v*` tag builds the Windows installer and publishes a GitHub Release automatically.
-- **Local SQLite** — All data stays on your machine under `%AppData%\TimeTrack\`.
+- **Heute-Ansicht** — Default-Tab mit aktivem Timer als Pille, Tages-/Wochensumme, Top-3-Kunden-Quick-Start und letzte 5 Einträge.
+- **Timer** — Start/Stop mit Kunden-Auswahl und Beschreibung. Crash-safe via Heartbeat.
+- **Kalender-Modus** — 7×N-Monatsraster mit KW-Spalte, Tagessumme, farbigen Mini-Bars pro Kunde, Tages-Drawer mit Inline-Edit.
+- **Quick-Filter + 1-Klick-PDF** — "Diese Woche / Letzte Woche / Diesen Monat / Letzter Monat" plus Hero-Button "📄 Letzter Monat als PDF".
+- **PDF-Stundennachweis** — Druckbares A4-PDF mit Datum / Von / Bis / Tätigkeit / Dauer (optional Honorar). Konfigurierbar in **Einstellungen → PDF-Vorlage**: Logo, Absender, Steuernummer, Akzentfarbe, Footer, Stunden-Rundung, optionale Unterschriftsfelder.
+- **Stundensatz pro Kunde** — Optionales Honorar-Feld, fließt als €-Spalte ins PDF.
+- **JSON-Vollexport** — Kunden + Einträge + Settings als lesbare JSON-Datei (Daten-Portabilität).
+- **Cross-Midnight Auto-Split** — Einträge über Mitternacht werden automatisch in zwei verlinkte Tageshalften gesplittet — DST-sicher.
+- **Kunden-Verwaltung** — Anlegen, bearbeiten, archivieren, löschen, Farbcode + Stundensatz.
+- **Global Hotkey** — `Alt+Shift+S` (konfigurierbar) startet/stoppt den Timer aus jedem Tab.
+- **Tray Icon + Quick-Start** — Rechtsklick auf die Tray öffnet aktive Kunden direkt als Buttons. Tray-Glyph wechselt je nach Timer-State.
+- **Idle-Detection** — PC inaktiv über Schwelle? Modal fragt: behalten, stoppen oder als Pause markieren.
+- **Auto-Backup** — Rollierende 7-Tage-SQLite-Snapshots unter `%AppData%\TimeTrack\backups\`. Manueller Backup + Restore aus Settings.
+- **DB Migrations** — Versioniertes Schema mit Pre-Migration-Backup, sodass Updates nie Daten verlieren.
+- **Auto-Update Releases** — `v*`-Tag pushen baut den Windows-Installer und publishes ein GitHub Release automatisch (mit gepacktem Smoke-Test gegen DB **und** PDF-Pipeline).
+- **Local SQLite** — Alle Daten bleiben auf deiner Maschine unter `%AppData%\TimeTrack\`.
 
 ### Coming soon
 
-- Kalender-Modus (monthly overview) — see [v1.2 issues](https://github.com/skoedr/time-tracking/labels/v1.2)
-- PDF Stundennachweis export — see [v1.3 issues](https://github.com/skoedr/time-tracking/labels/v1.3)
-- Mini-Modus always-on-top widget — see [v1.4 issues](https://github.com/skoedr/time-tracking/labels/v1.4)
-- Auto-Update + Onboarding — see [v1.5 issues](https://github.com/skoedr/time-tracking/labels/v1.5)
+- Mini-Modus always-on-top widget, Pomodoro, Tags — see [v1.4 issues](https://github.com/skoedr/time-tracking/labels/v1.4)
+- Auto-Update + Onboarding-Wizard + Crash-Logging — see [v1.5 issues](https://github.com/skoedr/time-tracking/labels/v1.5)
 
 ## Tech Stack
 
@@ -83,32 +87,46 @@ git push origin v1.x.y
 ```
 src/
   main/          # Electron main process
-    index.ts     # App entry, tray (with Quick-Start), global hotkey
+    index.ts     # App entry, tray (with Quick-Start), global hotkey, smoke-test mode
     db.ts        # SQLite open + WAL setup
-    ipc.ts       # All IPC handlers (clients, entries, settings, shell, paths)
+    ipc.ts       # All IPC handlers (clients, entries, settings, dashboard, exports)
     idle.ts      # powerMonitor-based idle watcher
     backup.ts    # Daily/manual/pre-migration backups + restore
-    migrations/  # Versioned schema migrations + runner
+    pdf.ts       # PDF payload builder + HTML template (Stundennachweis)
+    pdfWindow.ts # Hidden BrowserWindow renderer (printToPDF pipeline)
+    jsonExport.ts# Full JSON export (clients + entries + settings)
+    logo.ts      # Logo file -> base64 data URL for PDF embedding
+    migrations/  # Versioned schema migrations + runner (001..005)
   preload/
     index.ts     # Context Bridge (window.api)
     index.d.ts   # TypeScript types for renderer
   renderer/src/
-    views/       # React page components (incl. SettingsView)
-    components/  # IdleModal etc.
+    views/       # TimerView, TodayView, CalendarView, ClientsView, SettingsView
+    components/  # Dialog, IdleModal, PdfExportModal, CalendarDrawer, EntryEditForm, Toast, ConfirmDialog
     hooks/       # useTimer logic hook
-    store/       # Zustand stores
+    store/       # Zustand stores (timer, entries, toast)
   shared/
     types.ts     # Shared TypeScript interfaces
     duration.ts  # Time-formatting helpers
+    currency.ts  # Cent-based money + minute rounding (ceil)
+    date.ts      # Local-day helpers
+    dateRanges.ts# Quick-filter range calculation (DST-safe)
+    midnightSplit.ts # Cross-midnight entry split logic
+    rate.ts      # German decimal <-> integer cent parsing
+scripts/
+  generate-icons.mjs # SVG -> tray PNGs (running/stopped, @1x/@2x)
+  sync-icon.mjs      # resources/icon.png -> build/icon.png + multi-res .ico (prebuild hook)
+templates/
+  Rechnung_RE26001.pdf, wald-it-logo.png  # Sample artifacts
 ```
 
 ## Data Storage
 
-The SQLite database lives at `%AppData%\TimeTrack\timetrack.db`. Schema:
+The SQLite database lives at `%AppData%\TimeTrack\timetrack.db`. Schema (as of v1.3, schema_version 5):
 
-- `clients` — name, color, active flag
-- `entries` — client_id, description, started_at, stopped_at, heartbeat_at
-- `settings` — key/value store
+- `clients` — name, color, active flag, `rate_cent` (optional Stundensatz)
+- `entries` — client_id, description, started_at, stopped_at, heartbeat_at, `deleted_at` (soft-delete), `link_id` (cross-midnight pair UUID)
+- `settings` — key/value store (incl. PDF template settings: logo path, sender, tax id, accent color, footer, round minutes)
 
 On startup the app auto-stops any entries where the heartbeat is older than 5 minutes (crash recovery).
 
