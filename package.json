@@ -17,7 +17,7 @@
     "start": "electron-vite preview",
     "dev": "electron-vite dev",
     "sync-icon": "node scripts/sync-icon.mjs",
-    "prebuild": "npm run sync-icon",
+    "prebuild": "npm run sync-icon && node scripts/generate-licenses.mjs",
     "build": "npm run typecheck && electron-vite build",
     "postinstall": "electron-builder install-app-deps",
     "build:unpack": "npm run build && electron-builder --dir",
