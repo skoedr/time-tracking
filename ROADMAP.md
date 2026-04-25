@@ -142,6 +142,12 @@ Hauptfenster, um zu sehen "läuft mein Timer?".
 Kleinere Edge-Cases / Polish-Ideen, die irgendwann reinrutschen, aber noch keiner
 konkreten Version zugeordnet sind.
 
+- **Pomodoro-Modus** (#23) — 25/5 opt-in Timer pro Eintrag. Nach 25 min Modal
+  „5 min Pause? · Weiter ohne Pause · Stoppen“. Pause als separater Eintrag mit
+  `kind='break'` (neue Spalte), nicht dem Kunden zugeordnet. Verschoben aus v1.5,
+  weil Maintainer es selbst nicht nutzt und Mini-Widget + Quicknote den Daily-Trust
+  bereits abdecken.
+
 - **PDF: überlappende Einträge desselben Kunden zusammenfassen.** Wenn zwei (oder mehr)
   Einträge für den gleichen Kunden zeitlich knapp aufeinander folgen oder sich
   überschneiden (z. B. zwei kurze Test-Toggles innerhalb von wenigen Minuten), sollten

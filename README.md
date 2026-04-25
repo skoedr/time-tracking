@@ -21,13 +21,18 @@ A personal Windows desktop time-tracking app for freelancers. Lightweight Toggl 
 - **Idle-Detection** — PC inaktiv über Schwelle? Modal fragt: behalten, stoppen oder als Pause markieren.
 - **Auto-Backup** — Rollierende 7-Tage-SQLite-Snapshots unter `%AppData%\TimeTrack\backups\`. Manueller Backup + Restore aus Settings.
 - **DB Migrations** — Versioniertes Schema mit Pre-Migration-Backup, sodass Updates nie Daten verlieren.
+- **Auto-Update** — `electron-updater` prüft beim Start auf neue GitHub-Releases. UpdateBanner erscheint bei verfügbaren Updates; manueller Check + Installieren-Button in Einstellungen → Updates.
+- **Crash-Logging** — `electron-log` schreibt rotierende Logs in `%AppData%\TimeTrack\logs\`. Catch-all für Main- und Renderer-Process-Fehler. Log-Datei direkt aus Einstellungen → Diagnose öffnen.
+- **Onboarding-Wizard** — 3-stufiger Assistent beim ersten Start: Sprache wählen → ersten Kunden anlegen → Hotkey-Hinweis. Ein-mal gezeigt; Bestandsuser behalten das Flag automatisch.
+- **CSV-Export** — Unified ExportModal mit Kunden-/Zeitraum-Filter. Produkt: flache CSV-Datei mit allen Einträgen (DATEV-kompatibles Format).
+- **i18n DE/EN** — vollständige Übersetzung über typsichere Locale-Dateien. Sprache umschaltbar in Einstellungen → Allgemein (wirkt live ohne Neustart).
+- **Lizenz-Hinweise** — About-Dialog unter Einstellungen → Über. Zeigt die MIT-Lizenz von TimeTrack + aufklappbare Liste aller 95 gebündelten Drittanbieter-Pakete mit SPDX-Bezeichner und Lizenztext.
 - **Auto-Update Releases** — `v*`-Tag pushen baut den Windows-Installer und publishes ein GitHub Release automatisch (mit gepacktem Smoke-Test gegen DB **und** PDF-Pipeline).
 - **Local SQLite** — Alle Daten bleiben auf deiner Maschine unter `%AppData%\TimeTrack\`.
 
 ### Coming soon
 
-- Fenster-Größe & Layout-Density — letzte Position/Größe persistieren, Container-Width-Audit — see [v1.4 issues](https://github.com/skoedr/time-tracking/labels/v1.4)
-- Auto-Update + Onboarding-Wizard + Crash-Logging — see [v1.5 issues](https://github.com/skoedr/time-tracking/labels/v1.5)
+- Pomodoro-Modus (#23) — 25/5 opt-in Timer pro Eintrag, Pause als separater `kind='break'` Eintrag — see [open issues](https://github.com/skoedr/time-tracking/issues)
 
 ## Tech Stack
 
@@ -78,11 +83,13 @@ To cut a new release locally:
 
 ```bash
 # 1. Bump version in package.json + add CHANGELOG entry
-# 2. Tag and push
+# 2. Commit, tag, and push
+git add package.json CHANGELOG.md
+git commit -m "chore(release): bump version to 1.x.y"
 git tag v1.x.y
-git push origin v1.x.y
-# 3. The Release workflow does the rest. The release is created as a draft —
-#    publish it from the GitHub UI (or `gh release edit vX.Y.Z --draft=false`).
+git push origin main v1.x.y
+# 3. The Release workflow does the rest — runs tests, builds the NSIS installer,
+#    and publishes the GitHub Release automatically.
 ```
 
 ## Project Structure
@@ -99,15 +106,19 @@ src/
     pdfWindow.ts # Hidden BrowserWindow renderer (printToPDF pipeline)
     jsonExport.ts# Full JSON export (clients + entries + settings)
     logo.ts      # Logo file -> base64 data URL for PDF embedding
-    migrations/  # Versioned schema migrations + runner (001..005)
+    updater.ts   # electron-updater bridge + IPC handlers (auto-update)
+    csvExport.ts # CSV export builder
+    migrations/  # Versioned schema migrations + runner (001..008)
   preload/
     index.ts     # Context Bridge (window.api)
     index.d.ts   # TypeScript types for renderer
   renderer/src/
     views/       # TimerView, TodayView, CalendarView, ClientsView, SettingsView
-    components/  # Dialog, IdleModal, PdfExportModal, CalendarDrawer, EntryEditForm, Toast, ConfirmDialog
+    components/  # Dialog, IdleModal, PdfExportModal, CalendarDrawer, EntryEditForm, Toast,
+                 # ConfirmDialog, UpdateBanner, OnboardingWizard, AboutDialog, ExportModal
+    contexts/    # I18nContext (DE/EN translations, useT hook)
     hooks/       # useTimer logic hook
-    store/       # Zustand stores (timer, entries, toast)
+    store/       # Zustand stores (timer, entries, toast, updateStore)
   shared/
     types.ts     # Shared TypeScript interfaces
     duration.ts  # Time-formatting helpers
@@ -116,16 +127,20 @@ src/
     dateRanges.ts# Quick-filter range calculation (DST-safe)
     midnightSplit.ts # Cross-midnight entry split logic
     rate.ts      # German decimal <-> integer cent parsing
+    locales/     # de.ts + en.ts locale files (typsicher via TranslationKey)
 scripts/
-  generate-icons.mjs # SVG -> tray PNGs (running/stopped, @1x/@2x)
-  sync-icon.mjs      # resources/icon.png -> build/icon.png + multi-res .ico (prebuild hook)
+  generate-icons.mjs    # SVG -> tray PNGs (running/stopped, @1x/@2x)
+  sync-icon.mjs         # resources/icon.png -> build/icon.png + multi-res .ico (prebuild hook)
+  generate-licenses.mjs # Scannt Produktions-Deps, schreibt resources/licenses.json (prebuild hook)
+resources/
+  licenses.json  # Generierte Lizenzliste (95 Pakete, aktualisiert bei pnpm build)
 templates/
   Rechnung_RE26001.pdf, wald-it-logo.png  # Sample artifacts
 ```
 
 ## Data Storage
 
-The SQLite database lives at `%AppData%\TimeTrack\timetrack.db`. Schema (as of v1.3, schema_version 5):
+The SQLite database lives at `%AppData%\TimeTrack\timetrack.db`. Schema (as of v1.5, schema_version 8):
 
 - `clients` — name, color, active flag, `rate_cent` (optional Stundensatz)
 - `entries` — client_id, description, started_at, stopped_at, heartbeat_at, `deleted_at` (soft-delete), `link_id` (cross-midnight pair UUID)
