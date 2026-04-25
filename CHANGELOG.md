@@ -6,6 +6,16 @@ All notable changes to TimeTrack are documented here.
 
 ### Added
 
+- **CSV-Export** (#18, PR C) — Das PDF-Export-Dialog ist jetzt ein
+  einheitliches "Export"-Modal mit zwei Tabs: **PDF** (Stundennachweis,
+  unverändert) und **CSV** (Tabelle für Excel / DATEV). Der CSV-Export enthält
+  alle abgeschlossenen Einträge des gewählten Zeitraums mit den Spalten Datum,
+  Start, Ende, Dauer, Kunde, Beschreibung, Tags, Stundensatz und Betrag.
+  Zwei Formate wählbar: **DE** (Semikolon als Feldtrenner, Komma als
+  Dezimalzeichen — passt direkt in Excel DE) und **US** (Komma / Punkt —
+  für DATEV-Importe). Datei enthält UTF-8 BOM, damit Excel ohne Encoding-
+  Abfrage öffnet. Tags werden `|`-getrennt ausgegeben (kein Konflikt mit
+  dem Feldtrenner).
 - **Auto-Update** (#28, PR B) — `electron-updater` prüft beim App-Start auf
   GitHub-Releases, lädt neue Versionen automatisch im Hintergrund und zeigt
   ein dezentes Indigo-Banner an, sobald die Installation bereit ist. Der

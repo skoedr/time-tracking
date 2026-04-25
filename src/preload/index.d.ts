@@ -111,6 +111,14 @@ declare global {
         set(): Promise<IpcResult<{ path: string }>>
         clear(): Promise<IpcResult<void>>
       }
+      csv: {
+        export(req: {
+          clientId: number
+          fromIso: string
+          toIso: string
+          format?: 'de' | 'us'
+        }): Promise<IpcResult<{ path: string }>>
+      }
       update: {
         getStatus(): Promise<IpcResult<UpdateStatus>>
         getLastCheck(): Promise<IpcResult<string | null>>

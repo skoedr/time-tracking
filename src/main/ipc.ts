@@ -13,6 +13,7 @@ import { buildJsonExportPayload } from './jsonExport'
 import { buildPdfHtml, buildPdfPayload, type PdfRequest } from './pdf'
 import { renderPdfBuffer } from './pdfWindow'
 import { readLogoAsDataUrl, removeLogo, saveLogo } from './logo'
+import { handleCsvExport, type CsvRequest } from './csvExport'
 import type {
   Client,
   Entry,
@@ -673,6 +674,14 @@ export function registerIpcHandlers(hooks: IpcHooks): void {
       return fail(e)
     }
   })
+
+  // === CSV export (v1.5 PR C, issue #18) ===================================
+  ipcMain.handle(
+    'csv:export',
+    async (_e, req: CsvRequest): Promise<IpcResult<{ path: string }>> => {
+      return handleCsvExport(db, req)
+    }
+  )
 }
 
 /**

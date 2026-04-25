@@ -15,7 +15,7 @@ import { getQuickRange, QUICK_RANGE_LABELS, type QuickRangeKind } from '../../..
 import { useEntriesStore } from '../store/entriesStore'
 import { useTimer } from '../hooks/useTimer'
 import { CalendarDrawer } from '../components/CalendarDrawer'
-import { PdfExportModal } from '../components/PdfExportModal'
+import { ExportModal } from '../components/ExportModal'
 
 /**
  * Month-grid calendar view. 7×N rows, KW column on the left.
@@ -231,7 +231,7 @@ export default function CalendarView(): React.JSX.Element {
         onClose={() => setSelectedDay(null)}
       />
 
-      <PdfExportModal
+      <ExportModal
         key={pdfRange ? `${pdfRange.fromIso}-${pdfRange.toIso}` : 'closed'}
         open={pdfRange !== null}
         prefilledRange={pdfRange ?? undefined}
