@@ -27,6 +27,10 @@ export function PdfExportModal(props: Props): React.JSX.Element {
   const [clientId, setClientId] = useState<number | null>(prefilledClientId ?? null)
   const [fromIso, setFromIso] = useState(prefilledRange?.fromIso ?? '')
   const [toIso, setToIso] = useState(prefilledRange?.toIso ?? '')
+  // Off by default: most exports don't need signature lines, and an empty
+  // signature row at the foot of the document looks like an unfinished
+  // template to the recipient.
+  const [includeSignatures, setIncludeSignatures] = useState(false)
   const [busy, setBusy] = useState(false)
   const [statusMsg, setStatusMsg] = useState<string | null>(null)
   const [statusKind, setStatusKind] = useState<'info' | 'error' | 'success'>('info')
@@ -58,7 +62,7 @@ export function PdfExportModal(props: Props): React.JSX.Element {
     setBusy(true)
     setStatusMsg('PDF wird erstellt …')
     setStatusKind('info')
-    const res = await window.api.pdf.export({ clientId, fromIso, toIso })
+    const res = await window.api.pdf.export({ clientId, fromIso, toIso, includeSignatures })
     setBusy(false)
     if (res.ok) {
       setStatusKind('success')
@@ -119,6 +123,22 @@ export function PdfExportModal(props: Props): React.JSX.Element {
             />
           </label>
         </div>
+
+        <label className="flex items-start gap-2 text-sm text-zinc-300">
+          <input
+            type="checkbox"
+            checked={includeSignatures}
+            onChange={(e) => setIncludeSignatures(e.target.checked)}
+            disabled={busy}
+            className="mt-0.5 h-4 w-4 rounded border-zinc-600 bg-zinc-800 text-indigo-500 focus:ring-indigo-400 focus:ring-offset-0"
+          />
+          <span>
+            Unterschriftsfelder einblenden
+            <span className="block text-xs text-zinc-500">
+              Fügt unten zwei Linien für Auftragnehmer / Auftraggeber hinzu.
+            </span>
+          </span>
+        </label>
 
         {statusMsg && (
           <div

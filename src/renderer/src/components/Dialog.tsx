@@ -26,27 +26,35 @@ export function Dialog({
 }: Props): React.ReactElement | null {
   const containerRef = useRef<HTMLDivElement>(null)
   const previouslyFocused = useRef<Element | null>(null)
+  // Keep latest onClose in a ref so the focus/keydown effect doesn't re-run
+  // every time the parent re-renders (which would re-focus the close button
+  // on every tick — e.g. Today's running-timer pill ticks once per second).
+  const onCloseRef = useRef(onClose)
+  onCloseRef.current = onClose
 
   useEffect(() => {
     if (!open) return
     previouslyFocused.current = document.activeElement
     const handler = (e: KeyboardEvent): void => {
-      if (e.key === 'Escape') onClose()
+      if (e.key === 'Escape') onCloseRef.current()
     }
     window.addEventListener('keydown', handler)
     // Move focus into the dialog after mount so screen readers announce it.
+    // Prefer the first form control over the close (×) button — the close
+    // button is earlier in the DOM but should never steal initial focus.
     queueMicrotask(() => {
-      const first = containerRef.current?.querySelector<HTMLElement>(
-        'input, select, textarea, button'
-      )
-      first?.focus()
+      const root = containerRef.current
+      if (!root) return
+      const firstField = root.querySelector<HTMLElement>('input, select, textarea')
+      const fallback = root.querySelector<HTMLElement>('button')
+      ;(firstField ?? fallback)?.focus()
     })
     return () => {
       window.removeEventListener('keydown', handler)
       const prev = previouslyFocused.current
       if (prev instanceof HTMLElement) prev.focus()
     }
-  }, [open, onClose])
+  }, [open])
 
   if (!open) return null
 
