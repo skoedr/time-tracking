@@ -107,23 +107,29 @@ Hauptfenster, um zu sehen "läuft mein Timer?".
 ## v1.5 — Trust at Scale & Data Portability
 
 📂 [Issues mit Label `v1.5`](https://github.com/skoedr/time-tracking/labels/v1.5)
+📋 [Plan & Multi-Angle Review](.github/plan-v1.5.md)
 
 **Thema:** Wenn jemand außer dir das Tool nutzt, soll es nicht peinlich sein.
 
+- **Crash-Logging** (#34) — `electron-log` schreibt Errors in `%AppData%\TimeTrack\logs\`.
+  Settings-Button "Log-Datei öffnen" für Debugging. Foundation für alle anderen v1.5-PRs.
+- **Auto-Update** (#33) — `electron-updater` gegen GitHub Releases. Update-Banner statt
+  silent failure. Update wird beim nächsten Restart angewendet.
 - **CSV-Export** (#18) — für Steuerberater oder externe Tools (DATEV-kompatibel).
   Verschoben aus v1.4, da JSON-Vollexport die Daten-Portabilität bereits abdeckt
   und v1.4 auf Friction-Removal fokussiert.
-- **Pomodoro-Modus optional** (#23) — pro Eintrag aktivierbar: 25 min Timer, dann Modal
-  "5 min Pause? Weiter? Stoppen?". Pausen werden separat als Type=`break` gespeichert.
-  Verschoben aus v1.4 — Mini-Widget + Quicknote liefern mehr Daily-Trust.
-- **Onboarding-Wizard** — beim ersten Start: 3 Schritte (Sprache → ersten Kunden anlegen
-  → Hotkey-Hinweis). Ein-mal gezeigt.
-- **Auto-Update** — `electron-updater` gegen GitHub Releases. Update-Banner statt
-  silent failure. Update wird beim nächsten Restart angewendet.
-- **Crash-Logging** — `electron-log` schreibt Errors in `%AppData%\TimeTrack\logs\`.
-  Settings-Button "Letztes Log öffnen" für Debugging.
-- **Lizenz-Hinweise** — About-Dialog mit MIT-Lizenz und Drittanbieter-Lizenzen.
+- **i18n-Foundation** — kleine eigene Implementation (kein i18next-Heavyweight).
+  DE als Source-of-Truth, EN-Stub für migrierte Bereiche. Nicht-migrierte Strings
+  bleiben hardcoded; volle App-Übersetzung kommt in v1.6.
+- **Onboarding-Wizard** (#32) — beim ersten Start: 3 Schritte (Willkommen+Sprache →
+  ersten Kunden anlegen → Hotkey-Hinweis). Ein-mal gezeigt. Bestandsuser bekommen
+  Flag automatisch gesetzt.
+- **Lizenz-Hinweise** (#35) — About-Dialog mit MIT-Lizenz und automatisch generierten
+  Drittanbieter-Lizenzen.
 
+> **Gestrichen aus v1.5:** Pomodoro-Modus (#23). Maintainer nutzt es nicht selbst;
+> Daily-Trust wird durch Mini-Widget + Quicknote bereits abgedeckt.
+>
 > **Bewusst nicht in v1.5:** Code-Signing. SmartScreen-Warnung bei Installation
 > wird in Kauf genommen. Bricht keine Funktion, nur einmaliger "Trotzdem ausführen"-Klick.
 
