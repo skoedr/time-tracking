@@ -40,17 +40,27 @@ async function main() {
   mkdirSync(join(root, 'build'), { recursive: true })
   mkdirSync(join(root, 'resources'), { recursive: true })
 
-  // Helper: extract a region, auto-trim transparent borders, fit into a square
-  // with transparent padding so the icon centers nicely at the target size.
-  async function extractSquare(region, size) {
+  // Helper: extract a region, trim away any transparent border so the glyph
+  // dominates, pad to a square (minimal transparent padding), then resize.
+  // `padRatio` adds a tiny breathing room (e.g. 0.04 = 4 % of glyph side).
+  async function extractSquare(region, size, padRatio = 0) {
     const cropped = await sharp(sheet).extract(region).png().toBuffer()
-    const meta = await sharp(cropped).metadata()
-    const side = Math.max(meta.width ?? 0, meta.height ?? 0)
-    // Pad to square, then resize to target.
-    const square = await sharp(cropped)
+    // Trim removes fully-transparent pixels around the actual glyph.
+    let trimmed
+    try {
+      trimmed = await sharp(cropped).trim().png().toBuffer()
+    } catch {
+      trimmed = cropped
+    }
+    const meta = await sharp(trimmed).metadata()
+    const w = meta.width ?? 0
+    const h = meta.height ?? 0
+    const side = Math.max(w, h)
+    const padded = Math.round(side * (1 + padRatio * 2))
+    const square = await sharp(trimmed)
       .resize({
-        width: side,
-        height: side,
+        width: padded,
+        height: padded,
         fit: 'contain',
         background: { r: 0, g: 0, b: 0, alpha: 0 }
       })
@@ -62,28 +72,23 @@ async function main() {
       .toBuffer()
   }
 
-  // 1. Hero app icon — 1024×1024 PNG (electron-builder consumes this)
-  const hero1024 = await extractSquare(REGIONS.hero, 1024)
-  writeFileSync(join(root, 'build', 'icon.png'), hero1024)
-  writeFileSync(join(root, 'resources', 'icon.png'), hero1024)
-  console.log('build/icon.png + resources/icon.png written (1024×1024)')
+  // 1. Hero app icon — the manually maintained resources/icon.png is the
+  //    source of truth; scripts/sync-icon.mjs derives build/icon.png and
+  //    build/icon.ico from it. This generator only owns the tray glyphs
+  //    (and the preview composite at the bottom).
 
-  // 2. Hero ICO — multi-resolution for Windows
-  const sizes = [16, 24, 32, 48, 64, 128, 256]
-  const heroPngs = await Promise.all(sizes.map((s) => extractSquare(REGIONS.hero, s)))
-  const ico = await pngToIco(heroPngs)
-  writeFileSync(join(root, 'build', 'icon.ico'), ico)
-  console.log(`build/icon.ico written (${sizes.join('/')})`)
-
-  // 3. Tray icons — 32×32 PNG (Electron auto-picks @2x density on HiDPI)
-  const trayRunning = await extractSquare(REGIONS.trayRunning, 32)
-  const trayStopped = await extractSquare(REGIONS.trayStopped, 32)
+  // 2. Tray icons — 32×32 PNG (Electron auto-picks @2x density on HiDPI).
+  //    Trim+resize so the glyph fills almost the entire bitmap; only a
+  //    tiny breathing room is added so anti-aliased edges don't touch.
+  const trayPad = 0.02
+  const trayRunning = await extractSquare(REGIONS.trayRunning, 32, trayPad)
+  const trayStopped = await extractSquare(REGIONS.trayStopped, 32, trayPad)
   writeFileSync(join(root, 'resources', 'tray-running.png'), trayRunning)
   writeFileSync(join(root, 'resources', 'tray-stopped.png'), trayStopped)
 
   // Also emit @2x variants for HiDPI displays.
-  const trayRunning2x = await extractSquare(REGIONS.trayRunning, 64)
-  const trayStopped2x = await extractSquare(REGIONS.trayStopped, 64)
+  const trayRunning2x = await extractSquare(REGIONS.trayRunning, 64, trayPad)
+  const trayStopped2x = await extractSquare(REGIONS.trayStopped, 64, trayPad)
   writeFileSync(join(root, 'resources', 'tray-running@2x.png'), trayRunning2x)
   writeFileSync(join(root, 'resources', 'tray-stopped@2x.png'), trayStopped2x)
   console.log('resources/tray-{running,stopped}.png + @2x written (32×32 / 64×64)')
