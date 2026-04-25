@@ -5,6 +5,7 @@ import CalendarView from './views/CalendarView'
 import ClientsView from './views/ClientsView'
 import SettingsView from './views/SettingsView'
 import { IdleModal } from './components/IdleModal'
+import { QuickNoteModal } from './components/QuickNoteModal'
 import { ToastTray } from './components/Toast'
 import { useTimer } from './hooks/useTimer'
 
@@ -20,7 +21,8 @@ const NAV_LABEL: Record<View, string> = {
 
 function App(): React.JSX.Element {
   const [view, setView] = useState<View>('today')
-  const { idleEvent, idleKeep, idleStopAtIdle, idleMarkPause } = useTimer()
+  const { idleEvent, idleKeep, idleStopAtIdle, idleMarkPause, quickNoteEntry, setQuickNoteEntry } =
+    useTimer()
 
   return (
     <div className="h-screen bg-slate-900 text-slate-100 flex flex-col overflow-hidden">
@@ -56,6 +58,9 @@ function App(): React.JSX.Element {
           onStopAtIdle={idleStopAtIdle}
           onMarkPause={idleMarkPause}
         />
+      )}
+      {quickNoteEntry && (
+        <QuickNoteModal entry={quickNoteEntry} onDone={() => setQuickNoteEntry(null)} />
       )}
 
       <ToastTray />
