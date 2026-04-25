@@ -6,6 +6,14 @@ All notable changes to TimeTrack are documented here.
 
 ### Added
 
+- **Lizenz-Hinweise** (#35, PR F) — Unter Einstellungen → Über findet sich ein
+  neuer "Lizenzen & Über"-Button, der einen About-Dialog öffnet. Der Dialog zeigt
+  App-Version, den MIT-Lizenztext von TimeTrack sowie eine durchsuchbare, aufklapp-
+  bare Liste aller 95 gebündelten Drittanbieter-Pakete (Name, Version, SPDX-Bezeichner,
+  Repository-Link und Lizenztext). Die Lizenzliste wird zur Build-Zeit automatisch von
+  `scripts/generate-licenses.mjs` aus dem Produktions-Abhängigkeitsbaum generiert
+  und als `resources/licenses.json` abgelegt. Der `prebuild`-Hook führt das Script
+  bei jedem `pnpm build` automatisch aus.
 - **Onboarding-Wizard** (#32, PR E) — Neuen Installationen wird beim ersten
   Start automatisch ein 3-stufiger Assistent angezeigt. **Schritt 1** wählt
   die Sprache (DE/EN, Umschalter wirkt live). **Schritt 2** legt optional den

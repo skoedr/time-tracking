@@ -74,6 +74,17 @@ export const de = {
   'onboarding.hotkey.hint': 'Beide Hotkeys sind in Einstellungen änderbar.',
 
   // Settings — Re-Trigger
-  'settings.onboarding.retrigger': 'Onboarding erneut anzeigen',} as const
+  'settings.onboarding.retrigger': 'Onboarding erneut anzeigen',
+
+  // ── About-Dialog ─────────────────────────────────────────────
+  'about.title': 'Über TimeTrack',
+  'about.version': 'Version',
+  'about.ownLicense': 'Lizenz',
+  'about.thirdParty': 'Drittanbieter-Pakete',
+  'about.loading': 'Lade Lizenzinformationen …',
+  'about.noLicenseText': 'Kein Lizenztext verfügbar.',
+  'about.close': 'Schließen',
+  'about.open': 'Lizenzen & Über',
+} as const
 
 export type TranslationKey = keyof typeof de
