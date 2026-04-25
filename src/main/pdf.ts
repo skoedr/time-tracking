@@ -20,6 +20,13 @@ export interface PdfRequest {
   /** ISO-date strings, inclusive. e.g. '2026-04-01' to '2026-04-30'. */
   fromIso: string
   toIso: string
+  /**
+   * Render the two signature lines ("Datum, Auftragnehmer" / "Datum,
+   * Auftraggeber") at the bottom of the document. Default `false` —
+   * most users never need them, and an empty signature row at the end
+   * looks like an unfinished template. Toggled per-export from the modal.
+   */
+  includeSignatures?: boolean
 }
 
 export interface PdfRow {
@@ -50,6 +57,12 @@ export interface PdfPayload {
   logoDataUrl: string
   /** Rounding step in minutes; 0 = no rounding. */
   roundMinutes: number
+  /**
+   * When true, the rendered HTML includes a bottom signature row with
+   * lines for Auftragnehmer / Auftraggeber. Defaults to false at the
+   * payload level so existing call-sites / tests don't have to opt out.
+   */
+  includeSignatures?: boolean
   /** Used for the "erstellt am" footer line. */
   generatedAtIso: string
 }
@@ -71,6 +84,34 @@ function formatDate(iso: string): string {
 
 function formatTime(iso: string): string {
   return TIME_FMT.format(new Date(iso))
+}
+
+/**
+ * Snap a Date to the nearest `step` minutes (local time, half-up).
+ * Used to align displayed start times with the rounded duration so the
+ * PDF reader sees `19:00 – 19:30 → 0:30` instead of
+ * `18:54 – 19:18 → 0:30` (which would look like a math error to the
+ * recipient even though the duration column is correct).
+ *
+ * Edge: a snap near local midnight may roll the wall-clock time into
+ * the next day (e.g. 23:50 with step=30 → 00:00 next day). The PDF
+ * `date` column is taken from the raw start date, so this manifests as
+ * a slightly weird-looking row — but in practice cross-midnight entries
+ * are already auto-split into halves at the IPC layer (PR B), so no
+ * stored entry should sit within `step/2` minutes of midnight.
+ */
+function snapToStepLocal(d: Date, step: number): Date {
+  const totalMin = d.getHours() * 60 + d.getMinutes() + d.getSeconds() / 60
+  const snapped = Math.round(totalMin / step) * step
+  const result = new Date(d)
+  result.setHours(0, 0, 0, 0)
+  // setMinutes handles overflow into next day correctly.
+  result.setMinutes(snapped)
+  return result
+}
+
+function formatTimeDate(d: Date): string {
+  return TIME_FMT.format(d)
 }
 
 /**
@@ -124,13 +165,34 @@ export function buildPdfPayload(
   const rows: PdfRow[] = entries.map((e) => {
     const start = new Date(e.started_at)
     const stop = new Date(e.stopped_at as string)
-    const rawMin = Math.max(0, Math.round((stop.getTime() - start.getTime()) / 60000))
+    // Use ceil here so that a sub-minute entry (e.g. a quick test toggle of
+    // a few seconds) is reported as 1 raw minute instead of vanishing to 0.
+    // Combined with the ceil-based `roundMinutes` below, this matches the
+    // conventional billing rule: any started step gets charged in full.
+    const rawMs = Math.max(0, stop.getTime() - start.getTime())
+    const rawMin = rawMs > 0 ? Math.ceil(rawMs / 60000) : 0
     const minutes = roundMinutes(rawMin, roundStep)
     const fee = client.rate_cent > 0 ? feeCent(minutes, client.rate_cent) : null
+    // When rounding is on, we also adjust the displayed times so the
+    // visible "Von / Bis / Dauer" arithmetic adds up for the recipient.
+    // Rule: snap the start to the nearest step, then derive the stop as
+    // start + roundedMinutes. For step=0 (no rounding), display the raw
+    // wall-clock times unchanged.
+    let startTime: string
+    let stopTime: string
+    if (roundStep > 0) {
+      const displayedStart = snapToStepLocal(start, roundStep)
+      const displayedStop = new Date(displayedStart.getTime() + minutes * 60_000)
+      startTime = formatTimeDate(displayedStart)
+      stopTime = formatTimeDate(displayedStop)
+    } else {
+      startTime = formatTime(e.started_at)
+      stopTime = formatTime(e.stopped_at as string)
+    }
     return {
       date: formatDate(e.started_at),
-      startTime: formatTime(e.started_at),
-      stopTime: formatTime(e.stopped_at as string),
+      startTime,
+      stopTime,
       description: e.description ?? '',
       minutes,
       feeCent: fee
@@ -155,6 +217,7 @@ export function buildPdfPayload(
     footerText: settings.pdf_footer_text ?? '',
     logoDataUrl,
     roundMinutes: roundStep,
+    includeSignatures: req.includeSignatures === true,
     generatedAtIso
   }
 }
@@ -234,12 +297,22 @@ export function buildPdfHtml(p: PdfPayload): string {
         ${showFee ? `<td class="col-fee">${esc(formatEur(p.totals.feeCent ?? 0))}</td>` : ''}
       </tr>`
 
-  const roundingHint =
-    p.roundMinutes > 0
-      ? `<div class="rounding-hint">Stunden gerundet auf ${p.roundMinutes} Minuten.</div>`
-      : ''
+  // No visible rounding hint in the PDF: the recipient should never
+  // notice that times were rounded. The displayed Von/Bis times are
+  // already aligned with the rounded duration in `buildPdfPayload`,
+  // so the row arithmetic is internally consistent.
 
   const footer = p.footerText ? `<div class="footer-text">${esc(p.footerText)}</div>` : ''
+
+  // Signature lines are opt-in: most exports don't need them, and an
+  // unsigned signature row at the end of an otherwise clean document
+  // looks like a forgotten template.
+  const signatureBlock = p.includeSignatures
+    ? `<div class="signature-row">
+      <div class="sig">Datum, Auftragnehmer</div>
+      <div class="sig">Datum, Auftraggeber</div>
+    </div>`
+    : ''
 
   return `<!doctype html>
 <html lang="de">
@@ -329,7 +402,6 @@ export function buildPdfHtml(p: PdfPayload): string {
     padding: 24px 8px;
     font-style: italic;
   }
-  .rounding-hint { margin-top: 12px; font-size: 9pt; color: #64748b; font-style: italic; }
   footer.doc-foot {
     margin-top: 36px;
     padding-top: 12px;
@@ -396,12 +468,7 @@ export function buildPdfHtml(p: PdfPayload): string {
       </tbody>
     </table>
 
-    ${roundingHint}
-
-    <div class="signature-row">
-      <div class="sig">Datum, Auftragnehmer</div>
-      <div class="sig">Datum, Auftraggeber</div>
-    </div>
+    ${signatureBlock}
 
     <footer class="doc-foot">
       ${footer}

@@ -36,13 +36,20 @@ export function formatEur(cent: number): string {
 }
 
 /**
- * Round a duration to a multiple of `step` minutes (half-up). Used by the
- * PDF pipeline when `pdf_round_minutes` is non-zero. Returns the input
- * unchanged when `step <= 0` (the "no rounding" sentinel).
+ * Round a duration UP to the next multiple of `step` minutes (ceil).
+ * Used by the PDF pipeline when `pdf_round_minutes` is non-zero — this is
+ * the conventional billing rule: any started step is charged in full
+ * ("angebrochene 15 Minuten werden voll berechnet"). A raw 1-minute entry
+ * with step=15 becomes 15 minutes, not 0.
+ *
+ * Returns the input unchanged when `step <= 0` ("no rounding" sentinel).
+ * Zero (or negative) input minutes always stay zero — we never invent
+ * billable time for an entry that has none.
  */
 export function roundMinutes(minutes: number, step: number): number {
   if (step <= 0) return minutes
-  return Math.round(minutes / step) * step
+  if (minutes <= 0) return 0
+  return Math.ceil(minutes / step) * step
 }
 
 /**

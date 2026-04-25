@@ -13,6 +13,8 @@ import { join } from 'path'
 import { writeFileSync } from 'fs'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
+import trayRunningIcon from '../../resources/tray-running.png?asset'
+import trayStoppedIcon from '../../resources/tray-stopped.png?asset'
 import { getDb, recoverZombieEntries, MigrationError } from './db'
 import { registerIpcHandlers } from './ipc'
 import {
@@ -107,6 +109,10 @@ function updateTray(running: boolean, label: string, todaySeconds: number): void
   isTimerRunning = running
   runningLabel = label
   lastTodaySeconds = todaySeconds
+  // State-aware tray glyph (PR D #16/#42 follow-up): green clock when running,
+  // grey clock when idle. Both files live in resources/ and are bundled by
+  // electron-vite's `?asset` resolver.
+  tray.setImage(running ? trayRunningIcon : trayStoppedIcon)
   // Tooltip format (v1.2 #31):
   //   running: `● {client} · {HH:MM} · Heute {HH:MM}`
   //   idle:    `TimeTrack — Heute {HH:MM}`
@@ -195,7 +201,7 @@ function createWindow(): void {
   }
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   electronApp.setAppUserModelId('com.timetrack.app')
 
   // Smoke-test mode (CI release pipeline). When invoked with
@@ -212,12 +218,51 @@ app.whenReady().then(() => {
       const row = db.prepare('SELECT MAX(version) as v FROM schema_version').get() as {
         v: number | null
       }
+
+      // PDF pipeline smoke check (v1.3): seed a single client + entry,
+      // build the HTML payload, render via the hidden BrowserWindow.
+      // Catches regressions in printToPDF / Chromium / template wiring
+      // against the packaged binary, not just the unit-tested HTML string.
+      const { buildPdfPayload, buildPdfHtml } = await import('./pdf')
+      const { renderPdfBuffer } = await import('./pdfWindow')
+      let pdfBytes = 0
+      try {
+        db.prepare(
+          `INSERT OR IGNORE INTO clients (id, name, color, rate_cent)
+             VALUES (9999, '__smoke__', '#4f46e5', 0)`
+        ).run()
+        const today = new Date().toISOString().slice(0, 10)
+        const startIso = `${today}T08:00:00.000Z`
+        const stopIso = `${today}T09:00:00.000Z`
+        db.prepare(
+          `INSERT INTO entries (client_id, description, started_at, stopped_at)
+             VALUES (9999, 'smoke', ?, ?)`
+        ).run(startIso, stopIso)
+        const payload = buildPdfPayload(db, {
+          clientId: 9999,
+          fromIso: today,
+          toIso: today
+        }, '')
+        const html = buildPdfHtml(payload)
+        const buf = await renderPdfBuffer({ html })
+        pdfBytes = buf.length
+      } finally {
+        // Always clean up — keeps the smoke DB stable across re-runs.
+        try {
+          db.prepare(`DELETE FROM entries WHERE client_id = 9999`).run()
+          db.prepare(`DELETE FROM clients WHERE id = 9999`).run()
+        } catch {
+          /* best-effort */
+        }
+      }
+
       const result = {
         ok: true as const,
         schemaVersion: row.v ?? 0,
         dbPath: app.getPath('userData'),
         electronVersion: process.versions.electron,
-        nodeVersion: process.versions.node
+        nodeVersion: process.versions.node,
+        pdfBytes
       }
       const payload = JSON.stringify(result)
       console.log(`[smoke] ${payload}`)
@@ -289,7 +334,7 @@ app.whenReady().then(() => {
   configureIdleWatcher({ getWindow: () => mainWindow })
   loadStartupSettings()
 
-  tray = new Tray(icon)
+  tray = new Tray(trayStoppedIcon)
   updateTray(false, '', 0)
   tray.on('click', () => {
     if (mainWindow?.isVisible()) {
