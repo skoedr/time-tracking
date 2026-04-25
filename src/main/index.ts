@@ -17,6 +17,7 @@ import trayRunningIcon from '../../resources/tray-running.png?asset'
 import trayStoppedIcon from '../../resources/tray-stopped.png?asset'
 import { getDb, recoverZombieEntries, MigrationError } from './db'
 import { registerIpcHandlers } from './ipc'
+import { applyMiniEnabled, destroyMini, pushMiniState, toggleMini } from './miniWindow'
 import {
   configureIdleWatcher,
   setIdleThresholdMinutes,
@@ -29,6 +30,12 @@ import type { Client } from '../shared/types'
 let mainWindow: BrowserWindow | null = null
 let tray: Tray | null = null
 let isQuitting = false
+
+// ── Hotkey registration state ────────────────────────────────────
+// Tracked per-slot so `registerHotkey` and `registerMiniHotkey` can update
+// independently without clobbering each other (no more `unregisterAll`).
+let currentToggleHotkey = ''
+let currentMiniHotkey = ''
 
 // ── State for tray quick-start ──────────────────────────────────
 let cachedActiveClients: Client[] = []
@@ -126,13 +133,72 @@ function updateTray(running: boolean, label: string, todaySeconds: number): void
 }
 
 function registerHotkey(accelerator: string): boolean {
-  globalShortcut.unregisterAll()
+  // Cross-slot collision check (v1.4 PR B). Without this, suspending
+  // shortcuts during capture would let the user silently steal the
+  // mini-widget's accelerator, since the OS-level register call would
+  // succeed while the other slot is paused.
+  if (accelerator && accelerator === currentMiniHotkey) {
+    console.warn(`[hotkey] ${accelerator} is already bound to mini_hotkey`)
+    return false
+  }
+  if (currentToggleHotkey) {
+    globalShortcut.unregister(currentToggleHotkey)
+    currentToggleHotkey = ''
+  }
   if (!accelerator) return false
   const ok = globalShortcut.register(accelerator, () => {
     mainWindow?.webContents.send('timer:hotkey-toggle')
   })
-  if (!ok) console.warn(`[hotkey] Could not register ${accelerator}`)
+  if (ok) currentToggleHotkey = accelerator
+  else console.warn(`[hotkey] Could not register ${accelerator}`)
   return ok
+}
+
+/**
+ * Mini-Widget hotkey — toggles widget visibility (only when widget is
+ * enabled in Settings). Tracked separately from `hotkey_toggle` so changing
+ * one doesn't clobber the other (we used to call `unregisterAll`).
+ */
+function registerMiniHotkey(accelerator: string): boolean {
+  if (accelerator && accelerator === currentToggleHotkey) {
+    console.warn(`[mini-hotkey] ${accelerator} is already bound to hotkey_toggle`)
+    return false
+  }
+  if (currentMiniHotkey) {
+    globalShortcut.unregister(currentMiniHotkey)
+    currentMiniHotkey = ''
+  }
+  if (!accelerator) return false
+  const ok = globalShortcut.register(accelerator, () => {
+    toggleMini()
+  })
+  if (ok) currentMiniHotkey = accelerator
+  else console.warn(`[mini-hotkey] Could not register ${accelerator}`)
+  return ok
+}
+
+/**
+ * Suspend all global shortcuts — used while the Settings view is capturing
+ * a new hotkey, otherwise pressing the existing combo (e.g. Alt+Shift+S)
+ * fires the registered handler instead of being captured by the renderer.
+ * Restored via {@link resumeGlobalShortcuts}.
+ */
+function suspendGlobalShortcuts(): void {
+  if (currentToggleHotkey) globalShortcut.unregister(currentToggleHotkey)
+  if (currentMiniHotkey) globalShortcut.unregister(currentMiniHotkey)
+}
+
+function resumeGlobalShortcuts(): void {
+  if (currentToggleHotkey) {
+    globalShortcut.register(currentToggleHotkey, () => {
+      mainWindow?.webContents.send('timer:hotkey-toggle')
+    })
+  }
+  if (currentMiniHotkey) {
+    globalShortcut.register(currentMiniHotkey, () => {
+      toggleMini()
+    })
+  }
 }
 
 function applyAutoStart(enabled: boolean): void {
@@ -157,6 +223,24 @@ function loadStartupSettings(): void {
     registerHotkey(hotkey)
     const auto = map.auto_start === '1'
     applyAutoStart(auto)
+    // v1.4 PR B — mini-widget hotkey + restore visibility from last session.
+    const miniHotkey = map.mini_hotkey ?? 'Alt+Shift+M'
+    const miniHotkeyOk = registerMiniHotkey(miniHotkey)
+    if (!miniHotkeyOk && map.mini_enabled === '1') {
+      // Surface the conflict at startup so the user knows their hotkey
+      // is silently dead. Non-blocking dialog — the app continues to work,
+      // toggling via Settings still works.
+      dialog.showMessageBox({
+        type: 'warning',
+        title: 'TimeTrack — Hotkey-Konflikt',
+        message: `Der Mini-Widget-Hotkey "${miniHotkey}" konnte nicht registriert werden.`,
+        detail:
+          'Eine andere Anwendung verwendet diese Tastenkombination bereits.\n\n' +
+          'Du kannst in den Einstellungen einen anderen Hotkey wählen.',
+        buttons: ['OK']
+      })
+    }
+    if (map.mini_enabled === '1') applyMiniEnabled(true)
   } catch (err) {
     console.warn('[startup] settings load failed (using defaults):', err)
     registerHotkey('Alt+Shift+S')
@@ -326,7 +410,9 @@ app.whenReady().then(async () => {
     },
     setHotkey: (accelerator) => registerHotkey(accelerator),
     setAutoStart: (enabled) => applyAutoStart(enabled),
-    setIdleThreshold: (minutes) => setIdleThresholdMinutes(minutes)
+    setIdleThreshold: (minutes) => setIdleThresholdMinutes(minutes),
+    setMiniEnabled: (enabled) => applyMiniEnabled(enabled),
+    setMiniHotkey: (accelerator) => registerMiniHotkey(accelerator)
   })
   createWindow()
 
@@ -346,11 +432,41 @@ app.whenReady().then(async () => {
   })
 
   // Renderer notifies main to update tray state + drive idle watcher.
-  ipcMain.on('tray:update', (_event, running: boolean, label: string, todaySeconds: number) => {
-    updateTray(running, label, todaySeconds ?? lastTodaySeconds)
-    if (running) startIdleWatcher()
-    else stopIdleWatcher()
+  // `startedAt` (v1.4 PR B) is forwarded to the mini-widget so it can tick
+  // the elapsed time locally without round-trips.
+  ipcMain.on(
+    'tray:update',
+    (
+      _event,
+      running: boolean,
+      label: string,
+      todaySeconds: number,
+      startedAt: string | null = null
+    ) => {
+      updateTray(running, label, todaySeconds ?? lastTodaySeconds)
+      pushMiniState({ running, label, startedAt })
+      if (running) startIdleWatcher()
+      else stopIdleWatcher()
+    }
+  )
+
+  // Mini-Widget → main: forward play/stop intent to the main renderer,
+  // which owns the timer state machine. We piggy-back on the existing
+  // tray-stop / hotkey-toggle channels so there's only one source of truth.
+  ipcMain.on('mini:request-stop', () => {
+    mainWindow?.webContents.send('timer:tray-stop')
   })
+  ipcMain.on('mini:request-start', () => {
+    // hotkey-toggle starts when no timer is running and falls back to the
+    // first active client — exactly what we want for the play button.
+    mainWindow?.webContents.send('timer:hotkey-toggle')
+  })
+
+  // Settings view → main: pause/resume registered global shortcuts during
+  // hotkey capture so the user can rebind a key (e.g. Alt+Shift+S) without
+  // the existing handler firing first and swallowing the keystroke.
+  ipcMain.on('hotkey:beginCapture', () => suspendGlobalShortcuts())
+  ipcMain.on('hotkey:endCapture', () => resumeGlobalShortcuts())
 
   // Renderer dismissed idle modal — re-arm.
   ipcMain.on('idle:dismiss', () => rearmIdleWatcher())
@@ -367,6 +483,7 @@ app.on('before-quit', () => {
 app.on('will-quit', () => {
   globalShortcut.unregisterAll()
   stopIdleWatcher()
+  destroyMini()
 })
 
 app.on('window-all-closed', () => {

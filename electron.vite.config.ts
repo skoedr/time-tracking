@@ -12,6 +12,19 @@ export default defineConfig({
         '@renderer': resolve('src/renderer/src')
       }
     },
-    plugins: [react(), tailwindcss()]
+    plugins: [react(), tailwindcss()],
+    build: {
+      // Two HTML entry points: the main app window and the v1.4 mini widget.
+      // Both are bundled into out/renderer/ and loaded by separate
+      // BrowserWindow instances in the main process. Keeping them in one
+      // Vite build keeps HMR working in dev and shares the chunk cache.
+      rollupOptions: {
+        input: {
+          index: resolve('src/renderer/index.html'),
+          mini: resolve('src/renderer/mini.html')
+        }
+      }
+    }
   }
 })
+
