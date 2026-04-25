@@ -15,6 +15,9 @@ A personal Windows desktop time-tracking app for freelancers. Lightweight Toggl 
 - **Kunden-Verwaltung** — Anlegen, bearbeiten, archivieren, löschen, Farbcode + Stundensatz.
 - **Global Hotkey** — `Alt+Shift+S` (konfigurierbar) startet/stoppt den Timer aus jedem Tab.
 - **Tray Icon + Quick-Start** — Rechtsklick auf die Tray öffnet aktive Kunden direkt als Buttons. Tray-Glyph wechselt je nach Timer-State.
+- **Mini-Widget** — Always-on-top 200×40 Overlay (Hotkey `Alt+Shift+M`, konfigurierbar). Zeigt laufenden Timer + Kunde + Stop/Start-Buttons — kein Hauptfenster nötig. Draggable, sichtbar über Vollbild-Apps.
+- **Tags pro Eintrag** — Farbige Chips je Zeitblock. Filter im Kalender-Drawer per Tag-Klick. PDF-Export nach Tag gruppierbar.
+- **Schnell-Notiz nach Stop** — Kein Beschreibungsfeld ausgefüllt? 30s-Modal „Was war das?" erscheint nach dem Stoppen. Enter speichert, Escape überspringt.
 - **Idle-Detection** — PC inaktiv über Schwelle? Modal fragt: behalten, stoppen oder als Pause markieren.
 - **Auto-Backup** — Rollierende 7-Tage-SQLite-Snapshots unter `%AppData%\TimeTrack\backups\`. Manueller Backup + Restore aus Settings.
 - **DB Migrations** — Versioniertes Schema mit Pre-Migration-Backup, sodass Updates nie Daten verlieren.
@@ -23,7 +26,7 @@ A personal Windows desktop time-tracking app for freelancers. Lightweight Toggl 
 
 ### Coming soon
 
-- Mini-Modus always-on-top widget, Pomodoro, Tags — see [v1.4 issues](https://github.com/skoedr/time-tracking/labels/v1.4)
+- Fenster-Größe & Layout-Density — letzte Position/Größe persistieren, Container-Width-Audit — see [v1.4 issues](https://github.com/skoedr/time-tracking/labels/v1.4)
 - Auto-Update + Onboarding-Wizard + Crash-Logging — see [v1.5 issues](https://github.com/skoedr/time-tracking/labels/v1.5)
 
 ## Tech Stack

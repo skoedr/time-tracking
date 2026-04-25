@@ -163,8 +163,11 @@ All notable changes to TimeTrack are documented here.
     pro Tag (alphabetisch sortiert), jeder mit eigenem Subtotal-Bereich;
     Einträge ohne Tag landen in der Gruppe „Ohne Tag" (immer am Ende).
     Silent Fallback auf Flat-Layout wenn kein Eintrag im Zeitraum Tags hat.
-
-## [1.2.0] — 2026-04-24
+- **Schnell-Notiz nach Stop** (#25) — Wenn ein Timer mit leerer Beschreibung gestoppt
+  wird, erscheint ein Modal „Was war das?" mit 30s-Countdown-Progressbar.
+  Beschreibung eingeben und Enter drücken — der Eintrag wird sofort aktualisiert.
+  Escape oder Ablauf des Countdowns überspringen das Modal lautlos.
+  TodayView und CalendarDrawer refreshen automatisch nach dem Speichern.
 
 ## [1.2.0] — 2026-04-24
 
