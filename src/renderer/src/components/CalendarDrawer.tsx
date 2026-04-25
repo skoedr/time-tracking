@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Client, Entry } from '../../../shared/types'
+import { deserializeTags, entryHasTag } from '../../../shared/tags'
 import { useEntriesStore } from '../store/entriesStore'
 import { useToastStore } from '../store/toastStore'
 import { ConfirmDialog } from './ConfirmDialog'
@@ -32,6 +33,7 @@ export function CalendarDrawer({
   onClose
 }: Props): React.ReactElement | null {
   const showToast = useToastStore((s) => s.show)
+  const [tagFilter, setTagFilter] = useState<string | null>(null)
   const [editingId, setEditingId] = useState<number | null>(null)
   const [creating, setCreating] = useState(false)
   const [deleteCandidate, setDeleteCandidate] = useState<Entry | null>(null)
@@ -66,6 +68,23 @@ export function CalendarDrawer({
     return m
   }, [clients])
 
+  // Collect all unique tags from today's entries for the filter pill bar.
+  const allDayTags = useMemo(() => {
+    const seen = new Set<string>()
+    for (const e of entries) {
+      for (const t of deserializeTags(e.tags)) seen.add(t)
+    }
+    return [...seen].sort()
+  }, [entries])
+
+  const filteredEntries = useMemo(
+    () =>
+      tagFilter
+        ? entries.filter((e) => entryHasTag(e.tags, tagFilter))
+        : entries,
+    [entries, tagFilter]
+  )
+
   if (!open) return null
 
   async function confirmDelete(entry: Entry): Promise<void> {
@@ -84,7 +103,7 @@ export function CalendarDrawer({
   }
 
   const dateLabel = formatHumanDate(dateISO)
-  const totalSeconds = entries.reduce((sum, e) => sum + durationSeconds(e), 0)
+  const totalSeconds = filteredEntries.reduce((sum, e) => sum + durationSeconds(e), 0)
 
   return (
     <>
@@ -104,9 +123,31 @@ export function CalendarDrawer({
             <h2 className="text-base font-semibold text-slate-100">Einträge für {dateLabel}</h2>
             {entries.length > 0 && (
               <p className="mt-0.5 text-xs text-slate-400">
-                {entries.length} Eintrag{entries.length === 1 ? '' : 'e'} ·{' '}
-                {formatHHMM(totalSeconds)}
+                {filteredEntries.length !== entries.length
+                  ? `${filteredEntries.length} von ${entries.length} Eintrag${entries.length === 1 ? '' : 'e'}`
+                  : `${entries.length} Eintrag${entries.length === 1 ? '' : 'e'}`}{' '}
+                · {formatHHMM(totalSeconds)}
               </p>
+            )}
+            {allDayTags.length > 0 && (
+              <div className="mt-1.5 flex flex-wrap gap-1">
+                {allDayTags.map((tag) => (
+                  <button
+                    key={tag}
+                    type="button"
+                    onClick={() => setTagFilter(tagFilter === tag ? null : tag)}
+                    className={`rounded-full border px-2 py-0.5 text-xs font-medium transition-colors focus:outline-none focus:ring-1 focus:ring-indigo-400 ${
+                      tagFilter === tag
+                        ? 'border-indigo-500 bg-indigo-600 text-white'
+                        : 'border-slate-600 bg-slate-800 text-slate-300 hover:border-slateigo-500 hover:bg-slate-700'
+                    }`}
+                    aria-pressed={tagFilter === tag}
+                    title={tagFilter === tag ? 'Filter entfernen' : `Nach #${tag} filtern`}
+                  >
+                    #{tag}
+                  </button>
+                ))}
+              </div>
             )}
           </div>
           <button
@@ -121,15 +162,20 @@ export function CalendarDrawer({
 
         {/* Scroll body */}
         <div className="flex-1 overflow-y-auto p-3">
-          {entries.length === 0 && !creating && (
+          {filteredEntries.length === 0 && !creating && (
             <div className="mt-8 text-center text-sm text-slate-500">
-              <p>Kein Eintrag an diesem Tag.</p>
+              {tagFilter ? (
+                <p>Keine Einträge mit Tag <span className="font-medium text-slate-400">#{tagFilter}</span>.</p>
+              ) : (
+                <p>Kein Eintrag an diesem Tag.</p>
+              )}
             </div>
           )}
           <ul className="flex flex-col gap-2">
-            {entries.map((e) => {
+            {filteredEntries.map((e) => {
               const client = clientsById.get(e.client_id)
               const isEditing = editingId === e.id
+              const entryTags = deserializeTags(e.tags)
               return (
                 <li key={e.id} className="rounded-lg border border-slate-700 bg-slate-800/60">
                   {!isEditing && (
@@ -153,6 +199,18 @@ export function CalendarDrawer({
                           >
                             {e.description}
                           </p>
+                        )}
+                        {entryTags.length > 0 && (
+                          <div className="mt-1 flex flex-wrap gap-1">
+                            {entryTags.map((tag) => (
+                              <span
+                                key={tag}
+                                className="rounded-full bg-slate-700 px-1.5 py-px text-xs text-slate-400"
+                              >
+                                #{tag}
+                              </span>
+                            ))}
+                          </div>
                         )}
                       </div>
                       <span className="font-mono text-xs tabular-nums text-slate-300">
