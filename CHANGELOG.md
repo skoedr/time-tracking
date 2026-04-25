@@ -111,7 +111,36 @@ All notable changes to TimeTrack are documented here.
 
 ## [Unreleased] — v1.4
 
-(Fenster-Größe & Layout-Density, Mini-Widget, Pomodoro, Tags. Siehe ROADMAP.md.)
+### Added
+
+- **Mini-Widget** (#22) — Always-on-top 200×40-Overlay, das den laufenden
+  Timer jederzeit im Blick behält. Kein Hauptfenster nötig.
+  - `● Kundenname HH:MM:SS ■` (running) / `Kein Timer ▶` (idle) —
+    beide Buttons wired: ▶ startet via erstem aktiven Kunden,
+    ■ stoppt den laufenden Eintrag.
+  - Ganzes Widget drag-region; Stop/Play als `no-drag-region`-Insel.
+  - Transparent, `alwaysOnTop:'screen-saver'` (sichtbar über Vollbild-Apps),
+    `visibleOnAllWorkspaces`, `skipTaskbar`.
+  - Position rechts-unten als Default; Drag → 250ms-debounced-Persist in
+    `settings (mini_x / mini_y)`. Off-Screen-Clamp bei Neustart wenn
+    Monitor abgekoppelt wurde.
+  - **Hotkey `Alt+Shift+M`** toggelt Sichtbarkeit (konfigurierbar in
+    Settings). Getrennte Slot-Verwaltung von `hotkey_toggle` — kein
+    `globalShortcut.unregisterAll` mehr; Hotkeys können unabhängig
+    geändert werden.
+  - **Cross-Slot-Kollisionsschutz:** Versuch, denselben Combo für beide
+    Hotkeys zu setzen, liefert sofort den Fehler
+    „Hotkey konnte nicht registriert werden" (kein stilles Überschreiben).
+  - Hotkey-Capture in Settings suspendiert alle GlobalShortcuts während
+    der Eingabe, sodass die bestehende Tastenkombi nicht mehr den
+    Handler auslöst.
+  - Startup-Konflikt (Combo von anderer App belegt, wenn
+    `mini_enabled=1`): nicht-blockierendes `dialog.showMessageBox`.
+  - State-Push via `mini:state-changed` von Main an Mini-Renderer auf
+    jedem `tray:update`; `startedAt` wird im Widget lokal getickert
+    (kein IPC-Polling).
+  - Migration 006: seedet `mini_enabled='0'`, `mini_hotkey='Alt+Shift+M'`,
+    `mini_x='-1'`, `mini_y='-1'` via `INSERT OR IGNORE`.
 
 ## [1.2.0] — 2026-04-24
 

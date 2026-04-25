@@ -5,12 +5,12 @@
 
 **Branch-Strategie:** 4 PRs in dieser Reihenfolge. CI zuerst, weil Juni-Deadline.
 
-| PR | Branch | Issues | Risiko | Größe |
-|----|--------|--------|--------|-------|
-| A | `chore/v1.4-ci-node24` | #41 | sehr niedrig | XS (1 Datei, 2 Zeilen) |
-| B | `feat/v1.4-mini-widget` | #22 | hoch | L (zweites BrowserWindow + Hotkey + Migration + timerStore-Refactor) |
-| C | `feat/v1.4-tags` | #24 | mittel | M (Schema + Form + Filter + PDF-Group) |
-| D | `feat/v1.4-quicknote-window` | #25 + Backlog | niedrig | S (Toast-Hook + Window-Persist + 1 kombi-Migration) |
+| PR | Branch | Issues | Risiko | Größe | Status |
+|----|--------|--------|--------|-------|--------|
+| A | `chore/v1.4-ci-node24` | #41 | sehr niedrig | XS (1 Datei, 2 Zeilen) | ✅ merged |
+| B | `feat/v1.4-mini-widget` | #22 | hoch | L (zweites BrowserWindow + Hotkey + Migration + timerStore-Refactor) | ✅ merged |
+| C | `feat/v1.4-tags` | #24 | mittel | M (Schema + Form + Filter + PDF-Group) | ⏳ |
+| D | `feat/v1.4-quicknote-window` | #25 + Backlog | niedrig | S (Toast-Hook + Window-Persist + 1 kombi-Migration) | ⏳ |
 
 **Verschoben (NICHT in v1.4):**
 - #18 (CSV-Export) → v1.5 (JSON deckt Trust ab, Steuerberater-Pull fehlt)
@@ -114,15 +114,15 @@ Windows DWM-Composition kann mit anderen Direct3D-Apps schwarze Hintergründe pr
 
 ### Acceptance
 
-- [ ] Beim App-Start mit `mini_enabled=1`: Mini erscheint an gespeicherter Position (oder Default rechts unten)
-- [ ] Mini bleibt über Vollbild-Apps (Browser, IDE) sichtbar
-- [ ] Hotkey toggelt sichtbar/unsichtbar; konfigurierbar in Settings; Konflikt zeigt Toast
-- [ ] Klick auf `[⏹]` stoppt aktuellen Eintrag; Mini zeigt dann „Kein Timer" oder versteckt sich (siehe Frage unten)
+- [x] Beim App-Start mit `mini_enabled=1`: Mini erscheint an gespeicherter Position (oder Default rechts unten)
+- [x] Mini bleibt über Vollbild-Apps (Browser, IDE) sichtbar
+- [x] Hotkey toggelt sichtbar/unsichtbar; konfigurierbar in Settings; Konflikt zeigt Toast
+- [x] Klick auf `[⏹]` stoppt aktuellen Eintrag; Mini zeigt dann „Kein Timer"
 - [ ] Doppelklick öffnet Hauptfenster
-- [ ] Position-Roundtrip: drag → close app → restart → gleiche Position
-- [ ] Migration 006 idempotent
-- [ ] Settings-Toggle wirkt sofort (kein Restart nötig)
-- [ ] Test: Migration backward-compatible mit Schema 5
+- [x] Position-Roundtrip: drag → close app → restart → gleiche Position
+- [x] Migration 006 idempotent
+- [x] Settings-Toggle wirkt sofort (kein Restart nötig)
+- [x] Test: Migration backward-compatible mit Schema 5
 
 ### Open Questions
 

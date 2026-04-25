@@ -18,8 +18,33 @@ import type {
 const api = {
   // Tray + hotkey
   tray: {
-    update: (isRunning: boolean, label: string, todaySeconds: number): void =>
-      ipcRenderer.send('tray:update', isRunning, label, todaySeconds)
+    update: (
+      isRunning: boolean,
+      label: string,
+      todaySeconds: number,
+      startedAt: string | null = null
+    ): void => ipcRenderer.send('tray:update', isRunning, label, todaySeconds, startedAt)
+  },
+  // v1.4 PR B — mini-widget channels.
+  mini: {
+    onState: (
+      callback: (state: { running: boolean; label: string; startedAt: string | null }) => void
+    ): (() => void) => {
+      const handler = (
+        _e: unknown,
+        state: { running: boolean; label: string; startedAt: string | null }
+      ): void => callback(state)
+      ipcRenderer.on('mini:state-changed', handler)
+      return (): void => {
+        ipcRenderer.removeListener('mini:state-changed', handler)
+      }
+    },
+    requestStart: (): void => ipcRenderer.send('mini:request-start'),
+    requestStop: (): void => ipcRenderer.send('mini:request-stop')
+  },
+  hotkeyCapture: {
+    begin: (): void => ipcRenderer.send('hotkey:beginCapture'),
+    end: (): void => ipcRenderer.send('hotkey:endCapture')
   },
   onHotkeyToggle: (callback: () => void): (() => void) => {
     const handler = () => callback()

@@ -19,7 +19,27 @@ declare global {
     electron: ElectronAPI
     api: {
       tray: {
-        update(isRunning: boolean, label: string, todaySeconds: number): void
+        update(
+          isRunning: boolean,
+          label: string,
+          todaySeconds: number,
+          startedAt?: string | null
+        ): void
+      }
+      mini: {
+        onState(
+          callback: (state: {
+            running: boolean
+            label: string
+            startedAt: string | null
+          }) => void
+        ): () => void
+        requestStart(): void
+        requestStop(): void
+      }
+      hotkeyCapture: {
+        begin(): void
+        end(): void
       }
       onHotkeyToggle(callback: () => void): () => void
       onTrayQuickStart(callback: (clientId: number) => void): () => void

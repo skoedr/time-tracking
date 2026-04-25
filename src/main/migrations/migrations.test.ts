@@ -117,6 +117,11 @@ describe('migration SQL execution', () => {
       { key: 'hotkey_toggle', value: 'Alt+Shift+S' },
       { key: 'idle_threshold_minutes', value: '5' },
       { key: 'language', value: 'de' },
+      // Migration 006 — Mini-Widget (v1.4)
+      { key: 'mini_enabled', value: '0' },
+      { key: 'mini_hotkey', value: 'Alt+Shift+M' },
+      { key: 'mini_x', value: '-1' },
+      { key: 'mini_y', value: '-1' },
       // Migration 004 — PDF template seeds (v1.3 PR A)
       { key: 'pdf_accent_color', value: '#4f46e5' },
       { key: 'pdf_footer_text', value: '' },

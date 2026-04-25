@@ -47,6 +47,13 @@ export interface Settings {
   pdf_accent_color: string
   pdf_footer_text: string
   pdf_round_minutes: string
+  // v1.4 — Mini-Widget (always-on-top 200x40 overlay).
+  // Stored as strings; renderer parses '0'/'1' booleans and integer
+  // positions. mini_x/mini_y of -1 means "never positioned, use default".
+  mini_enabled: string
+  mini_hotkey: string
+  mini_x: string
+  mini_y: string
 }
 
 export interface CreateClientInput {
