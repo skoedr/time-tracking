@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import type { Settings, BackupInfo } from '../../../shared/types'
 import { useUpdateStore } from '../store/updateStore'
+import { useT, useLocale } from '../contexts/I18nContext'
+import type { Locale } from '../../../shared/i18n'
 
 const DEFAULT_HOTKEY = 'Alt+Shift+S'
 const DEFAULT_MINI_HOTKEY = 'Alt+Shift+M'
@@ -32,6 +34,8 @@ function parseAccelerator(e: KeyboardEvent): string | null {
 }
 
 export default function SettingsView(): React.JSX.Element {
+  const t = useT()
+  const { locale, setLocale } = useLocale()
   const [settings, setSettings] = useState<Settings | null>(null)
   const [paths, setPaths] = useState<{
     db: string
@@ -176,15 +180,15 @@ export default function SettingsView(): React.JSX.Element {
 
       {/* Allgemein */}
       <Section title="Allgemein">
-        <Row label="Sprache" hint="Übersetzungen folgen in v1.2 — die Auswahl wird gespeichert.">
+        <Row label={t('settings.language.title')}>
           <select
-            aria-label="Sprache"
-            value={settings.language}
-            onChange={(e) => update('language', e.target.value)}
+            aria-label={t('settings.language.title')}
+            value={locale}
+            onChange={(e) => void setLocale(e.target.value as Locale)}
             className={inputClass}
           >
-            <option value="de">Deutsch</option>
-            <option value="en">English</option>
+            <option value="de">{t('settings.language.de')}</option>
+            <option value="en">{t('settings.language.en')}</option>
           </select>
         </Row>
         <Row label="Mit Windows starten">
@@ -406,10 +410,10 @@ export default function SettingsView(): React.JSX.Element {
       </Section>
 
       {/* Diagnose (v1.5 PR A, issue #34) */}
-      <Section title="Diagnose">
+      <Section title={t('settings.diagnose.title')}>
         <Row
           label="Log-Datei"
-          hint="Bei Problemen: Datei kopieren und beim Bug-Report anhängen."
+          hint={t('settings.diagnose.hint')}
         >
           <div className="flex items-center gap-2">
             <code className="flex-1 truncate rounded bg-slate-800 px-3 py-1.5 text-xs text-slate-300">
@@ -420,14 +424,14 @@ export default function SettingsView(): React.JSX.Element {
               onClick={() => window.api.shell.showItemInFolder(paths.logFile)}
               className={btnSecondaryClass}
             >
-              Im Explorer zeigen
+              {t('settings.diagnose.reveal')}
             </button>
             <button
               type="button"
               onClick={() => window.api.shell.openPath(paths.logs)}
               className={btnSecondaryClass}
             >
-              Ordner öffnen
+              {t('settings.diagnose.open')}
             </button>
           </div>
           <p className="mt-1 text-xs text-slate-500">
@@ -581,6 +585,7 @@ function Row({
  */
 function UpdatesSection(): React.JSX.Element {
   const { status, appVersion, lastCheckedAt, checkNow, installNow, init } = useUpdateStore()
+  const t = useT()
   useEffect(() => {
     void init()
   }, [init])
@@ -588,7 +593,7 @@ function UpdatesSection(): React.JSX.Element {
   const busy = status.status === 'checking' || status.status === 'downloading'
   const lastCheckedLabel = lastCheckedAt
     ? new Date(lastCheckedAt).toLocaleString('de-DE')
-    : 'noch nicht geprüft'
+    : t('settings.update.never')
 
   let statusLabel = ''
   switch (status.status) {
@@ -596,33 +601,36 @@ function UpdatesSection(): React.JSX.Element {
       statusLabel = 'Bereit'
       break
     case 'checking':
-      statusLabel = 'Suche nach Updates …'
+      statusLabel = t('settings.update.checking')
       break
     case 'available':
-      statusLabel = `Version ${status.version} wird heruntergeladen …`
+      statusLabel = t('update.available', { version: status.version ?? '' })
       break
     case 'downloading':
-      statusLabel = `Lade Version ${status.version || '…'}: ${status.progress}%`
+      statusLabel = t('update.downloading', {
+        version: status.version ?? '…',
+        progress: status.progress ?? 0
+      })
       break
     case 'ready':
-      statusLabel = `Version ${status.version} bereit zur Installation`
+      statusLabel = t('update.ready.text', { version: status.version ?? '' })
       break
     case 'not-available':
       statusLabel = 'Du verwendest die aktuelle Version.'
       break
     case 'error':
-      statusLabel = `Fehler: ${status.message}`
+      statusLabel = t('update.error.text', { message: status.message ?? '' })
       break
   }
 
   return (
-    <Section title="Updates">
-      <Row label="Aktuelle Version">
+    <Section title={t('settings.update.title')}>
+      <Row label={t('settings.update.version', { version: appVersion || '—' })}>
         <code className="inline-block w-fit rounded bg-slate-800 px-3 py-1.5 text-xs text-slate-300">
           {appVersion || '—'}
         </code>
       </Row>
-      <Row label="Status" hint={`Letzte Prüfung: ${lastCheckedLabel}`}>
+      <Row label={t('settings.update.status')} hint={`${t('settings.update.lastCheck')}: ${lastCheckedLabel}`}>
         <p
           className={`text-sm ${
             status.status === 'error' ? 'text-amber-300' : 'text-slate-200'
@@ -639,7 +647,7 @@ function UpdatesSection(): React.JSX.Element {
             disabled={busy}
             className={`${btnSecondaryClass} disabled:cursor-not-allowed disabled:opacity-50`}
           >
-            Jetzt nach Updates suchen
+            {t('settings.update.checkNow')}
           </button>
           {status.status === 'ready' && (
             <button
@@ -647,7 +655,7 @@ function UpdatesSection(): React.JSX.Element {
               onClick={() => void installNow()}
               className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             >
-              Jetzt neu starten und installieren
+              {t('update.ready.install')}
             </button>
           )}
         </div>

@@ -6,6 +6,17 @@ All notable changes to TimeTrack are documented here.
 
 ### Added
 
+- **i18n-Foundation** (neu, PR D) — Mini-Übersetzungs-Infrastruktur ohne externe
+  Abhängigkeiten. Locale-Dateien sind typsichere TypeScript-Objekte
+  (`src/shared/locales/de.ts`, `en.ts`); TypeScript stellt sicher, dass EN
+  alle DE-Keys enthält. React-Context `I18nProvider` + `useT()`-Hook stellen
+  die `t()`-Funktion komponenten-übergreifend bereit. Locale wird in der
+  bestehenden `language`-Einstellung persistiert und bei App-Start geladen.
+  Migriert in v1.5: **UpdateBanner** (alle Update-Meldungen), **SettingsView**
+  (Diagnose-Abschnitt, Updates-Abschnitt, Sprach-Auswahl). Restliche Views
+  bleiben hardcoded auf DE und werden im v1.6-Backlog durch
+  `scripts/find-untranslated.mjs` erfasst. Sprach-Umschalter unter
+  Einstellungen → Sprache; Wechsel wirkt sofort auf migrierte Bereiche.
 - **CSV-Export** (#18, PR C) — Das PDF-Export-Dialog ist jetzt ein
   einheitliches "Export"-Modal mit zwei Tabs: **PDF** (Stundennachweis,
   unverändert) und **CSV** (Tabelle für Excel / DATEV). Der CSV-Export enthält
