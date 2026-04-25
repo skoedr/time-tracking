@@ -48,7 +48,7 @@ jobs:
         run: pnpm exec electron-rebuild -f -w better-sqlite3
 
       - name: Build installer (NSIS)
-        run: pnpm build:win
+        run: pnpm build:win -- --publish never
 
       - name: Smoke test packaged binary (DB + migrations against Electron ABI)
         shell: pwsh
