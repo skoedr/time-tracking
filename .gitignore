@@ -7,3 +7,7 @@ out
 .gstack/
 .design-review/
 .icon-build/
+
+# Locally generated PDF exports (Stundennachweis test outputs).
+# Curated reference PDFs in templates/ stay tracked individually.
+templates/Stundennachweis-*.pdf

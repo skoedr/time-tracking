@@ -2,7 +2,7 @@
 
 All notable changes to TimeTrack are documented here.
 
-## [Unreleased] — v1.3
+## [1.3.0] — 2026-04-25
 
 ### Added
 
@@ -56,6 +56,10 @@ All notable changes to TimeTrack are documented here.
   PDF-Empfänger:in nie eine Zeile wie „18:54 – 19:18 → 0:30" sieht.
   Die Rundung selbst wird im PDF nicht erwähnt — Datenbank speichert
   weiterhin die echten Start/Stopp-Zeitstempel.
+- **Unterschriftsfelder optional im PDF-Export** — Neue Checkbox im
+  „Stundennachweis als PDF"-Modal (Default: aus). Wenn aktiviert, werden
+  am Ende des Dokuments zwei Linien für Auftragnehmer / Auftraggeber
+  gerendert. Pro Export wählbar — kein Setting nötig.
 - **App- + Tray-Icons** (#16) — Neue Glass-Style-Icons aus dem
   Master-SVG `timetrack_icon_glass_final.svg`. `build/icon.png` (1024×1024)
   - `build/icon.ico` (16/24/32/48/64/128/256) für electron-builder,
@@ -63,10 +67,53 @@ All notable changes to TimeTrack are documented here.
     `resources/tray-stopped.png` (grau, idle) für die System-Tray. Die Tray
     wechselt das Glyph je nach Timer-State. Generator-Skript:
     `node scripts/generate-icons.mjs` (deps: `sharp`, `png-to-ico`).
+- **Manueller Icon-Workflow** — `resources/icon.png` ist jetzt die
+  Source-of-Truth für das App-Icon. `scripts/sync-icon.mjs` synchronisiert
+  es vor jedem Build automatisch nach `build/icon.png` (1024×1024) und
+  `build/icon.ico` (multi-res). Wird über den `prebuild`-npm-Hook
+  ausgelöst, sodass `pnpm build:win` immer das aktuelle Icon zieht.
+- **CI PDF-Smoke-Test** — Der Release-Workflow rendert beim Smoke-Test der
+  gepackten `.exe` jetzt zusätzlich ein Mini-PDF (1 Eintrag, 1 Kunde) und
+  prüft, dass `printToPDF` gegen das gepackte Chromium funktioniert
+  (`pdfBytes >= 1000`). Catches Regressions in der PDF-Pipeline bevor ein
+  Release rausgeht — nicht nur in der DB/ABI-Schicht.
 - **GitHub Actions auf v5** (#42) — `actions/checkout`, `actions/setup-node`,
   `actions/upload-artifact`, `actions/download-artifact` jeweils auf `@v5`
   in `release.yml` und `test.yml`. `pnpm/action-setup@v4` bleibt (kein v5
   veröffentlicht).
+
+### Changed
+
+- **PDF-Rundung jetzt aufrundend** — `roundMinutes` rundet nicht mehr halb-
+  auf-half-down, sondern aufwärts (ceil): jede angefangene Stufe wird voll
+  berechnet (Standard-Abrechnungslogik „angebrochene Viertelstunde voll").
+  Auch die Roh-Minuten-Berechnung im PDF nutzt `Math.ceil(ms/60000)`, damit
+  ein Sub-Minuten-Eintrag (z. B. ein Test-Toggle) als 1 Roh-Minute zählt
+  und mit step=15 als 15 Minuten ausgewiesen wird statt zu verschwinden.
+  `roundMinutes(0, step)` bleibt 0 — kein Phantom-Billing für leere Einträge.
+- **Kalender-Tagesbalken in Kundenfarbe** — Die Mini-Linien in den
+  Kalenderzellen nutzen jetzt `client.color` statt einer einheitlichen
+  Indigo-Farbe; Tooltip enthält zusätzlich den Kundennamen. Indigo-Fallback
+  bleibt für nicht-aufgelöste `client_id`s.
+
+### Fixed
+
+- **Globaler Hotkey `Alt+Shift+S` aus Heute/Kalender** — `start()` brach
+  still ab, wenn kein Kunde im Timer-Tab vorausgewählt war (seit v1.2 ist
+  „Heute" Default-View und hat keinen Selector). Fällt jetzt auf den ersten
+  aktiven Kunden zurück, sodass der Hotkey aus jedem Tab funktioniert.
+- **Fokus-Sprung im „Eintrag nachtragen"-Modal** — Der `Dialog`-Effect
+  hatte `onClose` in den Dependencies; mit Inline-Arrow als `onClose`
+  und einem sekündlich tickenden Timer im Hintergrund lief der Effect
+  jedes Mal neu und stahl den Fokus auf den ×-Schließen-Button. Effect
+  hängt jetzt nur noch an `open`, Fokus-Selector priorisiert
+  Form-Inputs vor Buttons.
+
+## [Unreleased] — v1.4
+
+(Fenster-Größe & Layout-Density, Mini-Widget, Pomodoro, Tags. Siehe ROADMAP.md.)
+
+## [1.2.0] — 2026-04-24
 
 ## [1.2.0] — 2026-04-24
 

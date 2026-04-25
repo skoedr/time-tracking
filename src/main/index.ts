@@ -201,7 +201,7 @@ function createWindow(): void {
   }
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   electronApp.setAppUserModelId('com.timetrack.app')
 
   // Smoke-test mode (CI release pipeline). When invoked with
@@ -218,12 +218,51 @@ app.whenReady().then(() => {
       const row = db.prepare('SELECT MAX(version) as v FROM schema_version').get() as {
         v: number | null
       }
+
+      // PDF pipeline smoke check (v1.3): seed a single client + entry,
+      // build the HTML payload, render via the hidden BrowserWindow.
+      // Catches regressions in printToPDF / Chromium / template wiring
+      // against the packaged binary, not just the unit-tested HTML string.
+      const { buildPdfPayload, buildPdfHtml } = await import('./pdf')
+      const { renderPdfBuffer } = await import('./pdfWindow')
+      let pdfBytes = 0
+      try {
+        db.prepare(
+          `INSERT OR IGNORE INTO clients (id, name, color, rate_cent)
+             VALUES (9999, '__smoke__', '#4f46e5', 0)`
+        ).run()
+        const today = new Date().toISOString().slice(0, 10)
+        const startIso = `${today}T08:00:00.000Z`
+        const stopIso = `${today}T09:00:00.000Z`
+        db.prepare(
+          `INSERT INTO entries (client_id, description, started_at, stopped_at)
+             VALUES (9999, 'smoke', ?, ?)`
+        ).run(startIso, stopIso)
+        const payload = buildPdfPayload(db, {
+          clientId: 9999,
+          fromIso: today,
+          toIso: today
+        }, '')
+        const html = buildPdfHtml(payload)
+        const buf = await renderPdfBuffer({ html })
+        pdfBytes = buf.length
+      } finally {
+        // Always clean up — keeps the smoke DB stable across re-runs.
+        try {
+          db.prepare(`DELETE FROM entries WHERE client_id = 9999`).run()
+          db.prepare(`DELETE FROM clients WHERE id = 9999`).run()
+        } catch {
+          /* best-effort */
+        }
+      }
+
       const result = {
         ok: true as const,
         schemaVersion: row.v ?? 0,
         dbPath: app.getPath('userData'),
         electronVersion: process.versions.electron,
-        nodeVersion: process.versions.node
+        nodeVersion: process.versions.node,
+        pdfBytes
       }
       const payload = JSON.stringify(result)
       console.log(`[smoke] ${payload}`)
