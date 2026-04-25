@@ -17,6 +17,7 @@ import trayRunningIcon from '../../resources/tray-running.png?asset'
 import trayStoppedIcon from '../../resources/tray-stopped.png?asset'
 import { getDb, recoverZombieEntries, MigrationError } from './db'
 import { registerIpcHandlers } from './ipc'
+import { applyMiniEnabled, destroyMini } from './miniWindow'
 import {
   configureIdleWatcher,
   setIdleThresholdMinutes,
@@ -157,6 +158,8 @@ function loadStartupSettings(): void {
     registerHotkey(hotkey)
     const auto = map.auto_start === '1'
     applyAutoStart(auto)
+    // v1.4 PR B — restore mini-widget visibility from last session.
+    if (map.mini_enabled === '1') applyMiniEnabled(true)
   } catch (err) {
     console.warn('[startup] settings load failed (using defaults):', err)
     registerHotkey('Alt+Shift+S')
@@ -326,7 +329,8 @@ app.whenReady().then(async () => {
     },
     setHotkey: (accelerator) => registerHotkey(accelerator),
     setAutoStart: (enabled) => applyAutoStart(enabled),
-    setIdleThreshold: (minutes) => setIdleThresholdMinutes(minutes)
+    setIdleThreshold: (minutes) => setIdleThresholdMinutes(minutes),
+    setMiniEnabled: (enabled) => applyMiniEnabled(enabled)
   })
   createWindow()
 
@@ -367,6 +371,7 @@ app.on('before-quit', () => {
 app.on('will-quit', () => {
   globalShortcut.unregisterAll()
   stopIdleWatcher()
+  destroyMini()
 })
 
 app.on('window-all-closed', () => {

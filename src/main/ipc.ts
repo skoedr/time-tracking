@@ -34,6 +34,7 @@ export interface IpcHooks {
   setHotkey(accelerator: string): boolean
   setAutoStart(enabled: boolean): void
   setIdleThreshold(minutes: number): void
+  setMiniEnabled(enabled: boolean): void
 }
 
 function ok<T>(data: T): IpcResult<T> {
@@ -435,6 +436,8 @@ export function registerIpcHandlers(hooks: IpcHooks): void {
       } else if (key === 'hotkey_toggle') {
         const okHotkey = hooks.setHotkey(value)
         if (!okHotkey) return fail(`Hotkey "${value}" konnte nicht registriert werden`)
+      } else if (key === 'mini_enabled') {
+        hooks.setMiniEnabled(value === '1')
       }
       return ok(undefined)
     } catch (e) {
