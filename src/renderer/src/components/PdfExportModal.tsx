@@ -31,6 +31,7 @@ export function PdfExportModal(props: Props): React.JSX.Element {
   // signature row at the foot of the document looks like an unfinished
   // template to the recipient.
   const [includeSignatures, setIncludeSignatures] = useState(false)
+  const [groupByTag, setGroupByTag] = useState(false)
   const [busy, setBusy] = useState(false)
   const [statusMsg, setStatusMsg] = useState<string | null>(null)
   const [statusKind, setStatusKind] = useState<'info' | 'error' | 'success'>('info')
@@ -62,7 +63,7 @@ export function PdfExportModal(props: Props): React.JSX.Element {
     setBusy(true)
     setStatusMsg('PDF wird erstellt …')
     setStatusKind('info')
-    const res = await window.api.pdf.export({ clientId, fromIso, toIso, includeSignatures })
+    const res = await window.api.pdf.export({ clientId, fromIso, toIso, includeSignatures, groupByTag })
     setBusy(false)
     if (res.ok) {
       setStatusKind('success')
@@ -123,6 +124,22 @@ export function PdfExportModal(props: Props): React.JSX.Element {
             />
           </label>
         </div>
+
+        <label className="flex items-start gap-2 text-sm text-zinc-300">
+          <input
+            type="checkbox"
+            checked={groupByTag}
+            onChange={(e) => setGroupByTag(e.target.checked)}
+            disabled={busy}
+            className="mt-0.5 h-4 w-4 rounded border-zinc-600 bg-zinc-800 text-indigo-500 focus:ring-indigo-400 focus:ring-offset-0"
+          />
+          <span>
+            Nach Tag gruppieren
+            <span className="block text-xs text-zinc-500">
+              Einträge mit Tags werden in separaten Abschnitten zusammengefasst.
+            </span>
+          </span>
+        </label>
 
         <label className="flex items-start gap-2 text-sm text-zinc-300">
           <input

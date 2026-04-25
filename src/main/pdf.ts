@@ -13,6 +13,7 @@
  */
 import type Database from 'better-sqlite3'
 import { feeCent, formatEur, formatHoursMinutes, roundMinutes } from '../shared/currency'
+import { deserializeTags } from '../shared/tags'
 import type { Client, Entry, Settings } from '../shared/types'
 
 export interface PdfRequest {
@@ -27,6 +28,13 @@ export interface PdfRequest {
    * looks like an unfinished template. Toggled per-export from the modal.
    */
   includeSignatures?: boolean
+  /**
+   * Group rows by tag in the rendered PDF. Each distinct tag gets its
+   * own section with a subtotal. Entries without any tag appear under
+   * "Ohne Tag" at the end. Falls back to flat layout when no entry has
+   * a tag (silent fallback). Default false.
+   */
+  groupByTag?: boolean
 }
 
 export interface PdfRow {
@@ -36,6 +44,16 @@ export interface PdfRow {
   description: string
   minutes: number
   feeCent: number | null
+  /** Raw serialized tags string from the DB column (`,bug,ux,` format). Optional — only needed for `groupByTag`. */
+  tags?: string
+}
+
+/** One group when `groupByTag` is true. tag='' means "Ohne Tag". */
+export interface PdfGroup {
+  tag: string
+  rows: PdfRow[]
+  totalMinutes: number
+  totalFeeCent: number | null
 }
 
 export interface PdfPayload {
@@ -65,6 +83,11 @@ export interface PdfPayload {
   includeSignatures?: boolean
   /** Used for the "erstellt am" footer line. */
   generatedAtIso: string
+  /**
+   * When non-null, rows are organised into tag-groups for the HTML
+   * renderer. null = flat layout (default). Empty `tag` = "Ohne Tag".
+   */
+  groups: PdfGroup[] | null
 }
 
 const DATE_FMT = new Intl.DateTimeFormat('de-DE', {
@@ -195,12 +218,45 @@ export function buildPdfPayload(
       stopTime,
       description: e.description ?? '',
       minutes,
-      feeCent: fee
+      feeCent: fee,
+      tags: e.tags ?? ''
     }
   })
 
   const totalMinutes = rows.reduce((sum, r) => sum + r.minutes, 0)
   const totalFee = client.rate_cent > 0 ? rows.reduce((sum, r) => sum + (r.feeCent ?? 0), 0) : null
+
+  // Build tag groups when requested AND at least one row has tags.
+  let groups: PdfGroup[] | null = null
+  if (req.groupByTag && rows.some((r) => r.tags && r.tags !== '')) {
+    const groupMap = new Map<string, PdfRow[]>()
+    for (const row of rows) {
+      const rowTags = deserializeTags(row.tags ?? '')
+      if (rowTags.length === 0) {
+        const bucket = groupMap.get('') ?? []
+        bucket.push(row)
+        groupMap.set('', bucket)
+      } else {
+        for (const tag of rowTags) {
+          const bucket = groupMap.get(tag) ?? []
+          bucket.push(row)
+          groupMap.set(tag, bucket)
+        }
+      }
+    }
+    // Sort: named tags alphabetically, then '' (Ohne Tag) last.
+    const sortedKeys = [...groupMap.keys()].sort((a, b) => {
+      if (a === '') return 1
+      if (b === '') return -1
+      return a.localeCompare(b)
+    })
+    groups = sortedKeys.map((tag) => {
+      const groupRows = groupMap.get(tag)!
+      const gMinutes = groupRows.reduce((s, r) => s + r.minutes, 0)
+      const gFee = client.rate_cent > 0 ? groupRows.reduce((s, r) => s + (r.feeCent ?? 0), 0) : null
+      return { tag, rows: groupRows, totalMinutes: gMinutes, totalFeeCent: gFee }
+    })
+  }
 
   return {
     client,
@@ -218,7 +274,8 @@ export function buildPdfPayload(
     logoDataUrl,
     roundMinutes: roundStep,
     includeSignatures: req.includeSignatures === true,
-    generatedAtIso
+    generatedAtIso,
+    groups
   }
 }
 
@@ -273,9 +330,10 @@ export function buildPdfHtml(p: PdfPayload): string {
     ? `<img src="${esc(p.logoDataUrl)}" alt="" class="logo" />`
     : '<div class="logo-placeholder"></div>'
 
-  const tableRows = p.rows
-    .map(
-      (r) => `<tr>
+  function renderRows(rows: PdfRow[]): string {
+    return rows
+      .map(
+        (r) => `<tr>
         <td class="col-date">${esc(r.date)}</td>
         <td class="col-time">${esc(r.startTime)}</td>
         <td class="col-time">${esc(r.stopTime)}</td>
@@ -283,19 +341,51 @@ export function buildPdfHtml(p: PdfPayload): string {
         <td class="col-dur">${esc(formatHoursMinutes(r.minutes))}</td>
         ${showFee ? `<td class="col-fee">${esc(formatEur(r.feeCent ?? 0))}</td>` : ''}
       </tr>`
-    )
-    .join('\n')
+      )
+      .join('\n')
+  }
 
-  const emptyState =
-    p.rows.length === 0
-      ? `<tr class="empty"><td colspan="${showFee ? 6 : 5}">Keine Einträge im gewählten Zeitraum.</td></tr>`
-      : ''
+  let tableBody: string
+  if (p.groups !== null && p.groups.length > 0) {
+    // Grouped layout: each tag gets a group-header row + data rows + subtotal.
+    const groupSections = p.groups
+      .map((g) => {
+        const label = g.tag ? `#${esc(g.tag)}` : 'Ohne Tag'
+        const subtotalFee = showFee
+          ? `<td class="col-fee">${esc(formatEur(g.totalFeeCent ?? 0))}</td>`
+          : ''
+        return `<tr class="group-header">
+          <td colspan="${showFee ? 6 : 5}" class="col-group">${label}</td>
+        </tr>
+        ${renderRows(g.rows)}
+        <tr class="subtotal">
+          <td colspan="${showFee ? 4 : 4}">Zwischensumme ${label}</td>
+          <td class="col-dur">${esc(formatHoursMinutes(g.totalMinutes))}</td>
+          ${subtotalFee}
+        </tr>`
+      })
+      .join('\n')
 
-  const totalsRow = `<tr class="total">
+    const totalsRowGrouped = `<tr class="total">
+        <td colspan="${showFee ? 4 : 4}">Gesamtsumme</td>
+        <td class="col-dur">${esc(formatHoursMinutes(p.totals.minutes))}</td>
+        ${showFee ? `<td class="col-fee">${esc(formatEur(p.totals.feeCent ?? 0))}</td>` : ''}
+      </tr>`
+
+    tableBody = groupSections + '\n' + totalsRowGrouped
+  } else {
+    const tableRows = renderRows(p.rows)
+    const emptyState =
+      p.rows.length === 0
+        ? `<tr class="empty"><td colspan="${showFee ? 6 : 5}">Keine Einträge im gewählten Zeitraum.</td></tr>`
+        : ''
+    const totalsRow = `<tr class="total">
         <td colspan="${showFee ? 4 : 4}">Summe</td>
         <td class="col-dur">${esc(formatHoursMinutes(p.totals.minutes))}</td>
         ${showFee ? `<td class="col-fee">${esc(formatEur(p.totals.feeCent ?? 0))}</td>` : ''}
       </tr>`
+    tableBody = tableRows + '\n' + emptyState + '\n' + totalsRow
+  }
 
   // No visible rounding hint in the PDF: the recipient should never
   // notice that times were rounded. The displayed Von/Bis times are
@@ -402,6 +492,23 @@ export function buildPdfHtml(p: PdfPayload): string {
     padding: 24px 8px;
     font-style: italic;
   }
+  table.entries tr.group-header td.col-group {
+    background: #f1f5f9;
+    color: #334155;
+    font-weight: 700;
+    font-size: 9.5pt;
+    border-top: 2px solid ${accent};
+    border-bottom: none;
+    padding: 6px 8px;
+  }
+  table.entries tr.subtotal td {
+    border-top: 1px solid #cbd5e1;
+    border-bottom: 2px solid ${accent};
+    font-weight: 600;
+    font-size: 10pt;
+    color: #334155;
+    padding: 5px 8px;
+  }
   footer.doc-foot {
     margin-top: 36px;
     padding-top: 12px;
@@ -462,9 +569,7 @@ export function buildPdfHtml(p: PdfPayload): string {
         </tr>
       </thead>
       <tbody>
-        ${tableRows}
-        ${emptyState}
-        ${totalsRow}
+        ${tableBody}
       </tbody>
     </table>
 

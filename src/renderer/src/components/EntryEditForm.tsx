@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import type { Client, Entry } from '../../../shared/types'
 import { formatTimeHHMM, parseTimeToDate } from '../../../shared/date'
 import { useEntriesStore } from '../store/entriesStore'
+import { TagInput } from './TagInput'
 
 interface Props {
   /** Existing entry to edit; omit for create-mode. */
@@ -52,6 +53,7 @@ export function EntryEditForm({
   const [stopTime, setStopTime] = useState(formatTimeHHMM(initialStop))
   const [clientId, setClientId] = useState<number>(entry?.client_id ?? clients[0]?.id ?? 0)
   const [description, setDescription] = useState(entry?.description ?? '')
+  const [tags, setTags] = useState(entry?.tags ?? '')
   const [state, setState] = useState<FormState>('idle')
   const [error, setError] = useState<string | null>(null)
   const bumpVersion = useEntriesStore((s) => s.bumpVersion)
@@ -104,13 +106,15 @@ export function EntryEditForm({
           client_id: clientId,
           description: description.trim(),
           started_at: start,
-          stopped_at: stop
+          stopped_at: stop,
+          tags
         })
       : await window.api.entries.create({
           client_id: clientId,
           description: description.trim(),
           started_at: start,
-          stopped_at: stop
+          stopped_at: stop,
+          tags
         })
     if (!res.ok) {
       setState('idle')
@@ -193,6 +197,18 @@ export function EntryEditForm({
           disabled={isSaving}
         />
       </label>
+
+      <div className="flex flex-col gap-1">
+        <span className="text-xs text-zinc-400">Tags</span>
+        <TagInput
+          value={tags}
+          onChange={(serialized) => setTags(serialized)}
+          disabled={isSaving}
+        />
+        <span className="text-xs text-zinc-600">
+          Tab, Enter oder Komma zum Hinzufügen · Backspace zum Entfernen
+        </span>
+      </div>
 
       {visibleError && (
         <p role="alert" className="text-xs text-red-400">
