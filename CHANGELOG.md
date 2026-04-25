@@ -2,6 +2,25 @@
 
 All notable changes to TimeTrack are documented here.
 
+## [1.5.2] — 2026-04-25
+
+### Security
+
+- **Supply-Chain-Härtung** — `pnpm/action-setup` in beiden CI-Workflows auf einen
+  festen Commit-SHA gepinnt (`fc06bc1...`), statt auf den mutablen `@v5`-Tag zu
+  zeigen. Verhindert, dass ein kompromittierter Tag transparente Code-Ausführung im
+  Release-Build-Runner ermöglicht.
+- **Backup-Restore Path-Traversal behoben** — `backup:restore`-IPC-Handler prüft
+  jetzt per `path.resolve`, dass der übergebene Dateipfad tatsächlich im Backups-
+  Verzeichnis liegt. Pfade außerhalb werden mit einem Fehler abgelehnt.
+- **URL-Öffner: `shell.openExternal` statt `shell.openPath`** — Links im About-Dialog
+  (GitHub-Repository sowie Drittanbieter-Paket-Repositories) nutzen jetzt den dafür
+  vorgesehenen `shell.openExternal`-IPC-Handler mit HTTP/HTTPS-Whitelist. Der neue
+  Handler lehnt Nicht-HTTP-URLs ab.
+- **CI-Permissions auf Least-Privilege** — `permissions: contents: write` aus dem
+  Workflow-Scope von `release.yml` entfernt und auf den `publish-release`-Job
+  beschränkt. Der `build-windows`-Job läuft nun mit `contents: read`.
+
 ## [1.5.1] — 2026-04-25
 
 ### Changed

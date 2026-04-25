@@ -89,6 +89,7 @@ declare global {
       }
       shell: {
         openPath(path: string): Promise<IpcResult<void>>
+        openExternal(url: string): Promise<IpcResult<void>>
         showItemInFolder(path: string): Promise<IpcResult<void>>
       }
       paths: {

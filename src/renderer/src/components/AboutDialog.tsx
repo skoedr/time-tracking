@@ -67,7 +67,7 @@ export function AboutDialog({ open, onClose, version }: Props): React.JSX.Elemen
             rel="noreferrer"
             onClick={(e) => {
               e.preventDefault()
-              void window.api.shell.openPath('https://github.com/skoedr/time-tracking')
+              void window.api.shell.openExternal('https://github.com/skoedr/time-tracking')
             }}
             className="text-xs text-indigo-400 hover:text-indigo-300 underline"
           >
@@ -120,7 +120,7 @@ export function AboutDialog({ open, onClose, version }: Props): React.JSX.Elemen
                     {pkg.repository && (
                       <button
                         type="button"
-                        onClick={() => void window.api.shell.openPath(pkg.repository!)}
+                        onClick={() => void window.api.shell.openExternal(pkg.repository!)}
                         className="text-left text-xs text-indigo-400 hover:text-indigo-300 underline truncate"
                       >
                         {pkg.repository}
