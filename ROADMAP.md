@@ -79,7 +79,7 @@ geschlossenen Schleife. Keine Tabs, keine Browser, kein zweites Programm nötig.
 
 ---
 
-## v1.4 — Flow & Less Friction
+## v1.4 — Flow & Less Friction ✅ ausgeliefert v1.4.0–v1.4.1 (2026-04-25)
 
 📂 [Issues mit Label `v1.4`](https://github.com/skoedr/time-tracking/labels/v1.4)
 📋 [Plan & Multi-Angle Review](.github/plan-v1.4.md)
@@ -87,45 +87,48 @@ geschlossenen Schleife. Keine Tabs, keine Browser, kein zweites Programm nötig.
 **Thema:** App soll im Workflow verschwinden, nicht stören. Plus die CI-Hausaufgabe
 (Node 20 → 24), bevor sie blocking wird.
 
-- **CI Node 24 Bump** (#41) — `pnpm/action-setup@v4` → `@v5` in beiden Workflows.
+- ✅ **CI Node 24 Bump** (#41) — `pnpm/action-setup@v4` → `@v5` in beiden Workflows.
   Vor Juni-Deadline für Node-20-Action-Deprecation.
-- **Mini-Widget** (#22) — Always-on-top, **200×40px horizontal** (Toggl-Style),
+- ✅ **Mini-Widget** (#22) — Always-on-top, **200×40px horizontal** (Toggl-Style),
   zeigt Zeit + Kunde + Stop-Button nebeneinander. Toggle per Hotkey `Alt+Shift+M`.
   Hero-Feature von v1.4.
-- **Tags pro Eintrag** (#24) — `#feature`, `#bugfix`, `#meeting` o.ä. Hash-basierte
+- ✅ **Tags pro Eintrag** (#24) — `#feature`, `#bugfix`, `#meeting` o.ä. Hash-basierte
   Chip-Farben aus 8er-Palette. Im PDF gruppierbar.
-- **Schnell-Notiz nach Stop** (#25) — wenn Beschreibung leer war, Toast "Was war das?"
+- ✅ **Schnell-Notiz nach Stop** (#25) — wenn Beschreibung leer war, Toast "Was war das?"
   mit 30s-Eingabefenster + Progress-Bar.
 - **Fenster-Größe & Layout-Density** — Mindestgröße, letzte Position/Größe persistieren,
   Container-Width-Audit (TodayView/CalendarView atmen lassen).
 
 **Ship-Kriterium:** Wochenlang täglich nutzen ohne dass es nervt. Niemand öffnet das
-Hauptfenster, um zu sehen "läuft mein Timer?".
+Hauptfenster, um zu sehen "läuft mein Timer?". ✅
 
 ---
 
-## v1.5 — Trust at Scale & Data Portability
+## v1.5 — Trust at Scale & Data Portability ✅ ausgeliefert v1.5.0–v1.5.2 (2026-04-25)
 
 📂 [Issues mit Label `v1.5`](https://github.com/skoedr/time-tracking/labels/v1.5)
 📋 [Plan & Multi-Angle Review](.github/plan-v1.5.md)
 
 **Thema:** Wenn jemand außer dir das Tool nutzt, soll es nicht peinlich sein.
 
-- **Crash-Logging** (#34) — `electron-log` schreibt Errors in `%AppData%\TimeTrack\logs\`.
+- ✅ **Crash-Logging** (#34) — `electron-log` schreibt Errors in `%AppData%\TimeTrack\logs\`.
   Settings-Button "Log-Datei öffnen" für Debugging. Foundation für alle anderen v1.5-PRs.
-- **Auto-Update** (#33) — `electron-updater` gegen GitHub Releases. Update-Banner statt
+- ✅ **Auto-Update** (#33) — `electron-updater` gegen GitHub Releases. Update-Banner statt
   silent failure. Update wird beim nächsten Restart angewendet.
-- **CSV-Export** (#18) — für Steuerberater oder externe Tools (DATEV-kompatibel).
+- ✅ **CSV-Export** (#18) — für Steuerberater oder externe Tools (DATEV-kompatibel).
   Verschoben aus v1.4, da JSON-Vollexport die Daten-Portabilität bereits abdeckt
   und v1.4 auf Friction-Removal fokussiert.
-- **i18n-Foundation** — kleine eigene Implementation (kein i18next-Heavyweight).
+- ✅ **i18n-Foundation** — kleine eigene Implementation (kein i18next-Heavyweight).
   DE als Source-of-Truth, EN-Stub für migrierte Bereiche. Nicht-migrierte Strings
   bleiben hardcoded; volle App-Übersetzung kommt in v1.6.
-- **Onboarding-Wizard** (#32) — beim ersten Start: 3 Schritte (Willkommen+Sprache →
+- ✅ **Onboarding-Wizard** (#32) — beim ersten Start: 3 Schritte (Willkommen+Sprache →
   ersten Kunden anlegen → Hotkey-Hinweis). Ein-mal gezeigt. Bestandsuser bekommen
   Flag automatisch gesetzt.
-- **Lizenz-Hinweise** (#35) — About-Dialog mit MIT-Lizenz und automatisch generierten
+- ✅ **Lizenz-Hinweise** (#35) — About-Dialog mit MIT-Lizenz und automatisch generierten
   Drittanbieter-Lizenzen.
+- ✅ **Security Patches (v1.5.2)** — Supply-Chain-Härtung (Action-SHA-Pinning),
+  Backup-Restore Path-Traversal-Fix, URL-Links via `shell.openExternal` statt
+  `openPath`, CI-Permissions auf Least-Privilege eingeschränkt.
 
 > **Gestrichen aus v1.5:** Pomodoro-Modus (#23). Maintainer nutzt es nicht selbst;
 > Daily-Trust wird durch Mini-Widget + Quicknote bereits abgedeckt.
@@ -133,7 +136,7 @@ Hauptfenster, um zu sehen "läuft mein Timer?".
 > **Bewusst nicht in v1.5:** Code-Signing. SmartScreen-Warnung bei Installation
 > wird in Kauf genommen. Bricht keine Funktion, nur einmaliger "Trotzdem ausführen"-Klick.
 
-**Ship-Kriterium:** Du kannst die App einem zweiten Freelancer ohne Anleitung geben.
+**Ship-Kriterium:** Du kannst die App einem zweiten Freelancer ohne Anleitung geben. ✅
 
 ---
 

@@ -2,7 +2,7 @@ import { ipcMain, shell } from 'electron'
 import { app } from 'electron'
 import { dialog } from 'electron'
 import { writeFileSync, readFileSync } from 'fs'
-import { dirname, join } from 'path'
+import { dirname, join, resolve, sep } from 'path'
 import log from 'electron-log/main'
 import { randomUUID } from 'crypto'
 import { getDb, getDbPath } from './db'
@@ -507,6 +507,12 @@ export function registerIpcHandlers(hooks: IpcHooks): void {
     'backup:restore',
     (_e, filePath: string): IpcResult<{ safetyBackupPath: string }> => {
       try {
+        // Guard: reject paths that escape the backups directory
+        const backupsDir = getBackupsDir()
+        const resolved = resolve(filePath)
+        if (!resolved.startsWith(backupsDir + sep)) {
+          return fail('Ungültiger Backup-Pfad')
+        }
         // Close the live DB so the file can be replaced. App must restart
         // afterwards; the renderer is expected to call app.relaunch via a
         // separate IPC or a manual user action.
@@ -530,6 +536,12 @@ export function registerIpcHandlers(hooks: IpcHooks): void {
   ipcMain.handle('shell:openPath', async (_e, path: string): Promise<IpcResult<void>> => {
     const err = await shell.openPath(path)
     if (err) return fail(err)
+    return ok(undefined)
+  })
+
+  ipcMain.handle('shell:openExternal', async (_e, url: string): Promise<IpcResult<void>> => {
+    if (!/^https?:\/\//i.test(url)) return fail('Nur https:// URLs erlaubt')
+    await shell.openExternal(url)
     return ok(undefined)
   })
 
