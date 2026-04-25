@@ -7,6 +7,7 @@ import SettingsView from './views/SettingsView'
 import { IdleModal } from './components/IdleModal'
 import { QuickNoteModal } from './components/QuickNoteModal'
 import { ToastTray } from './components/Toast'
+import { UpdateBanner } from './components/UpdateBanner'
 import { useTimer } from './hooks/useTimer'
 
 type View = 'today' | 'timer' | 'calendar' | 'clients' | 'settings'
@@ -26,6 +27,7 @@ function App(): React.JSX.Element {
 
   return (
     <div className="h-screen bg-slate-900 text-slate-100 flex flex-col overflow-hidden">
+      <UpdateBanner />
       {/* Nav */}
       <nav className="flex gap-1 px-3 py-2 bg-slate-800 border-b border-slate-700 shrink-0">
         {(['today', 'timer', 'calendar', 'clients', 'settings'] as View[]).map((v) => (

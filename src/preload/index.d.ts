@@ -11,7 +11,8 @@ import type {
   Settings,
   IpcResult,
   BackupInfo,
-  DashboardSummary
+  DashboardSummary,
+  UpdateStatus
 } from '../shared/types'
 
 declare global {
@@ -109,6 +110,14 @@ declare global {
       logo: {
         set(): Promise<IpcResult<{ path: string }>>
         clear(): Promise<IpcResult<void>>
+      }
+      update: {
+        getStatus(): Promise<IpcResult<UpdateStatus>>
+        getLastCheck(): Promise<IpcResult<string | null>>
+        getVersion(): Promise<IpcResult<string>>
+        check(): Promise<IpcResult<void>>
+        install(): Promise<IpcResult<void>>
+        onStatus(callback: (status: UpdateStatus) => void): () => void
       }
     }
   }

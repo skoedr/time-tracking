@@ -29,3 +29,7 @@ nsis:
   createDesktopShortcut: always
   createStartMenuShortcut: true
 npmRebuild: false
+publish:
+  provider: github
+  owner: skoedr
+  repo: time-tracking
