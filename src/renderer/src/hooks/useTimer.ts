@@ -143,6 +143,8 @@ export function useTimer() {
     setIsLoading(false)
     if (res.ok) {
       setRunningEntry(res.data)
+      // Dismiss quicknote modal if user starts a new timer before answering
+      if (useTimerStore.getState().quickNoteEntry) setQuickNoteEntry(null)
       const clientName = clients.find((c) => c.id === clientId)?.name ?? ''
       await pushTrayUpdate(true, clientName)
     }
@@ -184,6 +186,8 @@ export function useTimer() {
       if (res.ok) {
         setRunningEntry(res.data)
         setDescription('')
+        // Dismiss quicknote modal if user starts a new timer before answering
+        if (useTimerStore.getState().quickNoteEntry) setQuickNoteEntry(null)
         const clientName = clients.find((c) => c.id === clientId)?.name ?? ''
         await pushTrayUpdate(true, clientName)
       }

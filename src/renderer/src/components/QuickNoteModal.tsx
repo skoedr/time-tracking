@@ -61,7 +61,8 @@ export function QuickNoteModal({ entry, onDone }: Props) {
     if (e.key === 'Enter') void save()
   }
 
-  const progressPct = (remaining / TIMEOUT_S) * 100
+  // Bar grows left→right as time elapses (0% = just opened, 100% = time up)
+  const progressPct = ((TIMEOUT_S - remaining) / TIMEOUT_S) * 100
 
   return (
     <div
