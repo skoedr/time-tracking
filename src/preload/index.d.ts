@@ -89,7 +89,7 @@ declare global {
         showItemInFolder(path: string): Promise<IpcResult<void>>
       }
       paths: {
-        get(): Promise<IpcResult<{ db: string; backups: string }>>
+        get(): Promise<IpcResult<{ db: string; backups: string; logs: string; logFile: string }>>
       }
       exporter: {
         json(): Promise<IpcResult<{ path: string; bytes: number }>>

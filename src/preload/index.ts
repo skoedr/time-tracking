@@ -127,7 +127,8 @@ const api = {
       ipcRenderer.invoke('shell:showItemInFolder', path)
   },
   paths: {
-    get: (): Promise<IpcResult<{ db: string; backups: string }>> => ipcRenderer.invoke('paths:get')
+    get: (): Promise<IpcResult<{ db: string; backups: string; logs: string; logFile: string }>> =>
+      ipcRenderer.invoke('paths:get')
   },
   exporter: {
     json: (): Promise<IpcResult<{ path: string; bytes: number }>> =>

@@ -2,6 +2,8 @@ import { ipcMain, shell } from 'electron'
 import { app } from 'electron'
 import { dialog } from 'electron'
 import { writeFileSync } from 'fs'
+import { dirname } from 'path'
+import log from 'electron-log/main'
 import { randomUUID } from 'crypto'
 import { getDb, getDbPath } from './db'
 import { getBackupsDir } from './backup'
@@ -535,9 +537,20 @@ export function registerIpcHandlers(hooks: IpcHooks): void {
   })
 
   // ── Paths (for Settings-View) ──────────────────────────
-  ipcMain.handle('paths:get', (): IpcResult<{ db: string; backups: string }> => {
-    return ok({ db: getDbPath(), backups: getBackupsDir() })
-  })
+  ipcMain.handle(
+    'paths:get',
+    (): IpcResult<{ db: string; backups: string; logs: string; logFile: string }> => {
+      // electron-log returns a File transport whose `getFile()` resolves
+      // the on-disk log path lazily; the directory is its parent.
+      const logFile = log.transports.file.getFile().path
+      return ok({
+        db: getDbPath(),
+        backups: getBackupsDir(),
+        logs: dirname(logFile),
+        logFile
+      })
+    }
+  )
 
   ipcMain.handle('app:getVersion', (): IpcResult<string> => {
     return ok(app.getVersion())
