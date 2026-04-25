@@ -118,17 +118,27 @@ export function useTimer() {
   }, [runningEntry])
 
   const start = useCallback(async () => {
-    if (!selectedClientId) return
+    // Resolve which client to start. If the user hasn't picked one (e.g. the
+    // hotkey fires from Today/Calendar where there is no selector at all),
+    // fall back to the first active client so Alt+Shift+S always does
+    // *something* instead of silently no-op'ing.
+    let clientId = selectedClientId
+    if (!clientId) {
+      const fallback = clients.find((c) => c.active === 1)
+      if (!fallback) return
+      clientId = fallback.id
+      setSelectedClientId(clientId)
+    }
     setIsLoading(true)
     const res = await window.api.entries.start({
-      client_id: selectedClientId,
+      client_id: clientId,
       description,
       started_at: new Date().toISOString()
     })
     setIsLoading(false)
     if (res.ok) {
       setRunningEntry(res.data)
-      const clientName = clients.find((c) => c.id === selectedClientId)?.name ?? ''
+      const clientName = clients.find((c) => c.id === clientId)?.name ?? ''
       await pushTrayUpdate(true, clientName)
     }
   }, [selectedClientId, description, clients])

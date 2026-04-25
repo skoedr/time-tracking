@@ -81,6 +81,11 @@ geschlossenen Schleife. Keine Tabs, keine Browser, kein zweites Programm nötig.
 
 - **Mini-Widget** — Always-on-top, **200×40px horizontal** (Toggl-Style), zeigt Zeit + Kunde +
   Stop-Button nebeneinander. Toggle per Hotkey `Alt+Shift+M`.
+- **Fenster-Größe & Layout-Density** — Default-Größe ist heute 900×670 (etwas eng,
+  vor allem für Kalender + Today bei aktiven Timern). Verbesserungen: vernünftige
+  Mindestgröße setzen, letzte Position/Größe persistieren, max-w-Container in den
+  Views (`max-w-md`/`max-w-5xl`) auf den verfügbaren Platz hin überdenken, Heute-View
+  + Kalender breiter atmen lassen, Settings-View mehrspaltig wo sinnvoll.
 - **Pomodoro-Modus optional** — pro Eintrag aktivierbar: 25 min Timer, dann Modal
   "5 min Pause? Weiter? Stoppen?". Pausen werden separat als Type=`break` gespeichert.
 - **Tags pro Eintrag** — `#feature`, `#bugfix`, `#meeting` o.ä. Im PDF gruppierbar.
@@ -109,6 +114,21 @@ geschlossenen Schleife. Keine Tabs, keine Browser, kein zweites Programm nötig.
 > wird in Kauf genommen. Bricht keine Funktion, nur einmaliger "Trotzdem ausführen"-Klick.
 
 **Ship-Kriterium:** Du kannst die App einem zweiten Freelancer ohne Anleitung geben.
+
+---
+
+## Backlog (unscheduled)
+
+Kleinere Edge-Cases / Polish-Ideen, die irgendwann reinrutschen, aber noch keiner
+konkreten Version zugeordnet sind.
+
+- **PDF: überlappende Einträge desselben Kunden zusammenfassen.** Wenn zwei (oder mehr)
+  Einträge für den gleichen Kunden zeitlich knapp aufeinander folgen oder sich
+  überschneiden (z. B. zwei kurze Test-Toggles innerhalb von wenigen Minuten), sollten
+  sie im PDF zu einer Zeile zusammengeführt werden — Von = frühestes Start, Bis =
+  spätestes Stop, Beschreibungen mit `; ` verkettet (Duplikate raus). Offene Fragen:
+  Toleranz-Fenster konfigurierbar? Nur bei aktivierter Rundung? Gilt auch für die
+  Kalender-Anzeige oder rein PDF?
 
 ---
 
