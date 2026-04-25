@@ -6,6 +6,16 @@ All notable changes to TimeTrack are documented here.
 
 ### Added
 
+- **Auto-Update** (#28, PR B) — `electron-updater` prüft beim App-Start auf
+  GitHub-Releases, lädt neue Versionen automatisch im Hintergrund und zeigt
+  ein dezentes Indigo-Banner an, sobald die Installation bereit ist. Der
+  User entscheidet, wann neu gestartet wird — kein Force-Restart, kein
+  Datenverlust bei laufendem Timer. Settings → "Updates" zeigt aktuelle
+  Version, Status und letzte Prüfung; manueller "Jetzt nach Updates suchen"-
+  Button für ungeduldige User. Offline-Toleranz: stiller Fallback ohne rote
+  Fehlerbanner beim ersten Start ohne Internet. Alle Updater-Events fließen
+  in dieselbe Log-Datei wie PR A. Lokales Test-Setup via
+  `scripts/test-updater.mjs` + `build/dev-app-update.yml`.
 - **Crash-Logging** (#34, PR A) — `electron-log` schreibt App-Ereignisse und
   Fehler nach `%AppData%\TimeTrack\logs\main.log` (Windows; analoge Pfade auf
   macOS/Linux). Renderer-`console.*`-Aufrufe werden via IPC in dieselbe Datei

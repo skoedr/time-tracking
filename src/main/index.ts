@@ -18,6 +18,7 @@ import trayRunningIcon from '../../resources/tray-running.png?asset'
 import trayStoppedIcon from '../../resources/tray-stopped.png?asset'
 import { getDb, recoverZombieEntries, MigrationError } from './db'
 import { registerIpcHandlers } from './ipc'
+import { initAutoUpdater } from './updater'
 import { applyMiniEnabled, destroyMini, pushMiniState, toggleMini } from './miniWindow'
 import {
   configureIdleWatcher,
@@ -437,6 +438,10 @@ app.whenReady().then(async () => {
     setMiniHotkey: (accelerator) => registerMiniHotkey(accelerator)
   })
   createWindow()
+
+  // v1.5 PR B — init auto-updater after the main window exists so events
+  // can be broadcast to the renderer immediately.
+  initAutoUpdater({ isDev: is.dev })
 
   refreshActiveClients()
   configureIdleWatcher({ getWindow: () => mainWindow })

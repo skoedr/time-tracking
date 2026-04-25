@@ -128,6 +128,18 @@ export interface BackupInfo {
   sizeBytes: number
 }
 
+/**
+ * v1.5 PR B — auto-update lifecycle status broadcast over `update:status` IPC.
+ */
+export type UpdateStatus =
+  | { status: 'idle' }
+  | { status: 'checking' }
+  | { status: 'available'; version: string }
+  | { status: 'downloading'; version: string; progress: number }
+  | { status: 'ready'; version: string }
+  | { status: 'not-available'; checkedAt: string }
+  | { status: 'error'; message: string }
+
 /** Aggregated dashboard view returned by `dashboard:summary`. */
 export interface DashboardSummary {
   todaySeconds: number
