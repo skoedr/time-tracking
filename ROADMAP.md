@@ -79,37 +79,43 @@ geschlossenen Schleife. Keine Tabs, keine Browser, kein zweites Programm nötig.
 
 ---
 
-## v1.4 — Mini Mode & Flow
+## v1.4 — Flow & Less Friction
 
 📂 [Issues mit Label `v1.4`](https://github.com/skoedr/time-tracking/labels/v1.4)
+📋 [Plan & Multi-Angle Review](.github/plan-v1.4.md)
 
-**Thema:** App soll im Workflow verschwinden, nicht stören.
+**Thema:** App soll im Workflow verschwinden, nicht stören. Plus die CI-Hausaufgabe
+(Node 20 → 24), bevor sie blocking wird.
 
-- **Mini-Widget** — Always-on-top, **200×40px horizontal** (Toggl-Style), zeigt Zeit + Kunde +
-  Stop-Button nebeneinander. Toggle per Hotkey `Alt+Shift+M`.
-- **Fenster-Größe & Layout-Density** — Default-Größe ist heute 900×670 (etwas eng,
-  vor allem für Kalender + Today bei aktiven Timern). Verbesserungen: vernünftige
-  Mindestgröße setzen, letzte Position/Größe persistieren, max-w-Container in den
-  Views (`max-w-md`/`max-w-5xl`) auf den verfügbaren Platz hin überdenken, Heute-View
-  + Kalender breiter atmen lassen, Settings-View mehrspaltig wo sinnvoll.
-- **CSV-Export** (#18) — für Steuerberater oder externe Tools (DATEV-kompatibel).
-  Verschoben aus v1.3, da JSON-Vollexport die Daten-Portabilität bereits abdeckt.
-- **Pomodoro-Modus optional** — pro Eintrag aktivierbar: 25 min Timer, dann Modal
-  "5 min Pause? Weiter? Stoppen?". Pausen werden separat als Type=`break` gespeichert.
-- **Tags pro Eintrag** — `#feature`, `#bugfix`, `#meeting` o.ä. Im PDF gruppierbar.
-- **Schnell-Notiz nach Stop** — wenn Beschreibung leer war, Toast "Was war das?"
-  mit 30s-Eingabefenster.
+- **CI Node 24 Bump** (#41) — `pnpm/action-setup@v4` → `@v5` in beiden Workflows.
+  Vor Juni-Deadline für Node-20-Action-Deprecation.
+- **Mini-Widget** (#22) — Always-on-top, **200×40px horizontal** (Toggl-Style),
+  zeigt Zeit + Kunde + Stop-Button nebeneinander. Toggle per Hotkey `Alt+Shift+M`.
+  Hero-Feature von v1.4.
+- **Tags pro Eintrag** (#24) — `#feature`, `#bugfix`, `#meeting` o.ä. Hash-basierte
+  Chip-Farben aus 8er-Palette. Im PDF gruppierbar.
+- **Schnell-Notiz nach Stop** (#25) — wenn Beschreibung leer war, Toast "Was war das?"
+  mit 30s-Eingabefenster + Progress-Bar.
+- **Fenster-Größe & Layout-Density** — Mindestgröße, letzte Position/Größe persistieren,
+  Container-Width-Audit (TodayView/CalendarView atmen lassen).
 
-**Ship-Kriterium:** Wochenlang täglich nutzen ohne dass es nervt.
+**Ship-Kriterium:** Wochenlang täglich nutzen ohne dass es nervt. Niemand öffnet das
+Hauptfenster, um zu sehen "läuft mein Timer?".
 
 ---
 
-## v1.5 — Trust at Scale
+## v1.5 — Trust at Scale & Data Portability
 
 📂 [Issues mit Label `v1.5`](https://github.com/skoedr/time-tracking/labels/v1.5)
 
 **Thema:** Wenn jemand außer dir das Tool nutzt, soll es nicht peinlich sein.
 
+- **CSV-Export** (#18) — für Steuerberater oder externe Tools (DATEV-kompatibel).
+  Verschoben aus v1.4, da JSON-Vollexport die Daten-Portabilität bereits abdeckt
+  und v1.4 auf Friction-Removal fokussiert.
+- **Pomodoro-Modus optional** (#23) — pro Eintrag aktivierbar: 25 min Timer, dann Modal
+  "5 min Pause? Weiter? Stoppen?". Pausen werden separat als Type=`break` gespeichert.
+  Verschoben aus v1.4 — Mini-Widget + Quicknote liefern mehr Daily-Trust.
 - **Onboarding-Wizard** — beim ersten Start: 3 Schritte (Sprache → ersten Kunden anlegen
   → Hotkey-Hinweis). Ein-mal gezeigt.
 - **Auto-Update** — `electron-updater` gegen GitHub Releases. Update-Banner statt
