@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { useUpdateStore } from '../store/updateStore'
+import { useT } from '../contexts/I18nContext'
 
 /**
  * v1.5 PR B — slim banner above the main app surface.
@@ -12,6 +13,7 @@ import { useUpdateStore } from '../store/updateStore'
  */
 export function UpdateBanner(): React.JSX.Element | null {
   const { status, dismissed, dismissReady, installNow } = useUpdateStore()
+  const t = useT()
 
   useEffect(() => {
     void useUpdateStore.getState().init()
@@ -25,21 +27,22 @@ export function UpdateBanner(): React.JSX.Element | null {
 
   switch (status.status) {
     case 'checking':
-      content = <span className="text-sm">Suche nach Updates …</span>
+      content = <span className="text-sm">{t('update.checking')}</span>
       break
     case 'available':
       content = (
         <span className="text-sm">
-          Version <span className="font-semibold">{status.version}</span> verfügbar — wird
-          heruntergeladen …
+          {t('update.available', { version: status.version ?? '' })}
         </span>
       )
       break
     case 'downloading':
       content = (
         <span className="text-sm">
-          Lade Version <span className="font-semibold">{status.version || '…'}</span>:{' '}
-          {status.progress}%
+          {t('update.downloading', {
+            version: status.version ?? '…',
+            progress: status.progress ?? 0
+          })}
         </span>
       )
       break
@@ -47,8 +50,7 @@ export function UpdateBanner(): React.JSX.Element | null {
       content = (
         <div className="flex w-full items-center justify-between gap-3">
           <span className="text-sm">
-            Version <span className="font-semibold">{status.version}</span> bereit — App neu
-            starten?
+            {t('update.ready.text', { version: status.version ?? '' })}
           </span>
           <div className="flex items-center gap-2">
             <button
@@ -56,15 +58,15 @@ export function UpdateBanner(): React.JSX.Element | null {
               onClick={() => void installNow()}
               className="rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-indigo-500"
             >
-              Jetzt neu starten
+              {t('update.ready.install')}
             </button>
             <button
               type="button"
               onClick={dismissReady}
               className="rounded-md px-2 py-1 text-xs text-indigo-200 transition-colors hover:bg-indigo-500/20"
-              aria-label="Banner ausblenden"
+              aria-label={t('update.ready.dismiss')}
             >
-              Später
+              {t('update.ready.dismiss')}
             </button>
           </div>
         </div>
@@ -74,9 +76,9 @@ export function UpdateBanner(): React.JSX.Element | null {
       tone = 'warn'
       content = (
         <span className="text-sm">
-          Update-Fehler: <span className="font-mono text-xs">{status.message}</span>
+          {t('update.error.text', { message: status.message ?? '' })}
           {' — '}
-          <span className="text-xs opacity-80">Details in den Einstellungen.</span>
+          <span className="text-xs opacity-80">{t('update.error.details')}</span>
         </span>
       )
       break
