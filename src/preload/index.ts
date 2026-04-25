@@ -12,7 +12,8 @@ import type {
   Settings,
   IpcResult,
   BackupInfo,
-  DashboardSummary
+  DashboardSummary,
+  UpdateStatus
 } from '../shared/types'
 
 const api = {
@@ -149,6 +150,22 @@ const api = {
   logo: {
     set: (): Promise<IpcResult<{ path: string }>> => ipcRenderer.invoke('logo:set'),
     clear: (): Promise<IpcResult<void>> => ipcRenderer.invoke('logo:clear')
+  },
+  // v1.5 PR B — auto-updater
+  update: {
+    getStatus: (): Promise<IpcResult<UpdateStatus>> => ipcRenderer.invoke('update:getStatus'),
+    getLastCheck: (): Promise<IpcResult<string | null>> =>
+      ipcRenderer.invoke('update:getLastCheck'),
+    getVersion: (): Promise<IpcResult<string>> => ipcRenderer.invoke('update:getVersion'),
+    check: (): Promise<IpcResult<void>> => ipcRenderer.invoke('update:check'),
+    install: (): Promise<IpcResult<void>> => ipcRenderer.invoke('update:install'),
+    onStatus: (callback: (status: UpdateStatus) => void): (() => void) => {
+      const handler = (_e: unknown, status: UpdateStatus): void => callback(status)
+      ipcRenderer.on('update:status', handler)
+      return (): void => {
+        ipcRenderer.removeListener('update:status', handler)
+      }
+    }
   }
 }
 

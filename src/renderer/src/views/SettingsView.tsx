@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { Settings, BackupInfo } from '../../../shared/types'
+import { useUpdateStore } from '../store/updateStore'
 
 const DEFAULT_HOTKEY = 'Alt+Shift+S'
 const DEFAULT_MINI_HOTKEY = 'Alt+Shift+M'
@@ -435,6 +436,9 @@ export default function SettingsView(): React.JSX.Element {
         </Row>
       </Section>
 
+      {/* Updates (v1.5 PR B, issue #28) */}
+      <UpdatesSection />
+
       {/* PDF-Vorlage (v1.3 PR C, issues #16 + #19) */}
       <Section title="PDF-Vorlage">
         <Row label="Logo" hint="PNG, JPG, SVG oder WebP, max. 1 MB.">
@@ -566,5 +570,92 @@ function Row({
       {children}
       {hint && <p className="text-xs text-slate-500">{hint}</p>}
     </div>
+  )
+}
+
+/**
+ * v1.5 PR B — Updates section. Reads + drives state from useUpdateStore.
+ * The store auto-initializes on first mount via UpdateBanner; we still call
+ * `init()` here defensively in case Settings is opened before the banner
+ * has appeared in some future layout change.
+ */
+function UpdatesSection(): React.JSX.Element {
+  const { status, appVersion, lastCheckedAt, checkNow, installNow, init } = useUpdateStore()
+  useEffect(() => {
+    void init()
+  }, [init])
+
+  const busy = status.status === 'checking' || status.status === 'downloading'
+  const lastCheckedLabel = lastCheckedAt
+    ? new Date(lastCheckedAt).toLocaleString('de-DE')
+    : 'noch nicht geprüft'
+
+  let statusLabel = ''
+  switch (status.status) {
+    case 'idle':
+      statusLabel = 'Bereit'
+      break
+    case 'checking':
+      statusLabel = 'Suche nach Updates …'
+      break
+    case 'available':
+      statusLabel = `Version ${status.version} wird heruntergeladen …`
+      break
+    case 'downloading':
+      statusLabel = `Lade Version ${status.version || '…'}: ${status.progress}%`
+      break
+    case 'ready':
+      statusLabel = `Version ${status.version} bereit zur Installation`
+      break
+    case 'not-available':
+      statusLabel = 'Du verwendest die aktuelle Version.'
+      break
+    case 'error':
+      statusLabel = `Fehler: ${status.message}`
+      break
+  }
+
+  return (
+    <Section title="Updates">
+      <Row label="Aktuelle Version">
+        <code className="inline-block w-fit rounded bg-slate-800 px-3 py-1.5 text-xs text-slate-300">
+          {appVersion || '—'}
+        </code>
+      </Row>
+      <Row label="Status" hint={`Letzte Prüfung: ${lastCheckedLabel}`}>
+        <p
+          className={`text-sm ${
+            status.status === 'error' ? 'text-amber-300' : 'text-slate-200'
+          }`}
+        >
+          {statusLabel}
+        </p>
+      </Row>
+      <Row label="Aktionen">
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => void checkNow()}
+            disabled={busy}
+            className={`${btnSecondaryClass} disabled:cursor-not-allowed disabled:opacity-50`}
+          >
+            Jetzt nach Updates suchen
+          </button>
+          {status.status === 'ready' && (
+            <button
+              type="button"
+              onClick={() => void installNow()}
+              className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            >
+              Jetzt neu starten und installieren
+            </button>
+          )}
+        </div>
+        <p className="mt-1 text-xs text-slate-500">
+          Updates werden bei App-Start automatisch geprüft und im Hintergrund geladen. Du
+          entscheidest, wann installiert wird.
+        </p>
+      </Row>
+    </Section>
   )
 }
