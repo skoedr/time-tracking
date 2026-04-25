@@ -32,44 +32,50 @@ geschlossenen Schleife. Keine Tabs, keine Browser, kein zweites Programm nötig.
 
 ---
 
-## v1.2 — Calendar & Edit (das Original-Backlog)
+## v1.2 — Calendar & Edit ✅ ausgeliefert v1.2.0 (2026-04-24)
 
 📂 [Issues mit Label `v1.2`](https://github.com/skoedr/time-tracking/labels/v1.2)
 
 **Thema:** Was war, wann war es, und kann ich es korrigieren?
 
-- **Kalender-Modus** — Monatsansicht. Pro Tag: gestapelte farbige Balken pro Kunde mit
-  Tagessumme. Klick auf Tag → Tagesdetail mit allen Einträgen.
-- **Eintrag bearbeiten** — Start/Stop-Zeiten, Beschreibung, Kunde nachträglich ändern.
-  Rundung optional (5/10/15 Minuten).
-- **Eintrag löschen** — mit Confirm.
-- **Manueller Eintrag** — "Eintrag nachtragen" Button. Wichtig wenn Hotkey vergessen wurde.
-- **Heute-Übersicht** — beim App-Öffnen zuerst sichtbar: Tagessumme, letzte 5 Einträge,
-  Wochensumme.
-- **Tray-Tooltip-Erweiterung** — `● Mustermann · 02:14 · Heute 06:42`.
+- ✅ **Kalender-Modus** — 7×N-Monatsraster, KW-Spalte, Tagessumme, bis zu 5 Mini-Bars
+  pro Tag (mit `+N`-Überlauf), Tastatur-Navigation, heutige Zelle hervorgehoben.
+- ✅ **Eintrag bearbeiten** — Start/Stop, Beschreibung, Kunde nachträglich änderbar.
+  Rundung pro Eintrag optional (5/10/15/30 Minuten).
+- ✅ **Eintrag löschen** — Soft-Delete mit 5 s Undo-Toast (`deleted_at`-Spalte).
+- ✅ **Manueller Eintrag** — "Eintrag nachtragen"-Dialog mit Server-seitiger Validierung.
+- ✅ **Heute-Übersicht** — Default-Tab: aktiver Timer als Pille, Tages-/Wochensumme,
+  Top-3-Kunden-Quick-Start, letzte 5 Einträge.
+- ✅ **Tray-Tooltip-Erweiterung** — `● Mustermann · 02:14 · Heute 06:42`.
 
-**Ship-Kriterium:** Du kannst eine Woche Daten visuell prüfen und Fehler korrigieren ohne SQL.
+**Ship-Kriterium:** Du kannst eine Woche Daten visuell prüfen und Fehler korrigieren ohne SQL. ✅
 
 ---
 
-## v1.3 — PDF Export & Reporting (das Geld-verdienen-Feature)
+## v1.3 — PDF Export & Reporting ✅ ausgeliefert v1.3.0 (2026-04-25)
 
 📂 [Issues mit Label `v1.3`](https://github.com/skoedr/time-tracking/labels/v1.3)
 
 **Thema:** Daten → fertige Rechnungs-Anlage in 30 Sekunden.
 
-- **PDF-Stundennachweis** — Kunde + Zeitraum wählen → PDF mit Tabelle (Datum, Beschreibung,
-  Stunden), Summe, Stundensatz optional, Logo + Absender-Adresse aus Settings.
-  Generiert via **puppeteer** (HTML/CSS-Template, professionelles Layout).
-- **Daten-Export** — alle Einträge + Kunden als JSON. Vertrauen-stiftend für
-  Daten-Portabilität.
-- **CSV-Export** — für Steuerberater oder externe Tools (DATEV-kompatibel).
-- **Konfigurierbares PDF-Template** — Logo upload, Absenderadresse, Farbakzent passend
-  zum Kunden, Footer-Text.
-- **Stundensatz pro Kunde** — optional, fließt in PDF (Honorar-Summe).
-- **Quick-Filter im Kalender** — "Letzten Monat als PDF" mit 1 Klick.
+- ✅ **PDF-Stundennachweis** — Kunde + Zeitraum wählen → A4-PDF (Datum / Von / Bis /
+  Tätigkeit / Dauer, optional Honorar). Hidden-`BrowserWindow` + `printToPDF` statt
+  puppeteer (kein zusätzlicher Renderer-Entry).
+- ✅ **JSON-Vollexport** — Kunden + Einträge (inkl. soft-gelöschter und verlinkter
+  Hälften) + Settings als lesbare JSON-Datei. Trust-Artefakt.
+- ✅ **Konfigurierbares PDF-Template** — Logo, Absenderadresse, Steuernummer,
+  Akzentfarbe, Footer, optionale Stunden-Rundung in Einstellungen → PDF-Vorlage.
+- ✅ **Stundensatz pro Kunde** — Integer-Cents in `clients.rate_cent`, fließt als
+  €-Spalte ins PDF.
+- ✅ **Quick-Filter im Kalender** — Vier Pillen + Hero-Button "📄 Letzter Monat als PDF".
+- ✅ **Cross-Midnight Auto-Split** — Einträge über Mitternacht werden im IPC automatisch
+  in zwei verlinkte Hälften gesplittet (Migration 005, `entries.link_id`).
+- ✅ **App- + Tray-Icons** — Glass-Style aus `timetrack_icon_glass_desktop.svg`,
+  manueller Sync-Workflow via `scripts/sync-icon.mjs` + `prebuild`-Hook.
+- ✅ **CI PDF-Smoke-Test** — Release-Workflow rendert ein Mini-PDF aus der gepackten
+  `.exe` und prüft `pdfBytes >= 1000` bevor das Release publiziert wird.
 
-**Ship-Kriterium:** Du erstellst Rechnungs-Anlagen schneller als je zuvor und ohne Excel.
+**Ship-Kriterium:** Du erstellst Rechnungs-Anlagen schneller als je zuvor und ohne Excel. ✅
 
 ---
 
@@ -86,6 +92,8 @@ geschlossenen Schleife. Keine Tabs, keine Browser, kein zweites Programm nötig.
   Mindestgröße setzen, letzte Position/Größe persistieren, max-w-Container in den
   Views (`max-w-md`/`max-w-5xl`) auf den verfügbaren Platz hin überdenken, Heute-View
   + Kalender breiter atmen lassen, Settings-View mehrspaltig wo sinnvoll.
+- **CSV-Export** (#18) — für Steuerberater oder externe Tools (DATEV-kompatibel).
+  Verschoben aus v1.3, da JSON-Vollexport die Daten-Portabilität bereits abdeckt.
 - **Pomodoro-Modus optional** — pro Eintrag aktivierbar: 25 min Timer, dann Modal
   "5 min Pause? Weiter? Stoppen?". Pausen werden separat als Type=`break` gespeichert.
 - **Tags pro Eintrag** — `#feature`, `#bugfix`, `#meeting` o.ä. Im PDF gruppierbar.
