@@ -1,0 +1,32 @@
+name: Feature Request
+description: Neue Funktion oder Verbesserung vorschlagen
+title: "[Feature] "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem / Motivation
+      description: Welches Problem soll diese Funktion lösen?
+      placeholder: "Als Freelancer möchte ich ..., damit ..."
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Vorgeschlagene Lösung
+      description: Wie stellst du dir die Umsetzung vor?
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternativen
+      description: Welche anderen Lösungen hast du in Betracht gezogen?
+  - type: textarea
+    id: usecase
+    attributes:
+      label: Konkreter Anwendungsfall
+      description: Beschreibe einen typischen Workflow, der diese Funktion nutzen würde.
+    validations:
+      required: true
