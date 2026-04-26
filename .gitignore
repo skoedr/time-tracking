@@ -14,3 +14,6 @@ templates/Stundennachweis-*.pdf
 
 # v1.5 PR B — local auto-updater dev config (points at scripts/test-updater.mjs).
 build/dev-app-update.yml
+
+templates/Rechnung_*.pdf
+templates/*.png

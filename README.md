@@ -135,7 +135,6 @@ scripts/
 resources/
   licenses.json  # Generierte Lizenzliste (95 Pakete, aktualisiert bei pnpm build)
 templates/
-  Rechnung_RE26001.pdf, wald-it-logo.png  # Sample artifacts
 ```
 
 ## Data Storage
