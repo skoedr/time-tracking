@@ -208,40 +208,23 @@ Push (HN/Reddit-Posts), englische CHANGELOG-Übersetzung, Crowdin-Integration.
 
 ---
 
-## v1.7 — PDF-Merge (Hero-Feature)
+## v1.7 — PDF-Merge (Hero-Feature) ✅ ausgeliefert (2026-04-26)
+
+📂 [Plan](.github/plan-v1.7.md)
 
 **Thema:** Der einzige OSS-Pitch-Satz, den die App tragen muss: „TimeTrack
 erstellt deinen Stundennachweis und heftet ihn an deine Lexware-/sevDesk-/
 Billomat-Rechnung — in einem Klick."
 
-- **Neue Dependency:** `pdf-lib` (~150 KB, pure JS, MIT). Bewusst nicht
-  `pdfkit`/`puppeteer` — wir bauen kein neues PDF, wir kombinieren zwei
-  bestehende. pdf-lib ist die kleinste Lösung dafür.
-- **Settings → Export → „Rechnung-Anhang"-Sektion** (default off):
-  Toggle aktiviert die Merge-Funktion im Export-Modal. Ein Default-Pfad
-  („meine Rechnungen liegen typisch hier") merkbar.
-- **Im PdfExportModal:** neue Checkbox „An bestehende Rechnungs-PDF anhängen".
-  Wenn aktiv → File-Picker für die Original-PDF → nach „Erstellen" wird
-  `Math.max(originalPages, stundennachweisPages)` gemerged via `pdf-lib`'s
-  `PDFDocument.copyPages` → Output: `<originalname>_inkl_Stundennachweis.pdf`
-  in `<originalDir>` neben der Original-Rechnung. Original bleibt unverändert.
-- **Merge-Order konfigurierbar** in Settings: Stundennachweis vorne / hinten
-  (Default: hinten — passt zum „Anlage zur Rechnung"-Sprachgebrauch).
-- **Validierung:** Original muss eine valide PDF sein. Bei Fehler Toast
-  „Datei ist keine gültige PDF" + Original-Datei wird angezeigt.
-- **Dogfood-Test:** Maintainer ersetzt seinen aktuellen Lexware-Workflow
-  (PDF aus Lexware exportieren → Smallpdf/iLovePDF/manuell mergen)
-  durch das Feature und nutzt es einen vollen Abrechnungszyklus.
+- ✅ **`pdf-lib` Dependency** (~150 KB, pure JS, MIT) — kein Puppeteer, keine nativen Module, kein Rebuild-Schritt.
+- ✅ **Checkbox „An Rechnung anhängen"** immer sichtbar im Export-Modal (kein Settings-Toggle — direkt auffindbar wie die Unterschriftsfelder-Checkbox).
+- ✅ **File-Picker** für die Rechnungs-PDF über natives `<input type="file">` + Electron `File.path`.
+- ✅ **`pdf:merge-export` IPC-Handler** mit Path-Traversal-Guard, 50-MB-Cap, EBUSY/EPERM-Handling, EPERM-Fallback auf Save-Dialog.
+- ✅ **Output:** `<Rechnungsname>_inkl_Stundennachweis.pdf` neben der Original-Datei. Original bleibt unverändert.
+- ✅ **18 neue Tests** (pdfMerge.test.ts + ipc.test.ts). Kein Schema-Change.
 
 **Ship-Kriterium:** Maintainer hat seinen manuellen Smallpdf-Workflow für gut
 abgehakt. Ein Test-Freelancer mit Lexware-PDF kann es in unter 30 s nachvollziehen.
-
-**Reuse:** `pdf.ts` (Render-Pipeline bleibt unverändert), `PdfExportModal.tsx`
-(eine Checkbox + File-Picker dazu), `csvExport.ts`-Pattern für Output-Dialog-
-Handling. Schema-Change: keiner.
-
-**Aufwand-Schätzung:** S–M (~2 Wochen, ein PR — Merge-Logik + UI + Tests +
-Settings-Toggle).
 
 ---
 
