@@ -140,24 +140,223 @@ Hauptfenster, um zu sehen "läuft mein Timer?". ✅
 
 ---
 
+# Phase 2 — Open Source Release (v1.6 → v2.0)
+
+> **Strategie-Wechsel post-v1.5.2:** Das Tool ist Solo-tauglich „fertig". Nordstern
+> Phase 1 erreicht. Phase 2 öffnet das Repo bewusst für die Freelancer-Community
+> (MIT-Lizenz, freiwillige Nutzung, Support best-effort über GitHub Issues / Discussions).
+> Direktiven bleiben: kein Cloud, kein Server, kein SaaS-Abo, Solo-Maintainer.
+>
+> **Approach B („Distribution + PDF-Merge als Hero, Outlook später")** — siehe
+> Office-Hours-Design-Doc für die Alternativen-Diskussion (A/B/C). Begründung
+> der Wahl in einem Satz: PDF-Merge ist der einzige Ein-Satz-OSS-Pitch, der
+> jeden DE-Freelancer mit Lexware/sevDesk/Billomat sofort packt — und ist
+> gleichzeitig der reale Schmerz des Maintainers.
+
+## Pre-Roadmap-Block (Lizenz-Hygiene) ✅ ausgeliefert (2026-04-26)
+
+Vor dem ersten v1.6-PR war der Repo rechtlich **nicht** open-source, obwohl der
+About-Dialog „MIT" anzeigte. Repariert in einem Commit + History-Rewrite:
+
+- ✅ **`LICENSE`-File** mit kanonischem MIT-Text, Copyright Robin Wald.
+- ✅ **`"license": "MIT"`** in `package.json` + `repository`/`bugs` Felder.
+- ✅ **README License-Sektion** umgeschrieben („Private — not for distribution"
+  → MIT + Verweis auf bundled third-party licenses).
+- ✅ **Git History gepurged** via `git filter-repo`: drei PII-Files (Rechnung mit
+  IBAN/Steuernummer, Logo, ein Lingua-Masters-Stundennachweis) aus jedem Commit
+  rückwirkend entfernt. Backup-Mirror unter `..\time-tracking-backup-*.git`.
+- ✅ **13 obsolete Stage-Branches** auf origin gelöscht (alle Squash-merged in main,
+  enthielten Original-Commit `5c78d91` mit den PII-Blobs). Remote zeigt nur noch `main`.
+
+---
+
+## v1.6 — OSS-Readiness  🎯 nächste Stufe
+
+**Thema:** Aus „mein Repo zufällig auf GitHub" wird „Repo das ein anderer
+Freelancer clonen, verstehen und beitragen kann".
+
+- **`CONTRIBUTING.md`** — knapp: PR-Format (kleine PRs, ein Thema), `pnpm install` /
+  `pnpm dev` / `pnpm test` / `pnpm typecheck`-Workflow, Branch-Naming, Commit-Style
+  (`feat:`/`fix:`/`chore:` wie im CHANGELOG bereits gelebt). Code-of-Conduct-Link
+  (Contributor Covenant 2.1, ein File mehr).
+- **README zweisprachig** — Englische Sektion oben (kurz, „what + why"), DE
+  detailliert darunter. Oder als zweite Datei `README.en.md` mit Cross-Link.
+  Entscheidung: zwei Files, weil DE bereits 158 Zeilen hat und Inline-Mix
+  unleserlich wird.
+- **GitHub Issue-Templates** unter `.github/ISSUE_TEMPLATE/` — Bug-Report,
+  Feature-Request, Question. Mit Repro-Schritten + OS/Version-Felder.
+- **GitHub Discussions** aktivieren (manueller UI-Schritt im Repo-Settings).
+  Categories: Q&A, Ideas, Show & Tell, General.
+- **macOS-Build im Release-Workflow** — `pnpm build:mac` existiert schon im
+  package.json, in `.github/workflows/release.yml` als zweiter Job ergänzen.
+  electron-builder erzeugt `.dmg`. Kein Apple-Code-Signing (analog Windows-
+  SmartScreen-Direktive: User klickt einmal „Trotzdem öffnen"). Notarization
+  bewusst out-of-scope.
+- **Privacy-Statement** als `PRIVACY.md` (1-Pager): Alle Daten lokal in
+  `%AppData%\TimeTrack\`. Einziger Outbound-Call = Auto-Update gegen
+  `api.github.com/repos/skoedr/time-tracking/releases`. Kein Telemetry,
+  kein Analytics, kein Crash-Reporter zu Dritten. Logs bleiben lokal.
+- **`SECURITY.md`** — wie Security-Issues gemeldet werden (Private GitHub
+  Security Advisory bevorzugt, Email als Fallback).
+
+**Ship-Kriterium:** Ein fremder Freelancer findet auf GitHub das Repo, versteht
+in 60 Sekunden ob es für ihn taugt, lädt den Installer, und startet die App
+ohne Hilfe.
+
+**Bewusst NICHT in v1.6:** Code-Signing (ROADMAP-Direktive bleibt), Marketing-
+Push (HN/Reddit-Posts), englische CHANGELOG-Übersetzung, Crowdin-Integration.
+
+---
+
+## v1.7 — PDF-Merge (Hero-Feature)
+
+**Thema:** Der einzige OSS-Pitch-Satz, den die App tragen muss: „TimeTrack
+erstellt deinen Stundennachweis und heftet ihn an deine Lexware-/sevDesk-/
+Billomat-Rechnung — in einem Klick."
+
+- **Neue Dependency:** `pdf-lib` (~150 KB, pure JS, MIT). Bewusst nicht
+  `pdfkit`/`puppeteer` — wir bauen kein neues PDF, wir kombinieren zwei
+  bestehende. pdf-lib ist die kleinste Lösung dafür.
+- **Settings → Export → „Rechnung-Anhang"-Sektion** (default off):
+  Toggle aktiviert die Merge-Funktion im Export-Modal. Ein Default-Pfad
+  („meine Rechnungen liegen typisch hier") merkbar.
+- **Im PdfExportModal:** neue Checkbox „An bestehende Rechnungs-PDF anhängen".
+  Wenn aktiv → File-Picker für die Original-PDF → nach „Erstellen" wird
+  `Math.max(originalPages, stundennachweisPages)` gemerged via `pdf-lib`'s
+  `PDFDocument.copyPages` → Output: `<originalname>_inkl_Stundennachweis.pdf`
+  in `<originalDir>` neben der Original-Rechnung. Original bleibt unverändert.
+- **Merge-Order konfigurierbar** in Settings: Stundennachweis vorne / hinten
+  (Default: hinten — passt zum „Anlage zur Rechnung"-Sprachgebrauch).
+- **Validierung:** Original muss eine valide PDF sein. Bei Fehler Toast
+  „Datei ist keine gültige PDF" + Original-Datei wird angezeigt.
+- **Dogfood-Test:** Maintainer ersetzt seinen aktuellen Lexware-Workflow
+  (PDF aus Lexware exportieren → Smallpdf/iLovePDF/manuell mergen)
+  durch das Feature und nutzt es einen vollen Abrechnungszyklus.
+
+**Ship-Kriterium:** Maintainer hat seinen manuellen Smallpdf-Workflow für gut
+abgehakt. Ein Test-Freelancer mit Lexware-PDF kann es in unter 30 s nachvollziehen.
+
+**Reuse:** `pdf.ts` (Render-Pipeline bleibt unverändert), `PdfExportModal.tsx`
+(eine Checkbox + File-Picker dazu), `csvExport.ts`-Pattern für Output-Dialog-
+Handling. Schema-Change: keiner.
+
+**Aufwand-Schätzung:** S–M (~2 Wochen, ein PR — Merge-Logik + UI + Tests +
+Settings-Toggle).
+
+---
+
+## v1.8 — Daily-Use Polish
+
+**Thema:** Was nach 4–6 Wochen Eigenbetrieb + erstem OSS-Feedback weh tut.
+Die genaue Reihenfolge wird durch Issues bestimmt — diese Liste ist die
+Ausgangsbasis, kein Dogma.
+
+- **Pomodoro-Modus** (#23) — endlich aus dem Backlog. 25/5 opt-in pro Eintrag.
+  Pause als separater Eintrag mit `kind='break'` (neue Spalte → Migration 009),
+  keinem Kunden zugeordnet. Statistik „Wieviele Pomodori diese Woche" als
+  TodayView-Mini-Widget. Bedingung für Aufnahme: mindestens ein OSS-User
+  fragt explizit danach (sonst bleibt es im Backlog — Maintainer nutzt es selbst nicht).
+- **PDF: überlappende Einträge desselben Kunden zusammenfassen** (Backlog-Eintrag).
+  Toleranz-Fenster konfigurierbar (Default 5 min), nur bei aktivierter Rundung,
+  rein PDF-Output (Kalender bleibt granular).
+- **Vollständige i18n DE/EN** — `scripts/find-untranslated.mjs` bis zur Null
+  ausschöpfen. Aktuell sind nur `UpdateBanner` + `SettingsView` migriert
+  (siehe v1.5 PR D). v1.8 macht TodayView, TimerView, CalendarView, ClientsView
+  + alle Modals. Pflicht für ernsthafte EN-Adoption.
+- **Fresh-Install-Test-Findings** — Maintainer macht einen kompletten Test
+  „neue Windows-Maschine, lade nur die `.exe`" und führt ein Schmerz-Tagebuch.
+  Top-3-Friction-Points landen hier. (Test war in der Office-Hours-Diskussion
+  explizit aufgeschoben — wird vor v1.8-Scope-Lock nachgeholt.)
+
+**Ship-Kriterium:** Vollständig EN-übersetzt + die zwei Backlog-Items vom Tisch.
+Keine offenen „nervt mich täglich"-Items mehr im Maintainer-Tagebuch.
+
+---
+
+## v1.9 — Reporting & Outlook-Vorbereitung
+
+**Thema:** Mehr Einsicht in die eigenen Daten + ehrlicher Architektur-Setup
+für v2.0 Outlook-Integration.
+
+- **Wochen- und Monats-Charts** in TodayView — kleines Sparkline-Widget, SVG
+  handgemalt (keine externe Chart-Lib, Solo-Skala). Stunden pro Tag als Bar-Chart,
+  Top 3 Kunden als Donut. Reuse: `entriesStore` + `dateRanges.ts`, kein Schema-Change.
+- **„Top 5 Tätigkeiten dieses Monat"** — neue Mini-View, basiert auf existing
+  `description`-Feld, einfaches GROUP BY. Hilft beim Rückblick „was war eigentlich
+  meine Hauptarbeit".
+- **Vergleich „diesen Monat vs letzter Monat"** — Stunden, Top-Kunde, Top-Tätigkeit.
+  Eine Karte in TodayView.
+- **Migration 010: `entries.source`-Spalte** (`'manual' | 'timer' | 'outlook'`).
+  Default `'timer'` für bestehende Einträge, `'manual'` für die via „Eintrag
+  nachtragen"-Dialog. Pflicht-Foundation für v2.0, damit Outlook-Imports
+  unterscheidbar bleiben (z.B. „Re-Sync löscht nur Outlook-Einträge, nie manuelle").
+- **Settings → Integrations** — leere Sektion mit Stub-Card „Outlook (kommt in v2.0)".
+  Macht den Roadmap-Plan für User sichtbar.
+- **Conflict-Resolution-UX-Skizze** als Markdown im Repo (kein Code) — wie sieht
+  der Import-Dialog aus, was passiert bei Doubletten, was bei zeitlichen Überlappungen
+  zwischen Outlook-Event und gestopptem Timer.
+
+**Ship-Kriterium:** Du öffnest die App und siehst auf einen Blick, wie diese Woche
+im Vergleich zum letzten Monat lief — ohne Excel-Export.
+
+---
+
+## v2.0 — Outlook-Integration  🎯 echte Story-Stufe
+
+**Thema:** Das eine Feature, das TimeTrack vom „lokalen Toggl-Klon" zum
+„meinem Kalender ist die Quelle der Wahrheit"-Tool macht.
+
+- **Microsoft Graph API + MSAL Node** — Device-Code-Flow für die Auth, weil
+  damit kein Server nötig ist (kompatibel mit ROADMAP-Direktive „kein Cloud").
+  Einmalige Anmeldung pro Microsoft-Konto, Token im Electron `safeStorage` (DPAPI
+  unter Windows, Keychain unter macOS).
+- **Scope:** Nur `Calendars.Read` (delegated). Kein Write, kein Mail, nichts
+  Schreibendes. Office E1 / personal Microsoft Account beide unterstützt.
+- **Import-Flow:** Settings → Integrations → „Mit Outlook verbinden" → Auth-Browser-
+  Tab → zurück zur App. Dann: „Outlook importieren"-Button öffnet Modal:
+  Range wählen → Vorschau-Liste der Events → Mapping-Spalten (Subject → Kunde,
+  Body → Beschreibung) → bestätigen → import.
+- **Mapping-Regeln** persistiert: „Subject matched `^ACME` → Kunde ACME".
+  Settings → Integrations → Mapping-Regeln verwalten. Erste Regel kann beim
+  Import per „Diese Regel speichern"-Checkbox angelegt werden.
+- **Duplikat-Erkennung** via Graph-Event-`id` (in neue Spalte `entries.outlook_event_id`,
+  Migration 011). Re-Import desselben Range erkennt schon importierte Events.
+- **Recurring Events:** jede Instanz als eigener Eintrag. Gecancelte Instanzen
+  werden bei Re-Sync soft-gelöscht (`deleted_at` gesetzt).
+- **Token-Refresh** automatisch im Hintergrund. Bei Auth-Fehler: Banner „Outlook-
+  Verbindung abgelaufen — neu anmelden", Import-Funktion bis dahin disabled.
+- **Offline-Tolerant:** Kein Internet → klare Fehlermeldung, App-Hauptfunktion
+  unbeeinträchtigt.
+
+**Ship-Kriterium:** Maintainer importiert einen kompletten Monat aus Outlook,
+mappt auf seine Kunden, exportiert das resultierende PDF, und die Stunden
+stimmen mit Outlook überein. Ein OSS-Tester wiederholt das mit seinem eigenen
+Konto.
+
+**Bewusst NICHT in v2.0:** Google Calendar (separate API, separate v2.x),
+iCal-Import (anders gelagert, evtl. v2.1), bidirektionaler Sync (komplex,
+Risiko Daten zu überschreiben — vorerst Read-Only), Multi-Account (erst
+wenn jemand danach fragt).
+
+**Aufwand-Schätzung:** L–XL (~6–8 Wochen, vermutlich 3 PRs: Auth → Read-only-Import → Mapping/Recurring/Refresh).
+
+---
+
 ## Backlog (unscheduled)
 
 Kleinere Edge-Cases / Polish-Ideen, die irgendwann reinrutschen, aber noch keiner
-konkreten Version zugeordnet sind.
+konkreten Version zugeordnet sind. Pomodoro und PDF-Merge waren hier; Pomodoro
+wandert nach v1.8 (bedingt), PDF-Eintrags-Merge nach v1.8 (fest). PDF-Merge im
+Sinne von „an Rechnungs-PDF anhängen" ist v1.7-Hero — nicht verwechseln.
 
-- **Pomodoro-Modus** (#23) — 25/5 opt-in Timer pro Eintrag. Nach 25 min Modal
-  „5 min Pause? · Weiter ohne Pause · Stoppen“. Pause als separater Eintrag mit
-  `kind='break'` (neue Spalte), nicht dem Kunden zugeordnet. Verschoben aus v1.5,
-  weil Maintainer es selbst nicht nutzt und Mini-Widget + Quicknote den Daily-Trust
-  bereits abdecken.
-
-- **PDF: überlappende Einträge desselben Kunden zusammenfassen.** Wenn zwei (oder mehr)
-  Einträge für den gleichen Kunden zeitlich knapp aufeinander folgen oder sich
-  überschneiden (z. B. zwei kurze Test-Toggles innerhalb von wenigen Minuten), sollten
-  sie im PDF zu einer Zeile zusammengeführt werden — Von = frühestes Start, Bis =
-  spätestes Stop, Beschreibungen mit `; ` verkettet (Duplikate raus). Offene Fragen:
-  Toleranz-Fenster konfigurierbar? Nur bei aktivierter Rundung? Gilt auch für die
-  Kalender-Anzeige oder rein PDF?
+- **Google Calendar Import** — analog Outlook, eigene API. Erst nach v2.0,
+  wenn der Outlook-Flow stabil ist und die Mapping-UX validiert wurde.
+- **iCal-Import** (`.ics`-Datei) — für Apple Calendar, Thunderbird, andere.
+  Einfacher als OAuth-Flows, ggf. v2.1.
+- **Code-Signing** für Windows — bleibt bewusst draußen (Direktive aus v1.5).
+  Wenn ein OSS-User Sponsoring anbietet (~250€/Jahr EV-Cert), wird neu evaluiert.
+- **Plugin-Architektur** — explizit ABGELEHNT. Komplexitäts-Sprung der die
+  Solo-Maintenance-Direktive bricht. Wer ein Custom-Feature braucht, forked.
 
 ---
 

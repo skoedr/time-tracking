@@ -32,7 +32,15 @@ A personal Windows desktop time-tracking app for freelancers. Lightweight Toggl 
 
 ### Coming soon
 
-- Pomodoro-Modus (#23) — 25/5 opt-in Timer pro Eintrag, Pause als separater `kind='break'` Eintrag — see [open issues](https://github.com/skoedr/time-tracking/issues)
+- **PDF-Merge an Rechnung** (v1.7) — Stundennachweis wird mit einem Klick an
+  eine bestehende Lexware-/sevDesk-/Billomat-Rechnungs-PDF angehängt. Spart
+  den manuellen Smallpdf/Acrobat-Schritt.
+- **OSS-Readiness** (v1.6) — `CONTRIBUTING.md`, englischer README, macOS-Build.
+- **Outlook-Integration** (v2.0) — Read-only-Import via Microsoft Graph
+  (Device-Code-Flow, kein Server, Office E1 + persönliche Konten).
+- Pomodoro-Modus (#23) — bedingt auf User-Demand verschoben nach v1.8.
+
+Vollständige Roadmap: [ROADMAP.md](ROADMAP.md) · Issues: [github.com/skoedr/time-tracking/issues](https://github.com/skoedr/time-tracking/issues)
 
 ## Tech Stack
 
