@@ -39,3 +39,11 @@ Key routing rules:
 - Review what gstack has learned → invoke /learn
 - Tune question sensitivity → invoke /plan-tune
 - Code quality dashboard → invoke /health
+
+## GBrain Configuration (configured by /setup-gbrain)
+- Engine: pglite
+- Config file: ~/.gbrain/config.json (mode 0600)
+- Setup date: 2026-04-26
+- MCP registered: yes
+- Memory sync: full (https://github.com/skoedr/gstack-brain-robin)
+- Current repo policy: read-write
