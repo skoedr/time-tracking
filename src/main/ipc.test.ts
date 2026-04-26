@@ -321,3 +321,64 @@ describe('pdf:merge-export — size validation', () => {
     expect(validateInvoiceSize(Buffer.alloc(50 * 1024 * 1024))).toBeNull()
   })
 })
+
+// ---------------------------------------------------------------------------
+// pdf:merge-export — request field validation
+// Mirrors the guard at the top of the IPC handler before any FS access.
+// ---------------------------------------------------------------------------
+
+type PdfMergeReq = {
+  clientId?: unknown
+  fromIso?: unknown
+  toIso?: unknown
+  invoicePath?: unknown
+}
+
+function validateMergeRequest(req: PdfMergeReq | null | undefined): string | null {
+  if (!req || typeof req.clientId !== 'number' || !req.fromIso || !req.toIso) {
+    return 'Ungültige PDF-Anfrage'
+  }
+  if (!req.invoicePath) return 'Kein Rechnungspfad angegeben'
+  return null
+}
+
+describe('pdf:merge-export — request validation', () => {
+  it('rejects null request', () => {
+    expect(validateMergeRequest(null)).toBe('Ungültige PDF-Anfrage')
+  })
+
+  it('rejects request with non-number clientId', () => {
+    expect(validateMergeRequest({ clientId: '1', fromIso: '2026-01-01', toIso: '2026-01-31' })).toBe(
+      'Ungültige PDF-Anfrage'
+    )
+  })
+
+  it('rejects request with missing fromIso', () => {
+    expect(validateMergeRequest({ clientId: 1, fromIso: '', toIso: '2026-01-31' })).toBe(
+      'Ungültige PDF-Anfrage'
+    )
+  })
+
+  it('rejects request with missing toIso', () => {
+    expect(validateMergeRequest({ clientId: 1, fromIso: '2026-01-01', toIso: '' })).toBe(
+      'Ungültige PDF-Anfrage'
+    )
+  })
+
+  it('rejects valid request fields but missing invoicePath', () => {
+    expect(
+      validateMergeRequest({ clientId: 1, fromIso: '2026-01-01', toIso: '2026-01-31', invoicePath: '' })
+    ).toBe('Kein Rechnungspfad angegeben')
+  })
+
+  it('accepts a fully valid request object', () => {
+    expect(
+      validateMergeRequest({
+        clientId: 1,
+        fromIso: '2026-01-01',
+        toIso: '2026-01-31',
+        invoicePath: 'C:/invoices/rechnung.pdf'
+      })
+    ).toBeNull()
+  })
+})
