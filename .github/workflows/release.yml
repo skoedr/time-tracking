@@ -106,8 +106,109 @@ jobs:
             dist/latest.yml
           if-no-files-found: error
 
+  build-macos:
+    runs-on: macos-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Rebuild native modules for Node (test runtime)
+        run: pnpm rebuild better-sqlite3
+
+      - name: Test
+        run: pnpm test
+
+      - name: Rebuild better-sqlite3 for Electron ABI
+        run: pnpm exec electron-rebuild -f -w better-sqlite3
+
+      - name: Build app (DMG + ZIP, arm64)
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+        run: |
+          pnpm run build
+          pnpm exec electron-builder --mac --publish never
+
+      - name: Smoke test packaged binary (DB + migrations against Electron ABI)
+        run: |
+          APP_BINARY="dist/mac-arm64/TimeTrack.app/Contents/MacOS/TimeTrack"
+          if [ ! -f "$APP_BINARY" ]; then
+            echo "ERROR: Binary not found at $APP_BINARY"
+            ls -la dist/ || true
+            exit 1
+          fi
+          OUT="$RUNNER_TEMP/smoke.json"
+          echo "Running smoke test: $APP_BINARY --smoke-test=$OUT"
+          "$APP_BINARY" "--smoke-test=$OUT" &
+          SMOKE_PID=$!
+          WAITED=0
+          while kill -0 $SMOKE_PID 2>/dev/null && [ $WAITED -lt 60 ]; do
+            sleep 1
+            WAITED=$((WAITED + 1))
+          done
+          if kill -0 $SMOKE_PID 2>/dev/null; then
+            kill -9 $SMOKE_PID 2>/dev/null
+            echo "ERROR: Smoke test timed out after 60s"
+            exit 1
+          fi
+          wait $SMOKE_PID
+          SMOKE_EXIT=$?
+          if [ $SMOKE_EXIT -ne 0 ]; then
+            echo "ERROR: Smoke test exited with code $SMOKE_EXIT"
+            cat "$OUT" 2>/dev/null || true
+            exit 1
+          fi
+          if [ ! -f "$OUT" ]; then
+            echo "ERROR: Smoke test did not produce $OUT"
+            exit 1
+          fi
+          python3 -c "
+          import json, sys
+          d = json.load(open('$OUT'))
+          print('Smoke result:', json.dumps(d))
+          if not d.get('ok'):
+              print('ERROR: ok=false:', d.get('error'))
+              sys.exit(1)
+          if d.get('schemaVersion', 0) < 3:
+              print('ERROR: schemaVersion', d.get('schemaVersion'))
+              sys.exit(1)
+          if d.get('pdfBytes', 0) < 1000:
+              print('ERROR: pdfBytes', d.get('pdfBytes'))
+              sys.exit(1)
+          print('Smoke test passed (schema v{}, Electron {}, PDF {} bytes)'.format(
+              d['schemaVersion'], d.get('electronVersion', '?'), d['pdfBytes']))
+          "
+
+      - name: Upload macOS artifacts
+        uses: actions/upload-artifact@v5
+        with:
+          name: timetrack-macos
+          path: |
+            dist/*.dmg
+            dist/*.dmg.blockmap
+            dist/*.zip
+            dist/latest-mac.yml
+          if-no-files-found: error
+
   publish-release:
-    needs: build-windows
+    needs: [build-windows, build-macos]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -120,6 +221,12 @@ jobs:
         uses: actions/download-artifact@v5
         with:
           name: timetrack-windows-installer
+          path: dist
+
+      - name: Download macOS artifacts
+        uses: actions/download-artifact@v5
+        with:
+          name: timetrack-macos
           path: dist
 
       - name: Resolve tag
