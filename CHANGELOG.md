@@ -2,6 +2,12 @@
 
 All notable changes to TimeTrack are documented here.
 
+## [1.6.1] — 2026-04-26
+
+### Fixed
+
+- **Scrollbar-Styling** — Nativer Windows-Scrollbalken durch passenden Dark-Theme-Scrollbar ersetzt (Track: `slate-800`, Thumb: `slate-600`, Hover: `slate-500`, 8 px, border-radius 4 px). Gilt global für alle scrollbaren Bereiche. ([#64](https://github.com/skoedr/time-tracking/pull/64), closes [#63](https://github.com/skoedr/time-tracking/issues/63))
+
 ## [1.6.0] — 2026-04-26
 
 ### Added
