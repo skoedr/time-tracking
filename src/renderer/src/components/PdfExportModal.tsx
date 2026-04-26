@@ -69,7 +69,13 @@ export function PdfExportModal(props: Props): React.JSX.Element {
     if (!file) return
     // Electron adds .path to File objects in the renderer.
     const filePath = (file as File & { path: string }).path
-    setInvoicePath(filePath || null)
+    if (!filePath) {
+      setStatusKind('error')
+      setStatusMsg('Dateipfad konnte nicht ermittelt werden. Bitte Datei erneut wählen.')
+      e.target.value = ''
+      return
+    }
+    setInvoicePath(filePath)
     // Reset input so re-selecting the same file triggers onChange again.
     e.target.value = ''
   }

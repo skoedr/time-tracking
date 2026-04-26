@@ -1,7 +1,7 @@
 import { ipcMain, shell } from 'electron'
 import { app } from 'electron'
 import { dialog } from 'electron'
-import { existsSync, writeFileSync, readFileSync } from 'fs'
+import { existsSync, statSync, writeFileSync, readFileSync } from 'fs'
 import { dirname, extname, join, parse, resolve, sep } from 'path'
 import { mergePdfs } from './pdfMerge'
 import log from 'electron-log/main'
@@ -677,6 +677,12 @@ export function registerIpcHandlers(hooks: IpcHooks): void {
           return fail('Datei nicht gefunden')
         }
 
+        // Size check via stat before reading to avoid loading huge files.
+        const MAX_INVOICE_BYTES = 50 * 1024 * 1024 // 50 MB
+        if (statSync(resolvedInvoice).size > MAX_INVOICE_BYTES) {
+          return fail('Rechnungs-PDF zu groß (max. 50 MB)')
+        }
+
         // Read invoice — guard against locked files (Lexware / Acrobat open).
         let invoiceBuffer: Buffer
         try {
@@ -688,10 +694,6 @@ export function registerIpcHandlers(hooks: IpcHooks): void {
             )
           }
           return fail(e)
-        }
-        const MAX_INVOICE_BYTES = 50 * 1024 * 1024 // 50 MB
-        if (invoiceBuffer.length > MAX_INVOICE_BYTES) {
-          return fail('Rechnungs-PDF zu groß (max. 50 MB)')
         }
 
         // Render Stundennachweis.
@@ -714,9 +716,15 @@ export function registerIpcHandlers(hooks: IpcHooks): void {
           mergedBytes: merged.length
         })
 
-        // Derive output path next to the invoice.
+        // Derive output path next to the invoice. If a file with that name
+        // already exists (re-export of the same period), append a timestamp
+        // suffix rather than silently overwriting a previously sent document.
         const { dir, name } = parse(resolvedInvoice)
-        const outputPath = join(dir, `${name}_inkl_Stundennachweis.pdf`)
+        let outputPath = join(dir, `${name}_inkl_Stundennachweis.pdf`)
+        if (existsSync(outputPath)) {
+          const ts = new Date().toISOString().slice(0, 19).replace(/[:.]/g, '-')
+          outputPath = join(dir, `${name}_inkl_Stundennachweis_${ts}.pdf`)
+        }
 
         try {
           writeFileSync(outputPath, merged)
