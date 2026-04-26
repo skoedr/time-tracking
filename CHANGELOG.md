@@ -2,6 +2,24 @@
 
 All notable changes to TimeTrack are documented here.
 
+## [1.6.0] — 2026-04-26
+
+### Added
+
+- **CONTRIBUTING.md** — Dev-Setup (`pnpm install/dev/test/typecheck`), Branch-Konvention, Conventional Commits, PR-Regeln, i18n-Hinweis.
+- **CODE_OF_CONDUCT.md** — Contributor Covenant 2.1.
+- **SECURITY.md** — GitHub Private Security Advisory (bevorzugt) + E-Mail-Fallback, Scope (SQLite, Auto-Update, PDF, IPC).
+- **PRIVACY.md** — Datenschutz-1-Pager: Alle Daten lokal, einziger Outbound-Call = Auto-Update gegen `api.github.com`, kein Telemetry.
+- **Issue Templates** — `bug_report.yml`, `feature_request.yml`, `config.yml` (Blank Issues deaktiviert, Links zu Discussions + Security Advisory).
+- **README.en.md** — Vollständige englische Übersetzung der README.
+- **macOS-Build** — `build-macos`-Job in `release.yml`: arm64 DMG + ZIP, Smoke-Test, unsigned. `publish-release` wartet auf beide Plattformen.
+
+### Changed
+
+- `README.md` — Sprachbanner (Link zu README.en.md), neue Abschnitte Contributing, Privacy, Security.
+- `electron-builder.yml` — `mac:`-Sektion ergänzt: `hardenedRuntime`, Entitlements, Targets `dmg`+`zip` für `arm64`.
+- `package.json` — `"license": "MIT"`, `"repository"`, `"bugs"` ergänzt.
+
 ## [1.5.2] — 2026-04-25
 
 ### Security
