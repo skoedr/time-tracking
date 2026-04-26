@@ -1,5 +1,7 @@
 # TimeTrack
 
+> 🌐 [English version available → README.en.md](README.en.md)
+
 A personal Windows desktop time-tracking app for freelancers. Lightweight Toggl alternative with a local SQLite database, calendar view, and PDF Stundennachweis export.
 
 ## Features
@@ -159,6 +161,15 @@ On startup the app auto-stops any entries where the heartbeat is older than 5 mi
 - `contextIsolation: true`, `nodeIntegration: false`
 - All database access runs in the main process only
 - Renderer communicates exclusively via the typed Context Bridge (`window.api`)
+- Vulnerability reporting: see [SECURITY.md](SECURITY.md)
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for dev setup, branch naming, and PR guidelines.
+
+## Privacy
+
+All data stays local. Only outbound call: auto-update check against `api.github.com`. No telemetry. See [PRIVACY.md](PRIVACY.md).
 
 ## License
 
