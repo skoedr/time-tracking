@@ -1,0 +1,47 @@
+name: Bug Report
+description: Fehler oder unerwartetes Verhalten melden
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: input
+    id: version
+    attributes:
+      label: TimeTrack Version
+      placeholder: "z. B. 1.5.2 (Hilfe → Über TimeTrack)"
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: Betriebssystem
+      placeholder: "z. B. Windows 11 24H2, macOS 15.3"
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Schritte zum Reproduzieren
+      placeholder: |
+        1. App starten
+        2. Auf ... klicken
+        3. ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Erwartetes Verhalten
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Tatsächliches Verhalten
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Log-Ausgabe (optional)
+      description: "Logs findest du unter %AppData%\\TimeTrack\\logs\\"
+      render: text
