@@ -97,7 +97,7 @@ jobs:
           Write-Host "Smoke test passed (schema v$($payload.schemaVersion), Electron $($payload.electronVersion), PDF $($payload.pdfBytes) bytes)"
 
       - name: Upload installer artifact
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: timetrack-windows-installer
           path: |
@@ -197,7 +197,7 @@ jobs:
           "
 
       - name: Upload macOS artifacts
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: timetrack-macos
           path: |
@@ -218,13 +218,13 @@ jobs:
           ref: ${{ inputs.tag || github.ref }}
 
       - name: Download installer artifact
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v8
         with:
           name: timetrack-windows-installer
           path: dist
 
       - name: Download macOS artifacts
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v8
         with:
           name: timetrack-macos
           path: dist
