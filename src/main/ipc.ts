@@ -1,8 +1,9 @@
 import { ipcMain, shell } from 'electron'
 import { app } from 'electron'
 import { dialog } from 'electron'
-import { writeFileSync, readFileSync } from 'fs'
-import { dirname, join, resolve, sep } from 'path'
+import { existsSync, writeFileSync, readFileSync } from 'fs'
+import { dirname, extname, join, parse, resolve, sep } from 'path'
+import { mergePdfs } from './pdfMerge'
 import log from 'electron-log/main'
 import { randomUUID } from 'crypto'
 import { getDb, getDbPath } from './db'
@@ -644,6 +645,96 @@ export function registerIpcHandlers(hooks: IpcHooks): void {
         const buf = await renderPdfBuffer({ html })
         writeFileSync(result.filePath, buf)
         return ok({ path: result.filePath })
+      } catch (e) {
+        return fail(e)
+      }
+    }
+  )
+
+  // PDF merge-export: renders the Stundennachweis and appends it to an
+  // existing invoice PDF chosen by the user. The invoice file is never
+  // modified — the merged result is written next to it as
+  // <stem>_inkl_Stundennachweis.pdf. Falls back to a save dialog when the
+  // target directory is not writable (e.g. a corporate archive folder).
+  ipcMain.handle(
+    'pdf:merge-export',
+    async (
+      _e,
+      req: PdfRequest & { invoicePath: string }
+    ): Promise<IpcResult<{ path: string }>> => {
+      try {
+        if (!req || typeof req.clientId !== 'number' || !req.fromIso || !req.toIso) {
+          return fail('Ungültige PDF-Anfrage')
+        }
+        if (!req.invoicePath) return fail('Kein Rechnungspfad angegeben')
+
+        // Security: normalise path and require .pdf extension.
+        const resolvedInvoice = resolve(req.invoicePath)
+        if (extname(resolvedInvoice).toLowerCase() !== '.pdf') {
+          return fail('Die gewählte Datei ist keine PDF')
+        }
+        if (!existsSync(resolvedInvoice)) {
+          return fail('Datei nicht gefunden')
+        }
+
+        // Read invoice — guard against locked files (Lexware / Acrobat open).
+        let invoiceBuffer: Buffer
+        try {
+          invoiceBuffer = readFileSync(resolvedInvoice)
+        } catch (e: any) {
+          if (e.code === 'EBUSY' || e.code === 'EPERM') {
+            return fail(
+              `Datei ist durch ein anderes Programm gesperrt: ${parse(resolvedInvoice).base}`
+            )
+          }
+          return fail(e)
+        }
+        const MAX_INVOICE_BYTES = 50 * 1024 * 1024 // 50 MB
+        if (invoiceBuffer.length > MAX_INVOICE_BYTES) {
+          return fail('Rechnungs-PDF zu groß (max. 50 MB)')
+        }
+
+        // Render Stundennachweis.
+        const settingsRows = db.prepare(`SELECT key, value FROM settings`).all() as Array<{
+          key: string
+          value: string
+        }>
+        const settings = Object.fromEntries(
+          settingsRows.map((r) => [r.key, r.value])
+        ) as unknown as Settings
+        const logoDataUrl = readLogoAsDataUrl(settings.pdf_logo_path ?? '')
+        const payload = buildPdfPayload(db, req, logoDataUrl)
+        const snBuffer = await renderPdfBuffer({ html: buildPdfHtml(payload) })
+
+        // Merge: invoice first (append), then Stundennachweis.
+        const merged = await mergePdfs(snBuffer, invoiceBuffer, 'append')
+        log.debug('[pdf:merge-export] merged', {
+          invoiceBytes: invoiceBuffer.length,
+          snBytes: snBuffer.length,
+          mergedBytes: merged.length
+        })
+
+        // Derive output path next to the invoice.
+        const { dir, name } = parse(resolvedInvoice)
+        const outputPath = join(dir, `${name}_inkl_Stundennachweis.pdf`)
+
+        try {
+          writeFileSync(outputPath, merged)
+          return ok({ path: outputPath })
+        } catch (writeErr: any) {
+          // Directory may be read-only — fall back to a user-chosen path.
+          if (writeErr.code === 'EPERM' || writeErr.code === 'EACCES') {
+            const fallback = await dialog.showSaveDialog({
+              title: 'Zusammengeführte PDF speichern',
+              defaultPath: `${name}_inkl_Stundennachweis.pdf`,
+              filters: [{ name: 'PDF', extensions: ['pdf'] }]
+            })
+            if (fallback.canceled || !fallback.filePath) return fail('Speichern abgebrochen')
+            writeFileSync(fallback.filePath, merged)
+            return ok({ path: fallback.filePath })
+          }
+          return fail(writeErr)
+        }
       } catch (e) {
         return fail(e)
       }

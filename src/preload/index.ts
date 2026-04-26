@@ -150,7 +150,15 @@ const api = {
       toIso: string
       includeSignatures?: boolean
       groupByTag?: boolean
-    }): Promise<IpcResult<{ path: string }>> => ipcRenderer.invoke('pdf:export', req)
+    }): Promise<IpcResult<{ path: string }>> => ipcRenderer.invoke('pdf:export', req),
+    mergeExport: (req: {
+      clientId: number
+      fromIso: string
+      toIso: string
+      includeSignatures?: boolean
+      groupByTag?: boolean
+      invoicePath: string
+    }): Promise<IpcResult<{ path: string }>> => ipcRenderer.invoke('pdf:merge-export', req)
   },
   logo: {
     set: (): Promise<IpcResult<{ path: string }>> => ipcRenderer.invoke('logo:set'),

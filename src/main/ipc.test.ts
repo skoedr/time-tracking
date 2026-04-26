@@ -252,3 +252,72 @@ describe('entries:create / entries:update validation contract', () => {
     expect(err).toBeNull()
   })
 })
+
+// ---------------------------------------------------------------------------
+// pdf:merge-export — path validation logic
+//
+// The full IPC handler requires an Electron runtime and is not exercised here.
+// The core merge logic is covered in pdfMerge.test.ts.
+// This suite tests the standalone validation rules extracted from the handler.
+// ---------------------------------------------------------------------------
+
+import { extname, resolve } from 'path'
+import { existsSync } from 'fs'
+
+function validateInvoicePath(raw: string): string | null {
+  if (!raw) return 'Kein Rechnungspfad angegeben'
+  const resolved = resolve(raw)
+  if (extname(resolved).toLowerCase() !== '.pdf') return 'Die gewählte Datei ist keine PDF'
+  if (!existsSync(resolved)) return 'Datei nicht gefunden'
+  return null
+}
+
+function validateInvoiceSize(buf: Buffer): string | null {
+  const MAX = 50 * 1024 * 1024
+  return buf.length > MAX ? 'Rechnungs-PDF zu groß (max. 50 MB)' : null
+}
+
+describe('pdf:merge-export — path validation', () => {
+  it('rejects empty invoicePath', () => {
+    expect(validateInvoicePath('')).toBe('Kein Rechnungspfad angegeben')
+  })
+
+  it('rejects non-pdf extension (.txt)', () => {
+    expect(validateInvoicePath('C:/invoices/rechnung.txt')).toBe('Die gewählte Datei ist keine PDF')
+  })
+
+  it('rejects non-pdf extension (.docx)', () => {
+    expect(validateInvoicePath('C:/invoices/rechnung.docx')).toBe('Die gewählte Datei ist keine PDF')
+  })
+
+  it('accepts .pdf extension (lowercase)', () => {
+    // File does not exist — will fail at existsSync, not at extension check.
+    const err = validateInvoicePath('C:/does-not-exist/rechnung.pdf')
+    expect(err).toBe('Datei nicht gefunden')
+  })
+
+  it('accepts .PDF extension (uppercase, Windows drag-from-Explorer)', () => {
+    const err = validateInvoicePath('C:/does-not-exist/rechnung.PDF')
+    expect(err).toBe('Datei nicht gefunden')
+  })
+
+  it('rejects path traversal with non-pdf extension', () => {
+    expect(validateInvoicePath('../../secret.exe')).toBe('Die gewählte Datei ist keine PDF')
+  })
+})
+
+describe('pdf:merge-export — size validation', () => {
+  it('accepts a buffer below 50 MB', () => {
+    expect(validateInvoiceSize(Buffer.alloc(1024))).toBeNull()
+  })
+
+  it('rejects a buffer at exactly 50 MB + 1 byte', () => {
+    expect(validateInvoiceSize(Buffer.alloc(50 * 1024 * 1024 + 1))).toBe(
+      'Rechnungs-PDF zu groß (max. 50 MB)'
+    )
+  })
+
+  it('accepts a buffer at exactly 50 MB', () => {
+    expect(validateInvoiceSize(Buffer.alloc(50 * 1024 * 1024))).toBeNull()
+  })
+})

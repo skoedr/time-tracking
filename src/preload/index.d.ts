@@ -109,6 +109,14 @@ declare global {
           includeSignatures?: boolean
           groupByTag?: boolean
         }): Promise<IpcResult<{ path: string }>>
+        mergeExport(req: {
+          clientId: number
+          fromIso: string
+          toIso: string
+          includeSignatures?: boolean
+          groupByTag?: boolean
+          invoicePath: string
+        }): Promise<IpcResult<{ path: string }>>
       }
       logo: {
         set(): Promise<IpcResult<{ path: string }>>
