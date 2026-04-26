@@ -17,3 +17,6 @@ build/dev-app-update.yml
 
 templates/Rechnung_*.pdf
 templates/*.png
+
+# Claude Code local settings (personal, machine-specific)
+.claude/settings.local.json
