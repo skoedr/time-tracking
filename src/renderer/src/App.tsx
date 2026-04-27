@@ -146,7 +146,7 @@ function RunningPill({
         style={{ backgroundColor: clientColor ?? 'var(--green)' }}
       />
       {clientName && <span className="font-medium" style={{ color: 'var(--text)' }}>{clientName}</span>}
-      <span className="font-mono tabular-nums" style={{ fontFamily: "'JetBrains Mono', monospace" }}>{label}</span>
+      <span className="tabular-nums" style={{ fontFamily: "'JetBrains Mono', monospace" }}>{label}</span>
     </div>
   )
 }

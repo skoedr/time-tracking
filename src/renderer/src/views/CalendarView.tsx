@@ -340,7 +340,7 @@ function Week({
                 {day.getDate()}
               </span>
               {dayEntries.length > 0 && (
-                <span className="font-mono text-[10px] tabular-nums" style={{ color: 'var(--text3)' }}>
+                <span className="text-[10px] tabular-nums" style={{ color: 'var(--text3)', fontFamily: "'JetBrains Mono', monospace" }}>
                   {formatHHMM(totalSeconds)}
                 </span>
               )}

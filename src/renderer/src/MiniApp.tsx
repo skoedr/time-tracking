@@ -63,7 +63,7 @@ export default function MiniApp(): React.JSX.Element {
         <span className="flex-1 truncate" title={state.label}>
           {state.label || t('miniWidget.timerRunning')}
         </span>
-        <span className="font-mono tabular-nums text-xs text-slate-300">
+        <span className="tabular-nums text-xs" style={{ color: 'var(--text2)', fontFamily: "'JetBrains Mono', monospace" }}>
           {formatDuration(elapsed)}
         </span>
         <button

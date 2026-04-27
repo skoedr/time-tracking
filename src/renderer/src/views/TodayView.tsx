@@ -229,7 +229,7 @@ function ActiveTimerPill({
       {runningEntry.description && (
         <span className="truncate" style={{ color: 'var(--text2)' }}>— {runningEntry.description}</span>
       )}
-      <span className="ml-auto font-mono tabular-nums" style={{ color: 'var(--green)' }}>
+      <span className="ml-auto tabular-nums" style={{ color: 'var(--green)', fontFamily: "'JetBrains Mono', monospace" }}>
         {formatDuration(tickSeconds)}
       </span>
     </div>
@@ -251,7 +251,7 @@ function StatCard({
       style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)' }}
     >
       <p className="text-xs font-medium uppercase tracking-wide" style={{ color: 'var(--text2)' }}>{label}</p>
-      <p className={`mt-1 font-mono text-3xl font-bold tabular-nums ${accent}`}>
+      <p className={`mt-1 text-3xl font-bold tabular-nums ${accent}`} style={{ fontFamily: "'JetBrains Mono', monospace" }}>
         {formatHHMM(seconds)}
       </p>
     </div>
@@ -346,7 +346,7 @@ function RecentList({
             const client = clientsById.get(e.client_id)
             return (
               <tr key={e.id} className="hover:bg-white/5 transition-colors" style={{ borderColor: 'var(--card-border)' }}>
-                <td className="px-3 py-2 font-mono text-xs tabular-nums" style={{ color: 'var(--text2)' }}>
+                <td className="px-3 py-2 text-xs tabular-nums" style={{ color: 'var(--text2)', fontFamily: "'JetBrains Mono', monospace" }}>
                   {formatTimeRange(e)}
                 </td>
                 <td className="px-3 py-2">
@@ -363,7 +363,7 @@ function RecentList({
                     {e.description || <span style={{ color: 'var(--text3)' }}>—</span>}
                   </span>
                 </td>
-                <td className="px-3 py-2 text-right font-mono text-xs tabular-nums" style={{ color: 'var(--text2)' }}>
+                <td className="px-3 py-2 text-right text-xs tabular-nums" style={{ color: 'var(--text2)', fontFamily: "'JetBrains Mono', monospace" }}>
                   {formatHHMM(durationSeconds(e))}
                 </td>
                 <td className="px-3 py-2 text-right">

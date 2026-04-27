@@ -200,7 +200,7 @@ export function CalendarDrawer({
                       />
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--text2)' }}>
-                          <span className="font-mono tabular-nums">{formatTimeRange(e)}</span>
+                          <span className="tabular-nums" style={{ fontFamily: "'JetBrains Mono', monospace" }}>{formatTimeRange(e)}</span>
                           <span>·</span>
                           <span className="truncate" style={{ color: 'var(--text)' }}>
                             {client?.name ?? t('common.unknown')}
@@ -229,7 +229,7 @@ export function CalendarDrawer({
                           </div>
                         )}
                       </div>
-                      <span className="font-mono text-xs tabular-nums" style={{ color: 'var(--text)' }}>
+                      <span className="text-xs tabular-nums" style={{ color: 'var(--text)', fontFamily: "'JetBrains Mono', monospace" }}>
                         {formatHHMM(durationSeconds(e))}
                       </span>
                       <button
