@@ -1,12 +1,32 @@
-# Changelog
+﻿# Changelog
 
 All notable changes to TimeTrack are documented here.
 
-## [Unreleased — v1.8.0]
+## [1.8.0] — 2026-04-27
 
 ### Added
 
-- **Vollst\u00e4ndige i18n DE/EN** \u2014 alle Views, Components und das Mini-Widget sind jetzt zweisprachig. Sprachwechsel (DE \u2194 EN) funktioniert live ohne App-Neustart. Neue Keys: `nav.*`, `miniWidget.*`, und alle View-spezifischen Gruppen (`today.*`, `calendar.*`, `clients.*`, `entry.*`, `tags.*`, `drawer.*`, `idle.*`, `quicknote.*`, `export.*`, `merge.*`, `settings.*`). Ab sofort Pflicht: jeder neue nutzersichtbare String muss in `de.ts` **und** `en.ts` eingetragen sein.
+- **Glass Design System (Light & Dark)** — Komplett neues visuelles Fundament. Alle Farben, Schatten und Hintergruende laufen ueber CSS Custom Properties (--page-bg, --card-bg, --shadow, --accent, --green, --danger, …). Ambient-Glow-Blobs geben dem Seitenhintergrund Tiefe. ([#76](https://github.com/skoedr/time-tracking/issues/76))
+- **Inter Variable + JetBrains Mono** — Inter Variable als App-Schrift, JetBrains Mono fuer alle Timer- und Zahlenanzeigen. Beide Fonts lokal gebundelt.
+- **SVG-Icon-Bibliothek** (Icons.tsx) — Edit, Trash, Archive, Unarchive, Plus, X, ChevronLeft/Right/Down, Play, Stop, Clock, Check, Dot. Ersetzt Text-Pluszeichen in Buttons.
+- **Shared Toggle-Komponente** — Pill-Toggle (40x22 px) fuer Billable-Flag, Signatur-Checkbox und CSV-Gruppe-nach-Tag.
+- **TodayView Redesign** — Stat-Cards mit 40 px JetBrains-Mono-Zahl, ActiveTimerPill mit Stop-Button, Quick-Start-Zeile mit Play-Icons, Recent-List als CSS-Grid.
+- **Vollstaendige i18n DE/EN** — Alle Views, Components und das Mini-Widget zweisprachig. Sprachwechsel live ohne Neustart.
+- **Nicht-Abrechenbar-Flag + Private Notiz** — Eintrag als nicht abrechenbar markierbar; optionale interne Notiz wird nicht in Exporte uebernommen. ([#71](https://github.com/skoedr/time-tracking/issues/71), [#72](https://github.com/skoedr/time-tracking/issues/72))
+- **Ticket-/Referenzfeld** — Optionales Ticket- oder Issue-Feld pro Eintrag, erscheint im PDF-Stundennachweis. ([#70](https://github.com/skoedr/time-tracking/issues/70))
+- **CSV: Gruppe nach Tag mit Zwischensummen** — CSV-Export gruppiert nach Tag und zeigt Zwischen- und Gesamtsumme. ([#68](https://github.com/skoedr/time-tracking/issues/68))
+- **Settings: Sidebar-Navigation mit 5 Tabs** — Allgemein, Timer, Datenschutz, Backup, Ueber. ([#74](https://github.com/skoedr/time-tracking/issues/74))
+- **Archivierte Kunden eingeklappt** — Archivierte Kunden in ausklappbarer Sektion. ([#73](https://github.com/skoedr/time-tracking/issues/73))
+
+### Fixed
+
+- **Modal-Backdrop-Clipping** — `transform` aus der `fadeIn`-Animation entfernt. Chromium erzeugte durch `transform` + `fill-mode: both` einen neuen Containing Block, wodurch `position: fixed`-Overlays relativ zum View statt zum Viewport positioniert wurden — der sichtbare Rahmen um Modals.
+- **TodayView-Zentrierung** — `w-full` auf dem `max-w-3xl`-Wrapper nötig, da flex-col-Kinder sich nicht automatisch strecken.
+- **TimerView-Zentrierung** — `flex-1 flex flex-col` auf dem View-Container, `justify-center` in TimerView.
+- **Dialog-Overflow** — Tall-Modals scrollen korrekt statt außerhalb des Viewports zu enden.
+- **Light-Mode-Farben** — Alle `text-green-400` / `text-slate-*` Klassen durch CSS-Vars ersetzt.
+- **font-mono Tailwind ersetzt** — Explizit `fontFamily: "'JetBrains Mono', monospace"` statt `font-mono` (würde auf System-Monospace mappen).
+- **Ambient Blobs kein harter Schnitt** — Blobs direkt `position: fixed` ohne `overflow-hidden`-Wrapper, `--accent-bg` / `--green-bg` statt voller Farbe, 80 px Blur.
 
 ## [1.7.2] — 2026-04-27
 
