@@ -26,7 +26,7 @@ import { useT } from '../contexts/I18nContext'
  */
 export default function TodayView(): React.JSX.Element {
   const t = useT()
-  const { runningEntry, clients, startWithClient } = useTimer()
+  const { runningEntry, clients, startWithClient, stop } = useTimer()
   const version = useEntriesStore((s) => s.version)
   const showToast = useToastStore((s) => s.show)
 
@@ -83,11 +83,11 @@ export default function TodayView(): React.JSX.Element {
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-6">
-      <ActiveTimerPill runningEntry={runningEntry} clientsById={clientsById} />
+      <ActiveTimerPill runningEntry={runningEntry} clientsById={clientsById} onStop={() => void stop()} />
 
       {status === 'loading' && <SummarySkeleton />}
       {status === 'error' && (
-        <div className="rounded-lg border border-red-700/50 bg-red-900/20 p-4 text-sm text-red-200">
+        <div className="rounded-[14px] border border-red-700/50 bg-red-900/20 p-4 text-sm text-red-200">
           <p className="mb-2 font-medium">{t('today.error.title')}</p>
           {errorMsg && <p className="mb-2 text-xs text-red-300/80">{errorMsg}</p>}
           <button
@@ -102,8 +102,8 @@ export default function TodayView(): React.JSX.Element {
       {status === 'ready' && summary && (
         <>
           <div className="grid grid-cols-2 gap-4">
-            <StatCard label={t('today.stats.today')} seconds={summary.todaySeconds} accent="text-indigo-300" />
-            <StatCard label={t('today.stats.week')} seconds={summary.weekSeconds} accent="text-emerald-300" />
+            <StatCard label={t('today.stats.today')} seconds={summary.todaySeconds} accentColor="var(--accent)" />
+            <StatCard label={t('today.stats.week')} seconds={summary.weekSeconds} accentColor="var(--green)" />
           </div>
 
           <QuickStartRow
@@ -189,10 +189,12 @@ export default function TodayView(): React.JSX.Element {
 
 function ActiveTimerPill({
   runningEntry,
-  clientsById
+  clientsById,
+  onStop
 }: {
   runningEntry: Entry | null
   clientsById: Map<number, Client>
+  onStop: () => void
 }): React.JSX.Element {
   const t = useT()
   // A `now` tick instead of derived `tickSeconds` so we don't call
@@ -208,7 +210,7 @@ function ActiveTimerPill({
   if (!runningEntry) {
     return (
       <div
-        className="rounded-lg border px-4 py-2 text-sm backdrop-blur-xl"
+        className="rounded-[14px] border px-4 py-2 text-sm backdrop-blur-xl"
         style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)', color: 'var(--text3)' }}
       >
         {t('today.noTimer')}
@@ -218,7 +220,7 @@ function ActiveTimerPill({
   const client = clientsById.get(runningEntry.client_id)
   return (
     <div
-      className="flex items-center gap-3 rounded-lg border px-4 py-2 text-sm backdrop-blur-xl"
+      className="flex items-center gap-3 rounded-[14px] border px-4 py-2 text-sm backdrop-blur-xl"
       style={{ background: 'var(--green-bg)', borderColor: 'var(--green)', color: 'var(--text)' }}
     >
       <span
@@ -232,6 +234,16 @@ function ActiveTimerPill({
       <span className="ml-auto tabular-nums" style={{ color: 'var(--green)', fontFamily: "'JetBrains Mono', monospace" }}>
         {formatDuration(tickSeconds)}
       </span>
+      <button
+        type="button"
+        onClick={onStop}
+        className="ml-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-red-500/20 focus:outline-none focus:ring-2 focus:ring-red-400"
+        style={{ color: 'var(--danger)' }}
+        title="Timer stoppen"
+        aria-label="Timer stoppen"
+      >
+        <Icons.Stop width={14} height={14} />
+      </button>
     </div>
   )
 }
@@ -239,19 +251,22 @@ function ActiveTimerPill({
 function StatCard({
   label,
   seconds,
-  accent
+  accentColor
 }: {
   label: string
   seconds: number
-  accent: string
+  accentColor: string
 }): React.JSX.Element {
   return (
     <div
-      className="rounded-lg border p-4 backdrop-blur-xl"
+      className="rounded-[14px] border p-4 backdrop-blur-xl"
       style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)' }}
     >
-      <p className="text-xs font-medium uppercase tracking-wide" style={{ color: 'var(--text2)' }}>{label}</p>
-      <p className={`mt-1 text-3xl font-bold tabular-nums ${accent}`} style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+      <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text3)' }}>{label}</p>
+      <p
+        className="mt-2 tabular-nums"
+        style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 40, fontWeight: 700, lineHeight: 1, letterSpacing: 2, color: accentColor }}
+      >
         {formatHHMM(seconds)}
       </p>
     </div>
@@ -273,7 +288,7 @@ function QuickStartRow({
   if (topClients.length === 0) return null
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <span className="text-xs uppercase tracking-wide text-slate-500">{t('today.quickstart.label')}</span>
+      <span className="text-xs uppercase tracking-wide" style={{ color: 'var(--text3)' }}>{t('today.quickstart.label')}</span>
       {topClients.map((c) => {
         const stillActive = clientsById.get(c.client_id)?.active === 1
         return (
@@ -288,6 +303,7 @@ function QuickStartRow({
           >
             <span className="h-2 w-2 rounded-full" style={{ backgroundColor: c.color }} />
             {c.name}
+            <Icons.Play width={11} height={11} />
           </button>
         )
       })}
@@ -310,7 +326,7 @@ function RecentList({
   if (entries.length === 0) {
     return (
       <div
-        className="rounded-lg border border-dashed px-4 py-8 text-center backdrop-blur-xl"
+        className="rounded-[14px] border border-dashed px-4 py-8 text-center backdrop-blur-xl"
         style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)' }}
       >
         <p className="text-sm font-medium" style={{ color: 'var(--text)' }}>{t('today.recent.empty')}</p>
@@ -322,80 +338,68 @@ function RecentList({
   }
   return (
     <div
-      className="overflow-hidden rounded-lg border backdrop-blur-xl"
-      style={{ borderColor: 'var(--card-border)' }}
+      className="overflow-hidden rounded-[14px] border backdrop-blur-xl text-sm"
+      style={{ borderColor: 'var(--card-border)', background: 'var(--card-bg)' }}
     >
-      <table className="w-full text-sm">
-        <thead
-          className="text-xs uppercase tracking-wide"
-          style={{ background: 'var(--nav-bg)', color: 'var(--text2)' }}
-        >
-          <tr>
-            <th className="px-3 py-2 text-left font-medium">{t('today.table.time')}</th>
-            <th className="px-3 py-2 text-left font-medium">{t('today.table.client')}</th>
-            <th className="px-3 py-2 text-left font-medium">{t('today.table.description')}</th>
-            <th className="px-3 py-2 text-right font-medium">{t('today.table.duration')}</th>
-            <th className="w-20 px-3 py-2"></th>
-          </tr>
-        </thead>
-        <tbody
-          className="divide-y"
-          style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)' }}
-        >
-          {entries.map((e) => {
-            const client = clientsById.get(e.client_id)
-            return (
-              <tr key={e.id} className="hover:bg-white/5 transition-colors" style={{ borderColor: 'var(--card-border)' }}>
-                <td className="px-3 py-2 text-xs tabular-nums" style={{ color: 'var(--text2)', fontFamily: "'JetBrains Mono', monospace" }}>
-                  {formatTimeRange(e)}
-                </td>
-                <td className="px-3 py-2">
-                  <span className="inline-flex items-center gap-2" style={{ color: 'var(--text)' }}>
-                    <span
-                      className="h-2 w-2 rounded-full"
-                      style={{ backgroundColor: client?.color ?? '#64748b' }}
-                    />
-                    {client?.name ?? t('common.unknown')}
-                  </span>
-                </td>
-                <td className="px-3 py-2" style={{ color: 'var(--text2)' }}>
-                  <span className="block max-w-[280px] truncate" title={e.description}>
-                    {e.description || <span style={{ color: 'var(--text3)' }}>—</span>}
-                  </span>
-                </td>
-                <td className="px-3 py-2 text-right text-xs tabular-nums" style={{ color: 'var(--text2)', fontFamily: "'JetBrains Mono', monospace" }}>
-                  {formatHHMM(durationSeconds(e))}
-                </td>
-                <td className="px-3 py-2 text-right">
-                  <div className="flex justify-end gap-1">
-                    <button
-                      type="button"
-                      onClick={() => onEdit(e)}
-                      className="rounded p-1 hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition-colors"
-                      style={{ color: 'var(--text2)' }}
-                      aria-label={t('common.edit')}
-                      title={t('common.edit')}
-                    >
-                      <Icons.Edit />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => onDelete(e)}
-                      disabled={e.stopped_at === null}
-                      className="rounded p-1 hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-red-400 disabled:cursor-not-allowed disabled:opacity-30 transition-colors"
-                      style={{ color: 'var(--danger)' }}
-                      aria-label={t('common.delete')}
-                      title={e.stopped_at === null ? t('common.stopRunningFirst') : t('common.delete')}
-                    >
-                      <Icons.Trash />
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            )
-          })}
-        </tbody>
-      </table>
+      {/* Header */}
+      <div
+        className="grid px-3 py-2 text-xs font-medium uppercase tracking-wide"
+        style={{ gridTemplateColumns: '110px 1fr 1fr 70px 72px', background: 'var(--nav-bg)', color: 'var(--text2)' }}
+      >
+        <span>{t('today.table.time')}</span>
+        <span>{t('today.table.client')}</span>
+        <span>{t('today.table.description')}</span>
+        <span className="text-right">{t('today.table.duration')}</span>
+        <span />
+      </div>
+      {/* Rows */}
+      {entries.map((e) => {
+        const client = clientsById.get(e.client_id)
+        return (
+          <div
+            key={e.id}
+            className="grid items-center px-3 py-2.5 border-t transition-colors hover:bg-white/5"
+            style={{ gridTemplateColumns: '110px 1fr 1fr 70px 72px', borderColor: 'var(--card-border)' }}
+          >
+            <span className="text-xs tabular-nums" style={{ color: 'var(--text2)', fontFamily: "'JetBrains Mono', monospace" }}>
+              {formatTimeRange(e)}
+            </span>
+            <span className="inline-flex items-center gap-2 overflow-hidden" style={{ color: 'var(--text)' }}>
+              <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: client?.color ?? '#64748b' }} />
+              <span className="truncate">{client?.name ?? t('common.unknown')}</span>
+            </span>
+            <span className="truncate pr-2" style={{ color: 'var(--text2)' }} title={e.description}>
+              {e.description || <span style={{ color: 'var(--text3)' }}>—</span>}
+            </span>
+            <span className="text-right text-xs tabular-nums" style={{ color: 'var(--text2)', fontFamily: "'JetBrains Mono', monospace" }}>
+              {formatHHMM(durationSeconds(e))}
+            </span>
+            <span className="flex justify-end gap-1">
+              <button
+                type="button"
+                onClick={() => onEdit(e)}
+                className="rounded p-1 hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition-colors"
+                style={{ color: 'var(--text2)' }}
+                aria-label={t('common.edit')}
+                title={t('common.edit')}
+              >
+                <Icons.Edit />
+              </button>
+              <button
+                type="button"
+                onClick={() => onDelete(e)}
+                disabled={e.stopped_at === null}
+                className="rounded p-1 hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-red-400 disabled:cursor-not-allowed disabled:opacity-30 transition-colors"
+                style={{ color: 'var(--danger)' }}
+                aria-label={t('common.delete')}
+                title={e.stopped_at === null ? t('common.stopRunningFirst') : t('common.delete')}
+              >
+                <Icons.Trash />
+              </button>
+            </span>
+          </div>
+        )
+      })}
     </div>
   )
 }
