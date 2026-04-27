@@ -16,6 +16,7 @@ templates/Stundennachweis-*.pdf
 build/dev-app-update.yml
 
 templates/Rechnung_*.pdf
+templates/Zeiterfassung-*.csv
 templates/*.png
 
 # Claude Code local settings (personal, machine-specific)
