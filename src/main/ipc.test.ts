@@ -411,7 +411,7 @@ describe('dashboard:summary — duration precision', () => {
     tmpDir = mkdtempSync(join(tmpdir(), 'tt-duration-'))
     db = new DatabaseImpl(join(tmpDir, 'test.sqlite'))
     for (const m of migrations) {
-      m.up(db)
+      db.exec(m.up)
     }
   })
 
