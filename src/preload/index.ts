@@ -158,7 +158,14 @@ const api = {
       includeSignatures?: boolean
       groupByTag?: boolean
       invoicePath: string
-    }): Promise<IpcResult<{ path: string }>> => ipcRenderer.invoke('pdf:merge-export', req)
+    }): Promise<IpcResult<{ path: string }>> => ipcRenderer.invoke('pdf:merge-export', req),
+    mergeOnly: (req: {
+      stundennachweisPath: string
+      invoicePath: string
+    }): Promise<IpcResult<{ path: string }>> => ipcRenderer.invoke('pdf:merge-only', req),
+    pdfInfo: (req: {
+      filePath: string
+    }): Promise<IpcResult<{ pageCount: number }>> => ipcRenderer.invoke('pdf:pdf-info', req)
   },
   logo: {
     set: (): Promise<IpcResult<{ path: string }>> => ipcRenderer.invoke('logo:set'),

@@ -117,6 +117,13 @@ declare global {
           groupByTag?: boolean
           invoicePath: string
         }): Promise<IpcResult<{ path: string }>>
+        mergeOnly(req: {
+          stundennachweisPath: string
+          invoicePath: string
+        }): Promise<IpcResult<{ path: string }>>
+        pdfInfo(req: {
+          filePath: string
+        }): Promise<IpcResult<{ pageCount: number }>>
       }
       logo: {
         set(): Promise<IpcResult<{ path: string }>>

@@ -16,6 +16,7 @@ import { renderPdfBuffer } from './pdfWindow'
 import { readLogoAsDataUrl, removeLogo, saveLogo } from './logo'
 import { handleCsvExport, type CsvRequest } from './csvExport'
 import { validatePdfPath, validateMergeExportRequest } from './pdfMergeValidation'
+import { mergeOnlyHandler, pdfInfoHandler } from './pdfMergeHandlers'
 import type {
   Client,
   Entry,
@@ -743,6 +744,14 @@ export function registerIpcHandlers(hooks: IpcHooks): void {
       }
     }
   )
+
+  // PDF merge-only: merges two existing PDFs (Stundennachweis + invoice) without
+  // re-rendering. Core logic lives in pdfMergeHandlers.ts for testability.
+  ipcMain.handle('pdf:merge-only', (_e, req) => mergeOnlyHandler(req))
+
+  // PDF info: returns page count for a given PDF path. Used by the renderer to
+  // show page counts before confirming a merge.
+  ipcMain.handle('pdf:pdf-info', (_e, req) => pdfInfoHandler(req))
 
   // Logo picker — copies user-chosen image into userData/pdf-logo.<ext>
   // and persists the path into settings.pdf_logo_path.
