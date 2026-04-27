@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { formatDuration } from '../../shared/duration'
+import { useT } from './contexts/I18nContext'
 
 /**
  * v1.4 Mini-Widget — always-on-top 200x40 overlay showing the running timer.
@@ -16,6 +17,7 @@ interface MiniState {
 }
 
 export default function MiniApp(): React.JSX.Element {
+  const t = useT()
   const [state, setState] = useState<MiniState>({
     running: false,
     label: '',
@@ -59,14 +61,14 @@ export default function MiniApp(): React.JSX.Element {
       >
         <span className="h-2 w-2 rounded-full bg-emerald-400" aria-hidden />
         <span className="flex-1 truncate" title={state.label}>
-          {state.label || 'Timer läuft'}
+          {state.label || t('miniWidget.timerRunning')}
         </span>
         <span className="font-mono tabular-nums text-xs text-slate-300">
           {formatDuration(elapsed)}
         </span>
         <button
           type="button"
-          aria-label="Timer stoppen"
+          aria-label={t('miniWidget.stop')}
           onClick={() => window.api.mini.requestStop()}
           className="
             no-drag-region
@@ -91,10 +93,10 @@ export default function MiniApp(): React.JSX.Element {
       "
     >
       <span className="h-2 w-2 rounded-full bg-slate-600" aria-hidden />
-      <span className="flex-1 truncate text-slate-400">Kein Timer</span>
+      <span className="flex-1 truncate text-slate-400">{t('miniWidget.noTimer')}</span>
       <button
         type="button"
-        aria-label="Timer starten"
+        aria-label={t('miniWidget.start')}
         onClick={() => window.api.mini.requestStart()}
         className="
           no-drag-region

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { Client } from '../../../shared/types'
+import { useT } from '../contexts/I18nContext'
 import { Dialog } from './Dialog'
 
 interface Props {
@@ -25,6 +26,7 @@ type CsvFormat = 'de' | 'us'
  */
 export function ExportModal(props: Props): React.JSX.Element {
   const { open, onClose, prefilledClientId, prefilledRange } = props
+  const t = useT()
 
   const [tab, setTab] = useState<Tab>('pdf')
   const [clients, setClients] = useState<Client[]>([])
@@ -60,7 +62,7 @@ export function ExportModal(props: Props): React.JSX.Element {
         }
       } else {
         setStatusKind('error')
-        setStatusMsg(`Kunden laden fehlgeschlagen: ${res.error}`)
+        setStatusMsg(t('export.status.clientsError', { error: res.error }))
       }
     })
   }, [open, clients.length, prefilledClientId])
@@ -81,7 +83,7 @@ export function ExportModal(props: Props): React.JSX.Element {
   function validateRange(): boolean {
     if (fromIso > toIso) {
       setStatusKind('error')
-      setStatusMsg('Startdatum liegt nach dem Enddatum.')
+      setStatusMsg(t('export.status.dateError'))
       return false
     }
     return true
@@ -90,7 +92,7 @@ export function ExportModal(props: Props): React.JSX.Element {
   async function handlePdfExport(): Promise<void> {
     if (!canExport || !validateRange()) return
     setBusy(true)
-    setStatusMsg('PDF wird erstellt …')
+    setStatusMsg(t('export.status.pdfCreating'))
     setStatusKind('info')
     const res = await window.api.pdf.export({
       clientId: clientId!,
@@ -102,19 +104,19 @@ export function ExportModal(props: Props): React.JSX.Element {
     setBusy(false)
     if (res.ok) {
       setStatusKind('success')
-      setStatusMsg(`PDF gespeichert: ${res.data.path}`)
+      setStatusMsg(t('export.status.pdfSaved', { path: res.data.path }))
     } else if (res.error === 'Export abgebrochen') {
       setStatusMsg(null)
     } else {
       setStatusKind('error')
-      setStatusMsg(`Fehler: ${res.error}`)
+      setStatusMsg(t('export.status.error', { error: res.error }))
     }
   }
 
   async function handleCsvExport(): Promise<void> {
     if (!canExport || !validateRange()) return
     setBusy(true)
-    setStatusMsg('CSV wird erstellt …')
+    setStatusMsg(t('export.status.csvCreating'))
     setStatusKind('info')
     const res = await window.api.csv.export({
       clientId: clientId!,
@@ -125,12 +127,12 @@ export function ExportModal(props: Props): React.JSX.Element {
     setBusy(false)
     if (res.ok) {
       setStatusKind('success')
-      setStatusMsg(`CSV gespeichert: ${res.data.path}`)
+      setStatusMsg(t('export.status.csvSaved', { path: res.data.path }))
     } else if (res.error === 'Export abgebrochen') {
       setStatusMsg(null)
     } else {
       setStatusKind('error')
-      setStatusMsg(`Fehler: ${res.error}`)
+      setStatusMsg(t('export.status.error', { error: res.error }))
     }
   }
 
@@ -140,31 +142,31 @@ export function ExportModal(props: Props): React.JSX.Element {
     'mt-0.5 h-4 w-4 rounded border-zinc-600 bg-zinc-800 text-indigo-500 focus:ring-indigo-400 focus:ring-offset-0'
 
   return (
-    <Dialog open={open} onClose={onClose} title="Exportieren" widthClass="w-[520px]">
+    <Dialog open={open} onClose={onClose} title={t('export.title')} widthClass="w-[520px]">
       <div className="flex flex-col gap-4">
         {/* Tab bar */}
         <div className="flex gap-1 rounded-lg bg-zinc-800 p-1">
-          {(['pdf', 'csv'] as Tab[]).map((t) => (
+          {(['pdf', 'csv'] as Tab[]).map((tabKey) => (
             <button
-              key={t}
+              key={tabKey}
               type="button"
-              onClick={() => handleTabChange(t)}
+              onClick={() => handleTabChange(tabKey)}
               className={`flex-1 rounded-md py-1.5 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-400 ${
-                tab === t
+                tab === tabKey
                   ? 'bg-indigo-600 text-white'
                   : 'text-zinc-400 hover:text-zinc-200'
               }`}
             >
-              {t === 'pdf' ? 'PDF — Stundennachweis' : 'CSV — Tabelle'}
+              {tabKey === 'pdf' ? t('export.tab.pdf') : t('export.tab.csv')}
             </button>
           ))}
         </div>
 
         {/* Shared: client + date range */}
         <label className="flex flex-col gap-1 text-sm">
-          <span className="font-medium text-zinc-300">Kunde</span>
+          <span className="font-medium text-zinc-300">{t('export.client.label')}</span>
           <select
-            title="Kunde auswählen"
+            title={t('export.client.label')}
             value={clientId ?? ''}
             onChange={(e) =>
               setClientId(e.target.value === '' ? null : Number.parseInt(e.target.value, 10))
@@ -172,11 +174,11 @@ export function ExportModal(props: Props): React.JSX.Element {
             disabled={busy}
             className={inputClass}
           >
-            <option value="">— Kunde wählen —</option>
+            <option value="">{t('export.client.placeholder')}</option>
             {clients.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.name}
-                {c.rate_cent > 0 ? ` (${(c.rate_cent / 100).toFixed(2)} €/h)` : ' (kein Tarif)'}
+                {c.rate_cent > 0 ? ` (${(c.rate_cent / 100).toFixed(2)} €/h)` : ` ${t('export.client.noRate')}`}
               </option>
             ))}
           </select>
@@ -184,7 +186,7 @@ export function ExportModal(props: Props): React.JSX.Element {
 
         <div className="grid grid-cols-2 gap-3">
           <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium text-zinc-300">Von</span>
+            <span className="font-medium text-zinc-300">{t('export.from')}</span>
             <input
               type="date"
               value={fromIso}
@@ -194,7 +196,7 @@ export function ExportModal(props: Props): React.JSX.Element {
             />
           </label>
           <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium text-zinc-300">Bis</span>
+            <span className="font-medium text-zinc-300">{t('export.to')}</span>
             <input
               type="date"
               value={toIso}
@@ -217,9 +219,9 @@ export function ExportModal(props: Props): React.JSX.Element {
                 className={checkboxClass}
               />
               <span>
-                Nach Tag gruppieren
+                {t('export.pdf.groupByTag')}
                 <span className="block text-xs text-zinc-500">
-                  Einträge mit Tags werden in separaten Abschnitten zusammengefasst.
+                  {t('export.pdf.groupByTagHint')}
                 </span>
               </span>
             </label>
@@ -232,9 +234,9 @@ export function ExportModal(props: Props): React.JSX.Element {
                 className={checkboxClass}
               />
               <span>
-                Unterschriftsfelder einblenden
+                {t('export.pdf.signatures')}
                 <span className="block text-xs text-zinc-500">
-                  Fügt unten zwei Linien für Auftragnehmer / Auftraggeber hinzu.
+                  {t('export.pdf.signaturesHint')}
                 </span>
               </span>
             </label>
@@ -244,7 +246,7 @@ export function ExportModal(props: Props): React.JSX.Element {
         {/* CSV-specific options */}
         {tab === 'csv' && (
           <div className="flex flex-col gap-2">
-            <span className="text-sm font-medium text-zinc-300">Format</span>
+            <span className="text-sm font-medium text-zinc-300">{t('export.csv.format')}</span>
             <div className="flex gap-4">
               <label className="flex items-center gap-2 text-sm text-zinc-300 cursor-pointer">
                 <input
@@ -257,7 +259,7 @@ export function ExportModal(props: Props): React.JSX.Element {
                   className="h-4 w-4 text-indigo-500 focus:ring-indigo-400"
                 />
                 <span>
-                  DE <span className="text-xs text-zinc-500">(Semikolon, Komma-Dezimal — Excel DE)</span>
+                  DE <span className="text-xs text-zinc-500">{t('export.csv.formatDeHint')}</span>
                 </span>
               </label>
               <label className="flex items-center gap-2 text-sm text-zinc-300 cursor-pointer">
@@ -271,12 +273,12 @@ export function ExportModal(props: Props): React.JSX.Element {
                   className="h-4 w-4 text-indigo-500 focus:ring-indigo-400"
                 />
                 <span>
-                  US <span className="text-xs text-zinc-500">(Komma, Punkt-Dezimal — DATEV)</span>
+                  US <span className="text-xs text-zinc-500">{t('export.csv.formatUsHint')}</span>
                 </span>
               </label>
             </div>
             <p className="text-xs text-zinc-500">
-              UTF-8 mit BOM. Excel öffnet die Datei ohne Encoding-Abfrage.
+              {t('export.csv.encodingNote')}
             </p>
           </div>
         )}
@@ -302,11 +304,11 @@ export function ExportModal(props: Props): React.JSX.Element {
           <p className="text-xs text-zinc-500">
             {tab === 'pdf' ? (
               <>
-                Vorlage anpassen unter{' '}
-                <span className="font-medium text-zinc-400">Einstellungen → PDF-Vorlage</span>.
+                {t('export.footer.pdfHint')}{' '}
+                <span className="font-medium text-zinc-400">{t('export.footer.pdfHintPath')}</span>.
               </>
             ) : (
-              'Enthält alle abgeschlossenen Einträge im gewählten Zeitraum.'
+              t('export.footer.csvHint')
             )}
           </p>
           <div className="flex shrink-0 gap-2">
@@ -316,7 +318,7 @@ export function ExportModal(props: Props): React.JSX.Element {
               disabled={busy}
               className="rounded-lg border border-zinc-700 bg-zinc-800 px-4 py-2 text-sm font-medium text-zinc-200 hover:bg-zinc-700 focus:outline-none focus:ring-2 focus:ring-zinc-500 disabled:opacity-50"
             >
-              Schließen
+              {t('common.close')}
             </button>
             <button
               type="button"
@@ -324,7 +326,7 @@ export function ExportModal(props: Props): React.JSX.Element {
               disabled={!canExport}
               className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-300 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {busy ? 'Erstelle …' : tab === 'pdf' ? 'PDF speichern' : 'CSV speichern'}
+              {busy ? t('export.button.busy') : tab === 'pdf' ? t('export.button.pdf') : t('export.button.csv')}
             </button>
           </div>
         </div>

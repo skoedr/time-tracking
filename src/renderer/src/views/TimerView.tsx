@@ -1,6 +1,8 @@
 import { useTimer, formatDuration } from '../hooks/useTimer'
+import { useT } from '../contexts/I18nContext'
 
 export default function TimerView() {
+  const t = useT()
   const {
     clients,
     runningEntry,
@@ -43,7 +45,7 @@ export default function TimerView() {
 
       {/* Client Selector */}
       <div className="flex flex-col gap-1.5">
-        <label className="text-slate-400 text-xs font-medium uppercase tracking-wide">Kunde</label>
+        <label className="text-slate-400 text-xs font-medium uppercase tracking-wide">{t('timer.client.label')}</label>
         <select
           value={selectedClientId ?? ''}
           onChange={(e) => setSelectedClientId(e.target.value ? Number(e.target.value) : null)}
@@ -52,7 +54,7 @@ export default function TimerView() {
             focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent
             disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          <option value="">— Kunden auswählen —</option>
+          <option value="">{t('timer.client.placeholder')}</option>
           {activeClients.map((c) => (
             <option key={c.id} value={c.id}>
               {c.name}
@@ -61,8 +63,8 @@ export default function TimerView() {
         </select>
         {activeClients.length === 0 && (
           <p className="text-slate-500 text-xs">
-            Noch keine Kunden angelegt. Gehe zu{' '}
-            <span className="text-indigo-400">Kunden</span>, um welche hinzuzufügen.
+            {t('timer.client.noClientsHint')}{' '}
+            <span className="text-indigo-400">{t('timer.client.noClientsLink')}</span>{t('timer.client.noClientsSuffix')}
           </p>
         )}
       </div>
@@ -70,11 +72,11 @@ export default function TimerView() {
       {/* Description */}
       <div className="flex flex-col gap-1.5">
         <label className="text-slate-400 text-xs font-medium uppercase tracking-wide">
-          Beschreibung
+          {t('timer.description.label')}
         </label>
         <input
           type="text"
-          placeholder="Woran arbeitest du?"
+          placeholder={t('timer.description.placeholder')}
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           disabled={isRunning}
@@ -110,7 +112,7 @@ export default function TimerView() {
       {/* Running status hint */}
       {isRunning && (
         <p className="text-center text-slate-500 text-xs">
-          Timer läuft · <kbd className="font-mono text-slate-400">Alt+Shift+S</kbd> zum Stoppen
+          {t('timer.running.hint')} · <kbd className="font-mono text-slate-400">Alt+Shift+S</kbd> {t('timer.running.stopHint')}
         </p>
       )}
     </div>

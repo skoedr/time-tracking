@@ -1,4 +1,5 @@
 import { useEffect, useRef, type ReactNode } from 'react'
+import { useT } from '../contexts/I18nContext'
 
 interface Props {
   open: boolean
@@ -24,6 +25,7 @@ export function Dialog({
   children,
   widthClass = 'w-[460px]'
 }: Props): React.ReactElement | null {
+  const t = useT()
   const containerRef = useRef<HTMLDivElement>(null)
   const previouslyFocused = useRef<Element | null>(null)
   // Keep latest onClose in a ref so the focus/keydown effect doesn't re-run
@@ -80,7 +82,7 @@ export function Dialog({
             type="button"
             onClick={onClose}
             className="-mr-2 grid h-11 w-11 place-items-center rounded-lg text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-zinc-500"
-            aria-label="Schließen"
+            aria-label={t('common.close')}
           >
             ×
           </button>

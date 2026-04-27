@@ -2,6 +2,12 @@
 
 All notable changes to TimeTrack are documented here.
 
+## [Unreleased — v1.8.0]
+
+### Added
+
+- **Vollst\u00e4ndige i18n DE/EN** \u2014 alle Views, Components und das Mini-Widget sind jetzt zweisprachig. Sprachwechsel (DE \u2194 EN) funktioniert live ohne App-Neustart. Neue Keys: `nav.*`, `miniWidget.*`, und alle View-spezifischen Gruppen (`today.*`, `calendar.*`, `clients.*`, `entry.*`, `tags.*`, `drawer.*`, `idle.*`, `quicknote.*`, `export.*`, `merge.*`, `settings.*`). Ab sofort Pflicht: jeder neue nutzersichtbare String muss in `de.ts` **und** `en.ts` eingetragen sein.
+
 ## [1.7.2] — 2026-04-27
 
 ### Fixed

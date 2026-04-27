@@ -236,7 +236,7 @@ Ausgangsbasis, kein Dogma.
 
 📂 [Milestone v1.8](https://github.com/skoedr/time-tracking/milestone/2)
 
-- **Vollständige i18n DE/EN** *(erstes Item — alle nachfolgenden Features direkt zweisprachig)* — `scripts/find-untranslated.mjs` bis zur Null ausschöpfen. Aktuell sind nur `UpdateBanner` + `SettingsView` migriert (v1.5). v1.8 macht TodayView, TimerView, CalendarView, ClientsView + alle Modals. Pflicht für ernsthafte EN-Adoption.
+- ✅ **Vollständige i18n DE/EN** — alle Views, Components und das Mini-Widget migriert. `scripts/find-untranslated.mjs` zeigt 0 Treffer. Ab v1.8 gilt: jeder neue nutzersichtbare String muss in `de.ts` **und** `en.ts` eingetragen sein — Review-Blocker wenn nicht erfüllt.
 - **PDF: überlappende Einträge desselben Kunden zusammenfassen** — Toleranz-Fenster konfigurierbar (Default 5 min), nur bei aktivierter Rundung, rein PDF-Output (Kalender bleibt granular).
 - **CSV-Export nach Tags gruppieren** (#68) — Export-Konfiguration: Option „Gruppierung: nach Tags". Feature-Anfrage.
 - **Ticket-Nummer / Referenz-Feld** (#70) — optionales Freitextfeld pro Eintrag für Jira-Ticket, GitHub Issue etc. Fließt in CSV/PDF.
