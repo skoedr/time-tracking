@@ -6,6 +6,8 @@ import { useTimer, formatDuration } from '../hooks/useTimer'
 import { Dialog } from '../components/Dialog'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { EntryEditForm } from '../components/EntryEditForm'
+import type { TFunction } from '../contexts/I18nContext'
+import { useT } from '../contexts/I18nContext'
 
 /**
  * `Heute` view — the new default tab in v1.2 (D1).
@@ -22,6 +24,7 @@ import { EntryEditForm } from '../components/EntryEditForm'
  * starts/stops. No polling.
  */
 export default function TodayView(): React.JSX.Element {
+  const t = useT()
   const { runningEntry, clients, startWithClient } = useTimer()
   const version = useEntriesStore((s) => s.version)
   const showToast = useToastStore((s) => s.show)
@@ -66,12 +69,12 @@ export default function TodayView(): React.JSX.Element {
     setDeleteCandidate(null)
     const res = await window.api.entries.delete(entry.id)
     if (!res.ok) {
-      showToast(`Löschen fehlgeschlagen: ${res.error}`)
+      showToast(t('common.entryDeleteFailed', { error: res.error }))
       return
     }
     useEntriesStore.getState().bumpVersion()
-    showToast('Eintrag gelöscht', {
-      label: 'Rückgängig',
+    showToast(t('common.entryDeleted'), {
+      label: t('common.undo'),
       type: 'undo_delete',
       data: { entryId: entry.id }
     })
@@ -84,22 +87,22 @@ export default function TodayView(): React.JSX.Element {
       {status === 'loading' && <SummarySkeleton />}
       {status === 'error' && (
         <div className="rounded-lg border border-red-700/50 bg-red-900/20 p-4 text-sm text-red-200">
-          <p className="mb-2 font-medium">Daten konnten nicht geladen werden.</p>
+          <p className="mb-2 font-medium">{t('today.error.title')}</p>
           {errorMsg && <p className="mb-2 text-xs text-red-300/80">{errorMsg}</p>}
           <button
             type="button"
             className="rounded bg-red-800 px-3 py-1 text-xs hover:bg-red-700"
             onClick={() => useEntriesStore.getState().bumpVersion()}
           >
-            Erneut versuchen
+            {t('common.retry')}
           </button>
         </div>
       )}
       {status === 'ready' && summary && (
         <>
           <div className="grid grid-cols-2 gap-4">
-            <StatCard label="Heute" seconds={summary.todaySeconds} accent="text-indigo-300" />
-            <StatCard label="Diese Woche" seconds={summary.weekSeconds} accent="text-emerald-300" />
+            <StatCard label={t('today.stats.today')} seconds={summary.todaySeconds} accent="text-indigo-300" />
+            <StatCard label={t('today.stats.week')} seconds={summary.weekSeconds} accent="text-emerald-300" />
           </div>
 
           <QuickStartRow
@@ -124,13 +127,13 @@ export default function TodayView(): React.JSX.Element {
         disabled={clients.length === 0}
         className="self-start rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-400 disabled:cursor-not-allowed disabled:opacity-50"
       >
-        + Eintrag nachtragen
+        {t('today.addEntry')}
       </button>
 
       <Dialog
         open={createOpen}
         onClose={() => setCreateOpen(false)}
-        title="Eintrag nachtragen"
+        title={t('today.dialog.add')}
         widthClass="w-[520px]"
       >
         <EntryEditForm
@@ -138,7 +141,7 @@ export default function TodayView(): React.JSX.Element {
           defaultDate={defaultBackfillStart()}
           onSaved={() => {
             setCreateOpen(false)
-            showToast('Eintrag gespeichert')
+            showToast(t('common.entrySaved'))
           }}
           onCancel={() => setCreateOpen(false)}
         />
@@ -147,7 +150,7 @@ export default function TodayView(): React.JSX.Element {
       <Dialog
         open={editEntry !== null}
         onClose={() => setEditEntry(null)}
-        title="Eintrag bearbeiten"
+        title={t('today.dialog.edit')}
         widthClass="w-[520px]"
       >
         {editEntry && (
@@ -165,14 +168,14 @@ export default function TodayView(): React.JSX.Element {
 
       <ConfirmDialog
         open={deleteCandidate !== null}
-        title="Eintrag löschen?"
+        title={t('common.deleteEntryTitle')}
         message={
           deleteCandidate
-            ? buildDeleteMessage(deleteCandidate, clientsById.get(deleteCandidate.client_id))
+            ? buildDeleteMessage(deleteCandidate, clientsById.get(deleteCandidate.client_id), t)
             : ''
         }
-        confirmLabel="Löschen"
-        cancelLabel="Abbrechen"
+        confirmLabel={t('common.delete')}
+        cancelLabel={t('common.cancel')}
         variant="danger"
         onConfirm={() => deleteCandidate && void confirmDelete(deleteCandidate)}
         onCancel={() => setDeleteCandidate(null)}
@@ -188,6 +191,7 @@ function ActiveTimerPill({
   runningEntry: Entry | null
   clientsById: Map<number, Client>
 }): React.JSX.Element {
+  const t = useT()
   // A `now` tick instead of derived `tickSeconds` so we don't call
   // setState synchronously when `runningEntry` changes (lint rule).
   const [, setNow] = useState(0)
@@ -201,7 +205,7 @@ function ActiveTimerPill({
   if (!runningEntry) {
     return (
       <div className="rounded-lg border border-slate-700 bg-slate-800/60 px-4 py-2 text-sm text-slate-500">
-        Kein Timer läuft
+        {t('today.noTimer')}
       </div>
     )
   }
@@ -212,7 +216,7 @@ function ActiveTimerPill({
         className="h-2.5 w-2.5 animate-pulse rounded-full"
         style={{ backgroundColor: client?.color ?? '#10b981' }}
       />
-      <span className="font-medium text-slate-100">{client?.name ?? 'Unbekannt'}</span>
+      <span className="font-medium text-slate-100">{client?.name ?? t('common.unknown')}</span>
       {runningEntry.description && (
         <span className="truncate text-slate-400">— {runningEntry.description}</span>
       )}
@@ -253,10 +257,11 @@ function QuickStartRow({
   clientsById: Map<number, Client>
   onStart: (clientId: number) => void
 }): React.JSX.Element | null {
+  const t = useT()
   if (topClients.length === 0) return null
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <span className="text-xs uppercase tracking-wide text-slate-500">Quick-Start</span>
+      <span className="text-xs uppercase tracking-wide text-slate-500">{t('today.quickstart.label')}</span>
       {topClients.map((c) => {
         const stillActive = clientsById.get(c.client_id)?.active === 1
         return (
@@ -266,7 +271,7 @@ function QuickStartRow({
             disabled={disabled || !stillActive}
             onClick={() => onStart(c.client_id)}
             className="flex items-center gap-2 rounded-full border border-slate-700 bg-slate-800 px-3 py-1 text-sm text-slate-200 hover:border-indigo-500 hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
-            title={stillActive ? `Timer für ${c.name} starten` : 'Kunde inaktiv'}
+            title={stillActive ? t('today.quickstart.startFor', { name: c.name }) : t('today.quickstart.clientInactive')}
           >
             <span className="h-2 w-2 rounded-full" style={{ backgroundColor: c.color }} />
             {c.name}
@@ -288,12 +293,13 @@ function RecentList({
   onEdit: (e: Entry) => void
   onDelete: (e: Entry) => void
 }): React.JSX.Element {
+  const t = useT()
   if (entries.length === 0) {
     return (
       <div className="rounded-lg border border-dashed border-slate-700 bg-slate-800/40 px-4 py-8 text-center">
-        <p className="text-sm font-medium text-slate-300">Noch kein Eintrag heute</p>
+        <p className="text-sm font-medium text-slate-300">{t('today.recent.empty')}</p>
         <p className="mt-1 text-xs text-slate-500">
-          Starte einen Timer oder lege einen Eintrag manuell nach.
+          {t('today.recent.emptyHint')}
         </p>
       </div>
     )
@@ -303,10 +309,10 @@ function RecentList({
       <table className="w-full text-sm">
         <thead className="bg-slate-800 text-xs uppercase tracking-wide text-slate-400">
           <tr>
-            <th className="px-3 py-2 text-left font-medium">Zeit</th>
-            <th className="px-3 py-2 text-left font-medium">Kunde</th>
-            <th className="px-3 py-2 text-left font-medium">Beschreibung</th>
-            <th className="px-3 py-2 text-right font-medium">Dauer</th>
+            <th className="px-3 py-2 text-left font-medium">{t('today.table.time')}</th>
+            <th className="px-3 py-2 text-left font-medium">{t('today.table.client')}</th>
+            <th className="px-3 py-2 text-left font-medium">{t('today.table.description')}</th>
+            <th className="px-3 py-2 text-right font-medium">{t('today.table.duration')}</th>
             <th className="w-20 px-3 py-2"></th>
           </tr>
         </thead>
@@ -324,7 +330,7 @@ function RecentList({
                       className="h-2 w-2 rounded-full"
                       style={{ backgroundColor: client?.color ?? '#64748b' }}
                     />
-                    {client?.name ?? 'Unbekannt'}
+                    {client?.name ?? t('common.unknown')}
                   </span>
                 </td>
                 <td className="px-3 py-2 text-slate-300">
@@ -341,8 +347,8 @@ function RecentList({
                       type="button"
                       onClick={() => onEdit(e)}
                       className="rounded p-1 text-slate-400 hover:bg-slate-700 hover:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-400"
-                      aria-label="Bearbeiten"
-                      title="Bearbeiten"
+                      aria-label={t('common.edit')}
+                      title={t('common.edit')}
                     >
                       ✏️
                     </button>
@@ -351,8 +357,8 @@ function RecentList({
                       onClick={() => onDelete(e)}
                       disabled={e.stopped_at === null}
                       className="rounded p-1 text-slate-400 hover:bg-slate-700 hover:text-red-300 focus:outline-none focus:ring-2 focus:ring-red-400 disabled:cursor-not-allowed disabled:opacity-30"
-                      aria-label="Löschen"
-                      title={e.stopped_at === null ? 'Laufenden Timer zuerst stoppen' : 'Löschen'}
+                      aria-label={t('common.delete')}
+                      title={e.stopped_at === null ? t('common.stopRunningFirst') : t('common.delete')}
                     >
                       🗑️
                     </button>
@@ -420,10 +426,14 @@ function defaultBackfillStart(): Date {
   return new Date(Date.now() - 60 * 60 * 1000)
 }
 
-function buildDeleteMessage(entry: Entry, client: Client | undefined): string {
+function buildDeleteMessage(
+  entry: Entry,
+  client: Client | undefined,
+  t: TFunction
+): string {
   const dur = formatHHMM(durationSeconds(entry))
   const date = new Date(entry.started_at)
   const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
-  const name = client?.name ?? 'Unbekannt'
-  return `${name} · ${dateStr} · ${dur} — Wirklich löschen? Du kannst es 5 Sekunden lang rückgängig machen.`
+  const name = client?.name ?? t('common.unknown')
+  return t('common.deleteEntryMessage', { client: name, date: dateStr, duration: dur })
 }

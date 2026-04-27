@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { Entry } from '../../../shared/types'
 import { useEntriesStore } from '../store/entriesStore'
+import { useT } from '../contexts/I18nContext'
 
 const TIMEOUT_S = 30
 
@@ -10,6 +11,7 @@ interface Props {
 }
 
 export function QuickNoteModal({ entry, onDone }: Props) {
+  const t = useT()
   const [text, setText] = useState('')
   const [remaining, setRemaining] = useState(TIMEOUT_S)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -73,10 +75,10 @@ export function QuickNoteModal({ entry, onDone }: Props) {
     >
       <div className="w-[420px] rounded-xl bg-zinc-900 p-6 shadow-2xl ring-1 ring-zinc-700">
         <h2 id="quicknote-title" className="mb-1 text-xl font-semibold text-zinc-100">
-          Was war das?
+          {t('quicknote.title')}
         </h2>
         <p className="mb-4 text-sm text-zinc-400">
-          Kein Eintrag hatte eine Beschreibung. Kurz notieren?
+          {t('quicknote.body')}
         </p>
 
         <input
@@ -85,7 +87,7 @@ export function QuickNoteModal({ entry, onDone }: Props) {
           value={text}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Beschreibung eingeben …"
+          placeholder={t('quicknote.placeholder')}
           className="mb-4 w-full rounded-lg bg-zinc-800 px-3 py-2.5 text-sm text-zinc-100
             placeholder:text-zinc-500 outline-none ring-1 ring-zinc-700
             focus:ring-2 focus:ring-indigo-500"
@@ -108,7 +110,7 @@ export function QuickNoteModal({ entry, onDone }: Props) {
               text-white hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed
               focus:outline-none focus:ring-2 focus:ring-indigo-400"
           >
-            Speichern
+            {t('common.save')}
           </button>
           <button
             type="button"
@@ -116,7 +118,7 @@ export function QuickNoteModal({ entry, onDone }: Props) {
             className="rounded-lg bg-zinc-800 px-4 py-2.5 text-sm font-medium text-zinc-300
               hover:bg-zinc-700 focus:outline-none focus:ring-2 focus:ring-zinc-500"
           >
-            Überspringen ({remaining}s)
+            {t('quicknote.skip', { remaining: String(remaining) })}
           </button>
         </div>
       </div>

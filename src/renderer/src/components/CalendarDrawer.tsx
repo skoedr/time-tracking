@@ -5,6 +5,8 @@ import { useEntriesStore } from '../store/entriesStore'
 import { useToastStore } from '../store/toastStore'
 import { ConfirmDialog } from './ConfirmDialog'
 import { EntryEditForm } from './EntryEditForm'
+import { useT } from '../contexts/I18nContext'
+import type { TFunction } from '../contexts/I18nContext'
 
 interface Props {
   open: boolean
@@ -33,6 +35,7 @@ export function CalendarDrawer({
   onClose
 }: Props): React.ReactElement | null {
   const showToast = useToastStore((s) => s.show)
+  const t = useT()
   const [tagFilter, setTagFilter] = useState<string | null>(null)
   const [editingId, setEditingId] = useState<number | null>(null)
   const [creating, setCreating] = useState(false)
@@ -91,12 +94,12 @@ export function CalendarDrawer({
     setDeleteCandidate(null)
     const res = await window.api.entries.delete(entry.id)
     if (!res.ok) {
-      showToast(`Löschen fehlgeschlagen: ${res.error}`)
+      showToast(t('common.entryDeleteFailed', { error: res.error }))
       return
     }
     useEntriesStore.getState().bumpVersion()
-    showToast('Eintrag gelöscht', {
-      label: 'Rückgängig',
+    showToast(t('common.entryDeleted'), {
+      label: t('common.undo'),
       type: 'undo_delete',
       data: { entryId: entry.id }
     })
@@ -114,18 +117,18 @@ export function CalendarDrawer({
         ref={drawerRef}
         role="dialog"
         aria-modal="true"
-        aria-label={`Einträge für ${dateLabel}`}
+        aria-label={t('drawer.aria', { date: dateLabel })}
         className="fixed right-0 top-0 z-40 flex h-screen w-96 flex-col bg-slate-900 shadow-2xl ring-1 ring-slate-700"
       >
         {/* Sticky header */}
         <div className="flex shrink-0 items-center justify-between border-b border-slate-700 bg-slate-800 px-4 py-3">
           <div>
-            <h2 className="text-base font-semibold text-slate-100">Einträge für {dateLabel}</h2>
+            <h2 className="text-base font-semibold text-slate-100">{t('drawer.header.title', { date: dateLabel })}</h2>
             {entries.length > 0 && (
               <p className="mt-0.5 text-xs text-slate-400">
                 {filteredEntries.length !== entries.length
-                  ? `${filteredEntries.length} von ${entries.length} Eintrag${entries.length === 1 ? '' : 'e'}`
-                  : `${entries.length} Eintrag${entries.length === 1 ? '' : 'e'}`}{' '}
+                  ? t('drawer.entries.filtered', { count: String(filteredEntries.length), total: String(entries.length) })
+                  : entries.length === 1 ? t('drawer.entries.one') : t('drawer.entries.other', { count: String(entries.length) })}{' '}
                 · {formatHHMM(totalSeconds)}
               </p>
             )}
@@ -142,7 +145,7 @@ export function CalendarDrawer({
                         : 'border-slate-600 bg-slate-800 text-slate-300 hover:border-slateigo-500 hover:bg-slate-700'
                     }`}
                     aria-pressed={tagFilter === tag}
-                    title={tagFilter === tag ? 'Filter entfernen' : `Nach #${tag} filtern`}
+                    title={tagFilter === tag ? t('drawer.filter.remove') : t('drawer.filter.apply', { tag })}
                   >
                     #{tag}
                   </button>
@@ -153,7 +156,7 @@ export function CalendarDrawer({
           <button
             type="button"
             onClick={onClose}
-            aria-label="Schließen"
+            aria-label={t('common.close')}
             className="grid h-11 w-11 place-items-center rounded-lg text-slate-400 hover:bg-slate-700 hover:text-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-500"
           >
             ×
@@ -165,9 +168,9 @@ export function CalendarDrawer({
           {filteredEntries.length === 0 && !creating && (
             <div className="mt-8 text-center text-sm text-slate-500">
               {tagFilter ? (
-                <p>Keine Einträge mit Tag <span className="font-medium text-slate-400">#{tagFilter}</span>.</p>
+                <p>{t('drawer.empty.noEntriesWithTag', { tag: tagFilter })}</p>
               ) : (
-                <p>Kein Eintrag an diesem Tag.</p>
+                <p>{t('drawer.empty.noEntries')}</p>
               )}
             </div>
           )}
@@ -189,7 +192,7 @@ export function CalendarDrawer({
                           <span className="font-mono tabular-nums">{formatTimeRange(e)}</span>
                           <span>·</span>
                           <span className="truncate text-slate-200">
-                            {client?.name ?? 'Unbekannt'}
+                            {client?.name ?? t('common.unknown')}
                           </span>
                         </div>
                         {e.description && (
@@ -220,8 +223,8 @@ export function CalendarDrawer({
                         type="button"
                         onClick={() => setEditingId(e.id)}
                         className="rounded p-1 text-slate-400 hover:bg-slate-700 hover:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-400"
-                        aria-label="Bearbeiten"
-                        title="Bearbeiten"
+                        aria-label={t('common.edit')}
+                        title={t('common.edit')}
                       >
                         ✏️
                       </button>
@@ -230,8 +233,8 @@ export function CalendarDrawer({
                         onClick={() => setDeleteCandidate(e)}
                         disabled={e.stopped_at === null}
                         className="rounded p-1 text-slate-400 hover:bg-slate-700 hover:text-red-300 focus:outline-none focus:ring-2 focus:ring-red-400 disabled:cursor-not-allowed disabled:opacity-30"
-                        aria-label="Löschen"
-                        title={e.stopped_at === null ? 'Laufenden Timer zuerst stoppen' : 'Löschen'}
+                        aria-label={t('common.delete')}
+                        title={e.stopped_at === null ? t('common.stopRunningFirst') : t('common.delete')}
                       >
                         🗑️
                       </button>
@@ -244,7 +247,7 @@ export function CalendarDrawer({
                         clients={clients}
                         onSaved={() => {
                           setEditingId(null)
-                          showToast('Eintrag gespeichert')
+                          showToast(t('common.entrySaved'))
                         }}
                         onCancel={() => setEditingId(null)}
                       />
@@ -260,7 +263,7 @@ export function CalendarDrawer({
                   defaultDate={defaultStartForDay(dateISO)}
                   onSaved={() => {
                     setCreating(false)
-                    showToast('Eintrag gespeichert')
+                    showToast(t('common.entrySaved'))
                   }}
                   onCancel={() => setCreating(false)}
                 />
@@ -278,7 +281,7 @@ export function CalendarDrawer({
               disabled={clients.length === 0}
               className="w-full rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-400 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              + Eintrag für {dateLabel} hinzufügen
+              {t('drawer.footer.addEntry', { date: dateLabel })}
             </button>
           </div>
         )}
@@ -286,14 +289,14 @@ export function CalendarDrawer({
 
       <ConfirmDialog
         open={deleteCandidate !== null}
-        title="Eintrag löschen?"
+        title={t('common.deleteEntryTitle')}
         message={
           deleteCandidate
-            ? buildDeleteMessage(deleteCandidate, clientsById.get(deleteCandidate.client_id))
+            ? buildDeleteMessage(deleteCandidate, clientsById.get(deleteCandidate.client_id), t)
             : ''
         }
-        confirmLabel="Löschen"
-        cancelLabel="Abbrechen"
+        confirmLabel={t('common.delete')}
+        cancelLabel={t('common.cancel')}
         variant="danger"
         onConfirm={() => deleteCandidate && void confirmDelete(deleteCandidate)}
         onCancel={() => setDeleteCandidate(null)}
@@ -338,10 +341,10 @@ function defaultStartForDay(dateISO: string): Date {
   return new Date(y, m - 1, d, 9, 0, 0, 0)
 }
 
-function buildDeleteMessage(entry: Entry, client: Client | undefined): string {
+function buildDeleteMessage(entry: Entry, client: Client | undefined, t: TFunction): string {
   const dur = formatHHMM(durationSeconds(entry))
   const date = new Date(entry.started_at)
   const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
-  const name = client?.name ?? 'Unbekannt'
-  return `${name} · ${dateStr} · ${dur} — Wirklich löschen? Du kannst es 5 Sekunden lang rückgängig machen.`
+  const name = client?.name ?? t('common.unknown')
+  return t('common.deleteEntryMessage', { client: name, date: dateStr, duration: dur })
 }

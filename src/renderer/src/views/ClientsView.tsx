@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import type { Client, CreateClientInput, UpdateClientInput } from '../../../shared/types'
 import { formatRateInput, parseRateInput } from '../../../shared/rate'
 import { useClientsStore } from '../store/clientsStore'
+import { useT } from '../contexts/I18nContext'
+import type { TranslationKey } from '../../../shared/locales/de'
 
 const COLORS = [
   '#6366f1', // indigo
@@ -16,20 +18,21 @@ const COLORS = [
   '#84cc16' // lime
 ]
 
-const COLOR_NAMES: Record<string, string> = {
-  '#6366f1': 'Indigo',
-  '#8b5cf6': 'Violett',
-  '#ec4899': 'Pink',
-  '#f59e0b': 'Amber',
-  '#10b981': 'Smaragd',
-  '#3b82f6': 'Blau',
-  '#ef4444': 'Rot',
-  '#f97316': 'Orange',
-  '#14b8a6': 'Teal',
-  '#84cc16': 'Lime'
+const COLOR_NAMES_KEYS: Record<string, TranslationKey> = {
+  '#6366f1': 'clients.color.indigo',
+  '#8b5cf6': 'clients.color.violet',
+  '#ec4899': 'clients.color.pink',
+  '#f59e0b': 'clients.color.amber',
+  '#10b981': 'clients.color.emerald',
+  '#3b82f6': 'clients.color.blue',
+  '#ef4444': 'clients.color.red',
+  '#f97316': 'clients.color.orange',
+  '#14b8a6': 'clients.color.teal',
+  '#84cc16': 'clients.color.lime',
 }
 
 export default function ClientsView() {
+  const t = useT()
   const [clients, setClients] = useState<Client[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
@@ -58,7 +61,7 @@ export default function ClientsView() {
   }
 
   async function handleDelete(client: Client) {
-    if (!confirm(`Kunde "${client.name}" wirklich löschen?\nAlle Zeiteinträge werden mitgelöscht.`))
+    if (!confirm(t('clients.confirm.delete', { name: client.name })))
       return
     await window.api.clients.delete(client.id)
     await loadClients()
@@ -97,19 +100,19 @@ export default function ClientsView() {
           className="bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium
             px-4 py-2 rounded-lg transition-colors"
         >
-          + Neuer Kunde
+          + {t('clients.addNew')}
         </button>
       </div>
 
       {isLoading ? (
-        <p className="text-slate-500 text-sm">Lädt...</p>
+        <p className="text-slate-500 text-sm">{t('clients.loading')}</p>
       ) : (
         <>
           {clients.length === 0 && (
             <div className="text-center py-16 text-slate-500">
               <p className="text-4xl mb-3">👤</p>
-              <p className="font-medium">Noch keine Kunden</p>
-              <p className="text-sm mt-1">Lege deinen ersten Kunden an.</p>
+              <p className="font-medium">{t('clients.empty.title')}</p>
+              <p className="text-sm mt-1">{t('clients.empty.hint')}</p>
             </div>
           )}
 
@@ -125,7 +128,7 @@ export default function ClientsView() {
           {inactiveClients.length > 0 && (
             <div className="mt-6">
               <p className="text-slate-500 text-xs font-medium uppercase tracking-wide mb-2">
-                Archiviert
+                {t('clients.archived.label')}
               </p>
               <ClientList
                 clients={inactiveClients}
@@ -169,39 +172,54 @@ function ClientList({
   return (
     <ul className="flex flex-col gap-2">
       {clients.map((c) => (
-        <li
-          key={c.id}
-          className="flex items-center gap-3 bg-slate-800 border border-slate-700 rounded-xl px-4 py-3"
-        >
-          <span
-            className={`w-4 h-4 rounded-full shrink-0 ${dimmed ? 'opacity-40' : ''}`}
-            style={{ backgroundColor: c.color }}
-          />
-          <span className={`flex-1 text-slate-100 font-medium ${dimmed ? 'opacity-50' : ''}`}>
-            {c.name}
-          </span>
-          <button
-            onClick={() => onToggleActive(c)}
-            title={c.active ? 'Archivieren' : 'Reaktivieren'}
-            className="text-slate-500 hover:text-slate-300 text-sm transition-colors px-1"
-          >
-            {c.active ? '📦' : '♻️'}
-          </button>
-          <button
-            onClick={() => onEdit(c)}
-            className="text-slate-500 hover:text-slate-300 text-sm transition-colors px-1"
-          >
-            ✏️
-          </button>
-          <button
-            onClick={() => onDelete(c)}
-            className="text-slate-500 hover:text-red-400 text-sm transition-colors px-1"
-          >
-            🗑️
-          </button>
-        </li>
+        <ClientItem key={c.id} client={c} onEdit={onEdit} onDelete={onDelete} onToggleActive={onToggleActive} dimmed={dimmed} />
       ))}
     </ul>
+  )
+}
+
+function ClientItem({
+  client: c, onEdit, onDelete, onToggleActive, dimmed = false
+}: {
+  client: Client
+  onEdit: (c: Client) => void
+  onDelete: (c: Client) => void
+  onToggleActive: (c: Client) => void
+  dimmed?: boolean
+}) {
+  const t = useT()
+  return (
+    <li
+      key={c.id}
+      className="flex items-center gap-3 bg-slate-800 border border-slate-700 rounded-xl px-4 py-3"
+    >
+      <span
+        className={`w-4 h-4 rounded-full shrink-0 ${dimmed ? 'opacity-40' : ''}`}
+        style={{ backgroundColor: c.color }}
+      />
+      <span className={`flex-1 text-slate-100 font-medium ${dimmed ? 'opacity-50' : ''}`}>
+        {c.name}
+      </span>
+      <button
+        onClick={() => onToggleActive(c)}
+        title={c.active ? t('clients.action.archive') : t('clients.action.reactivate')}
+        className="text-slate-500 hover:text-slate-300 text-sm transition-colors px-1"
+      >
+        {c.active ? '📦' : '♻️'}
+      </button>
+      <button
+        onClick={() => onEdit(c)}
+        className="text-slate-500 hover:text-slate-300 text-sm transition-colors px-1"
+      >
+        ✏️
+      </button>
+      <button
+        onClick={() => onDelete(c)}
+        className="text-slate-500 hover:text-red-400 text-sm transition-colors px-1"
+      >
+        🗑️
+      </button>
+    </li>
   )
 }
 
@@ -214,6 +232,7 @@ function ClientFormModal({
   onSave: (data: { name: string; color: string; rate_cent: number }) => Promise<void>
   onClose: () => void
 }) {
+  const t = useT()
   const [name, setName] = useState(client?.name ?? '')
   const [color, setColor] = useState(client?.color ?? COLORS[0])
   const [rateInput, setRateInput] = useState(() => formatRateInput(client?.rate_cent ?? 0))
@@ -225,16 +244,16 @@ function ClientFormModal({
     e.preventDefault()
     const trimmed = name.trim()
     if (!trimmed) {
-      setError('Name ist erforderlich.')
+      setError(t('clients.form.nameRequired'))
       return
     }
     const parsed = parseRateInput(rateInput)
     if (parsed === 'invalid') {
-      setRateError('Bitte eine Zahl eingeben (z.B. 85,00).')
+      setRateError(t('clients.form.rateInvalid'))
       return
     }
     if (parsed === 'negative') {
-      setRateError('Stundensatz darf nicht negativ sein.')
+      setRateError(t('clients.form.rateNegative'))
       return
     }
     setIsSaving(true)
@@ -249,14 +268,14 @@ function ClientFormModal({
     >
       <div className="bg-slate-800 border border-slate-700 rounded-2xl p-6 w-full max-w-sm mx-4 shadow-2xl">
         <h2 className="text-lg font-semibold text-slate-100 mb-5">
-          {client ? 'Kunde bearbeiten' : 'Neuer Kunde'}
+          {client ? t('clients.form.editTitle') : t('clients.form.createTitle')}
         </h2>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           {/* Name */}
           <div className="flex flex-col gap-1.5">
             <label className="text-slate-400 text-xs font-medium uppercase tracking-wide">
-              Name
+              {t('clients.form.nameLabel')}
             </label>
             <input
               autoFocus
@@ -266,7 +285,7 @@ function ClientFormModal({
                 setName(e.target.value)
                 setError('')
               }}
-              placeholder="z.B. Mustermann GmbH"
+              placeholder={t('clients.form.namePlaceholder')}
               className="bg-slate-900 border border-slate-600 rounded-lg px-3 py-2.5
                 text-slate-100 placeholder:text-slate-600 focus:outline-none
                 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
@@ -277,15 +296,15 @@ function ClientFormModal({
           {/* Color */}
           <div className="flex flex-col gap-1.5">
             <label className="text-slate-400 text-xs font-medium uppercase tracking-wide">
-              Farbe
+              {t('clients.form.colorLabel')}
             </label>
             <div className="flex gap-2 flex-wrap">
               {COLORS.map((c) => (
                 <button
                   key={c}
                   type="button"
-                  title={COLOR_NAMES[c] ?? c}
-                  aria-label={`Farbe ${COLOR_NAMES[c] ?? c}`}
+                  title={t(COLOR_NAMES_KEYS[c] ?? 'clients.color.indigo')}
+                  aria-label={t('clients.form.colorAria', { color: t(COLOR_NAMES_KEYS[c] ?? 'clients.color.indigo') })}
                   onClick={() => setColor(c)}
                   className={`w-8 h-8 rounded-full transition-transform ${
                     color === c
@@ -304,7 +323,7 @@ function ClientFormModal({
               htmlFor="client-rate"
               className="text-slate-400 text-xs font-medium uppercase tracking-wide"
             >
-              Stundensatz (€/h)
+              {t('clients.form.rateLabel')}
             </label>
             <div className="relative">
               <input
@@ -316,7 +335,7 @@ function ClientFormModal({
                   setRateInput(e.target.value)
                   setRateError('')
                 }}
-                placeholder="Optional, z.B. 85,00"
+                placeholder={t('clients.form.ratePlaceholder')}
                 className="bg-slate-900 border border-slate-600 rounded-lg pl-3 pr-10 py-2.5 w-full
                   text-slate-100 placeholder:text-slate-600 focus:outline-none
                   focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
@@ -327,9 +346,7 @@ function ClientFormModal({
             </div>
             {rateError && <p className="text-red-400 text-xs">{rateError}</p>}
             {!rateError && (
-              <p className="text-slate-500 text-xs">
-                Leer lassen oder 0, wenn kein Honorar berechnet werden soll.
-              </p>
+              <p className="text-slate-500 text-xs">{t('clients.form.rateHint')}</p>
             )}
           </div>
 
@@ -341,7 +358,7 @@ function ClientFormModal({
               className="flex-1 bg-slate-700 hover:bg-slate-600 text-slate-200
                 font-medium py-2.5 rounded-lg transition-colors"
             >
-              Abbrechen
+              {t('common.cancel')}
             </button>
             <button
               type="submit"
@@ -349,7 +366,7 @@ function ClientFormModal({
               className="flex-1 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50
                 text-white font-medium py-2.5 rounded-lg transition-colors"
             >
-              {isSaving ? '...' : 'Speichern'}
+              {isSaving ? t('common.saving') : t('common.save')}
             </button>
           </div>
         </form>

@@ -3,6 +3,7 @@ import type { Client, Entry } from '../../../shared/types'
 import { formatTimeHHMM, parseTimeToDate } from '../../../shared/date'
 import { useEntriesStore } from '../store/entriesStore'
 import { TagInput } from './TagInput'
+import { useT } from '../contexts/I18nContext'
 
 interface Props {
   /** Existing entry to edit; omit for create-mode. */
@@ -43,6 +44,7 @@ export function EntryEditForm({
   onSaved,
   onCancel
 }: Props): React.ReactElement {
+  const t = useT()
   const initialStart = entry ? new Date(entry.started_at) : (defaultDate ?? new Date())
   const initialStop = entry?.stopped_at
     ? new Date(entry.stopped_at)
@@ -67,7 +69,7 @@ export function EntryEditForm({
   }, [date, startTime, stopTime, clientId, description])
 
   function validateLocal(): string | null {
-    if (!clientId) return 'Bitte einen Kunden wählen'
+    if (!clientId) return t('entry.validation.clientRequired')
     let start: Date
     let stop: Date
     try {
@@ -76,10 +78,10 @@ export function EntryEditForm({
     } catch (e) {
       return (e as Error).message
     }
-    if (stop.getTime() <= start.getTime()) return 'Endzeit muss nach der Startzeit liegen'
-    if (start.getTime() > Date.now()) return 'Startzeit darf nicht in der Zukunft liegen'
+    if (stop.getTime() <= start.getTime()) return t('entry.validation.endAfterStart')
+    if (start.getTime() > Date.now()) return t('entry.validation.startNotFuture')
     if (description.length > MAX_DESCRIPTION_LEN) {
-      return `Beschreibung überschreitet ${MAX_DESCRIPTION_LEN} Zeichen`
+      return t('entry.validation.descriptionTooLong', { max: String(MAX_DESCRIPTION_LEN) })
     }
     return null
   }
@@ -134,7 +136,7 @@ export function EntryEditForm({
     <form onSubmit={handleSubmit} className="flex flex-col gap-3 text-sm">
       <div className="grid grid-cols-3 gap-2">
         <label className="flex flex-col gap-1">
-          <span className="text-xs text-zinc-400">Datum</span>
+          <span className="text-xs text-zinc-400">{t('entry.date')}</span>
           <input
             type="date"
             value={date}
@@ -144,7 +146,7 @@ export function EntryEditForm({
           />
         </label>
         <label className="flex flex-col gap-1">
-          <span className="text-xs text-zinc-400">Start</span>
+          <span className="text-xs text-zinc-400">{t('entry.start')}</span>
           <input
             type="time"
             value={startTime}
@@ -154,7 +156,7 @@ export function EntryEditForm({
           />
         </label>
         <label className="flex flex-col gap-1">
-          <span className="text-xs text-zinc-400">Ende</span>
+          <span className="text-xs text-zinc-400">{t('entry.end')}</span>
           <input
             type="time"
             value={stopTime}
@@ -166,7 +168,7 @@ export function EntryEditForm({
       </div>
 
       <label className="flex flex-col gap-1">
-        <span className="text-xs text-zinc-400">Kunde</span>
+          <span className="text-xs text-zinc-400">{t('entry.client')}</span>
         <select
           value={clientId}
           onChange={(e) => setClientId(parseInt(e.target.value, 10))}
@@ -183,7 +185,7 @@ export function EntryEditForm({
 
       <label className="flex flex-col gap-1">
         <span className="text-xs text-zinc-400">
-          Beschreibung{' '}
+          {t('entry.description')}{' '}
           <span className="text-zinc-600">
             ({description.length}/{MAX_DESCRIPTION_LEN})
           </span>
@@ -199,14 +201,14 @@ export function EntryEditForm({
       </label>
 
       <div className="flex flex-col gap-1">
-        <span className="text-xs text-zinc-400">Tags</span>
+          <span className="text-xs text-zinc-400">{t('entry.tags')}</span>
         <TagInput
           value={tags}
           onChange={(serialized) => setTags(serialized)}
           disabled={isSaving}
         />
         <span className="text-xs text-zinc-600">
-          Tab, Enter oder Komma zum Hinzufügen · Backspace zum Entfernen
+          {t('entry.tagsHint')}
         </span>
       </div>
 
@@ -217,7 +219,7 @@ export function EntryEditForm({
       )}
       {state === 'success' && (
         <p role="status" className="text-xs text-emerald-400">
-          Gespeichert
+          {t('entry.saved')}
         </p>
       )}
 
@@ -228,14 +230,14 @@ export function EntryEditForm({
           disabled={isSaving}
           className="rounded-lg bg-zinc-800 px-3 py-1.5 text-sm font-medium text-zinc-100 hover:bg-zinc-700 focus:outline-none focus:ring-2 focus:ring-zinc-500 disabled:opacity-50"
         >
-          Abbrechen
+          {t('common.cancel')}
         </button>
         <button
           type="submit"
           disabled={isSaving || localError !== null}
           className="rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-400 disabled:opacity-50"
         >
-          {isSaving ? 'Speichert…' : 'Speichern'}
+          {isSaving ? t('common.saving') : t('common.save')}
         </button>
       </div>
     </form>

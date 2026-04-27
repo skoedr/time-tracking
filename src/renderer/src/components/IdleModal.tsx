@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { formatDuration } from '../../../shared/duration'
+import { useT } from '../contexts/I18nContext'
 
 interface Props {
   idleSince: string
@@ -10,6 +11,7 @@ interface Props {
 }
 
 export function IdleModal({ idleSince, idleSeconds, onKeep, onStopAtIdle, onMarkPause }: Props) {
+  const t = useT()
   useEffect(() => {
     const handler = (e: KeyboardEvent): void => {
       if (e.key === 'Escape') onKeep()
@@ -32,11 +34,10 @@ export function IdleModal({ idleSince, idleSeconds, onKeep, onStopAtIdle, onMark
     >
       <div className="w-[460px] rounded-xl bg-zinc-900 p-6 shadow-2xl ring-1 ring-zinc-700">
         <h2 id="idle-modal-title" className="mb-2 text-xl font-semibold text-zinc-100">
-          Inaktivität erkannt
+          {t('idle.title')}
         </h2>
         <p className="mb-6 text-sm text-zinc-400">
-          Du warst seit <span className="font-mono text-zinc-200">{idleSinceLocal}</span> nicht
-          mehr aktiv ({formatDuration(idleSeconds)}). Was soll mit der Zeit passieren?
+          {t('idle.body', { time: idleSinceLocal, duration: formatDuration(idleSeconds) })}
         </p>
         <div className="flex flex-col gap-2">
           <button
@@ -45,25 +46,25 @@ export function IdleModal({ idleSince, idleSeconds, onKeep, onStopAtIdle, onMark
             className="rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-400"
             autoFocus
           >
-            Weiter laufen lassen
+            {t('idle.keep')}
           </button>
           <button
             type="button"
             onClick={onStopAtIdle}
             className="rounded-lg bg-zinc-800 px-4 py-2.5 text-sm font-medium text-zinc-100 hover:bg-zinc-700 focus:outline-none focus:ring-2 focus:ring-zinc-500"
           >
-            Bei Inaktivität stoppen ({idleSinceLocal})
+            {t('idle.stopAtIdle', { time: idleSinceLocal })}
           </button>
           <button
             type="button"
             onClick={onMarkPause}
             className="rounded-lg bg-zinc-800 px-4 py-2.5 text-sm font-medium text-zinc-100 hover:bg-zinc-700 focus:outline-none focus:ring-2 focus:ring-zinc-500"
           >
-            Als Pause markieren
+            {t('idle.markPause')}
           </button>
         </div>
         <p className="mt-4 text-xs text-zinc-500">
-          Tipp: <kbd className="rounded bg-zinc-800 px-1.5 py-0.5">Esc</kbd> = Weiter laufen lassen
+          {t('idle.tip')}
         </p>
       </div>
     </div>

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { deserializeTags, parseTagInput, serializeTags } from '../../../shared/tags'
+import { useT } from '../contexts/I18nContext'
 
 interface Props {
   /** Serialized tags value from the DB (`,bug,ux,` format). */
@@ -36,6 +37,7 @@ function chipColor(tag: string): string {
  * Stores tags as the serialized DB format (`,tag1,tag2,`) via `onChange`.
  */
 export function TagInput({ value, onChange, disabled = false }: Props): React.ReactElement {
+  const t = useT()
   const tags = deserializeTags(value)
   const [inputValue, setInputValue] = useState('')
   const [suggestions, setSuggestions] = useState<string[]>([])
@@ -152,7 +154,7 @@ export function TagInput({ value, onChange, disabled = false }: Props): React.Re
                   removeTag(tag)
                 }}
                 className="leading-none opacity-60 hover:opacity-100 focus:outline-none"
-                aria-label={`Tag ${tag} entfernen`}
+                aria-label={t('tags.removeAria', { tag })}
               >
                 ×
               </button>
@@ -170,9 +172,9 @@ export function TagInput({ value, onChange, disabled = false }: Props): React.Re
           onFocus={() => setDropdownOpen(true)}
           onKeyDown={handleKeyDown}
           disabled={disabled}
-          placeholder={tags.length === 0 ? 'Tags hinzufügen…' : ''}
+          placeholder={tags.length === 0 ? t('tags.placeholder') : ''}
           className="min-w-[80px] flex-1 bg-transparent text-xs text-zinc-100 placeholder-zinc-600 focus:outline-none"
-          aria-label="Tag eingeben"
+          aria-label={t('tags.inputAria')}
           aria-autocomplete="list"
           aria-expanded={showDropdown}
         />

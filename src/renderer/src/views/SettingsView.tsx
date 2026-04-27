@@ -111,48 +111,47 @@ export default function SettingsView(): React.JSX.Element {
     setSettings({ ...settings, [key]: value })
     const res = await window.api.settings.set(String(key), String(value))
     if (!res.ok) {
-      setStatusMsg(`Fehler: ${res.error}`)
+      setStatusMsg(t('common.error', { error: res.error }))
       // revert by reloading
       await loadAll()
     }
   }
 
   async function createBackupNow(): Promise<void> {
-    setStatusMsg('Backup wird erstellt …')
+    setStatusMsg(t('settings.data.backupCreating'))
     const res = await window.api.backups.create()
     if (res.ok) {
-      setStatusMsg('Backup erstellt.')
+      setStatusMsg(t('settings.data.backupCreated'))
       const list = await window.api.backups.list()
       if (list.ok) setBackups(list.data)
     } else {
-      setStatusMsg(`Fehler: ${res.error}`)
+      setStatusMsg(t('common.error', { error: res.error }))
     }
   }
 
   async function exportJson(): Promise<void> {
-    setStatusMsg('Export wird vorbereitet …')
+    setStatusMsg(t('settings.data.jsonExporting'))
     const res = await window.api.exporter.json()
     if (res.ok) {
       const kb = (res.data.bytes / 1024).toFixed(1)
-      setStatusMsg(`Export gespeichert (${kb} KB).`)
+      setStatusMsg(t('settings.data.jsonExportSaved', { kb }))
     } else if (res.error === 'Export abgebrochen') {
-      // User cancelled the save dialog; surface no error noise.
       setStatusMsg(null)
     } else {
-      setStatusMsg(`Export fehlgeschlagen: ${res.error}`)
+      setStatusMsg(t('settings.data.jsonExportFailed', { error: res.error }))
     }
   }
 
   async function pickLogo(): Promise<void> {
-    setStatusMsg('Logo wird gewählt …')
+      setStatusMsg(t('settings.pdf.logoPicking'))
     const res = await window.api.logo.set()
     if (res.ok) {
       setSettings((prev) => (prev ? { ...prev, pdf_logo_path: res.data.path } : prev))
-      setStatusMsg('Logo gespeichert.')
+      setStatusMsg(t('settings.pdf.logoSaved'))
     } else if (res.error === 'Auswahl abgebrochen') {
       setStatusMsg(null)
     } else {
-      setStatusMsg(`Logo-Fehler: ${res.error}`)
+      setStatusMsg(t('settings.pdf.logoError', { error: res.error }))
     }
   }
 
@@ -160,28 +159,28 @@ export default function SettingsView(): React.JSX.Element {
     const res = await window.api.logo.clear()
     if (res.ok) {
       setSettings((prev) => (prev ? { ...prev, pdf_logo_path: '' } : prev))
-      setStatusMsg('Logo entfernt.')
+      setStatusMsg(t('settings.pdf.logoRemoved'))
     } else {
-      setStatusMsg(`Fehler: ${res.error}`)
+      setStatusMsg(`${t('settings.update.idle')}: ${res.error}`)
     }
   }
 
   if (!settings || !paths) {
-    return <div className="text-slate-400">Lade Einstellungen …</div>
+    return <div className="text-slate-400">{t('settings.loading')}</div>
   }
 
   const latestBackup = backups[0] ?? null
 
   return (
     <div className="max-w-2xl mx-auto flex flex-col gap-8 pb-12">
-      <h1 className="text-2xl font-semibold text-slate-100">Einstellungen</h1>
+      <h1 className="text-2xl font-semibold text-slate-100">{t('settings.title')}</h1>
 
       {statusMsg && (
         <div className="rounded-md bg-slate-800 px-3 py-2 text-sm text-slate-300">{statusMsg}</div>
       )}
 
       {/* Allgemein */}
-      <Section title="Allgemein">
+      <Section title={t('settings.section.general')}>
         <Row label={t('settings.language.title')}>
           <select
             aria-label={t('settings.language.title')}
@@ -193,19 +192,19 @@ export default function SettingsView(): React.JSX.Element {
             <option value="en">{t('settings.language.en')}</option>
           </select>
         </Row>
-        <Row label="Onboarding">
+        <Row label={t('settings.general.onboarding')}>
           <button
             type="button"
             onClick={async () => {
               await window.api.settings.set('onboarding_completed', '0')
-              setStatusMsg('Onboarding zurückgesetzt — App neu starten oder Seite neu laden.')
+              setStatusMsg(t('settings.general.onboardingReset'))
             }}
             className={btnSecondaryClass}
           >
             {t('settings.onboarding.retrigger')}
           </button>
         </Row>
-        <Row label="Mit Windows starten">
+        <Row label={t('settings.general.autoStart')}>
           <label className="inline-flex items-center gap-2">
             <input
               type="checkbox"
@@ -213,26 +212,26 @@ export default function SettingsView(): React.JSX.Element {
               onChange={(e) => update('auto_start', e.target.checked ? '1' : '0')}
               className="h-4 w-4 rounded border-slate-600 bg-slate-800"
             />
-            <span className="text-sm text-slate-300">Beim Anmelden automatisch starten</span>
+            <span className="text-sm text-slate-300">{t('settings.general.autoStartLabel')}</span>
           </label>
         </Row>
-        <Row label="Firma (für Exporte)">
+        <Row label={t('settings.general.company')}>
           <input
             type="text"
             value={settings.company_name}
             onChange={(e) => update('company_name', e.target.value)}
             className={inputClass}
-            placeholder={'z.\u202fB. Meine Firma GmbH'}
+            placeholder={t('settings.general.companyPlaceholder')}
           />
         </Row>
       </Section>
 
       {/* Timer */}
-      <Section title="Timer">
-        <Row label="Inaktivitäts-Schwelle" hint="Nach wie vielen Minuten soll die App nachfragen?">
+      <Section title={t('settings.section.timer')}>
+        <Row label={t('settings.timer.idle')} hint={t('settings.timer.idleHint')}>
           <div className="flex items-center gap-2">
             <input
-              aria-label="Inaktivitäts-Schwelle in Minuten"
+              aria-label={t('settings.timer.idleAria')}
               type="number"
               min={1}
               max={60}
@@ -240,17 +239,17 @@ export default function SettingsView(): React.JSX.Element {
               onChange={(e) => update('idle_threshold_minutes', e.target.value)}
               className={`${inputClass} w-24`}
             />
-            <span className="text-sm text-slate-400">Minuten</span>
+            <span className="text-sm text-slate-400">{t('settings.timer.idleUnit')}</span>
           </div>
         </Row>
         <Row
-          label="Globaler Hotkey"
-          hint="Start/Stop von überall. Modifier (Ctrl/Alt/Shift) + Buchstabe oder F-Taste."
+          label={t('settings.timer.hotkey')}
+          hint={t('settings.timer.hotkeyHint')}
         >
           <div className="flex items-center gap-2">
             <code className="rounded bg-slate-800 px-3 py-1.5 text-sm text-slate-200">
               {capturingHotkey === 'hotkey_toggle'
-                ? 'Drücke eine Tastenkombi …'
+                ? t('settings.timer.hotkeyCapturing')
                 : settings.hotkey_toggle}
             </code>
             <button
@@ -261,7 +260,7 @@ export default function SettingsView(): React.JSX.Element {
               }}
               className={btnSecondaryClass}
             >
-              {capturingHotkey === 'hotkey_toggle' ? 'Abbrechen' : 'Ändern'}
+              {capturingHotkey === 'hotkey_toggle' ? t('common.cancel') : t('settings.timer.hotkeyChange')}
             </button>
             {settings.hotkey_toggle !== DEFAULT_HOTKEY && (
               <button
@@ -269,7 +268,7 @@ export default function SettingsView(): React.JSX.Element {
                 onClick={() => update('hotkey_toggle', DEFAULT_HOTKEY)}
                 className={btnSecondaryClass}
               >
-                Zurücksetzen
+                {t('settings.timer.hotkeyReset')}
               </button>
             )}
           </div>
@@ -277,26 +276,26 @@ export default function SettingsView(): React.JSX.Element {
             <p className="mt-1 text-xs text-red-400">{hotkeyError}</p>
           )}
         </Row>
-        <Row label="Rundung" hint="Aktuell nur intern verfügbar — UI-Auswahl folgt.">
+        <Row label={t('settings.timer.rounding')} hint={t('settings.timer.roundingHint')}>
           <select
-            aria-label="Rundungsmodus"
+            aria-label={t('settings.timer.roundingHint')}
             value={settings.rounding_mode}
             onChange={(e) => update('rounding_mode', e.target.value as Settings['rounding_mode'])}
             className={inputClass}
           >
-            <option value="none">Keine</option>
-            <option value="ceil">Aufrunden</option>
-            <option value="floor">Abrunden</option>
-            <option value="round">Kaufmännisch</option>
+            <option value="none">{t('settings.timer.roundingNone')}</option>
+            <option value="ceil">{t('settings.timer.roundingCeil')}</option>
+            <option value="floor">{t('settings.timer.roundingFloor')}</option>
+            <option value="round">{t('settings.timer.roundingRound')}</option>
           </select>
         </Row>
       </Section>
 
       {/* Mini-Widget (v1.4) */}
-      <Section title="Mini-Widget">
+      <Section title={t('settings.section.miniWidget')}>
         <Row
-          label="Aktivieren"
-          hint="Always-on-top 200×40-Overlay mit Timer und Stop-Button. Standardmäßig deaktiviert."
+          label={t('settings.mini.enable')}
+          hint={t('settings.mini.enableHint')}
         >
           <label className="inline-flex items-center gap-2">
             <input
@@ -305,17 +304,17 @@ export default function SettingsView(): React.JSX.Element {
               onChange={(e) => update('mini_enabled', e.target.checked ? '1' : '0')}
               className="h-4 w-4 rounded border-slate-600 bg-slate-800"
             />
-            <span className="text-sm text-slate-300">Mini-Widget anzeigen</span>
+            <span className="text-sm text-slate-300">{t('settings.mini.enableLabel')}</span>
           </label>
         </Row>
         <Row
-          label="Hotkey"
-          hint="Mini-Widget ein-/ausblenden. Modifier + Buchstabe oder F-Taste."
+          label={t('settings.mini.hotkey')}
+          hint={t('settings.mini.hotkeyHint')}
         >
           <div className="flex items-center gap-2">
             <code className="rounded bg-slate-800 px-3 py-1.5 text-sm text-slate-200">
               {capturingHotkey === 'mini_hotkey'
-                ? 'Drücke eine Tastenkombi …'
+                ? t('settings.timer.hotkeyCapturing')
                 : settings.mini_hotkey}
             </code>
             <button
@@ -326,7 +325,7 @@ export default function SettingsView(): React.JSX.Element {
               }}
               className={btnSecondaryClass}
             >
-              {capturingHotkey === 'mini_hotkey' ? 'Abbrechen' : 'Ändern'}
+              {capturingHotkey === 'mini_hotkey' ? t('common.cancel') : t('settings.timer.hotkeyChange')}
             </button>
             {settings.mini_hotkey !== DEFAULT_MINI_HOTKEY && (
               <button
@@ -334,7 +333,7 @@ export default function SettingsView(): React.JSX.Element {
                 onClick={() => update('mini_hotkey', DEFAULT_MINI_HOTKEY)}
                 className={btnSecondaryClass}
               >
-                Zurücksetzen
+                {t('settings.timer.hotkeyReset')}
               </button>
             )}
           </div>
@@ -343,8 +342,8 @@ export default function SettingsView(): React.JSX.Element {
           )}
         </Row>
         <Row
-          label="Position"
-          hint="Setzt das Mini-Widget beim nächsten Anzeigen wieder auf rechts unten."
+          label={t('settings.mini.position')}
+          hint={t('settings.mini.positionHint')}
         >
           <button
             type="button"
@@ -352,18 +351,18 @@ export default function SettingsView(): React.JSX.Element {
               await window.api.settings.set('mini_x', '-1')
               await window.api.settings.set('mini_y', '-1')
               setSettings((prev) => (prev ? { ...prev, mini_x: '-1', mini_y: '-1' } : prev))
-              setStatusMsg('Mini-Widget-Position zurückgesetzt.')
+              setStatusMsg(t('settings.mini.positionResetDone'))
             }}
             className={btnSecondaryClass}
           >
-            Position zurücksetzen
+            {t('settings.mini.positionReset')}
           </button>
         </Row>
       </Section>
 
       {/* Daten */}
-      <Section title="Daten">
-        <Row label="Datenbank">
+      <Section title={t('settings.section.data')}>
+        <Row label={t('settings.data.database')}>
           <div className="flex items-center gap-2">
             <code className="flex-1 truncate rounded bg-slate-800 px-3 py-1.5 text-xs text-slate-300">
               {paths.db}
@@ -373,11 +372,11 @@ export default function SettingsView(): React.JSX.Element {
               onClick={() => window.api.shell.showItemInFolder(paths.db)}
               className={btnSecondaryClass}
             >
-              Im Explorer öffnen
+              {t('settings.data.openInExplorer')}
             </button>
           </div>
         </Row>
-        <Row label="Backups-Ordner">
+        <Row label={t('settings.data.backupsFolder')}>
           <div className="flex items-center gap-2">
             <code className="flex-1 truncate rounded bg-slate-800 px-3 py-1.5 text-xs text-slate-300">
               {paths.backups}
@@ -387,38 +386,38 @@ export default function SettingsView(): React.JSX.Element {
               onClick={() => window.api.shell.openPath(paths.backups)}
               className={btnSecondaryClass}
             >
-              Öffnen
+              {t('settings.data.open')}
             </button>
           </div>
         </Row>
-        <Row label="Letztes Backup">
+        <Row label={t('settings.data.lastBackup')}>
           <div className="flex items-center justify-between gap-2">
             <span className="text-sm text-slate-300">
               {latestBackup
                 ? `${new Date(latestBackup.createdAt).toLocaleString('de-DE')} (${latestBackup.reason})`
-                : 'Noch keins vorhanden'}
+                : t('settings.data.noBackup')}
             </span>
             <button type="button" onClick={createBackupNow} className={btnSecondaryClass}>
-              Backup jetzt erstellen
+            {t('settings.data.createBackup')}
             </button>
           </div>
           {backups.length > 0 && (
             <p className="mt-1 text-xs text-slate-500">
-              Insgesamt {backups.length} Backup{backups.length === 1 ? '' : 's'} gespeichert.
+              {backups.length === 1 ? t('settings.data.backupCount') : t('settings.data.backupCountPlural', { count: String(backups.length) })}
             </p>
           )}
         </Row>
-        <Row label="JSON-Vollexport">
+        <Row label={t('settings.data.jsonExport')}>
           <div className="flex items-center justify-between gap-2">
             <span className="text-sm text-slate-300">
-              Alle Kunden, Einträge und Einstellungen als JSON-Datei.
+              {t('settings.data.jsonExportDesc')}
             </span>
             <button type="button" onClick={exportJson} className={btnSecondaryClass}>
-              Export speichern …
+              {t('settings.data.jsonExportBtn')}
             </button>
           </div>
           <p className="mt-1 text-xs text-slate-500">
-            Lesbares Format zum Backup oder zur Weiterverarbeitung. CSV/PDF folgen.
+            {t('settings.data.jsonExportHint')}
           </p>
         </Row>
       </Section>
@@ -458,27 +457,27 @@ export default function SettingsView(): React.JSX.Element {
       <UpdatesSection />
 
       {/* PDF-Vorlage (v1.3 PR C, issues #16 + #19) */}
-      <Section title="PDF-Vorlage">
-        <Row label="Logo" hint="PNG, JPG, SVG oder WebP, max. 1 MB.">
+      <Section title={t('settings.section.pdf')}>
+        <Row label={t('settings.pdf.logo')} hint={t('settings.pdf.logoHint')}>
           <div className="flex items-center gap-3">
             {settings.pdf_logo_path ? (
               <code className="flex-1 truncate rounded bg-slate-800 px-3 py-1.5 text-xs text-slate-300">
                 {settings.pdf_logo_path}
               </code>
             ) : (
-              <span className="flex-1 text-sm text-slate-500">Kein Logo gesetzt.</span>
+              <span className="flex-1 text-sm text-slate-500">{t('settings.pdf.noLogo')}</span>
             )}
             <button type="button" onClick={pickLogo} className={btnSecondaryClass}>
-              Logo wählen …
+              {t('settings.pdf.chooseLogo')}
             </button>
             {settings.pdf_logo_path && (
               <button type="button" onClick={clearLogo} className={btnSecondaryClass}>
-                Entfernen
+                {t('settings.pdf.removeLogo')}
               </button>
             )}
           </div>
         </Row>
-        <Row label="Absenderadresse" hint="Erscheint rechts oben im PDF.">
+        <Row label={t('settings.pdf.sender')} hint={t('settings.pdf.senderHint')}>
           <textarea
             rows={4}
             value={settings.pdf_sender_address}
@@ -487,7 +486,7 @@ export default function SettingsView(): React.JSX.Element {
             className={`${inputClass} resize-y font-sans`}
           />
         </Row>
-        <Row label="Steuernummer">
+        <Row label={t('settings.pdf.taxId')}>
           <input
             type="text"
             value={settings.pdf_tax_id}
@@ -496,7 +495,7 @@ export default function SettingsView(): React.JSX.Element {
             className={inputClass}
           />
         </Row>
-        <Row label="Akzentfarbe" hint="Tabellenkopf, Linien, Hervorhebungen.">
+        <Row label={t('settings.pdf.accentColor')} hint={t('settings.pdf.accentColorHint')}>
           <div className="flex items-center gap-3">
             <input
               type="color"
@@ -507,14 +506,14 @@ export default function SettingsView(): React.JSX.Element {
               }
               onChange={(e) => update('pdf_accent_color', e.target.value)}
               className="h-10 w-16 cursor-pointer rounded border border-slate-700 bg-slate-800"
-              aria-label="Akzentfarbe wählen"
+              aria-label={t('settings.pdf.accentColorAria')}
             />
             <code className="rounded bg-slate-800 px-3 py-1.5 text-xs text-slate-300">
               {settings.pdf_accent_color || '#4f46e5'}
             </code>
           </div>
         </Row>
-        <Row label="Footer-Text" hint="Z. B. Bankverbindung oder Zahlungshinweis.">
+        <Row label={t('settings.pdf.footer')} hint={t('settings.pdf.footerHint')}>
           <textarea
             rows={3}
             value={settings.pdf_footer_text}
@@ -523,13 +522,13 @@ export default function SettingsView(): React.JSX.Element {
             className={`${inputClass} resize-y font-sans`}
           />
         </Row>
-        <Row label="Stunden runden auf" hint="Auf Wunsch werden alle Einträge im PDF gerundet.">
+        <Row label={t('settings.pdf.roundMinutes')} hint={t('settings.pdf.roundMinutesHint')}>
           <select
             value={settings.pdf_round_minutes || '0'}
             onChange={(e) => update('pdf_round_minutes', e.target.value)}
             className={inputClass}
           >
-            <option value="0">Keine Rundung</option>
+            <option value="0">{t('settings.pdf.roundNone')}</option>
             <option value="5">5 Minuten</option>
             <option value="10">10 Minuten</option>
             <option value="15">15 Minuten</option>
@@ -539,8 +538,8 @@ export default function SettingsView(): React.JSX.Element {
       </Section>
 
       {/* Über */}
-      <Section title="Über">
-        <Row label="Version">
+      <Section title={t('settings.section.about')}>
+        <Row label={t('settings.about.version')}>
           <span className="text-sm text-slate-300">{version || '—'}</span>
         </Row>
         <Row label={t('about.open')}>
@@ -623,7 +622,7 @@ function UpdatesSection(): React.JSX.Element {
   let statusLabel = ''
   switch (status.status) {
     case 'idle':
-      statusLabel = 'Bereit'
+      statusLabel = t('settings.update.idle')
       break
     case 'checking':
       statusLabel = t('settings.update.checking')
@@ -641,7 +640,7 @@ function UpdatesSection(): React.JSX.Element {
       statusLabel = t('update.ready.text', { version: status.version ?? '' })
       break
     case 'not-available':
-      statusLabel = 'Du verwendest die aktuelle Version.'
+      statusLabel = t('settings.update.upToDate')
       break
     case 'error':
       statusLabel = t('update.error.text', { message: status.message ?? '' })
@@ -664,7 +663,7 @@ function UpdatesSection(): React.JSX.Element {
           {statusLabel}
         </p>
       </Row>
-      <Row label="Aktionen">
+      <Row label={t('settings.update.actions')}>
         <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
@@ -685,8 +684,7 @@ function UpdatesSection(): React.JSX.Element {
           )}
         </div>
         <p className="mt-1 text-xs text-slate-500">
-          Updates werden bei App-Start automatisch geprüft und im Hintergrund geladen. Du
-          entscheidest, wann installiert wird.
+          {t('settings.update.autoInfo')}
         </p>
       </Row>
     </Section>

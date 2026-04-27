@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useT } from '../contexts/I18nContext'
+import type { TranslationKey } from '../../../shared/locales/de'
 import {
   addMonths,
   endOfMonth,
@@ -11,7 +13,7 @@ import {
 } from 'date-fns'
 import type { Entry } from '../../../shared/types'
 import type { Client } from '../../../shared/types'
-import { getQuickRange, QUICK_RANGE_LABELS, type QuickRangeKind } from '../../../shared/dateRanges'
+import { getQuickRange, type QuickRangeKind } from '../../../shared/dateRanges'
 import { useEntriesStore } from '../store/entriesStore'
 import { useTimer } from '../hooks/useTimer'
 import { CalendarDrawer } from '../components/CalendarDrawer'
@@ -29,8 +31,11 @@ import { PdfMergeModal } from '../components/PdfMergeModal'
  * and on `entriesStore.version` bump.
  */
 export default function CalendarView(): React.JSX.Element {
+  const t = useT()
   const { clients } = useTimer()
   const version = useEntriesStore((s) => s.version)
+
+  const months = MONTHS_KEYS.map((k) => t(k as import('../../../shared/locales/de').TranslationKey))
 
   const [cursor, setCursor] = useState(() => startOfMonth(new Date()))
   const [entries, setEntries] = useState<Entry[]>([])
@@ -132,18 +137,18 @@ export default function CalendarView(): React.JSX.Element {
           type="button"
           onClick={onPrev}
           className="grid h-9 w-9 place-items-center rounded-lg border border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-400"
-          aria-label="Vorheriger Monat"
+          aria-label={t('calendar.nav.prev')}
         >
           ‹
         </button>
         <h2 className="min-w-[200px] text-center text-lg font-semibold text-slate-100">
-          {formatMonthHeader(cursor)}
+          {formatMonthHeader(cursor, months)}
         </h2>
         <button
           type="button"
           onClick={onNext}
           className="grid h-9 w-9 place-items-center rounded-lg border border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-400"
-          aria-label="Nächster Monat"
+          aria-label={t('calendar.nav.next')}
         >
           ›
         </button>
@@ -152,12 +157,12 @@ export default function CalendarView(): React.JSX.Element {
           onClick={onToday}
           className="ml-2 rounded-lg border border-slate-700 bg-slate-800 px-3 py-1.5 text-sm font-medium text-slate-200 hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-400"
         >
-          Heute
+          {t('calendar.nav.today')}
         </button>
-        {status === 'loading' && <span className="ml-auto text-xs text-slate-500">Lade…</span>}
+        {status === 'loading' && <span className="ml-auto text-xs text-slate-500">{t('calendar.status.loading')}</span>}
         {status === 'error' && (
           <span className="ml-auto text-xs text-red-400" title={errorMsg ?? ''}>
-            Fehler beim Laden
+            {t('calendar.status.error')}
           </span>
         )}
       </div>
@@ -169,11 +174,11 @@ export default function CalendarView(): React.JSX.Element {
           type="button"
           onClick={() => onQuickRange('lastMonth')}
           className="rounded-full bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-300"
-          title="Letzten Monat als PDF exportieren"
+          title={t('calendar.export.lastMonthTitle')}
         >
-          📄 Letzter Monat als PDF
+          {t('calendar.export.lastMonth')}
         </button>
-        <span className="ml-1 text-xs uppercase tracking-wide text-slate-500">oder Zeitraum:</span>
+        <span className="ml-1 text-xs uppercase tracking-wide text-slate-500">{t('calendar.export.rangeLabel')}</span>
         {(['thisWeek', 'lastWeek', 'thisMonth'] as const).map((k) => (
           <button
             key={k}
@@ -181,30 +186,30 @@ export default function CalendarView(): React.JSX.Element {
             onClick={() => onQuickRange(k)}
             className="rounded-full border border-slate-700 bg-slate-800 px-3 py-1.5 text-xs font-medium text-slate-300 hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-400"
           >
-            {QUICK_RANGE_LABELS[k]}
+            {t(('calendar.range.' + k) as TranslationKey)}
           </button>
         ))}
         <button
           type="button"
           onClick={() => setMergeOpen(true)}
           className="ml-auto rounded-full border border-slate-700 bg-slate-800 px-3 py-1.5 text-xs font-medium text-slate-300 hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-400"
-          title="Vorhandene PDFs zusammenführen"
+          title={t('calendar.export.mergeTitle')}
         >
-          PDFs zusammenführen
+          {t('calendar.export.merge')}
         </button>
       </div>
 
       {/* Header row: KW + Mo–So */}
       <div className="grid grid-cols-[40px_repeat(7,minmax(0,1fr))] gap-px rounded-t-lg bg-slate-700">
         <div className="bg-slate-800 px-2 py-1 text-center text-xs font-medium text-slate-500">
-          KW
+          {t('calendar.header.week')}
         </div>
-        {['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'].map((d) => (
+        {(['calendar.days.mon', 'calendar.days.tue', 'calendar.days.wed', 'calendar.days.thu', 'calendar.days.fri', 'calendar.days.sat', 'calendar.days.sun'] as TranslationKey[]).map((k) => (
           <div
-            key={d}
+            key={k}
             className="bg-slate-800 px-2 py-1 text-center text-xs font-medium text-slate-400"
           >
-            {d}
+            {t(k)}
           </div>
         ))}
       </div>
@@ -213,7 +218,7 @@ export default function CalendarView(): React.JSX.Element {
       <div
         ref={gridRef}
         role="grid"
-        aria-label="Kalender"
+        aria-label={t('calendar.grid.aria')}
         onKeyDown={handleKey}
         className="grid grid-cols-[40px_repeat(7,minmax(0,1fr))] gap-px rounded-b-lg bg-slate-700"
       >
@@ -225,6 +230,7 @@ export default function CalendarView(): React.JSX.Element {
             byDay={byDay}
             clients={clients}
             focusDay={focusDay}
+            months={months}
             onSelect={(d) => {
               setFocusDay(d)
               setSelectedDay(d)
@@ -265,6 +271,7 @@ function Week({
   byDay,
   clients,
   focusDay,
+  months,
   onSelect
 }: {
   week: WeekData
@@ -272,6 +279,7 @@ function Week({
   byDay: Map<string, Entry[]>
   clients: Client[]
   focusDay: Date
+  months: readonly string[]
   onSelect: (d: Date) => void
 }): React.JSX.Element {
   return (
@@ -293,7 +301,7 @@ function Week({
             data-day={key}
             tabIndex={isFocus ? 0 : -1}
             role="gridcell"
-            aria-label={`${formatAriaDate(day)}${dayEntries.length ? `, ${dayEntries.length} Einträge` : ''}`}
+            aria-label={`${formatAriaDate(day, months)}${dayEntries.length ? `, ${dayEntries.length}` : ''}`}
             onClick={() => onSelect(day)}
             className={[
               'relative flex h-24 flex-col gap-0.5 px-2 py-1 text-left transition-colors',
@@ -411,25 +419,25 @@ function formatHHMM(seconds: number): string {
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
 }
 
-const MONTHS_DE = [
-  'Januar',
-  'Februar',
-  'März',
-  'April',
-  'Mai',
-  'Juni',
-  'Juli',
-  'August',
-  'September',
-  'Oktober',
-  'November',
-  'Dezember'
-]
+const MONTHS_KEYS = [
+  'calendar.months.jan',
+  'calendar.months.feb',
+  'calendar.months.mar',
+  'calendar.months.apr',
+  'calendar.months.may',
+  'calendar.months.jun',
+  'calendar.months.jul',
+  'calendar.months.aug',
+  'calendar.months.sep',
+  'calendar.months.oct',
+  'calendar.months.nov',
+  'calendar.months.dec',
+] as const
 
-function formatMonthHeader(d: Date): string {
-  return `${MONTHS_DE[d.getMonth()]} ${d.getFullYear()}`
+function formatMonthHeader(d: Date, months: readonly string[]): string {
+  return `${months[d.getMonth()]} ${d.getFullYear()}`
 }
 
-function formatAriaDate(d: Date): string {
-  return `${d.getDate()}. ${MONTHS_DE[d.getMonth()]} ${d.getFullYear()}`
+function formatAriaDate(d: Date, months: readonly string[]): string {
+  return `${d.getDate()}. ${months[d.getMonth()]} ${d.getFullYear()}`
 }
