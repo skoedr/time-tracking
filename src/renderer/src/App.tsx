@@ -36,17 +36,33 @@ function App(): React.JSX.Element {
   }
 
   return (
-    <div className="h-screen bg-slate-900 text-slate-100 flex flex-col overflow-hidden">
+    <div
+      className="h-screen flex flex-col overflow-hidden"
+      style={{ background: 'var(--page-bg)', color: 'var(--text)' }}
+    >
+      {/* Ambient glow blobs */}
+      <div className="pointer-events-none fixed inset-0 overflow-hidden" aria-hidden>
+        <div className="absolute -top-32 -left-32 h-96 w-96 rounded-full opacity-20 blur-3xl" style={{ background: 'var(--accent)' }} />
+        <div className="absolute -bottom-32 -right-32 h-96 w-96 rounded-full opacity-15 blur-3xl" style={{ background: 'var(--green)' }} />
+      </div>
+
       <UpdateBanner />
       {/* Nav */}
-      <nav className="flex gap-1 px-3 py-2 bg-slate-800 border-b border-slate-700 shrink-0">
+      <nav
+        className="relative z-10 flex gap-1 px-3 py-2 shrink-0 border-b backdrop-blur-xl"
+        style={{
+          background: 'var(--nav-bg)',
+          borderColor: 'var(--card-border)'
+        }}
+      >
         {(['today', 'timer', 'calendar', 'clients', 'settings'] as View[]).map((v) => (
           <button
             key={v}
             onClick={() => setView(v)}
             className={`px-4 py-1.5 rounded text-sm font-medium transition-colors
               focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500
-              ${view === v ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-700'}`}
+              ${view === v ? 'bg-indigo-600 text-white' : 'hover:bg-white/10'}`}
+            style={view !== v ? { color: 'var(--text2)' } : undefined}
           >
             {t(('nav.' + v) as `nav.${View}`)}
           </button>
@@ -54,7 +70,7 @@ function App(): React.JSX.Element {
       </nav>
 
       {/* Content */}
-      <main className="flex-1 overflow-y-auto p-6">
+      <main className="relative z-10 flex-1 overflow-y-auto p-6">
         {view === 'today' && <TodayView />}
         {view === 'timer' && <TimerView />}
         {view === 'calendar' && <CalendarView />}

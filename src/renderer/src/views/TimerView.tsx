@@ -50,9 +50,10 @@ export default function TimerView() {
           value={selectedClientId ?? ''}
           onChange={(e) => setSelectedClientId(e.target.value ? Number(e.target.value) : null)}
           disabled={isRunning}
-          className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-slate-100
+          className="rounded-lg px-3 py-2.5 border backdrop-blur-xl
             focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent
             disabled:opacity-50 disabled:cursor-not-allowed"
+          style={{ background: 'var(--input-bg)', borderColor: 'var(--card-border)', color: 'var(--text)' }}
         >
           <option value="">{t('timer.client.placeholder')}</option>
           {activeClients.map((c) => (
@@ -81,9 +82,10 @@ export default function TimerView() {
           onChange={(e) => setDescription(e.target.value)}
           disabled={isRunning}
           onKeyDown={(e) => e.key === 'Enter' && canStart && start()}
-          className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-slate-100
-            placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500
+          className="rounded-lg px-3 py-2.5 border backdrop-blur-xl
+            focus:outline-none focus:ring-2 focus:ring-indigo-500
             focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+          style={{ background: 'var(--input-bg)', borderColor: 'var(--card-border)', color: 'var(--text)' }}
         />
       </div>
 
@@ -92,9 +94,9 @@ export default function TimerView() {
         <button
           onClick={start}
           disabled={!canStart || isLoading}
-          className="bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-700 disabled:text-slate-500
-            text-white font-semibold py-3 rounded-xl transition-colors text-lg
-            disabled:cursor-not-allowed"
+          className="text-white font-semibold py-3 rounded-xl transition-colors text-lg
+            disabled:cursor-not-allowed disabled:opacity-40"
+          style={{ background: canStart && !isLoading ? 'var(--accent)' : 'var(--card-bg)', color: canStart && !isLoading ? 'white' : 'var(--text3)' }}
         >
           {isLoading ? '...' : '▶ Start'}
         </button>
@@ -102,8 +104,8 @@ export default function TimerView() {
         <button
           onClick={stop}
           disabled={isLoading}
-          className="bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white font-semibold
-            py-3 rounded-xl transition-colors text-lg"
+          className="font-semibold py-3 rounded-xl transition-colors text-lg disabled:opacity-50"
+          style={{ background: 'var(--danger)', color: 'white' }}
         >
           {isLoading ? '...' : '■ Stop'}
         </button>

@@ -118,14 +118,18 @@ export function CalendarDrawer({
         role="dialog"
         aria-modal="true"
         aria-label={t('drawer.aria', { date: dateLabel })}
-        className="fixed right-0 top-0 z-40 flex h-screen w-96 flex-col bg-slate-900 shadow-2xl ring-1 ring-slate-700"
+        className="fixed right-0 top-0 z-40 flex h-screen w-96 flex-col shadow-2xl border-l backdrop-blur-xl"
+        style={{ background: 'var(--nav-bg)', borderColor: 'var(--card-border)' }}
       >
         {/* Sticky header */}
-        <div className="flex shrink-0 items-center justify-between border-b border-slate-700 bg-slate-800 px-4 py-3">
+        <div
+          className="flex shrink-0 items-center justify-between border-b px-4 py-3"
+          style={{ background: 'var(--nav-bg)', borderColor: 'var(--card-border)' }}
+        >
           <div>
-            <h2 className="text-base font-semibold text-slate-100">{t('drawer.header.title', { date: dateLabel })}</h2>
+            <h2 className="text-base font-semibold" style={{ color: 'var(--text)' }}>{t('drawer.header.title', { date: dateLabel })}</h2>
             {entries.length > 0 && (
-              <p className="mt-0.5 text-xs text-slate-400">
+              <p className="mt-0.5 text-xs" style={{ color: 'var(--text2)' }}>
                 {filteredEntries.length !== entries.length
                   ? t('drawer.entries.filtered', { count: String(filteredEntries.length), total: String(entries.length) })
                   : entries.length === 1 ? t('drawer.entries.one') : t('drawer.entries.other', { count: String(entries.length) })}{' '}
@@ -142,8 +146,9 @@ export function CalendarDrawer({
                     className={`rounded-full border px-2 py-0.5 text-xs font-medium transition-colors focus:outline-none focus:ring-1 focus:ring-indigo-400 ${
                       tagFilter === tag
                         ? 'border-indigo-500 bg-indigo-600 text-white'
-                        : 'border-slate-600 bg-slate-800 text-slate-300 hover:border-slateigo-500 hover:bg-slate-700'
+                        : 'hover:border-indigo-400'
                     }`}
+                    style={tagFilter !== tag ? { borderColor: 'var(--card-border)', background: 'var(--card-bg)', color: 'var(--text2)' } : {}}
                     aria-pressed={tagFilter === tag}
                     title={tagFilter === tag ? t('drawer.filter.remove') : t('drawer.filter.apply', { tag })}
                   >
@@ -157,7 +162,8 @@ export function CalendarDrawer({
             type="button"
             onClick={onClose}
             aria-label={t('common.close')}
-            className="grid h-11 w-11 place-items-center rounded-lg text-slate-400 hover:bg-slate-700 hover:text-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-500"
+            className="grid h-11 w-11 place-items-center rounded-lg hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+            style={{ color: 'var(--text2)' }}
           >
             ×
           </button>
@@ -166,7 +172,7 @@ export function CalendarDrawer({
         {/* Scroll body */}
         <div className="flex-1 overflow-y-auto p-3">
           {filteredEntries.length === 0 && !creating && (
-            <div className="mt-8 text-center text-sm text-slate-500">
+            <div className="mt-8 text-center text-sm" style={{ color: 'var(--text3)' }}>
               {tagFilter ? (
                 <p>{t('drawer.empty.noEntriesWithTag', { tag: tagFilter })}</p>
               ) : (
@@ -180,7 +186,11 @@ export function CalendarDrawer({
               const isEditing = editingId === e.id
               const entryTags = deserializeTags(e.tags)
               return (
-                <li key={e.id} className="rounded-lg border border-slate-700 bg-slate-800/60">
+                <li
+                  key={e.id}
+                  className="rounded-lg border backdrop-blur-xl"
+                  style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)' }}
+                >
                   {!isEditing && (
                     <div className="flex items-center gap-2 p-2">
                       <span
@@ -188,16 +198,17 @@ export function CalendarDrawer({
                         style={{ backgroundColor: client?.color ?? '#64748b' }}
                       />
                       <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2 text-xs text-slate-400">
+                        <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--text2)' }}>
                           <span className="font-mono tabular-nums">{formatTimeRange(e)}</span>
                           <span>·</span>
-                          <span className="truncate text-slate-200">
+                          <span className="truncate" style={{ color: 'var(--text)' }}>
                             {client?.name ?? t('common.unknown')}
                           </span>
                         </div>
                         {e.description && (
                           <p
-                            className="mt-0.5 truncate text-xs text-slate-400"
+                            className="mt-0.5 truncate text-xs"
+                            style={{ color: 'var(--text2)' }}
                             title={e.description}
                           >
                             {e.description}
@@ -208,7 +219,8 @@ export function CalendarDrawer({
                             {entryTags.map((tag) => (
                               <span
                                 key={tag}
-                                className="rounded-full bg-slate-700 px-1.5 py-px text-xs text-slate-400"
+                                className="rounded-full px-1.5 py-px text-xs"
+                                style={{ background: 'var(--accent-bg)', color: 'var(--text2)' }}
                               >
                                 #{tag}
                               </span>
@@ -216,13 +228,14 @@ export function CalendarDrawer({
                           </div>
                         )}
                       </div>
-                      <span className="font-mono text-xs tabular-nums text-slate-300">
+                      <span className="font-mono text-xs tabular-nums" style={{ color: 'var(--text)' }}>
                         {formatHHMM(durationSeconds(e))}
                       </span>
                       <button
                         type="button"
                         onClick={() => setEditingId(e.id)}
-                        className="rounded p-1 text-slate-400 hover:bg-slate-700 hover:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                        className="rounded p-1 hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                        style={{ color: 'var(--text2)' }}
                         aria-label={t('common.edit')}
                         title={t('common.edit')}
                       >
@@ -232,7 +245,8 @@ export function CalendarDrawer({
                         type="button"
                         onClick={() => setDeleteCandidate(e)}
                         disabled={e.stopped_at === null}
-                        className="rounded p-1 text-slate-400 hover:bg-slate-700 hover:text-red-300 focus:outline-none focus:ring-2 focus:ring-red-400 disabled:cursor-not-allowed disabled:opacity-30"
+                        className="rounded p-1 hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-red-400 disabled:cursor-not-allowed disabled:opacity-30"
+                        style={{ color: 'var(--danger)' }}
                         aria-label={t('common.delete')}
                         title={e.stopped_at === null ? t('common.stopRunningFirst') : t('common.delete')}
                       >
@@ -241,7 +255,7 @@ export function CalendarDrawer({
                     </div>
                   )}
                   {isEditing && (
-                    <div className="border-t border-slate-700 p-3">
+                    <div className="border-t p-3" style={{ borderColor: 'var(--card-border)' }}>
                       <EntryEditForm
                         entry={e}
                         clients={clients}
@@ -257,7 +271,10 @@ export function CalendarDrawer({
               )
             })}
             {creating && (
-              <li className="rounded-lg border border-indigo-500/60 bg-slate-800/60 p-3">
+              <li
+                className="rounded-lg border p-3 backdrop-blur-xl"
+                style={{ background: 'var(--card-bg)', borderColor: 'var(--accent)' }}
+              >
                 <EntryEditForm
                   clients={clients}
                   defaultDate={defaultStartForDay(dateISO)}
@@ -274,12 +291,16 @@ export function CalendarDrawer({
 
         {/* Sticky footer */}
         {!creating && (
-          <div className="shrink-0 border-t border-slate-700 bg-slate-800 p-3">
+          <div
+            className="shrink-0 border-t p-3"
+            style={{ background: 'var(--nav-bg)', borderColor: 'var(--card-border)' }}
+          >
             <button
               type="button"
               onClick={() => setCreating(true)}
               disabled={clients.length === 0}
-              className="w-full rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-400 disabled:cursor-not-allowed disabled:opacity-50"
+              className="w-full rounded-lg px-4 py-2 text-sm font-medium text-white hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-indigo-400 disabled:cursor-not-allowed disabled:opacity-50"
+              style={{ background: 'var(--accent)' }}
             >
               {t('drawer.footer.addEntry', { date: dateLabel })}
             </button>

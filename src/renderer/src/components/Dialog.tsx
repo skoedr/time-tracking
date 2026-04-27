@@ -72,16 +72,18 @@ export function Dialog({
     >
       <div
         ref={containerRef}
-        className={`${widthClass} rounded-xl bg-zinc-900 p-6 shadow-2xl ring-1 ring-zinc-700`}
+        className={`${widthClass} rounded-xl border p-6 shadow-2xl backdrop-blur-xl`}
+        style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)' }}
       >
         <div className="mb-4 flex items-center justify-between">
-          <h2 id="dialog-title" className="text-lg font-semibold text-zinc-100">
+          <h2 id="dialog-title" className="text-lg font-semibold" style={{ color: 'var(--text)' }}>
             {title}
           </h2>
           <button
             type="button"
             onClick={onClose}
-            className="-mr-2 grid h-11 w-11 place-items-center rounded-lg text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-zinc-500"
+            className="-mr-2 grid h-11 w-11 place-items-center rounded-lg hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+            style={{ color: 'var(--text2)' }}
             aria-label={t('common.close')}
           >
             ×

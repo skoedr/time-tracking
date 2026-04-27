@@ -211,31 +211,35 @@ function ClientItem({
   return (
     <li
       key={c.id}
-      className="flex items-center gap-3 bg-slate-800 border border-slate-700 rounded-xl px-4 py-3"
+      className="flex items-center gap-3 rounded-xl border px-4 py-3 backdrop-blur-xl transition-colors"
+      style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)' }}
     >
       <span
         className={`w-4 h-4 rounded-full shrink-0 ${dimmed ? 'opacity-40' : ''}`}
         style={{ backgroundColor: c.color }}
       />
-      <span className={`flex-1 text-slate-100 font-medium ${dimmed ? 'opacity-50' : ''}`}>
+      <span className={`flex-1 font-medium ${dimmed ? 'opacity-50' : ''}`} style={{ color: 'var(--text)' }}>
         {c.name}
       </span>
       <button
         onClick={() => onToggleActive(c)}
         title={c.active ? t('clients.action.archive') : t('clients.action.reactivate')}
-        className="text-slate-500 hover:text-slate-300 text-sm transition-colors px-1"
+        className="text-sm transition-colors px-1 hover:opacity-80"
+        style={{ color: 'var(--text3)' }}
       >
         {c.active ? '📦' : '♻️'}
       </button>
       <button
         onClick={() => onEdit(c)}
-        className="text-slate-500 hover:text-slate-300 text-sm transition-colors px-1"
+        className="text-sm transition-colors px-1 hover:opacity-80"
+        style={{ color: 'var(--text3)' }}
       >
         ✏️
       </button>
       <button
         onClick={() => onDelete(c)}
-        className="text-slate-500 hover:text-red-400 text-sm transition-colors px-1"
+        className="text-sm transition-colors px-1 hover:opacity-80"
+        style={{ color: 'var(--danger)' }}
       >
         🗑️
       </button>
@@ -283,18 +287,21 @@ function ClientFormModal({
 
   return (
     <div
-      className="fixed inset-0 bg-black/60 flex items-center justify-center z-50"
+      className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 backdrop-blur-sm"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="bg-slate-800 border border-slate-700 rounded-2xl p-6 w-full max-w-sm mx-4 shadow-2xl">
-        <h2 className="text-lg font-semibold text-slate-100 mb-5">
+      <div
+        className="rounded-2xl p-6 w-full max-w-sm mx-4 shadow-2xl border backdrop-blur-xl"
+        style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)' }}
+      >
+        <h2 className="text-lg font-semibold mb-5" style={{ color: 'var(--text)' }}>
           {client ? t('clients.form.editTitle') : t('clients.form.createTitle')}
         </h2>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           {/* Name */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-slate-400 text-xs font-medium uppercase tracking-wide">
+            <label className="text-xs font-medium uppercase tracking-wide" style={{ color: 'var(--text2)' }}>
               {t('clients.form.nameLabel')}
             </label>
             <input
@@ -306,16 +313,16 @@ function ClientFormModal({
                 setError('')
               }}
               placeholder={t('clients.form.namePlaceholder')}
-              className="bg-slate-900 border border-slate-600 rounded-lg px-3 py-2.5
-                text-slate-100 placeholder:text-slate-600 focus:outline-none
+              className="rounded-lg px-3 py-2.5 border backdrop-blur-xl focus:outline-none
                 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              style={{ background: 'var(--input-bg)', borderColor: 'var(--card-border)', color: 'var(--text)' }}
             />
-            {error && <p className="text-red-400 text-xs">{error}</p>}
+            {error && <p className="text-xs" style={{ color: 'var(--danger)' }}>{error}</p>}
           </div>
 
           {/* Color */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-slate-400 text-xs font-medium uppercase tracking-wide">
+            <label className="text-xs font-medium uppercase tracking-wide" style={{ color: 'var(--text2)' }}>
               {t('clients.form.colorLabel')}
             </label>
             <div className="flex gap-2 flex-wrap">
@@ -328,7 +335,7 @@ function ClientFormModal({
                   onClick={() => setColor(c)}
                   className={`w-8 h-8 rounded-full transition-transform ${
                     color === c
-                      ? 'scale-125 ring-2 ring-white ring-offset-2 ring-offset-slate-800'
+                      ? 'scale-125 ring-2 ring-white ring-offset-2'
                       : 'hover:scale-110'
                   }`}
                   style={{ backgroundColor: c }}
@@ -341,7 +348,8 @@ function ClientFormModal({
           <div className="flex flex-col gap-1.5">
             <label
               htmlFor="client-rate"
-              className="text-slate-400 text-xs font-medium uppercase tracking-wide"
+              className="text-xs font-medium uppercase tracking-wide"
+              style={{ color: 'var(--text2)' }}
             >
               {t('clients.form.rateLabel')}
             </label>
@@ -356,17 +364,17 @@ function ClientFormModal({
                   setRateError('')
                 }}
                 placeholder={t('clients.form.ratePlaceholder')}
-                className="bg-slate-900 border border-slate-600 rounded-lg pl-3 pr-10 py-2.5 w-full
-                  text-slate-100 placeholder:text-slate-600 focus:outline-none
+                className="rounded-lg pl-3 pr-10 py-2.5 w-full border backdrop-blur-xl focus:outline-none
                   focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                style={{ background: 'var(--input-bg)', borderColor: 'var(--card-border)', color: 'var(--text)' }}
               />
-              <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm text-slate-500">
+              <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm" style={{ color: 'var(--text3)' }}>
                 €
               </span>
             </div>
-            {rateError && <p className="text-red-400 text-xs">{rateError}</p>}
+            {rateError && <p className="text-xs" style={{ color: 'var(--danger)' }}>{rateError}</p>}
             {!rateError && (
-              <p className="text-slate-500 text-xs">{t('clients.form.rateHint')}</p>
+              <p className="text-xs" style={{ color: 'var(--text3)' }}>{t('clients.form.rateHint')}</p>
             )}
           </div>
 
@@ -375,8 +383,8 @@ function ClientFormModal({
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 bg-slate-700 hover:bg-slate-600 text-slate-200
-                font-medium py-2.5 rounded-lg transition-colors"
+              className="flex-1 font-medium py-2.5 rounded-lg transition-colors hover:opacity-90"
+              style={{ background: 'var(--card-border)', color: 'var(--text)' }}
             >
               {t('common.cancel')}
             </button>

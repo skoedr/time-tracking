@@ -170,7 +170,7 @@ export default function SettingsView(): React.JSX.Element {
   }
 
   if (!settings || !paths) {
-    return <div className="text-slate-400">{t('settings.loading')}</div>
+    return <div style={{ color: 'var(--text2)' }}>{t('settings.loading')}</div>
   }
 
   const latestBackup = backups[0] ?? null
@@ -197,8 +197,8 @@ export default function SettingsView(): React.JSX.Element {
             className={`w-full rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
               tab === item.id
                 ? 'bg-indigo-600 text-white'
-                : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'
-            }`}
+                : 'hover:bg-white/10 hover:text-[var(--text)]'
+            } text-[var(--text2)]`}
           >
             {item.label}
           </button>
@@ -208,14 +208,17 @@ export default function SettingsView(): React.JSX.Element {
       {/* Content */}
       <div className="flex-1 min-w-0 flex flex-col gap-8">
         {statusMsg && (
-          <div className="rounded-md bg-slate-800 px-3 py-2 text-sm text-slate-300">{statusMsg}</div>
+          <div
+            className="rounded-md px-3 py-2 text-sm"
+            style={{ background: 'var(--card-bg)', color: 'var(--text)' }}
+          >{statusMsg}</div>
         )}
 
         {/* Allgemein */}
         {tab === 'general' && (
           <Section title={t('settings.section.general')}>
             <Row label={t('settings.theme.title')}>
-              <div className="inline-flex rounded-lg border border-slate-700 overflow-hidden">
+              <div className="inline-flex rounded-lg border overflow-hidden" style={{ borderColor: 'var(--card-border)' }}>
                 {(['light', 'dark', 'system'] as ThemeMode[]).map((m) => (
                   <button
                     key={m}
@@ -224,8 +227,9 @@ export default function SettingsView(): React.JSX.Element {
                     className={`px-4 py-1.5 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${
                       themeMode === m
                         ? 'bg-indigo-600 text-white'
-                        : 'text-slate-400 hover:text-slate-200 hover:bg-slate-700'
+                        : 'hover:bg-white/10'
                     }`}
+                    style={themeMode !== m ? { color: 'var(--text2)' } : {}}
                   >
                     {t(`settings.theme.${m}` as `settings.theme.${'light' | 'dark' | 'system'}`)}
                   </button>
@@ -261,9 +265,9 @@ export default function SettingsView(): React.JSX.Element {
                   type="checkbox"
                   checked={settings.auto_start === '1'}
                   onChange={(e) => update('auto_start', e.target.checked ? '1' : '0')}
-                  className="h-4 w-4 rounded border-slate-600 bg-slate-800"
+                  className="h-4 w-4 rounded accent-indigo-500"
                 />
-                <span className="text-sm text-slate-300">{t('settings.general.autoStartLabel')}</span>
+                <span className="text-sm" style={{ color: 'var(--text)' }}>{t('settings.general.autoStartLabel')}</span>
               </label>
             </Row>
             <Row label={t('settings.general.company')}>
@@ -293,7 +297,7 @@ export default function SettingsView(): React.JSX.Element {
                     onChange={(e) => update('idle_threshold_minutes', e.target.value)}
                     className={`${inputClass} w-24`}
                   />
-                  <span className="text-sm text-slate-400">{t('settings.timer.idleUnit')}</span>
+                  <span className="text-sm" style={{ color: 'var(--text2)' }}>{t('settings.timer.idleUnit')}</span>
                 </div>
               </Row>
               <Row
@@ -301,7 +305,7 @@ export default function SettingsView(): React.JSX.Element {
                 hint={t('settings.timer.hotkeyHint')}
               >
                 <div className="flex items-center gap-2">
-                  <code className="rounded bg-slate-800 px-3 py-1.5 text-sm text-slate-200">
+                  <code className="rounded px-3 py-1.5 text-sm" style={{ background: 'var(--card-bg)', color: 'var(--text)' }}>
                     {capturingHotkey === 'hotkey_toggle'
                       ? t('settings.timer.hotkeyCapturing')
                       : settings.hotkey_toggle}
@@ -356,9 +360,9 @@ export default function SettingsView(): React.JSX.Element {
                     type="checkbox"
                     checked={settings.mini_enabled === '1'}
                     onChange={(e) => update('mini_enabled', e.target.checked ? '1' : '0')}
-                    className="h-4 w-4 rounded border-slate-600 bg-slate-800"
+                    className="h-4 w-4 rounded accent-indigo-500"
                   />
-                  <span className="text-sm text-slate-300">{t('settings.mini.enableLabel')}</span>
+                  <span className="text-sm" style={{ color: 'var(--text)' }}>{t('settings.mini.enableLabel')}</span>
                 </label>
               </Row>
               <Row
@@ -366,7 +370,7 @@ export default function SettingsView(): React.JSX.Element {
                 hint={t('settings.mini.hotkeyHint')}
               >
                 <div className="flex items-center gap-2">
-                  <code className="rounded bg-slate-800 px-3 py-1.5 text-sm text-slate-200">
+                  <code className="rounded px-3 py-1.5 text-sm" style={{ background: 'var(--card-bg)', color: 'var(--text)' }}>
                     {capturingHotkey === 'mini_hotkey'
                       ? t('settings.timer.hotkeyCapturing')
                       : settings.mini_hotkey}
@@ -422,11 +426,11 @@ export default function SettingsView(): React.JSX.Element {
             <Row label={t('settings.pdf.logo')} hint={t('settings.pdf.logoHint')}>
               <div className="flex items-center gap-3">
                 {settings.pdf_logo_path ? (
-                  <code className="flex-1 truncate rounded bg-slate-800 px-3 py-1.5 text-xs text-slate-300">
+                  <code className="flex-1 truncate rounded px-3 py-1.5 text-xs" style={{ background: 'var(--card-bg)', color: 'var(--text2)' }}>
                     {settings.pdf_logo_path}
                   </code>
                 ) : (
-                  <span className="flex-1 text-sm text-slate-500">{t('settings.pdf.noLogo')}</span>
+                  <span className="flex-1 text-sm" style={{ color: 'var(--text3)' }}>{t('settings.pdf.noLogo')}</span>
                 )}
                 <button type="button" onClick={pickLogo} className={btnSecondaryClass}>
                   {t('settings.pdf.chooseLogo')}
@@ -466,10 +470,10 @@ export default function SettingsView(): React.JSX.Element {
                       : '#4f46e5'
                   }
                   onChange={(e) => update('pdf_accent_color', e.target.value)}
-                  className="h-10 w-16 cursor-pointer rounded border border-slate-700 bg-slate-800"
+                  className="h-10 w-16 cursor-pointer rounded border" style={{ borderColor: 'var(--card-border)', background: 'var(--card-bg)' }}
                   aria-label={t('settings.pdf.accentColorAria')}
                 />
-                <code className="rounded bg-slate-800 px-3 py-1.5 text-xs text-slate-300">
+                <code className="rounded px-3 py-1.5 text-xs" style={{ background: 'var(--card-bg)', color: 'var(--text2)' }}>
                   {settings.pdf_accent_color || '#4f46e5'}
                 </code>
               </div>
@@ -505,7 +509,7 @@ export default function SettingsView(): React.JSX.Element {
             <Section title={t('settings.section.data')}>
               <Row label={t('settings.data.database')}>
                 <div className="flex items-center gap-2">
-                  <code className="flex-1 truncate rounded bg-slate-800 px-3 py-1.5 text-xs text-slate-300">
+                  <code className="flex-1 truncate rounded px-3 py-1.5 text-xs" style={{ background: 'var(--card-bg)', color: 'var(--text2)' }}>
                     {paths.db}
                   </code>
                   <button
@@ -519,7 +523,7 @@ export default function SettingsView(): React.JSX.Element {
               </Row>
               <Row label={t('settings.data.backupsFolder')}>
                 <div className="flex items-center gap-2">
-                  <code className="flex-1 truncate rounded bg-slate-800 px-3 py-1.5 text-xs text-slate-300">
+                  <code className="flex-1 truncate rounded px-3 py-1.5 text-xs" style={{ background: 'var(--card-bg)', color: 'var(--text2)' }}>
                     {paths.backups}
                   </code>
                   <button
@@ -543,21 +547,21 @@ export default function SettingsView(): React.JSX.Element {
                   </button>
                 </div>
                 {backups.length > 0 && (
-                  <p className="mt-1 text-xs text-slate-500">
+                  <p className="mt-1 text-xs" style={{ color: 'var(--text3)' }}>
                     {backups.length === 1 ? t('settings.data.backupCount') : t('settings.data.backupCountPlural', { count: String(backups.length) })}
                   </p>
                 )}
               </Row>
               <Row label={t('settings.data.jsonExport')}>
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-sm text-slate-300">
+                  <span className="text-sm" style={{ color: 'var(--text)' }}>
                     {t('settings.data.jsonExportDesc')}
                   </span>
                   <button type="button" onClick={exportJson} className={btnSecondaryClass}>
                     {t('settings.data.jsonExportBtn')}
                   </button>
                 </div>
-                <p className="mt-1 text-xs text-slate-500">
+                <p className="mt-1 text-xs" style={{ color: 'var(--text3)' }}>
                   {t('settings.data.jsonExportHint')}
                 </p>
               </Row>
@@ -570,7 +574,7 @@ export default function SettingsView(): React.JSX.Element {
                 hint={t('settings.diagnose.hint')}
               >
                 <div className="flex items-center gap-2">
-                  <code className="flex-1 truncate rounded bg-slate-800 px-3 py-1.5 text-xs text-slate-300">
+                  <code className="flex-1 truncate rounded px-3 py-1.5 text-xs" style={{ background: 'var(--card-bg)', color: 'var(--text2)' }}>
                     {paths.logFile}
                   </code>
                   <button
@@ -588,7 +592,7 @@ export default function SettingsView(): React.JSX.Element {
                     {t('settings.diagnose.open')}
                   </button>
                 </div>
-                <p className="mt-1 text-xs text-slate-500">
+                <p className="mt-1 text-xs" style={{ color: 'var(--text3)' }}>
                   Rotiert automatisch bei 5 MB. Enthält App-Ereignisse und Fehler aus Main- und Renderer-Process.
                 </p>
               </Row>
@@ -604,7 +608,7 @@ export default function SettingsView(): React.JSX.Element {
 
             <Section title={t('settings.section.about')}>
               <Row label={t('settings.about.version')}>
-                <span className="text-sm text-slate-300">{version || '—'}</span>
+                <span className="text-sm" style={{ color: 'var(--text)' }}>{version || '—'}</span>
               </Row>
               <Row label={t('about.open')}>
                 <button
@@ -626,11 +630,13 @@ export default function SettingsView(): React.JSX.Element {
 }
 
 const inputClass =
-  'bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 ' +
+  'rounded-lg px-3 py-2 text-sm border backdrop-blur-xl ' +
+  '[background:var(--input-bg)] [border-color:var(--card-border)] [color:var(--text)] ' +
   'focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent'
 
 const btnSecondaryClass =
-  'rounded-md bg-slate-700 px-3 py-1.5 text-sm font-medium text-slate-100 hover:bg-slate-600 ' +
+  'rounded-md px-3 py-1.5 text-sm font-medium hover:bg-white/10 ' +
+  'border [background:var(--card-bg)] [border-color:var(--card-border)] [color:var(--text)] ' +
   'focus:outline-none focus:ring-2 focus:ring-indigo-500'
 
 function Section({
@@ -642,8 +648,11 @@ function Section({
 }): React.JSX.Element {
   return (
     <section className="flex flex-col gap-4">
-      <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-500">{title}</h2>
-      <div className="flex flex-col gap-5 rounded-lg border border-slate-800 bg-slate-900/50 p-5">
+      <h2 className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text3)' }}>{title}</h2>
+      <div
+        className="flex flex-col gap-5 rounded-lg border p-5 backdrop-blur-xl"
+        style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)' }}
+      >
         {children}
       </div>
     </section>
@@ -661,9 +670,9 @@ function Row({
 }): React.JSX.Element {
   return (
     <div className="flex flex-col gap-1.5">
-      <label className="text-sm font-medium text-slate-200">{label}</label>
+      <label className="text-sm font-medium" style={{ color: 'var(--text)' }}>{label}</label>
       {children}
-      {hint && <p className="text-xs text-slate-500">{hint}</p>}
+      {hint && <p className="text-xs" style={{ color: 'var(--text3)' }}>{hint}</p>}
     </div>
   )
 }
@@ -717,14 +726,14 @@ function UpdatesSection(): React.JSX.Element {
   return (
     <Section title={t('settings.update.title')}>
       <Row label={t('settings.update.version', { version: appVersion || '—' })}>
-        <code className="inline-block w-fit rounded bg-slate-800 px-3 py-1.5 text-xs text-slate-300">
+        <code className="inline-block w-fit rounded px-3 py-1.5 text-xs" style={{ background: 'var(--card-bg)', color: 'var(--text2)' }}>
           {appVersion || '—'}
         </code>
       </Row>
       <Row label={t('settings.update.status')} hint={`${t('settings.update.lastCheck')}: ${lastCheckedLabel}`}>
         <p
           className={`text-sm ${
-            status.status === 'error' ? 'text-amber-300' : 'text-slate-200'
+            status.status === 'error' ? 'text-amber-300' : ''
           }`}
         >
           {statusLabel}
@@ -750,7 +759,7 @@ function UpdatesSection(): React.JSX.Element {
             </button>
           )}
         </div>
-        <p className="mt-1 text-xs text-slate-500">
+        <p className="mt-1 text-xs" style={{ color: 'var(--text3)' }}>
           {t('settings.update.autoInfo')}
         </p>
       </Row>

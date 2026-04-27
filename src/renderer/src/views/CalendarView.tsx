@@ -136,18 +136,20 @@ export default function CalendarView(): React.JSX.Element {
         <button
           type="button"
           onClick={onPrev}
-          className="grid h-9 w-9 place-items-center rounded-lg border border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+          className="grid h-9 w-9 place-items-center rounded-lg border backdrop-blur-xl hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+          style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)', color: 'var(--text2)' }}
           aria-label={t('calendar.nav.prev')}
         >
           ‹
         </button>
-        <h2 className="min-w-[200px] text-center text-lg font-semibold text-slate-100">
+        <h2 className="min-w-[200px] text-center text-lg font-semibold" style={{ color: 'var(--text)' }}>
           {formatMonthHeader(cursor, months)}
         </h2>
         <button
           type="button"
           onClick={onNext}
-          className="grid h-9 w-9 place-items-center rounded-lg border border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+          className="grid h-9 w-9 place-items-center rounded-lg border backdrop-blur-xl hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+          style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)', color: 'var(--text2)' }}
           aria-label={t('calendar.nav.next')}
         >
           ›
@@ -155,13 +157,14 @@ export default function CalendarView(): React.JSX.Element {
         <button
           type="button"
           onClick={onToday}
-          className="ml-2 rounded-lg border border-slate-700 bg-slate-800 px-3 py-1.5 text-sm font-medium text-slate-200 hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+          className="ml-2 rounded-lg border px-3 py-1.5 text-sm font-medium backdrop-blur-xl hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+          style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)', color: 'var(--text)' }}
         >
           {t('calendar.nav.today')}
         </button>
-        {status === 'loading' && <span className="ml-auto text-xs text-slate-500">{t('calendar.status.loading')}</span>}
+        {status === 'loading' && <span className="ml-auto text-xs" style={{ color: 'var(--text3)' }}>{t('calendar.status.loading')}</span>}
         {status === 'error' && (
-          <span className="ml-auto text-xs text-red-400" title={errorMsg ?? ''}>
+          <span className="ml-auto text-xs" style={{ color: 'var(--danger)' }} title={errorMsg ?? ''}>
             {t('calendar.status.error')}
           </span>
         )}
@@ -173,18 +176,20 @@ export default function CalendarView(): React.JSX.Element {
         <button
           type="button"
           onClick={() => onQuickRange('lastMonth')}
-          className="rounded-full bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+          className="rounded-full px-3 py-1.5 text-xs font-semibold text-white hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+          style={{ background: 'var(--accent)' }}
           title={t('calendar.export.lastMonthTitle')}
         >
           {t('calendar.export.lastMonth')}
         </button>
-        <span className="ml-1 text-xs uppercase tracking-wide text-slate-500">{t('calendar.export.rangeLabel')}</span>
+        <span className="ml-1 text-xs uppercase tracking-wide" style={{ color: 'var(--text3)' }}>{t('calendar.export.rangeLabel')}</span>
         {(['thisWeek', 'lastWeek', 'thisMonth'] as const).map((k) => (
           <button
             key={k}
             type="button"
             onClick={() => onQuickRange(k)}
-            className="rounded-full border border-slate-700 bg-slate-800 px-3 py-1.5 text-xs font-medium text-slate-300 hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+            className="rounded-full border px-3 py-1.5 text-xs font-medium backdrop-blur-xl hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+            style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)', color: 'var(--text)' }}
           >
             {t(('calendar.range.' + k) as TranslationKey)}
           </button>
@@ -192,7 +197,8 @@ export default function CalendarView(): React.JSX.Element {
         <button
           type="button"
           onClick={() => setMergeOpen(true)}
-          className="ml-auto rounded-full border border-slate-700 bg-slate-800 px-3 py-1.5 text-xs font-medium text-slate-300 hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+          className="ml-auto rounded-full border px-3 py-1.5 text-xs font-medium backdrop-blur-xl hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+          style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)', color: 'var(--text)' }}
           title={t('calendar.export.mergeTitle')}
         >
           {t('calendar.export.merge')}
@@ -200,14 +206,21 @@ export default function CalendarView(): React.JSX.Element {
       </div>
 
       {/* Header row: KW + Mo–So */}
-      <div className="grid grid-cols-[40px_repeat(7,minmax(0,1fr))] gap-px rounded-t-lg bg-slate-700">
-        <div className="bg-slate-800 px-2 py-1 text-center text-xs font-medium text-slate-500">
+      <div
+        className="grid grid-cols-[40px_repeat(7,minmax(0,1fr))] gap-px rounded-t-lg"
+        style={{ background: 'var(--card-border)' }}
+      >
+        <div
+          className="px-2 py-1 text-center text-xs font-medium"
+          style={{ background: 'var(--nav-bg)', color: 'var(--text3)' }}
+        >
           {t('calendar.header.week')}
         </div>
         {(['calendar.days.mon', 'calendar.days.tue', 'calendar.days.wed', 'calendar.days.thu', 'calendar.days.fri', 'calendar.days.sat', 'calendar.days.sun'] as TranslationKey[]).map((k) => (
           <div
             key={k}
-            className="bg-slate-800 px-2 py-1 text-center text-xs font-medium text-slate-400"
+            className="px-2 py-1 text-center text-xs font-medium"
+            style={{ background: 'var(--nav-bg)', color: 'var(--text2)' }}
           >
             {t(k)}
           </div>
@@ -220,7 +233,8 @@ export default function CalendarView(): React.JSX.Element {
         role="grid"
         aria-label={t('calendar.grid.aria')}
         onKeyDown={handleKey}
-        className="grid grid-cols-[40px_repeat(7,minmax(0,1fr))] gap-px rounded-b-lg bg-slate-700"
+        className="grid grid-cols-[40px_repeat(7,minmax(0,1fr))] gap-px rounded-b-lg"
+        style={{ background: 'var(--card-border)' }}
       >
         {weeks.map((week) => (
           <Week
@@ -284,7 +298,10 @@ function Week({
 }): React.JSX.Element {
   return (
     <>
-      <div className="bg-slate-900/60 px-2 py-2 text-center text-xs text-slate-500">
+      <div
+        className="px-2 py-2 text-center text-xs"
+        style={{ background: 'var(--nav-bg)', color: 'var(--text3)' }}
+      >
         {week.weekNumber}
       </div>
       {week.days.map((day) => {
@@ -304,22 +321,26 @@ function Week({
             aria-label={`${formatAriaDate(day, months)}${dayEntries.length ? `, ${dayEntries.length}` : ''}`}
             onClick={() => onSelect(day)}
             className={[
-              'relative flex h-24 flex-col gap-0.5 px-2 py-1 text-left transition-colors',
-              'bg-slate-900 hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-400',
+              'relative flex h-24 flex-col gap-0.5 px-2 py-1 text-left transition-colors backdrop-blur-xl',
+              'focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-400',
               !inMonth && 'opacity-40',
               isToday && 'border-2 border-indigo-500'
             ]
               .filter(Boolean)
               .join(' ')}
+            style={{ background: 'var(--card-bg)' }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--card-hover)')}
+            onMouseLeave={(e) => (e.currentTarget.style.background = 'var(--card-bg)')}
           >
             <div className="flex items-start justify-between">
               <span
-                className={`text-sm font-semibold ${isToday ? 'text-indigo-300' : 'text-slate-100'}`}
+                className="text-sm font-semibold"
+                style={{ color: isToday ? 'var(--accent)' : 'var(--text)' }}
               >
                 {day.getDate()}
               </span>
               {dayEntries.length > 0 && (
-                <span className="font-mono text-[10px] tabular-nums text-slate-400">
+                <span className="font-mono text-[10px] tabular-nums" style={{ color: 'var(--text3)' }}>
                   {formatHHMM(totalSeconds)}
                 </span>
               )}
@@ -365,7 +386,7 @@ function DayBars({
           />
         )
       })}
-      {overflow > 0 && <span className="text-[10px] text-slate-400">+{overflow}</span>}
+      {overflow > 0 && <span className="text-[10px]" style={{ color: 'var(--text3)' }}>+{overflow}</span>}
     </div>
   )
 }

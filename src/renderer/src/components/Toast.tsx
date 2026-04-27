@@ -18,14 +18,16 @@ export function ToastTray(): React.ReactElement | null {
         <div
           key={t.id}
           role="status"
-          className="pointer-events-auto flex min-w-[280px] max-w-[420px] items-center gap-3 rounded-lg bg-zinc-800 px-4 py-3 text-sm text-zinc-100 shadow-lg ring-1 ring-zinc-700"
+          className="pointer-events-auto flex min-w-[280px] max-w-[420px] items-center gap-3 rounded-lg px-4 py-3 text-sm shadow-lg border backdrop-blur-xl"
+          style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)', color: 'var(--text)' }}
         >
           <span className="flex-1">{t.message}</span>
           {t.action && (
             <button
               type="button"
               onClick={() => void executeAction(t.id)}
-              className="rounded px-2 py-1 text-sm font-medium text-indigo-300 hover:bg-zinc-700 hover:text-indigo-200 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+              className="rounded px-2 py-1 text-sm font-medium hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+            style={{ color: 'var(--accent)' }}
             >
               {t.action.label}
             </button>
@@ -34,7 +36,8 @@ export function ToastTray(): React.ReactElement | null {
             type="button"
             onClick={() => dismiss(t.id)}
             aria-label="Schließen"
-            className="grid h-7 w-7 place-items-center rounded text-zinc-500 hover:bg-zinc-700 hover:text-zinc-300 focus:outline-none focus:ring-2 focus:ring-zinc-500"
+            className="grid h-7 w-7 place-items-center rounded hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+            style={{ color: 'var(--text3)' }}
           >
             ×
           </button>

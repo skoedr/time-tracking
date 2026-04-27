@@ -204,23 +204,29 @@ function ActiveTimerPill({
 
   if (!runningEntry) {
     return (
-      <div className="rounded-lg border border-slate-700 bg-slate-800/60 px-4 py-2 text-sm text-slate-500">
+      <div
+        className="rounded-lg border px-4 py-2 text-sm backdrop-blur-xl"
+        style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)', color: 'var(--text3)' }}
+      >
         {t('today.noTimer')}
       </div>
     )
   }
   const client = clientsById.get(runningEntry.client_id)
   return (
-    <div className="flex items-center gap-3 rounded-lg border border-emerald-700/60 bg-emerald-900/20 px-4 py-2 text-sm">
+    <div
+      className="flex items-center gap-3 rounded-lg border px-4 py-2 text-sm backdrop-blur-xl"
+      style={{ background: 'var(--green-bg)', borderColor: 'var(--green)', color: 'var(--text)' }}
+    >
       <span
         className="h-2.5 w-2.5 animate-pulse rounded-full"
         style={{ backgroundColor: client?.color ?? '#10b981' }}
       />
-      <span className="font-medium text-slate-100">{client?.name ?? t('common.unknown')}</span>
+      <span className="font-medium" style={{ color: 'var(--text)' }}>{client?.name ?? t('common.unknown')}</span>
       {runningEntry.description && (
-        <span className="truncate text-slate-400">— {runningEntry.description}</span>
+        <span className="truncate" style={{ color: 'var(--text2)' }}>— {runningEntry.description}</span>
       )}
-      <span className="ml-auto font-mono tabular-nums text-emerald-300">
+      <span className="ml-auto font-mono tabular-nums" style={{ color: 'var(--green)' }}>
         {formatDuration(tickSeconds)}
       </span>
     </div>
@@ -237,8 +243,11 @@ function StatCard({
   accent: string
 }): React.JSX.Element {
   return (
-    <div className="rounded-lg border border-slate-700 bg-slate-800 p-4">
-      <p className="text-xs font-medium uppercase tracking-wide text-slate-400">{label}</p>
+    <div
+      className="rounded-lg border p-4 backdrop-blur-xl"
+      style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)' }}
+    >
+      <p className="text-xs font-medium uppercase tracking-wide" style={{ color: 'var(--text2)' }}>{label}</p>
       <p className={`mt-1 font-mono text-3xl font-bold tabular-nums ${accent}`}>
         {formatHHMM(seconds)}
       </p>
@@ -270,7 +279,8 @@ function QuickStartRow({
             type="button"
             disabled={disabled || !stillActive}
             onClick={() => onStart(c.client_id)}
-            className="flex items-center gap-2 rounded-full border border-slate-700 bg-slate-800 px-3 py-1 text-sm text-slate-200 hover:border-indigo-500 hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex items-center gap-2 rounded-full border px-3 py-1 text-sm backdrop-blur-xl hover:border-indigo-500 disabled:cursor-not-allowed disabled:opacity-50 transition-colors"
+            style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)', color: 'var(--text)' }}
             title={stillActive ? t('today.quickstart.startFor', { name: c.name }) : t('today.quickstart.clientInactive')}
           >
             <span className="h-2 w-2 rounded-full" style={{ backgroundColor: c.color }} />
@@ -296,18 +306,27 @@ function RecentList({
   const t = useT()
   if (entries.length === 0) {
     return (
-      <div className="rounded-lg border border-dashed border-slate-700 bg-slate-800/40 px-4 py-8 text-center">
-        <p className="text-sm font-medium text-slate-300">{t('today.recent.empty')}</p>
-        <p className="mt-1 text-xs text-slate-500">
+      <div
+        className="rounded-lg border border-dashed px-4 py-8 text-center backdrop-blur-xl"
+        style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)' }}
+      >
+        <p className="text-sm font-medium" style={{ color: 'var(--text)' }}>{t('today.recent.empty')}</p>
+        <p className="mt-1 text-xs" style={{ color: 'var(--text3)' }}>
           {t('today.recent.emptyHint')}
         </p>
       </div>
     )
   }
   return (
-    <div className="overflow-hidden rounded-lg border border-slate-700">
+    <div
+      className="overflow-hidden rounded-lg border backdrop-blur-xl"
+      style={{ borderColor: 'var(--card-border)' }}
+    >
       <table className="w-full text-sm">
-        <thead className="bg-slate-800 text-xs uppercase tracking-wide text-slate-400">
+        <thead
+          className="text-xs uppercase tracking-wide"
+          style={{ background: 'var(--nav-bg)', color: 'var(--text2)' }}
+        >
           <tr>
             <th className="px-3 py-2 text-left font-medium">{t('today.table.time')}</th>
             <th className="px-3 py-2 text-left font-medium">{t('today.table.client')}</th>
@@ -316,16 +335,19 @@ function RecentList({
             <th className="w-20 px-3 py-2"></th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-slate-800 bg-slate-900/40">
+        <tbody
+          className="divide-y"
+          style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)' }}
+        >
           {entries.map((e) => {
             const client = clientsById.get(e.client_id)
             return (
-              <tr key={e.id} className="hover:bg-slate-800/60">
-                <td className="px-3 py-2 font-mono text-xs text-slate-300 tabular-nums">
+              <tr key={e.id} className="hover:bg-white/5 transition-colors" style={{ borderColor: 'var(--card-border)' }}>
+                <td className="px-3 py-2 font-mono text-xs tabular-nums" style={{ color: 'var(--text2)' }}>
                   {formatTimeRange(e)}
                 </td>
                 <td className="px-3 py-2">
-                  <span className="inline-flex items-center gap-2 text-slate-200">
+                  <span className="inline-flex items-center gap-2" style={{ color: 'var(--text)' }}>
                     <span
                       className="h-2 w-2 rounded-full"
                       style={{ backgroundColor: client?.color ?? '#64748b' }}
@@ -333,12 +355,12 @@ function RecentList({
                     {client?.name ?? t('common.unknown')}
                   </span>
                 </td>
-                <td className="px-3 py-2 text-slate-300">
+                <td className="px-3 py-2" style={{ color: 'var(--text2)' }}>
                   <span className="block max-w-[280px] truncate" title={e.description}>
-                    {e.description || <span className="text-slate-600">—</span>}
+                    {e.description || <span style={{ color: 'var(--text3)' }}>—</span>}
                   </span>
                 </td>
-                <td className="px-3 py-2 text-right font-mono text-xs text-slate-300 tabular-nums">
+                <td className="px-3 py-2 text-right font-mono text-xs tabular-nums" style={{ color: 'var(--text2)' }}>
                   {formatHHMM(durationSeconds(e))}
                 </td>
                 <td className="px-3 py-2 text-right">
@@ -346,7 +368,8 @@ function RecentList({
                     <button
                       type="button"
                       onClick={() => onEdit(e)}
-                      className="rounded p-1 text-slate-400 hover:bg-slate-700 hover:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                      className="rounded p-1 hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition-colors"
+                      style={{ color: 'var(--text2)' }}
                       aria-label={t('common.edit')}
                       title={t('common.edit')}
                     >
@@ -356,7 +379,8 @@ function RecentList({
                       type="button"
                       onClick={() => onDelete(e)}
                       disabled={e.stopped_at === null}
-                      className="rounded p-1 text-slate-400 hover:bg-slate-700 hover:text-red-300 focus:outline-none focus:ring-2 focus:ring-red-400 disabled:cursor-not-allowed disabled:opacity-30"
+                      className="rounded p-1 hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-red-400 disabled:cursor-not-allowed disabled:opacity-30 transition-colors"
+                      style={{ color: 'var(--text2)' }}
                       aria-label={t('common.delete')}
                       title={e.stopped_at === null ? t('common.stopRunningFirst') : t('common.delete')}
                     >
@@ -377,12 +401,12 @@ function SummarySkeleton(): React.JSX.Element {
   return (
     <div className="flex flex-col gap-4">
       <div className="grid grid-cols-2 gap-4">
-        <div className="h-24 animate-pulse rounded-lg bg-slate-800" />
-        <div className="h-24 animate-pulse rounded-lg bg-slate-800" />
+        <div className="h-24 animate-pulse rounded-lg" style={{ background: 'var(--card-bg)' }} />
+        <div className="h-24 animate-pulse rounded-lg" style={{ background: 'var(--card-bg)' }} />
       </div>
       <div className="space-y-2">
         {[0, 1, 2, 3, 4].map((i) => (
-          <div key={i} className="h-10 animate-pulse rounded bg-slate-800" />
+          <div key={i} className="h-10 animate-pulse rounded" style={{ background: 'var(--card-bg)' }} />
         ))}
       </div>
     </div>

@@ -84,15 +84,16 @@ export function UpdateBanner(): React.JSX.Element | null {
       break
   }
 
-  const toneClasses =
+  const toneStyle =
     tone === 'warn'
-      ? 'bg-amber-900/70 text-amber-100 ring-amber-700/50'
-      : 'bg-indigo-900/70 text-indigo-100 ring-indigo-700/50'
+      ? { background: 'rgba(180,120,0,0.15)', color: 'var(--text)', borderColor: 'rgba(180,120,0,0.35)' }
+      : { background: 'var(--accent-bg)', color: 'var(--text)', borderColor: 'rgba(139,124,248,0.30)' }
 
   return (
     <div
       role="status"
-      className={`flex items-center px-4 py-2 ring-1 ring-inset ${toneClasses}`}
+      className="flex items-center px-4 py-2 border-b"
+      style={toneStyle}
     >
       {content}
     </div>

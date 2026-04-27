@@ -147,43 +147,47 @@ export function EntryEditForm({
     <form onSubmit={handleSubmit} className="flex flex-col gap-3 text-sm">
       <div className="grid grid-cols-3 gap-2">
         <label className="flex flex-col gap-1">
-          <span className="text-xs text-zinc-400">{t('entry.date')}</span>
+          <span className="text-xs" style={{ color: 'var(--text2)' }}>{t('entry.date')}</span>
           <input
             type="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}
-            className="rounded border border-zinc-700 bg-zinc-900 px-2 py-1.5 text-zinc-100 focus:border-indigo-500 focus:outline-none"
+            className="rounded border px-2 py-1.5 focus:border-indigo-500 focus:outline-none backdrop-blur-xl"
+            style={{ background: 'var(--input-bg)', borderColor: 'var(--card-border)', color: 'var(--text)' }}
             disabled={isSaving}
           />
         </label>
         <label className="flex flex-col gap-1">
-          <span className="text-xs text-zinc-400">{t('entry.start')}</span>
+          <span className="text-xs" style={{ color: 'var(--text2)' }}>{t('entry.start')}</span>
           <input
             type="time"
             value={startTime}
             onChange={(e) => setStartTime(e.target.value)}
-            className="rounded border border-zinc-700 bg-zinc-900 px-2 py-1.5 text-zinc-100 focus:border-indigo-500 focus:outline-none"
+            className="rounded border px-2 py-1.5 focus:border-indigo-500 focus:outline-none backdrop-blur-xl"
+            style={{ background: 'var(--input-bg)', borderColor: 'var(--card-border)', color: 'var(--text)' }}
             disabled={isSaving}
           />
         </label>
         <label className="flex flex-col gap-1">
-          <span className="text-xs text-zinc-400">{t('entry.end')}</span>
+          <span className="text-xs" style={{ color: 'var(--text2)' }}>{t('entry.end')}</span>
           <input
             type="time"
             value={stopTime}
             onChange={(e) => setStopTime(e.target.value)}
-            className="rounded border border-zinc-700 bg-zinc-900 px-2 py-1.5 text-zinc-100 focus:border-indigo-500 focus:outline-none"
+            className="rounded border px-2 py-1.5 focus:border-indigo-500 focus:outline-none backdrop-blur-xl"
+            style={{ background: 'var(--input-bg)', borderColor: 'var(--card-border)', color: 'var(--text)' }}
             disabled={isSaving || (entry?.stopped_at == null && entry !== undefined)}
           />
         </label>
       </div>
 
       <label className="flex flex-col gap-1">
-        <span className="text-xs text-zinc-400">{t('entry.client')}</span>
+        <span className="text-xs" style={{ color: 'var(--text2)' }}>{t('entry.client')}</span>
         <select
           value={clientId}
           onChange={(e) => setClientId(parseInt(e.target.value, 10))}
-          className="rounded border border-zinc-700 bg-zinc-900 px-2 py-1.5 text-zinc-100 focus:border-indigo-500 focus:outline-none"
+          className="rounded border px-2 py-1.5 focus:border-indigo-500 focus:outline-none backdrop-blur-xl"
+          style={{ background: 'var(--input-bg)', borderColor: 'var(--card-border)', color: 'var(--text)' }}
           disabled={isSaving}
         >
           {activeClients.map((c) => (
@@ -195,9 +199,9 @@ export function EntryEditForm({
       </label>
 
       <label className="flex flex-col gap-1">
-        <span className="text-xs text-zinc-400">
+        <span className="text-xs" style={{ color: 'var(--text2)' }}>
           {t('entry.description')}{' '}
-          <span className="text-zinc-600">
+      <span className="text-xs" style={{ color: 'var(--text3)' }}>
             ({description.length}/{MAX_DESCRIPTION_LEN})
           </span>
         </span>
@@ -206,35 +210,37 @@ export function EntryEditForm({
           onChange={(e) => setDescription(e.target.value)}
           rows={2}
           maxLength={MAX_DESCRIPTION_LEN}
-          className="rounded border border-zinc-700 bg-zinc-900 px-2 py-1.5 text-zinc-100 focus:border-indigo-500 focus:outline-none"
+          className="rounded border px-2 py-1.5 focus:border-indigo-500 focus:outline-none backdrop-blur-xl"
+          style={{ background: 'var(--input-bg)', borderColor: 'var(--card-border)', color: 'var(--text)' }}
           disabled={isSaving}
         />
       </label>
 
       <div className="flex flex-col gap-1">
-        <span className="text-xs text-zinc-400">{t('entry.tags')}</span>
+        <span className="text-xs" style={{ color: 'var(--text2)' }}>{t('entry.tags')}</span>
         <TagInput
           value={tags}
           onChange={(serialized) => setTags(serialized)}
           disabled={isSaving}
         />
-        <span className="text-xs text-zinc-600">
+        <span className="text-xs" style={{ color: 'var(--text3)' }}>
           {t('entry.tagsHint')}
         </span>
       </div>
 
       <label className="flex flex-col gap-1">
-        <span className="text-xs text-zinc-400">{t('entry.reference.label')}</span>
+        <span className="text-xs" style={{ color: 'var(--text2)' }}>{t('entry.reference.label')}</span>
         <input
           type="text"
           value={reference}
           onChange={(e) => setReference(e.target.value)}
           maxLength={MAX_REFERENCE_LEN}
           placeholder={t('entry.reference.placeholder')}
-          className="rounded border border-zinc-700 bg-zinc-900 px-2 py-1.5 text-zinc-100 placeholder-zinc-600 focus:border-indigo-500 focus:outline-none"
+          className="rounded border px-2 py-1.5 focus:border-indigo-500 focus:outline-none backdrop-blur-xl"
+          style={{ background: 'var(--input-bg)', borderColor: 'var(--card-border)', color: 'var(--text)' }}
           disabled={isSaving}
         />
-        <span className="text-xs text-zinc-600">{t('entry.reference.hint')}</span>
+        <span className="text-xs" style={{ color: 'var(--text3)' }}>{t('entry.reference.hint')}</span>
       </label>
 
       <label className="flex items-center gap-2 cursor-pointer select-none">
@@ -242,46 +248,52 @@ export function EntryEditForm({
           type="checkbox"
           checked={billable === 1}
           onChange={(e) => setBillable(e.target.checked ? 1 : 0)}
-          className="h-4 w-4 rounded border-zinc-700 bg-zinc-900 accent-indigo-500"
+          className="h-4 w-4 rounded accent-indigo-500"
+          style={{ borderColor: 'var(--card-border)' }}
           disabled={isSaving}
         />
-        <span className="text-xs text-zinc-400">{t('entry.billable.label')}</span>
+        <span className="text-xs" style={{ color: 'var(--text2)' }}>{t('entry.billable.label')}</span>
         {billable === 0 && (
-          <span className="ml-auto text-xs text-amber-400">{t('entry.billable.hint')}</span>
+          <span className="ml-auto text-xs" style={{ color: '#f59e0b' }}>{t('entry.billable.hint')}</span>
         )}
       </label>
 
       <label className="flex flex-col gap-1">
-        <span className="text-xs text-zinc-400">{t('entry.privateNote.label')}</span>
+        <span className="text-xs" style={{ color: 'var(--text2)' }}>{t('entry.privateNote.label')}</span>
         <textarea
           value={privateNote}
           onChange={(e) => setPrivateNote(e.target.value)}
           rows={2}
           maxLength={MAX_NOTE_LEN}
           placeholder={t('entry.privateNote.placeholder')}
-          className="rounded border border-zinc-700 bg-zinc-900 px-2 py-1.5 text-zinc-100 placeholder-zinc-600 focus:border-indigo-500 focus:outline-none"
+          className="rounded border px-2 py-1.5 focus:border-indigo-500 focus:outline-none backdrop-blur-xl"
+          style={{ background: 'var(--input-bg)', borderColor: 'var(--card-border)', color: 'var(--text)' }}
           disabled={isSaving}
         />
-        <span className="text-xs text-zinc-600">{t('entry.privateNote.hint')}</span>
+        <span className="text-xs" style={{ color: 'var(--text3)' }}>{t('entry.privateNote.hint')}</span>
       </label>
 
       {visibleError && (
-        <p role="alert" className="text-xs text-red-400">
+        <p role="alert" className="text-xs" style={{ color: 'var(--danger)' }}>
           {visibleError}
         </p>
       )}
       {state === 'success' && (
-        <p role="status" className="text-xs text-emerald-400">
+        <p role="status" className="text-xs" style={{ color: 'var(--green)' }}>
           {t('entry.saved')}
         </p>
       )}
 
-      <div className="sticky bottom-0 -mx-1 mt-1 flex justify-end gap-2 bg-zinc-900/80 px-1 pt-2 backdrop-blur">
+      <div
+        className="sticky bottom-0 -mx-1 mt-1 flex justify-end gap-2 px-1 pt-2 backdrop-blur border-t"
+        style={{ background: 'var(--nav-bg)', borderColor: 'var(--card-border)' }}
+      >
         <button
           type="button"
           onClick={onCancel}
           disabled={isSaving}
-          className="rounded-lg bg-zinc-800 px-3 py-1.5 text-sm font-medium text-zinc-100 hover:bg-zinc-700 focus:outline-none focus:ring-2 focus:ring-zinc-500 disabled:opacity-50"
+          className="rounded-lg px-3 py-1.5 text-sm font-medium hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-400 disabled:opacity-50 border backdrop-blur-xl"
+          style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)', color: 'var(--text)' }}
         >
           {t('common.cancel')}
         </button>

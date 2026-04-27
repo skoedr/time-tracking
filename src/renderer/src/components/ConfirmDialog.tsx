@@ -55,11 +55,14 @@ export function ConfirmDialog({
       aria-labelledby="confirm-title"
       aria-describedby="confirm-message"
     >
-      <div className="w-[440px] rounded-xl bg-zinc-900 p-6 shadow-2xl ring-1 ring-zinc-700">
-        <h2 id="confirm-title" className="mb-2 text-lg font-semibold text-zinc-100">
+      <div
+        className="w-[440px] rounded-xl border p-6 shadow-2xl backdrop-blur-xl"
+        style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)' }}
+      >
+        <h2 id="confirm-title" className="mb-2 text-lg font-semibold" style={{ color: 'var(--text)' }}>
           {title}
         </h2>
-        <p id="confirm-message" className="mb-6 text-sm text-zinc-400">
+        <p id="confirm-message" className="mb-6 text-sm" style={{ color: 'var(--text2)' }}>
           {message}
         </p>
         <div className="flex justify-end gap-2">
@@ -67,7 +70,8 @@ export function ConfirmDialog({
             ref={cancelRef}
             type="button"
             onClick={onCancel}
-            className="rounded-lg bg-zinc-800 px-4 py-2.5 text-sm font-medium text-zinc-100 hover:bg-zinc-700 focus:outline-none focus:ring-2 focus:ring-zinc-500"
+            className="rounded-lg px-4 py-2.5 text-sm font-medium hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-400 border backdrop-blur-xl"
+            style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)', color: 'var(--text)' }}
           >
             {cancelLabel}
           </button>
