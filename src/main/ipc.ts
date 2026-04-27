@@ -34,6 +34,7 @@ import type {
 } from '../shared/types'
 
 const MAX_DESCRIPTION_LEN = 500
+const MAX_REFERENCE_LEN = 200
 const MAX_DURATION_SECONDS = 24 * 3600
 
 export interface IpcHooks {
@@ -857,6 +858,7 @@ function validateManualEntry(
     description: string
     started_at: string
     stopped_at: string
+    reference?: string
   },
   excludeId?: number,
   excludeLinkId?: string
@@ -872,6 +874,9 @@ function validateManualEntry(
   if (durationSec > MAX_DURATION_SECONDS) return 'Dauer überschreitet 24 Stunden'
   if ((input.description ?? '').length > MAX_DESCRIPTION_LEN) {
     return `Beschreibung überschreitet ${MAX_DESCRIPTION_LEN} Zeichen`
+  }
+  if ((input.reference ?? '').length > MAX_REFERENCE_LEN) {
+    return `Referenz überschreitet ${MAX_REFERENCE_LEN} Zeichen`
   }
   const clientRow = db.prepare(`SELECT id FROM clients WHERE id = ?`).get(input.client_id) as
     | { id: number }
