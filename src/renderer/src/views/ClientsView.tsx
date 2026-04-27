@@ -131,11 +131,13 @@ export default function ClientsView() {
             <div className="mt-6">
               <button
                 onClick={() => setArchivedExpanded((v) => !v)}
+                aria-expanded={archivedExpanded}
                 className="flex items-center gap-1.5 text-slate-500 hover:text-slate-300
                   text-xs font-medium uppercase tracking-wide mb-2 transition-colors"
                 aria-expanded={archivedExpanded}
               >
                 <svg
+                  aria-hidden="true"
                   className={`w-3 h-3 transition-transform duration-200 ${archivedExpanded ? 'rotate-90' : ''}`}
                   viewBox="0 0 12 12"
                   fill="none"

@@ -91,11 +91,10 @@ export const en: Record<TranslationKey, string> = {
   'entry.reference.hint': 'e.g. JIRA-123 or #42 (optional)',
   'entry.reference.placeholder': 'Ticket or issue number',
 
-  // ── About-Dialog ─────────────────────────────────────────────
-  // ── ClientsView
+  // ── ClientsView ──────────────────────────────────────────────
   'clients.archivedSection': 'Archived ({count})',
 
-  // ── About-Dialog
+  // ── About-Dialog ─────────────────────────────────────────────
   'about.title': 'About TimeTrack',
   'about.version': 'Version',
   'about.ownLicense': 'License',
