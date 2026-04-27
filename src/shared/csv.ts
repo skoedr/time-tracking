@@ -75,6 +75,7 @@ export function formatCsv(
 
   for (const entry of entries) {
     if (!entry.stopped_at) continue // skip running
+    if (entry.billable === 0) continue // skip non-billable (#71)
 
     const start = new Date(entry.started_at)
     const stop = new Date(entry.stopped_at)

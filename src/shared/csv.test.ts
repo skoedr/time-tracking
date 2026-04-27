@@ -27,6 +27,8 @@ function makeEntry(overrides: Partial<Entry> = {}): Entry {
     link_id: null,
     tags: '',
     reference: '',
+    billable: 1,
+    private_note: '',
     ...overrides
   }
 }
@@ -172,4 +174,24 @@ describe('formatCsv', () => {
     const lines = csv.replace('﻿', '').split('\r\n').filter(Boolean)
     expect(lines).toHaveLength(3) // header + 2 data rows
   })
-})
+  it('skips non-billable entries (billable = 0)', () => {
+    const nonBillable = makeEntry({ billable: 0 })
+    const csv = formatCsv([nonBillable], CLIENT_MAP)
+    const lines = csv.replace('\uFEFF', '').split('\r\n').filter(Boolean)
+    expect(lines).toHaveLength(1) // header only
+  })
+
+  it('includes billable entries (billable = 1)', () => {
+    const billable = makeEntry({ billable: 1 })
+    const csv = formatCsv([billable], CLIENT_MAP)
+    const lines = csv.replace('\uFEFF', '').split('\r\n').filter(Boolean)
+    expect(lines).toHaveLength(2) // header + 1 data row
+  })
+
+  it('mixed billable + non-billable: only billable rows exported', () => {
+    const b = makeEntry({ id: 1, billable: 1 })
+    const nb = makeEntry({ id: 2, billable: 0 })
+    const csv = formatCsv([b, nb], CLIENT_MAP)
+    const lines = csv.replace('\uFEFF', '').split('\r\n').filter(Boolean)
+    expect(lines).toHaveLength(2) // header + 1
+  })})

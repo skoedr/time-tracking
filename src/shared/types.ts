@@ -38,6 +38,17 @@ export interface Entry {
    * NOT NULL DEFAULT ''.
    */
   reference: string
+  /**
+   * v1.8 #71: 1 = billable (default), 0 = non-billable.
+   * Non-billable entries are counted in total duration but excluded from
+   * invoice exports (CSV, PDF) and the billable-hours summary.
+   */
+  billable: number
+  /**
+   * v1.8 #72: optional internal-only note, never written to any export.
+   * Empty string means no note set.
+   */
+  private_note: string
 }
 
 export interface Settings {
@@ -110,6 +121,10 @@ export interface CreateManualEntryInput {
   tags?: string
   /** Free-text ticket/reference (e.g. 'JIRA-123'). Optional — defaults to '' */
   reference?: string
+  /** 1 = billable (default), 0 = non-billable. Optional — defaults to 1 */
+  billable?: number
+  /** Internal-only note, never exported. Optional — defaults to '' */
+  private_note?: string
 }
 
 export interface UpdateEntryInput {
@@ -122,6 +137,10 @@ export interface UpdateEntryInput {
   tags?: string
   /** Free-text ticket/reference (e.g. 'JIRA-123'). Optional — defaults to '' */
   reference?: string
+  /** 1 = billable (default), 0 = non-billable. Optional — defaults to 1 */
+  billable?: number
+  /** Internal-only note, never exported. Optional — defaults to '' */
+  private_note?: string
 }
 
 export interface MonthQuery {
