@@ -92,6 +92,10 @@ export const en: Record<TranslationKey, string> = {
   'entry.reference.placeholder': 'Ticket or issue number',
 
   // ── About-Dialog ─────────────────────────────────────────────
+  // ── ClientsView
+  'clients.archivedSection': 'Archived ({count})',
+
+  // ── About-Dialog
   'about.title': 'About TimeTrack',
   'about.version': 'Version',
   'about.ownLicense': 'License',
