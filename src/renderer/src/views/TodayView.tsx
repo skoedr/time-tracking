@@ -82,7 +82,7 @@ export default function TodayView(): React.JSX.Element {
   }
 
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-6">
+    <div className="mx-auto w-full max-w-3xl flex flex-col gap-6">
       <ActiveTimerPill runningEntry={runningEntry} clientsById={clientsById} onStop={() => void stop()} />
 
       {status === 'loading' && <SummarySkeleton />}
