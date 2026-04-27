@@ -40,6 +40,7 @@ export function ExportModal(props: Props): React.JSX.Element {
 
   // CSV-specific
   const [csvFormat, setCsvFormat] = useState<CsvFormat>('de')
+  const [csvGroupByTag, setCsvGroupByTag] = useState(false)
 
   const [busy, setBusy] = useState(false)
   const [statusMsg, setStatusMsg] = useState<string | null>(null)
@@ -122,7 +123,8 @@ export function ExportModal(props: Props): React.JSX.Element {
       clientId: clientId!,
       fromIso,
       toIso,
-      format: csvFormat
+      format: csvFormat,
+      groupByTag: csvGroupByTag
     })
     setBusy(false)
     if (res.ok) {
@@ -246,6 +248,21 @@ export function ExportModal(props: Props): React.JSX.Element {
         {/* CSV-specific options */}
         {tab === 'csv' && (
           <div className="flex flex-col gap-2">
+            <label className="flex items-start gap-2 text-sm text-zinc-300">
+              <input
+                type="checkbox"
+                checked={csvGroupByTag}
+                onChange={(e) => setCsvGroupByTag(e.target.checked)}
+                disabled={busy}
+                className={checkboxClass}
+              />
+              <span>
+                {t('export.csv.groupByTag')}
+                <span className="block text-xs text-zinc-500">
+                  {t('export.csv.groupByTagHint')}
+                </span>
+              </span>
+            </label>
             <span className="text-sm font-medium text-zinc-300">{t('export.csv.format')}</span>
             <div className="flex gap-4">
               <label className="flex items-center gap-2 text-sm text-zinc-300 cursor-pointer">

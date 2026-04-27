@@ -194,4 +194,93 @@ describe('formatCsv', () => {
     const csv = formatCsv([b, nb], CLIENT_MAP)
     const lines = csv.replace('\uFEFF', '').split('\r\n').filter(Boolean)
     expect(lines).toHaveLength(2) // header + 1
-  })})
+  })
+
+  describe('groupByTag', () => {
+    it('flat output when no entries have tags (groupByTag ignored)', () => {
+      const e1 = makeEntry({ id: 1, tags: '' })
+      const e2 = makeEntry({ id: 2, tags: '' })
+      const csv = formatCsv([e1, e2], CLIENT_MAP, { groupByTag: true })
+      const lines = csv.replace('\uFEFF', '').split('\r\n').filter(Boolean)
+      // No tagged entries → falls back to flat: header + 2 data rows
+      expect(lines).toHaveLength(3)
+    })
+
+    it('groups entries by first tag alphabetically', () => {
+      const eDesign = makeEntry({ id: 1, tags: ',Design,', description: 'UI' })
+      const eDev = makeEntry({ id: 2, tags: ',Dev,', description: 'Backend' })
+      const csv = formatCsv([eDev, eDesign], CLIENT_MAP, { groupByTag: true })
+      const lines = csv.replace('\uFEFF', '').split('\r\n').filter(Boolean)
+      // header + [Design] header + 1 data + Design Σ + [Dev] header + 1 data + Dev Σ + Σ Gesamt
+      expect(lines).toHaveLength(8)
+      // Design group should appear before Dev alphabetically
+      const beschreibungCol = 5
+      const designHeaderLine = lines.find((l) => l.split(';')[beschreibungCol] === '[Design]')
+      const devHeaderLine = lines.find((l) => l.split(';')[beschreibungCol] === '[Dev]')
+      expect(designHeaderLine).toBeDefined()
+      expect(devHeaderLine).toBeDefined()
+      expect(lines.indexOf(designHeaderLine!)).toBeLessThan(lines.indexOf(devHeaderLine!))
+    })
+
+    it('subtotal row has correct duration for a group', () => {
+      // entry: 09:00 → 10:30 = 5400s = 01:30:00
+      const entry = makeEntry({ tags: ',Development,' })
+      const csv = formatCsv([entry], CLIENT_MAP, { groupByTag: true })
+      const lines = csv.replace('\uFEFF', '').split('\r\n').filter(Boolean)
+      const subtotalLine = lines.find((l) => l.includes('Development Σ'))
+      expect(subtotalLine).toBeDefined()
+      const fields = subtotalLine!.split(';')
+      expect(fields[3]).toBe('01:30:00') // Dauer column
+    })
+
+    it('subtotal row has correct Betrag (1.5h × 75€/h = 112,50)', () => {
+      const entry = makeEntry({ tags: ',Dev,' })
+      const csv = formatCsv([entry], CLIENT_MAP, { groupByTag: true })
+      const subtotalLine = csv
+        .replace('\uFEFF', '')
+        .split('\r\n')
+        .find((l) => l.includes('Dev Σ'))
+      expect(subtotalLine).toBeDefined()
+      const fields = subtotalLine!.split(';')
+      expect(fields[9]).toBe('112,50') // Betrag column
+    })
+
+    it('entries with no tag go into Ohne Tag group (shown last)', () => {
+      const withTag = makeEntry({ id: 1, tags: ',alpha,', description: 'Tagged' })
+      const noTag = makeEntry({ id: 2, tags: '', description: 'Untagged' })
+      const csv = formatCsv([withTag, noTag], CLIENT_MAP, { groupByTag: true })
+      const lines = csv.replace('\uFEFF', '').split('\r\n').filter(Boolean)
+      const alphaIdx = lines.findIndex((l) => l.split(';')[5] === '[alpha]')
+      const ohneTagIdx = lines.findIndex((l) => l.split(';')[5] === '[Ohne Tag]')
+      expect(alphaIdx).toBeGreaterThan(-1)
+      expect(ohneTagIdx).toBeGreaterThan(-1)
+      expect(alphaIdx).toBeLessThan(ohneTagIdx) // named tags before Ohne Tag
+    })
+
+    it('grand total row at end has combined Dauer + Betrag', () => {
+      // Two entries of 1.5h each → 3h total, 2 × 112,50 = 225,00
+      const e1 = makeEntry({ id: 1, tags: ',A,' })
+      const e2 = makeEntry({ id: 2, tags: ',B,' })
+      const csv = formatCsv([e1, e2], CLIENT_MAP, { groupByTag: true })
+      const lines = csv.replace('\uFEFF', '').split('\r\n').filter(Boolean)
+      const totalLine = lines[lines.length - 1]
+      const fields = totalLine.split(';')
+      expect(fields[5]).toBe('Σ Gesamt')
+      expect(fields[3]).toBe('03:00:00')
+      expect(fields[9]).toBe('225,00')
+    })
+
+    it('multi-tag entry is grouped by first tag only (no duplication)', () => {
+      const entry = makeEntry({ tags: ',Design,Dev,' })
+      const csv = formatCsv([entry], CLIENT_MAP, { groupByTag: true })
+      const lines = csv.replace('\uFEFF', '').split('\r\n').filter(Boolean)
+      // Only one data row expected, under Design (alphabetically first)
+      const dataRows = lines.filter((l) => {
+        const fields = l.split(';')
+        // Data rows have a date in col 0 (dd.MM.yyyy)
+        return /^\d{2}\.\d{2}\.\d{4}$/.test(fields[0])
+      })
+      expect(dataRows).toHaveLength(1)
+    })
+  })
+})

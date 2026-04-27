@@ -22,6 +22,8 @@ export interface CsvRequest {
   toIso: string
   /** DE = ';' / ',' (default), US = ',' / '.' */
   format?: 'de' | 'us'
+  /** When true, entries are grouped by their first tag with subtotal rows. Default: false. */
+  groupByTag?: boolean
 }
 
 function ok<T>(data: T): IpcResult<T> {
@@ -71,8 +73,8 @@ export async function handleCsvExport(
 
     const opts: CsvOptions =
       req.format === 'us'
-        ? { fieldSeparator: ',', decimalSeparator: '.' }
-        : { fieldSeparator: ';', decimalSeparator: ',' }
+        ? { fieldSeparator: ',', decimalSeparator: '.', groupByTag: req.groupByTag }
+        : { fieldSeparator: ';', decimalSeparator: ',', groupByTag: req.groupByTag }
 
     const clientMap = new Map([[client.id, client]])
     const csv = formatCsv(entries, clientMap, opts)

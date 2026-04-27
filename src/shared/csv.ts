@@ -26,6 +26,8 @@ export interface CsvOptions {
   fieldSeparator?: ';' | ','
   /** Decimal separator for monetary amounts. Default: ',' (DACH). */
   decimalSeparator?: ',' | '.'
+  /** When true, entries are grouped by their first tag with subtotal rows. Default: false. */
+  groupByTag?: boolean
 }
 
 const HEADER = [
@@ -70,53 +72,152 @@ export function formatCsv(
   const sep = opts.fieldSeparator ?? ';'
   const dec = opts.decimalSeparator ?? ','
 
-  const rows: string[] = []
-  rows.push(HEADER.map((h) => escapeField(h, sep)).join(sep))
+  // Pre-filter: skip running entries and non-billable entries.
+  const validEntries = entries.filter((e) => {
+    if (!e.stopped_at) return false
+    if (e.billable === 0) return false
+    return true
+  })
 
-  for (const entry of entries) {
-    if (!entry.stopped_at) continue // skip running
-    if (entry.billable === 0) continue // skip non-billable (#71)
+  const headerRow = HEADER.map((h) => escapeField(h, sep)).join(sep)
+  const rows: string[] = [headerRow]
 
-    const start = new Date(entry.started_at)
-    const stop = new Date(entry.stopped_at)
-    const durationSec = Math.max(0, Math.floor((stop.getTime() - start.getTime()) / 1000))
-
-    const datum = formatDate(start)
-    const startStr = formatTimeHHMM(start)
-    const endeStr = formatTimeHHMM(stop)
-    const dauerStr = formatDuration(durationSec)
-
-    const client = clientMap.get(entry.client_id)
-    const clientName = client?.name ?? ''
-    const rateCent = client?.rate_cent ?? 0
-
-    const rateStr = rateCent > 0 ? formatDecimal(rateCent / 100, dec) : ''
-    const betragStr =
-      rateCent > 0 ? formatDecimal((durationSec / 3600) * (rateCent / 100), dec) : ''
-
-    const tags = deserializeTags(entry.tags).join('|')
-    const reference = entry.reference ?? ''
-
-    const row = [
-      datum,
-      startStr,
-      endeStr,
-      dauerStr,
-      clientName,
-      entry.description,
-      tags,
-      reference,
-      rateStr,
-      betragStr
-    ]
-      .map((f) => escapeField(f, sep))
-      .join(sep)
-
-    rows.push(row)
+  if (opts.groupByTag && validEntries.some((e) => deserializeTags(e.tags).length > 0)) {
+    appendGroupedRows(rows, validEntries, clientMap, sep, dec)
+  } else {
+    for (const entry of validEntries) {
+      rows.push(buildEntryRow(entry, clientMap, sep, dec))
+    }
   }
 
   // UTF-8 BOM + CRLF line endings
   return '\uFEFF' + rows.join('\r\n') + '\r\n'
+}
+
+/**
+ * Build an array of CSV rows for a single entry (no newline handling — caller
+ * is responsible for joining with \r\n).
+ */
+function buildEntryRow(
+  entry: Entry,
+  clientMap: Map<number, Client>,
+  sep: string,
+  dec: string
+): string {
+  const start = new Date(entry.started_at)
+  const stop = new Date(entry.stopped_at!)
+  const durationSec = Math.max(0, Math.floor((stop.getTime() - start.getTime()) / 1000))
+
+  const client = clientMap.get(entry.client_id)
+  const clientName = client?.name ?? ''
+  const rateCent = client?.rate_cent ?? 0
+
+  const rateStr = rateCent > 0 ? formatDecimal(rateCent / 100, dec) : ''
+  const betragStr =
+    rateCent > 0 ? formatDecimal((durationSec / 3600) * (rateCent / 100), dec) : ''
+
+  const tags = deserializeTags(entry.tags).join('|')
+  const reference = entry.reference ?? ''
+
+  return [
+    formatDate(start),
+    formatTimeHHMM(start),
+    formatTimeHHMM(stop),
+    formatDuration(durationSec),
+    clientName,
+    entry.description,
+    tags,
+    reference,
+    rateStr,
+    betragStr
+  ]
+    .map((f) => escapeField(f, sep))
+    .join(sep)
+}
+
+/**
+ * Append tag-grouped rows (header + data + subtotal per group, then grand
+ * total) to the rows array in-place.
+ *
+ * Grouping key: first tag of each entry. Entries with no tags fall into the
+ * "Ohne Tag" group (shown last). Named groups sorted alphabetically.
+ */
+function appendGroupedRows(
+  rows: string[],
+  entries: Entry[],
+  clientMap: Map<number, Client>,
+  sep: string,
+  dec: string
+): void {
+  // Build groups keyed by first tag ('' = no tag).
+  const groupMap = new Map<string, Entry[]>()
+  for (const entry of entries) {
+    const entryTags = deserializeTags(entry.tags)
+    const key = entryTags[0] ?? ''
+    const bucket = groupMap.get(key) ?? []
+    bucket.push(entry)
+    groupMap.set(key, bucket)
+  }
+
+  // Named tags alphabetically first, then '' (Ohne Tag) last.
+  const sortedKeys = [...groupMap.keys()].sort((a, b) => {
+    if (a === '') return 1
+    if (b === '') return -1
+    return a.localeCompare(b, 'de')
+  })
+
+  let grandDurSec = 0
+  let grandAmountCent = 0
+  let grandHasRate = false
+
+  for (const key of sortedKeys) {
+    const groupEntries = groupMap.get(key)!
+    const tagLabel = key === '' ? 'Ohne Tag' : key
+
+    // Group header row: tag name in Beschreibung column, all others empty.
+    const headerFields = Array<string>(HEADER.length).fill('')
+    headerFields[5] = `[${tagLabel}]` // Beschreibung column
+    rows.push(headerFields.map((f) => escapeField(f, sep)).join(sep))
+
+    let groupDurSec = 0
+    let groupAmountCent = 0
+    let groupHasRate = false
+
+    for (const entry of groupEntries) {
+      rows.push(buildEntryRow(entry, clientMap, sep, dec))
+
+      const start = new Date(entry.started_at)
+      const stop = new Date(entry.stopped_at!)
+      const durSec = Math.max(0, Math.floor((stop.getTime() - start.getTime()) / 1000))
+      groupDurSec += durSec
+
+      const rateCent = clientMap.get(entry.client_id)?.rate_cent ?? 0
+      if (rateCent > 0) {
+        groupHasRate = true
+        groupAmountCent += (durSec / 3600) * rateCent
+      }
+    }
+
+    grandDurSec += groupDurSec
+    if (groupHasRate) {
+      grandHasRate = true
+      grandAmountCent += groupAmountCent
+    }
+
+    // Subtotal row: Beschreibung = label, Dauer = duration, Betrag = amount.
+    const subtotalFields = Array<string>(HEADER.length).fill('')
+    subtotalFields[3] = formatDuration(groupDurSec) // Dauer
+    subtotalFields[5] = `${tagLabel} Σ` // Beschreibung
+    if (groupHasRate) subtotalFields[9] = formatDecimal(groupAmountCent / 100, dec) // Betrag
+    rows.push(subtotalFields.map((f) => escapeField(f, sep)).join(sep))
+  }
+
+  // Grand total row.
+  const totalFields = Array<string>(HEADER.length).fill('')
+  totalFields[3] = formatDuration(grandDurSec)
+  totalFields[5] = 'Σ Gesamt'
+  if (grandHasRate) totalFields[9] = formatDecimal(grandAmountCent / 100, dec)
+  rows.push(totalFields.map((f) => escapeField(f, sep)).join(sep))
 }
 
 /** Format a Date as dd.MM.yyyy in local timezone. */

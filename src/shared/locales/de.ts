@@ -301,6 +301,8 @@ export const de = {
   'export.csv.formatDeHint': '(Semikolon, Komma-Dezimal — Excel DE)',
   'export.csv.formatUsHint': '(Komma, Punkt-Dezimal — DATEV)',
   'export.csv.encodingNote': 'UTF-8 mit BOM. Excel öffnet die Datei ohne Encoding-Abfrage.',
+  'export.csv.groupByTag': 'Nach Tags gruppieren',
+  'export.csv.groupByTagHint': 'Fügt pro Tag eine Kopfzeile und Zwischensumme ein.',
   'export.footer.pdfHint': 'Vorlage anpassen unter',
   'export.footer.pdfHintPath': 'Einstellungen → PDF-Vorlage',
   'export.footer.csvHint': 'Enthält alle abgeschlossenen Einträge im gewählten Zeitraum.',
