@@ -234,50 +234,62 @@ abgehakt. Ein Test-Freelancer mit Lexware-PDF kann es in unter 30 s nachvollzieh
 Die genaue Reihenfolge wird durch Issues bestimmt — diese Liste ist die
 Ausgangsbasis, kein Dogma.
 
-- **Pomodoro-Modus** (#23) — endlich aus dem Backlog. 25/5 opt-in pro Eintrag.
-  Pause als separater Eintrag mit `kind='break'` (neue Spalte → Migration 009),
-  keinem Kunden zugeordnet. Statistik „Wieviele Pomodori diese Woche" als
-  TodayView-Mini-Widget. Bedingung für Aufnahme: mindestens ein OSS-User
-  fragt explizit danach (sonst bleibt es im Backlog — Maintainer nutzt es selbst nicht).
-- **PDF: überlappende Einträge desselben Kunden zusammenfassen** (Backlog-Eintrag).
-  Toleranz-Fenster konfigurierbar (Default 5 min), nur bei aktivierter Rundung,
-  rein PDF-Output (Kalender bleibt granular).
-- **Vollständige i18n DE/EN** — `scripts/find-untranslated.mjs` bis zur Null
-  ausschöpfen. Aktuell sind nur `UpdateBanner` + `SettingsView` migriert
-  (siehe v1.5 PR D). v1.8 macht TodayView, TimerView, CalendarView, ClientsView
-  + alle Modals. Pflicht für ernsthafte EN-Adoption.
-- **Fresh-Install-Test-Findings** — Maintainer macht einen kompletten Test
-  „neue Windows-Maschine, lade nur die `.exe`" und führt ein Schmerz-Tagebuch.
-  Top-3-Friction-Points landen hier. (Test war in der Office-Hours-Diskussion
-  explizit aufgeschoben — wird vor v1.8-Scope-Lock nachgeholt.)
+📂 [Milestone v1.8](https://github.com/skoedr/time-tracking/milestone/2)
 
-**Ship-Kriterium:** Vollständig EN-übersetzt + die zwei Backlog-Items vom Tisch.
-Keine offenen „nervt mich täglich"-Items mehr im Maintainer-Tagebuch.
+- **Vollständige i18n DE/EN** *(erstes Item — alle nachfolgenden Features direkt zweisprachig)* — `scripts/find-untranslated.mjs` bis zur Null ausschöpfen. Aktuell sind nur `UpdateBanner` + `SettingsView` migriert (v1.5). v1.8 macht TodayView, TimerView, CalendarView, ClientsView + alle Modals. Pflicht für ernsthafte EN-Adoption.
+- **PDF: überlappende Einträge desselben Kunden zusammenfassen** — Toleranz-Fenster konfigurierbar (Default 5 min), nur bei aktivierter Rundung, rein PDF-Output (Kalender bleibt granular).
+- **CSV-Export nach Tags gruppieren** (#68) — Export-Konfiguration: Option „Gruppierung: nach Tags". Feature-Anfrage.
+- **Ticket-Nummer / Referenz-Feld** (#70) — optionales Freitextfeld pro Eintrag für Jira-Ticket, GitHub Issue etc. Fließt in CSV/PDF.
+- **Nicht-abrechenbares Flag** (#71) — Einträge als „nicht abrechenbar" markieren; in Rechnungs-Exporten herausgefiltert.
+- **Private Notiz an Eintrag** (#72) — internes Notizfeld, nicht im Export sichtbar.
+- **Archivierte Kunden einklappbar** (#73) — standardmäßig eingeklappt, per Klick aufklappbar.
+- **Einstellungen-Navigation / Untermenüs** (#74) — logische Unterbereiche (Allgemein, Export, Sicherung, Über).
+- **Light-Mode / Theming** (#76) — Tailwind `dark:` class-Strategie. Hell / Dunkel / System-Follow. Größtes Item (~2–3 Wochen).
+- ✅ **Fresh-Install-Test** — beim Kollegen ohne Probleme durchgeführt. Keine kritischen Findings.
+
+**Bewusst gestrichen:** Pomodoro (#23) — kein Eigenbedarf, kein OSS-User hat explizit danach gefragt. Wandert in den Backlog.
+
+**Ship-Kriterium:** Vollständig EN-übersetzt, alle Nutzer-Feature-Anfragen bewertet und entweder gebaut oder begründet zurückgestellt. Keine offenen „nervt mich täglich"-Items im Maintainer-Tagebuch.
 
 ---
 
-## v1.9 — Reporting & Outlook-Vorbereitung
+## v1.9 — Projekte & Datenportabilität
 
-**Thema:** Mehr Einsicht in die eigenen Daten + ehrlicher Architektur-Setup
-für v2.0 Outlook-Integration.
+**Thema:** Die zwei größten Architektur-Entscheidungen vor v2.0: echte Projekthierarchie
+und saubere Maschinenmigration.
 
-- **Wochen- und Monats-Charts** in TodayView — kleines Sparkline-Widget, SVG
-  handgemalt (keine externe Chart-Lib, Solo-Skala). Stunden pro Tag als Bar-Chart,
-  Top 3 Kunden als Donut. Reuse: `entriesStore` + `dateRanges.ts`, kein Schema-Change.
-- **„Top 5 Tätigkeiten dieses Monat"** — neue Mini-View, basiert auf existing
-  `description`-Feld, einfaches GROUP BY. Hilft beim Rückblick „was war eigentlich
-  meine Hauptarbeit".
-- **Vergleich „diesen Monat vs letzter Monat"** — Stunden, Top-Kunde, Top-Tätigkeit.
-  Eine Karte in TodayView.
+📂 [Milestone v1.9](https://github.com/skoedr/time-tracking/milestone/3)
+
+- **Projekte pro Kunde** (#75) — echte Hierarchie `Kunde → Projekt → Einträge`.
+  Projekt = eigenes DB-Entity mit eigenem Stundensatz, optionaler Laufzeit.
+  Timer, Kalender, Export kennen Projekte. Bestehende Einträge bekommen
+  `project_id = NULL` (rückwärtskompatibel). **Eng-Review vor Implementierung.**
+- **JSON-Import für Maschinenmigration** (#78) — Import des bestehenden JSON-Exports.
+  Schema-Validierung, Dry-Run-Vorschau, automatisches Backup vor Import,
+  konfigurierbare Merge-Strategie (überschreiben vs. nur neue Einträge).
+- **Konfigurierbarer Backup-Pfad** (#79) — Zielordner in den Einstellungen wählbar
+  (OneDrive, Dropbox, NAS). Simpler Path-Picker, keine Cloud-API.
 - **Migration 010: `entries.source`-Spalte** (`'manual' | 'timer' | 'outlook'`).
-  Default `'timer'` für bestehende Einträge, `'manual'` für die via „Eintrag
-  nachtragen"-Dialog. Pflicht-Foundation für v2.0, damit Outlook-Imports
-  unterscheidbar bleiben (z.B. „Re-Sync löscht nur Outlook-Einträge, nie manuelle").
-- **Settings → Integrations** — leere Sektion mit Stub-Card „Outlook (kommt in v2.0)".
+  Foundation für v2.0 Outlook-Imports.
+- **Settings → Integrations** — Stub-Card „Outlook (kommt in v2.0)".
   Macht den Roadmap-Plan für User sichtbar.
-- **Conflict-Resolution-UX-Skizze** als Markdown im Repo (kein Code) — wie sieht
-  der Import-Dialog aus, was passiert bei Doubletten, was bei zeitlichen Überlappungen
-  zwischen Outlook-Event und gestopptem Timer.
+
+**Ship-Kriterium:** Du kannst deine gesamte Datenhistorie auf eine neue Maschine
+umziehen ohne Datenverlust. Projekte pro Kunde sind buchbar.
+
+---
+
+## v1.10 — Reporting & Outlook-Vorbereitung
+
+**Thema:** Mehr Einsicht in die eigenen Daten + Architektur-Skizze für v2.0.
+
+- **Wochen- und Monats-Charts** in TodayView — Sparkline-Widget, SVG handgemalt
+  (keine externe Chart-Lib). Stunden pro Tag als Bar-Chart, Top 3 Kunden als Donut.
+  Reuse: `entriesStore` + `dateRanges.ts`, kein Schema-Change.
+- **„Top 5 Tätigkeiten dieses Monat"** — GROUP BY auf `description`, Mini-View.
+- **Vergleich „diesen Monat vs letzter Monat"** — Stunden, Top-Kunde, Top-Tätigkeit.
+- **Conflict-Resolution-UX-Skizze** als Markdown im Repo (kein Code) — Vorlage
+  für Outlook-Import-Dialog, Duplikat- und Überlappungsbehandlung.
 
 **Ship-Kriterium:** Du öffnest die App und siehst auf einen Blick, wie diese Woche
 im Vergleich zum letzten Monat lief — ohne Excel-Export.
@@ -327,10 +339,11 @@ wenn jemand danach fragt).
 
 ## Backlog (unscheduled)
 
-Kleinere Edge-Cases / Polish-Ideen, die irgendwann reinrutschen, aber noch keiner
-konkreten Version zugeordnet sind. Pomodoro und PDF-Merge waren hier; Pomodoro
-wandert nach v1.8 (bedingt), PDF-Eintrags-Merge nach v1.8 (fest). PDF-Merge im
-Sinne von „an Rechnungs-PDF anhängen" ist v1.7-Hero — nicht verwechseln.
+Kleinere Edge-Cases / Polish-Ideen ohne konkrete Version. PDF-Eintrags-Merge (überlappende
+Einträge zusammenfassen) ist in v1.8. PDF-Merge im Sinne von „an Rechnungs-PDF anhängen"
+ist v1.7-Hero — nicht verwechseln.
+
+- **Pomodoro-Modus** (#23) — 25/5 opt-in. Kein Eigenbedarf, kein OSS-User hat explizit danach gefragt. Bleibt hier bis jemand es wirklich braucht.
 
 - **Google Calendar Import** — analog Outlook, eigene API. Erst nach v2.0,
   wenn der Outlook-Flow stabil ist und die Mapping-UX validiert wurde.
