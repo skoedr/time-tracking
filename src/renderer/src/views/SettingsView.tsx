@@ -4,6 +4,7 @@ import { useUpdateStore } from '../store/updateStore'
 import { useT, useLocale } from '../contexts/I18nContext'
 import type { Locale } from '../../../shared/i18n'
 import { AboutDialog } from '../components/AboutDialog'
+import { useTheme, type ThemeMode } from '../contexts/ThemeContext'
 
 const DEFAULT_HOTKEY = 'Alt+Shift+S'
 const DEFAULT_MINI_HOTKEY = 'Alt+Shift+M'
@@ -174,6 +175,8 @@ export default function SettingsView(): React.JSX.Element {
 
   const latestBackup = backups[0] ?? null
 
+  const { themeMode, setThemeMode } = useTheme()
+
   const NAV_ITEMS: { id: SettingsTab; label: string }[] = [
     { id: 'general', label: t('settings.nav.general') },
     { id: 'timer', label: t('settings.nav.timer') },
@@ -211,6 +214,24 @@ export default function SettingsView(): React.JSX.Element {
         {/* Allgemein */}
         {tab === 'general' && (
           <Section title={t('settings.section.general')}>
+            <Row label={t('settings.theme.title')}>
+              <div className="inline-flex rounded-lg border border-slate-700 overflow-hidden">
+                {(['light', 'dark', 'system'] as ThemeMode[]).map((m) => (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => setThemeMode(m)}
+                    className={`px-4 py-1.5 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${
+                      themeMode === m
+                        ? 'bg-indigo-600 text-white'
+                        : 'text-slate-400 hover:text-slate-200 hover:bg-slate-700'
+                    }`}
+                  >
+                    {t(`settings.theme.${m}` as `settings.theme.${'light' | 'dark' | 'system'}`)}
+                  </button>
+                ))}
+              </div>
+            </Row>
             <Row label={t('settings.language.title')}>
               <select
                 aria-label={t('settings.language.title')}

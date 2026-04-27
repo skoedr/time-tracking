@@ -80,6 +80,8 @@ export interface Settings {
   // v1.5 PR E — Onboarding wizard.
   // '0' = not yet completed, '1' = done (or existing user after upgrade).
   onboarding_completed: string
+  // v1.8 #76 — Theme mode: 'light' | 'dark' | 'system'.
+  theme_mode: string
 }
 
 export interface CreateClientInput {

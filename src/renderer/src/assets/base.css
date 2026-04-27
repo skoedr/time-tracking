@@ -1,3 +1,50 @@
+/* ── v1.8 #76: Glass theme tokens ──────────────────────────────────────────
+   :root  = Light mode (default)
+   .dark  = Dark mode (toggled by ThemeContext / preload FOUC fix)
+   All rgba values intentionally kept in CSS — Tailwind arbitrary values with
+   two parameters (rgba(r,g,b,a)) become unreadable as utility classes.
+───────────────────────────────────────────────────────────────────────────── */
+:root {
+  --page-bg:     linear-gradient(145deg, #dde4f8 0%, #e8edfb 100%);
+  --card-bg:     rgba(255, 255, 255, 0.70);
+  --card-hover:  rgba(255, 255, 255, 0.85);
+  --card-border: rgba(0, 0, 0, 0.07);
+  --nav-bg:      rgba(255, 255, 255, 0.75);
+  --input-bg:    rgba(255, 255, 255, 0.90);
+  --shadow:      0 8px 32px rgba(100, 120, 200, 0.12);
+  --accent-glow: rgba(91, 78, 240, 0.18);
+  --blur:        blur(20px);
+  --text:        #1a1c2e;
+  --text2:       #5b6080;
+  --text3:       #9098b8;
+  --accent:      #5b4ef0;
+  --accent-bg:   rgba(91, 78, 240, 0.08);
+  --green:       #16a34a;
+  --green-bg:    rgba(22, 163, 74, 0.07);
+  --danger:      #dc2626;
+  --danger-bg:   rgba(220, 38, 38, 0.07);
+}
+
+.dark {
+  --page-bg:     linear-gradient(145deg, #0d0f1e 0%, #080c1a 100%);
+  --card-bg:     rgba(255, 255, 255, 0.045);
+  --card-hover:  rgba(255, 255, 255, 0.07);
+  --card-border: rgba(255, 255, 255, 0.08);
+  --nav-bg:      rgba(10, 12, 28, 0.80);
+  --input-bg:    rgba(0, 0, 0, 0.30);
+  --shadow:      0 8px 32px rgba(0, 0, 0, 0.50);
+  --accent-glow: rgba(139, 124, 248, 0.25);
+  --text:        #e8eaf6;
+  --text2:       #8b93bc;
+  --text3:       #4a5270;
+  --accent:      #8b7cf8;
+  --accent-bg:   rgba(139, 124, 248, 0.12);
+  --green:       #4ade80;
+  --green-bg:    rgba(74, 222, 128, 0.10);
+  --danger:      #f87171;
+  --danger-bg:   rgba(248, 113, 113, 0.10);
+}
+
 :root {
   --ev-c-white: #ffffff;
   --ev-c-white-soft: #f8f8f8;

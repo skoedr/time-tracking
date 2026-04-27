@@ -18,6 +18,18 @@ import type {
 } from '../shared/types'
 import type { CsvRequest } from '../main/csvExport'
 
+// ── v1.8 #76: FOUC prevention ─────────────────────────────────────────────
+// Reads theme_mode synchronously (before React mounts) so the .dark class is
+// set on <html> before the first paint. ipcRenderer.sendSync blocks the
+// renderer thread briefly — acceptable here because it's a single SQLite row.
+{
+  const rawMode = ipcRenderer.sendSync('settings:getSync', 'theme_mode') as string | null
+  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+  const isDark = rawMode === 'dark' || (rawMode !== 'light' && prefersDark)
+  document.documentElement.classList.toggle('dark', isDark)
+}
+// ──────────────────────────────────────────────────────────────────────────
+
 const api = {
   // Tray + hotkey
   tray: {

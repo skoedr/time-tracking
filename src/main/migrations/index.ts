@@ -8,6 +8,7 @@ import { migration007 } from './007-v14-tags'
 import { migration008 } from './008-v15-onboarding'
 import { migration009 } from './009-v18-reference'
 import { migration010 } from './010-v18-billable-private-note'
+import { migration011 } from './011-v18-theme'
 
 export interface Migration {
   /** Monotonically increasing integer. Never reused, never reordered. */
@@ -32,5 +33,6 @@ export const migrations: Migration[] = [
   migration007,
   migration008,
   migration009,
-  migration010
+  migration010,
+  migration011
 ].sort((a, b) => a.version - b.version)

@@ -7,11 +7,14 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App'
 import { I18nProvider } from './contexts/I18nContext'
+import { ThemeProvider } from './contexts/ThemeContext'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <I18nProvider>
-      <App />
+      <ThemeProvider>
+        <App />
+      </ThemeProvider>
     </I18nProvider>
   </StrictMode>
 )

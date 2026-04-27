@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* v1.8 #76 — class-based dark mode (Tailwind v4 syntax) */
+@custom-variant dark (&:where(.dark, .dark *));
+
 *,
 *::before,
 *::after {

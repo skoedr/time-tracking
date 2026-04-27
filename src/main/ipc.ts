@@ -490,6 +490,20 @@ export function registerIpcHandlers(hooks: IpcHooks): void {
     }
   })
 
+  // ── Synchronous settings read (preload FOUC fix only) ──────────
+  // ipcMain.on + event.returnValue is the only synchronous IPC pattern.
+  // Used exclusively by preload to read theme_mode before first paint.
+  ipcMain.on('settings:getSync', (event, key: string) => {
+    try {
+      const row = db
+        .prepare(`SELECT value FROM settings WHERE key = ?`)
+        .get(key) as { value: string } | undefined
+      event.returnValue = row?.value ?? null
+    } catch {
+      event.returnValue = null
+    }
+  })
+
   // ── Backups ───────────────────────────────────
   ipcMain.handle('backup:list', (): IpcResult<BackupInfo[]> => {
     try {
