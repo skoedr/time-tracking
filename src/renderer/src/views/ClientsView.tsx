@@ -39,7 +39,6 @@ export default function ClientsView() {
   const [editingClient, setEditingClient] = useState<Client | null>(null)
   const [archivedExpanded, setArchivedExpanded] = useState(false)
   const bumpClientsVersion = useClientsStore((s) => s.bumpVersion)
-  const t = useT()
 
   useEffect(() => {
     loadClients()
@@ -134,7 +133,6 @@ export default function ClientsView() {
                 aria-expanded={archivedExpanded}
                 className="flex items-center gap-1.5 text-slate-500 hover:text-slate-300
                   text-xs font-medium uppercase tracking-wide mb-2 transition-colors"
-                aria-expanded={archivedExpanded}
               >
                 <svg
                   aria-hidden="true"
@@ -145,7 +143,6 @@ export default function ClientsView() {
                   strokeWidth="2"
                   strokeLinecap="round"
                   strokeLinejoin="round"
-                  aria-hidden="true"
                 >
                   <path d="M4 2l4 4-4 4" />
                 </svg>
