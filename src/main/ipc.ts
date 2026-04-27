@@ -1,8 +1,9 @@
 import { ipcMain, shell } from 'electron'
 import { app } from 'electron'
 import { dialog } from 'electron'
-import { writeFileSync, readFileSync } from 'fs'
-import { dirname, join, resolve, sep } from 'path'
+import { existsSync, statSync, writeFileSync, readFileSync } from 'fs'
+import { dirname, join, parse, resolve, sep } from 'path'
+import { mergePdfs } from './pdfMerge'
 import log from 'electron-log/main'
 import { randomUUID } from 'crypto'
 import { getDb, getDbPath } from './db'
@@ -14,6 +15,8 @@ import { buildPdfHtml, buildPdfPayload, type PdfRequest } from './pdf'
 import { renderPdfBuffer } from './pdfWindow'
 import { readLogoAsDataUrl, removeLogo, saveLogo } from './logo'
 import { handleCsvExport, type CsvRequest } from './csvExport'
+import { validatePdfPath, validateMergeExportRequest } from './pdfMergeValidation'
+import { mergeOnlyHandler, pdfInfoHandler } from './pdfMergeHandlers'
 import type {
   Client,
   Entry,
@@ -649,6 +652,122 @@ export function registerIpcHandlers(hooks: IpcHooks): void {
       }
     }
   )
+
+  // PDF merge-export: renders the Stundennachweis and appends it to an
+  // existing invoice PDF chosen by the user. The invoice file is never
+  // modified — the merged result is written next to it as
+  // <stem>_inkl_Stundennachweis.pdf. Falls back to a save dialog when the
+  // target directory is not writable (e.g. a corporate archive folder).
+  ipcMain.handle(
+    'pdf:merge-export',
+    async (
+      _e,
+      req: PdfRequest & { invoicePath: string }
+    ): Promise<IpcResult<{ path: string }>> => {
+      try {
+        const reqErr = validateMergeExportRequest(req)
+        if (reqErr) return fail(reqErr)
+
+        const pathErr = validatePdfPath(req.invoicePath)
+        if (pathErr) return fail(pathErr)
+
+        const resolvedInvoice = resolve(req.invoicePath)
+
+        // Size check via stat before reading to avoid loading huge files.
+        const MAX_INVOICE_BYTES = 50 * 1024 * 1024 // 50 MB
+        if (statSync(resolvedInvoice).size > MAX_INVOICE_BYTES) {
+          return fail('Rechnungs-PDF zu groß (max. 50 MB)')
+        }
+
+        // Read invoice — guard against locked files (Lexware / Acrobat open).
+        let invoiceBuffer: Buffer
+        try {
+          invoiceBuffer = readFileSync(resolvedInvoice)
+        } catch (e: any) {
+          if (e.code === 'EBUSY' || e.code === 'EPERM') {
+            return fail(
+              `Datei ist durch ein anderes Programm gesperrt: ${parse(resolvedInvoice).base}`
+            )
+          }
+          return fail(e)
+        }
+
+        // Render Stundennachweis.
+        const settingsRows = db.prepare(`SELECT key, value FROM settings`).all() as Array<{
+          key: string
+          value: string
+        }>
+        const settings = Object.fromEntries(
+          settingsRows.map((r) => [r.key, r.value])
+        ) as unknown as Settings
+        const logoDataUrl = readLogoAsDataUrl(settings.pdf_logo_path ?? '')
+        const payload = buildPdfPayload(db, req, logoDataUrl)
+        const snBuffer = await renderPdfBuffer({ html: buildPdfHtml(payload) })
+
+        // Merge: invoice first (append), then Stundennachweis.
+        const merged = await mergePdfs(snBuffer, invoiceBuffer, 'append')
+        log.debug('[pdf:merge-export] merged', {
+          invoiceBytes: invoiceBuffer.length,
+          snBytes: snBuffer.length,
+          mergedBytes: merged.length
+        })
+
+        // Derive output path next to the invoice. If a file with that name
+        // already exists (re-export of the same period), append a timestamp
+        // suffix rather than silently overwriting a previously sent document.
+        const { dir, name } = parse(resolvedInvoice)
+        let outputPath = join(dir, `${name}_inkl_Stundennachweis.pdf`)
+        if (existsSync(outputPath)) {
+          const ts = new Date().toISOString().slice(0, 19).replace(/[:.]/g, '-')
+          outputPath = join(dir, `${name}_inkl_Stundennachweis_${ts}.pdf`)
+        }
+
+        try {
+          writeFileSync(outputPath, merged)
+          return ok({ path: outputPath })
+        } catch (writeErr: any) {
+          // Directory may be read-only — fall back to a user-chosen path.
+          if (writeErr.code === 'EPERM' || writeErr.code === 'EACCES') {
+            const fallback = await dialog.showSaveDialog({
+              title: 'Zusammengeführte PDF speichern',
+              defaultPath: `${name}_inkl_Stundennachweis.pdf`,
+              filters: [{ name: 'PDF', extensions: ['pdf'] }]
+            })
+            if (fallback.canceled || !fallback.filePath) return fail('Speichern abgebrochen')
+            writeFileSync(fallback.filePath, merged)
+            return ok({ path: fallback.filePath })
+          }
+          return fail(writeErr)
+        }
+      } catch (e) {
+        return fail(e)
+      }
+    }
+  )
+
+  // PDF merge-only: merges two existing PDFs (Stundennachweis + invoice) without
+  // re-rendering. Core logic lives in pdfMergeHandlers.ts for testability.
+  ipcMain.handle('pdf:merge-only', (_e, req) => mergeOnlyHandler(req))
+
+  // PDF info: returns page count for a given PDF path. Used by the renderer to
+  // show page counts before confirming a merge.
+  ipcMain.handle('pdf:pdf-info', (_e, req) => pdfInfoHandler(req))
+
+  // PDF open dialog: opens a native file picker and returns the selected path.
+  // Safer than relying on file.path in the renderer (not available with contextIsolation).
+  ipcMain.handle('pdf:open-pdf-dialog', async (): Promise<IpcResult<{ filePath: string } | null>> => {
+    try {
+      const result = await dialog.showOpenDialog({
+        title: 'PDF auswählen',
+        filters: [{ name: 'PDF', extensions: ['pdf'] }],
+        properties: ['openFile']
+      })
+      if (result.canceled || !result.filePaths[0]) return ok(null)
+      return ok({ filePath: result.filePaths[0] })
+    } catch (e) {
+      return fail(e)
+    }
+  })
 
   // Logo picker — copies user-chosen image into userData/pdf-logo.<ext>
   // and persists the path into settings.pdf_logo_path.

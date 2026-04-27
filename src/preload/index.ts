@@ -150,7 +150,24 @@ const api = {
       toIso: string
       includeSignatures?: boolean
       groupByTag?: boolean
-    }): Promise<IpcResult<{ path: string }>> => ipcRenderer.invoke('pdf:export', req)
+    }): Promise<IpcResult<{ path: string }>> => ipcRenderer.invoke('pdf:export', req),
+    mergeExport: (req: {
+      clientId: number
+      fromIso: string
+      toIso: string
+      includeSignatures?: boolean
+      groupByTag?: boolean
+      invoicePath: string
+    }): Promise<IpcResult<{ path: string }>> => ipcRenderer.invoke('pdf:merge-export', req),
+    mergeOnly: (req: {
+      stundennachweisPath: string
+      invoicePath: string
+    }): Promise<IpcResult<{ path: string }>> => ipcRenderer.invoke('pdf:merge-only', req),
+    pdfInfo: (req: {
+      filePath: string
+    }): Promise<IpcResult<{ pageCount: number }>> => ipcRenderer.invoke('pdf:pdf-info', req),
+    openPdfDialog: (): Promise<IpcResult<{ filePath: string } | null>> =>
+      ipcRenderer.invoke('pdf:open-pdf-dialog')
   },
   logo: {
     set: (): Promise<IpcResult<{ path: string }>> => ipcRenderer.invoke('logo:set'),

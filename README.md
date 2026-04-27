@@ -11,6 +11,7 @@ A personal Windows desktop time-tracking app for freelancers. Lightweight Toggl 
 - **Kalender-Modus** — 7×N-Monatsraster mit KW-Spalte, Tagessumme, farbigen Mini-Bars pro Kunde, Tages-Drawer mit Inline-Edit.
 - **Quick-Filter + 1-Klick-PDF** — "Diese Woche / Letzte Woche / Diesen Monat / Letzter Monat" plus Hero-Button "📄 Letzter Monat als PDF".
 - **PDF-Stundennachweis** — Druckbares A4-PDF mit Datum / Von / Bis / Tätigkeit / Dauer (optional Honorar). Konfigurierbar in **Einstellungen → PDF-Vorlage**: Logo, Absender, Steuernummer, Akzentfarbe, Footer, Stunden-Rundung, optionale Unterschriftsfelder.
+- **PDF-Merge — An Rechnung anhängen** — Stundennachweis direkt an eine bestehende Lexware-/sevDesk-/Billomat-Rechnungs-PDF anhängen. Checkbox im Export-Modal aktivieren, Rechnung wählen, fertig. Kein Smallpdf, kein Acrobat. Output: `<Rechnungsname>_inkl_Stundennachweis.pdf` neben der Original-Datei. Original bleibt unverändert.
 - **Stundensatz pro Kunde** — Optionales Honorar-Feld, fließt als €-Spalte ins PDF.
 - **JSON-Vollexport** — Kunden + Einträge + Settings als lesbare JSON-Datei (Daten-Portabilität).
 - **Cross-Midnight Auto-Split** — Einträge über Mitternacht werden automatisch in zwei verlinkte Tageshalften gesplittet — DST-sicher.
@@ -34,9 +35,6 @@ A personal Windows desktop time-tracking app for freelancers. Lightweight Toggl 
 
 ### Coming soon
 
-- **PDF-Merge an Rechnung** (v1.7) — Stundennachweis wird mit einem Klick an
-  eine bestehende Lexware-/sevDesk-/Billomat-Rechnungs-PDF angehängt. Spart
-  den manuellen Smallpdf/Acrobat-Schritt.
 - **Outlook-Integration** (v2.0) — Read-only-Import via Microsoft Graph
   (Device-Code-Flow, kein Server, Office E1 + persönliche Konten).
 - Pomodoro-Modus (#23) — bedingt auf User-Demand verschoben nach v1.8.
@@ -113,6 +111,7 @@ src/
     backup.ts    # Daily/manual/pre-migration backups + restore
     pdf.ts       # PDF payload builder + HTML template (Stundennachweis)
     pdfWindow.ts # Hidden BrowserWindow renderer (printToPDF pipeline)
+    pdfMerge.ts  # PDF merge logic (mergePdfs via pdf-lib)
     jsonExport.ts# Full JSON export (clients + entries + settings)
     logo.ts      # Logo file -> base64 data URL for PDF embedding
     updater.ts   # electron-updater bridge + IPC handlers (auto-update)

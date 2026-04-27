@@ -109,6 +109,22 @@ declare global {
           includeSignatures?: boolean
           groupByTag?: boolean
         }): Promise<IpcResult<{ path: string }>>
+        mergeExport(req: {
+          clientId: number
+          fromIso: string
+          toIso: string
+          includeSignatures?: boolean
+          groupByTag?: boolean
+          invoicePath: string
+        }): Promise<IpcResult<{ path: string }>>
+        mergeOnly(req: {
+          stundennachweisPath: string
+          invoicePath: string
+        }): Promise<IpcResult<{ path: string }>>
+        pdfInfo(req: {
+          filePath: string
+        }): Promise<IpcResult<{ pageCount: number }>>
+        openPdfDialog(): Promise<IpcResult<{ filePath: string } | null>>
       }
       logo: {
         set(): Promise<IpcResult<{ path: string }>>

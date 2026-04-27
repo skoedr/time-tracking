@@ -11,6 +11,7 @@ A personal Windows desktop time-tracking app for freelancers. Lightweight Toggl 
 - **Calendar Mode** — 7×N monthly grid with calendar-week column, daily total, color-coded mini-bars per client, and day-drawer with inline edit.
 - **Quick-Filter + 1-Click PDF** — "This week / Last week / This month / Last month" plus hero button "📄 Last month as PDF".
 - **PDF Timesheet** — Printable A4 PDF with date / from / to / activity / duration (optionally with fee). Configurable in **Settings → PDF Template**: logo, sender address, tax number, accent color, footer, hour rounding, optional signature fields.
+- **PDF Merge — Attach to Invoice** — Attach the timesheet directly to an existing invoice PDF (Lexware / sevDesk / Billomat). Enable the checkbox in the export modal, pick your invoice, done. No Smallpdf, no Acrobat. Output: `<invoice-name>_inkl_Stundennachweis.pdf` next to the original. The original is never modified.
 - **Hourly Rate per Client** — Optional fee field, renders as €-column in the PDF.
 - **Full JSON Export** — Clients + entries + settings as a readable JSON file (data portability).
 - **Cross-Midnight Auto-Split** — Entries spanning midnight are automatically split into two linked half-day entries — DST-safe.
@@ -34,7 +35,6 @@ A personal Windows desktop time-tracking app for freelancers. Lightweight Toggl 
 
 ### Coming soon
 
-- **PDF-Merge** (v1.7) — Attach the timesheet to an existing invoice PDF (Lexware / sevDesk / Billomat) in one click. Saves the manual Smallpdf/Acrobat step.
 - **Outlook Integration** (v2.0) — Read-only import via Microsoft Graph (Device Code Flow, no server, Office E1 + personal accounts).
 - Pomodoro mode (#23) — deferred to v1.8 based on user demand.
 

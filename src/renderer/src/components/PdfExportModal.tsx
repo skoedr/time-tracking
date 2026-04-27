@@ -1,6 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { Client } from '../../../shared/types'
 import { Dialog } from './Dialog'
+
+const basename = (p: string): string => p.replace(/.*[\\/]/, '')
 
 interface Props {
   open: boolean
@@ -32,6 +34,9 @@ export function PdfExportModal(props: Props): React.JSX.Element {
   // template to the recipient.
   const [includeSignatures, setIncludeSignatures] = useState(false)
   const [groupByTag, setGroupByTag] = useState(false)
+  const [mergeInvoice, setMergeInvoice] = useState(false)
+  const [invoicePath, setInvoicePath] = useState<string | null>(null)
+  const invoiceFileRef = useRef<HTMLInputElement>(null)
   const [busy, setBusy] = useState(false)
   const [statusMsg, setStatusMsg] = useState<string | null>(null)
   const [statusKind, setStatusKind] = useState<'info' | 'error' | 'success'>('info')
@@ -53,6 +58,28 @@ export function PdfExportModal(props: Props): React.JSX.Element {
     })
   }, [open, clients.length, prefilledClientId])
 
+  function handlePickInvoice(): void {
+    // Electron exposes the native file path on the File object as file.path.
+    // Using a hidden <input type="file"> is the standard renderer-side approach.
+    invoiceFileRef.current?.click()
+  }
+
+  function handleInvoiceFileChange(e: React.ChangeEvent<HTMLInputElement>): void {
+    const file = e.target.files?.[0]
+    if (!file) return
+    // Electron adds .path to File objects in the renderer.
+    const filePath = (file as File & { path: string }).path
+    if (!filePath) {
+      setStatusKind('error')
+      setStatusMsg('Dateipfad konnte nicht ermittelt werden. Bitte Datei erneut wählen.')
+      e.target.value = ''
+      return
+    }
+    setInvoicePath(filePath)
+    // Reset input so re-selecting the same file triggers onChange again.
+    e.target.value = ''
+  }
+
   async function handleExport(): Promise<void> {
     if (clientId == null || !fromIso || !toIso) return
     if (fromIso > toIso) {
@@ -60,15 +87,24 @@ export function PdfExportModal(props: Props): React.JSX.Element {
       setStatusMsg('Startdatum liegt nach dem Enddatum.')
       return
     }
+    if (mergeInvoice && !invoicePath) {
+      setStatusKind('error')
+      setStatusMsg('Bitte eine Rechnung-PDF auswählen.')
+      return
+    }
     setBusy(true)
-    setStatusMsg('PDF wird erstellt …')
+    const req = { clientId, fromIso, toIso, includeSignatures, groupByTag }
+    setStatusMsg(mergeInvoice ? 'Erstellt zusammengeführte PDF …' : 'PDF wird erstellt …')
     setStatusKind('info')
-    const res = await window.api.pdf.export({ clientId, fromIso, toIso, includeSignatures, groupByTag })
+    const res =
+      mergeInvoice && invoicePath
+        ? await window.api.pdf.mergeExport({ ...req, invoicePath })
+        : await window.api.pdf.export(req)
     setBusy(false)
     if (res.ok) {
       setStatusKind('success')
       setStatusMsg(`PDF gespeichert: ${res.data.path}`)
-    } else if (res.error === 'Export abgebrochen') {
+    } else if (res.error === 'Export abgebrochen' || res.error === 'Speichern abgebrochen') {
       setStatusKind('info')
       setStatusMsg(null)
     } else {
@@ -77,7 +113,12 @@ export function PdfExportModal(props: Props): React.JSX.Element {
     }
   }
 
-  const canExport = clientId != null && fromIso !== '' && toIso !== '' && !busy
+  const canExport =
+    clientId != null &&
+    fromIso !== '' &&
+    toIso !== '' &&
+    !busy &&
+    (!mergeInvoice || invoicePath != null)
 
   return (
     <Dialog open={open} onClose={onClose} title="Stundennachweis als PDF" widthClass="w-[520px]">
@@ -157,6 +198,51 @@ export function PdfExportModal(props: Props): React.JSX.Element {
           </span>
         </label>
 
+        <label className="flex items-start gap-2 text-sm text-zinc-300">
+          <input
+            type="checkbox"
+            checked={mergeInvoice}
+            onChange={(e) => {
+              setMergeInvoice(e.target.checked)
+              if (!e.target.checked) setInvoicePath(null)
+            }}
+            disabled={busy}
+            className="mt-0.5 h-4 w-4 rounded border-zinc-600 bg-zinc-800 text-indigo-500 focus:ring-indigo-400 focus:ring-offset-0"
+          />
+          <span>
+            An Rechnung anhängen
+            <span className="block text-xs text-zinc-500">
+              Stundennachweis wird am Ende der gewählten PDF angefügt. Original bleibt unverändert.
+            </span>
+          </span>
+        </label>
+
+        {mergeInvoice && (
+          <div className="ml-6 flex items-center gap-2">
+            {/* Hidden native file picker — Electron exposes file.path on the File object */}
+            <input
+              ref={invoiceFileRef}
+              type="file"
+              accept=".pdf,.PDF"
+              aria-label="Rechnung-PDF auswählen"
+              className="hidden"
+              onChange={handleInvoiceFileChange}
+            />
+            <button
+              type="button"
+              onClick={handlePickInvoice}
+              disabled={busy}
+              aria-label="Rechnung-PDF auswählen"
+              className="rounded-lg border border-zinc-600 bg-zinc-800 px-3 py-1.5 text-xs text-zinc-200 hover:bg-zinc-700 focus:outline-none focus:ring-2 focus:ring-indigo-400 disabled:opacity-50"
+            >
+              {invoicePath ? 'Rechnung wechseln …' : 'Rechnung wählen …'}
+            </button>
+            <span className="max-w-[200px] truncate text-xs text-zinc-500">
+              {invoicePath ? basename(invoicePath) : 'keine Datei gewählt'}
+            </span>
+          </div>
+        )}
+
         {statusMsg && (
           <div
             className={
@@ -166,7 +252,8 @@ export function PdfExportModal(props: Props): React.JSX.Element {
                   ? 'rounded-lg bg-emerald-900/40 px-3 py-2 text-sm text-emerald-200'
                   : 'rounded-lg bg-zinc-800 px-3 py-2 text-sm text-zinc-300'
             }
-            role={statusKind === 'error' ? 'alert' : 'status'}
+            role={statusKind === 'error' ? 'alert' : undefined}
+            aria-live="polite"
           >
             {statusMsg}
           </div>

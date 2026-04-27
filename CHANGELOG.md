@@ -2,6 +2,13 @@
 
 All notable changes to TimeTrack are documented here.
 
+## [1.7.0] — 2026-04-26
+
+### Added
+
+- **PDF-Merge — An Rechnung anhängen** — Stundennachweis direkt an eine bestehende Rechnungs-PDF anhängen (Lexware, sevDesk, Billomat). Checkbox „An Rechnung anhängen" im Export-Modal aktivieren, Rechnungs-PDF wählen, fertig. Der Stundennachweis wird am Ende der Rechnung angefügt; die Original-Datei bleibt unverändert. Output: `<Rechnungsname>_inkl_Stundennachweis.pdf` im selben Verzeichnis. Bei bereits existierender Ausgabedatei wird ein Zeitstempel-Suffix ergänzt (kein stilles Überschreiben). Bei schreibgeschützten Verzeichnissen öffnet sich automatisch ein Speichern-Dialog.
+- **`pdf-lib`** als neue Dependency (~150 KB, pure JS, MIT) — kein natives Modul, kein Rebuild-Schritt.
+
 ## [1.6.1] — 2026-04-26
 
 ### Fixed
