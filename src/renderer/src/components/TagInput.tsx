@@ -137,7 +137,8 @@ export function TagInput({ value, onChange, disabled = false }: Props): React.Re
   return (
     <div ref={containerRef} className="relative">
       <div
-        className={`flex min-h-[36px] flex-wrap items-center gap-1 rounded border border-zinc-700 bg-zinc-900 px-2 py-1.5 focus-within:border-indigo-500 ${disabled ? 'opacity-50' : ''}`}
+        className={`flex min-h-[36px] flex-wrap items-center gap-1 rounded border px-2 py-1.5 focus-within:border-indigo-500 transition-colors ${disabled ? 'opacity-50' : ''}`}
+        style={{ background: 'var(--input-bg)', borderColor: 'var(--card-border)' }}
         onClick={() => inputRef.current?.focus()}
       >
         {tags.map((tag) => (
@@ -173,7 +174,8 @@ export function TagInput({ value, onChange, disabled = false }: Props): React.Re
           onKeyDown={handleKeyDown}
           disabled={disabled}
           placeholder={tags.length === 0 ? t('tags.placeholder') : ''}
-          className="min-w-[80px] flex-1 bg-transparent text-xs text-zinc-100 placeholder-zinc-600 focus:outline-none"
+          className="min-w-[80px] flex-1 bg-transparent text-xs focus:outline-none"
+          style={{ color: 'var(--text)' }}
           aria-label={t('tags.inputAria')}
           aria-autocomplete="list"
           aria-expanded={showDropdown}
@@ -183,7 +185,8 @@ export function TagInput({ value, onChange, disabled = false }: Props): React.Re
       {showDropdown && (
         <ul
           role="listbox"
-          className="absolute z-50 mt-1 max-h-48 w-full overflow-auto rounded border border-zinc-700 bg-zinc-900 py-1 shadow-xl"
+          className="absolute z-50 mt-1 max-h-48 w-full overflow-auto rounded border py-1 shadow-xl backdrop-blur-xl"
+          style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)' }}
         >
           {suggestions.map((s, i) => (
             <li
@@ -197,8 +200,9 @@ export function TagInput({ value, onChange, disabled = false }: Props): React.Re
               className={`cursor-pointer px-3 py-1 text-xs ${
                 i === highlightedIndex
                   ? 'bg-indigo-600 text-white'
-                  : 'text-zinc-300 hover:bg-zinc-800'
+                  : 'hover:bg-white/10'
               }`}
+              style={i !== highlightedIndex ? { color: 'var(--text)' } : undefined}
             >
               #{s}
             </li>

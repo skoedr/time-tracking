@@ -18,7 +18,7 @@ function App(): React.JSX.Element {
   const t = useT()
   const [view, setView] = useState<View>('today')
   const [showOnboarding, setShowOnboarding] = useState(false)
-  const { idleEvent, idleKeep, idleStopAtIdle, idleMarkPause, quickNoteEntry, setQuickNoteEntry } =
+  const { idleEvent, idleKeep, idleStopAtIdle, idleMarkPause, quickNoteEntry, setQuickNoteEntry, runningEntry, clients } =
     useTimer()
 
   // Check onboarding flag on mount — show wizard only for fresh installs.
@@ -49,7 +49,7 @@ function App(): React.JSX.Element {
       <UpdateBanner />
       {/* Nav */}
       <nav
-        className="relative z-10 flex gap-1 px-3 py-2 shrink-0 border-b backdrop-blur-xl"
+        className="relative z-10 flex items-center gap-1 px-3 py-2 shrink-0 border-b backdrop-blur-xl"
         style={{
           background: 'var(--nav-bg)',
           borderColor: 'var(--card-border)'
@@ -59,7 +59,7 @@ function App(): React.JSX.Element {
           <button
             key={v}
             onClick={() => setView(v)}
-            className={`px-4 py-1.5 rounded text-sm font-medium transition-colors
+            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors
               focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500
               ${view === v ? 'bg-indigo-600 text-white' : 'hover:bg-white/10'}`}
             style={view !== v ? { color: 'var(--text2)' } : undefined}
@@ -67,15 +67,29 @@ function App(): React.JSX.Element {
             {t(('nav.' + v) as `nav.${View}`)}
           </button>
         ))}
+
+        {/* Running timer pill */}
+        {runningEntry && (() => {
+          const client = clients.find((c) => c.id === runningEntry.client_id)
+          return (
+            <RunningPill
+              startedAt={runningEntry.started_at}
+              clientName={client?.name}
+              clientColor={client?.color}
+            />
+          )
+        })()}
       </nav>
 
       {/* Content */}
       <main className="relative z-10 flex-1 overflow-y-auto p-6">
-        {view === 'today' && <TodayView />}
-        {view === 'timer' && <TimerView />}
-        {view === 'calendar' && <CalendarView />}
-        {view === 'clients' && <ClientsView />}
-        {view === 'settings' && <SettingsView />}
+        <div key={view} className="view-enter">
+          {view === 'today' && <TodayView />}
+          {view === 'timer' && <TimerView />}
+          {view === 'calendar' && <CalendarView />}
+          {view === 'clients' && <ClientsView />}
+          {view === 'settings' && <SettingsView />}
+        </div>
       </main>
 
       {idleEvent && (
@@ -99,3 +113,40 @@ function App(): React.JSX.Element {
 }
 
 export default App
+
+// ── Running timer pill (nav bar, right side) ────────────────────────────────
+function RunningPill({
+  startedAt,
+  clientName,
+  clientColor
+}: {
+  startedAt: string
+  clientName?: string
+  clientColor?: string
+}): React.JSX.Element {
+  const [, setTick] = useState(0)
+  useEffect(() => {
+    const id = setInterval(() => setTick((n) => n + 1), 1000)
+    return () => clearInterval(id)
+  }, [startedAt])
+
+  const seconds = Math.max(0, Math.floor((Date.now() - new Date(startedAt).getTime()) / 1000))
+  const h = Math.floor(seconds / 3600)
+  const m = Math.floor((seconds % 3600) / 60)
+  const s = seconds % 60
+  const label = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+
+  return (
+    <div
+      className="ml-auto flex items-center gap-2 rounded-full border px-3 py-1 text-xs"
+      style={{ background: 'var(--green-bg)', borderColor: 'var(--green)', color: 'var(--green)' }}
+    >
+      <span
+        className="h-2 w-2 animate-pulse rounded-full"
+        style={{ backgroundColor: clientColor ?? 'var(--green)' }}
+      />
+      {clientName && <span className="font-medium" style={{ color: 'var(--text)' }}>{clientName}</span>}
+      <span className="font-mono tabular-nums" style={{ fontFamily: "'JetBrains Mono', monospace" }}>{label}</span>
+    </div>
+  )
+}

@@ -77,24 +77,28 @@ export function OnboardingWizard({ open, onFinish }: Props): React.JSX.Element |
   const stepLabel = t('onboarding.step', { current: step, total: TOTAL_STEPS })
 
   const inputClass =
-    'rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-zinc-100 text-sm ' +
-    'focus:outline-none focus:ring-2 focus:ring-indigo-400 w-full'
+    'rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 w-full'
+  const inputStyle = { background: 'var(--input-bg)', borderColor: 'var(--card-border)', color: 'var(--text)' } as React.CSSProperties
 
   return (
     // Full-screen overlay — sits above everything including UpdateBanner.
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
-      <div className="relative flex w-full max-w-md flex-col gap-6 rounded-2xl bg-zinc-900 p-8 shadow-2xl ring-1 ring-zinc-800">
+      <div
+        className="relative flex w-full max-w-md flex-col gap-6 rounded-2xl p-8 shadow-2xl border backdrop-blur-xl"
+        style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)' }}
+      >
         {/* Skip link */}
         <button
           type="button"
           onClick={onFinish}
-          className="absolute right-5 top-5 text-xs text-zinc-500 hover:text-zinc-300 focus:outline-none focus:ring-2 focus:ring-indigo-400 rounded"
+          className="absolute right-5 top-5 text-xs hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-indigo-400 rounded transition-opacity"
+          style={{ color: 'var(--text3)' }}
         >
           {t('onboarding.skip')}
         </button>
 
         {/* Step indicator */}
-        <p className="text-xs text-zinc-500">{stepLabel}</p>
+        <p className="text-xs" style={{ color: 'var(--text3)' }}>{stepLabel}</p>
 
         {/* ── Step 1: Welcome + Language ── */}
         {step === 1 && (
@@ -104,22 +108,23 @@ export function OnboardingWizard({ open, onFinish }: Props): React.JSX.Element |
               <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-indigo-600 text-3xl font-black text-white select-none">
                 T
               </div>
-              <h1 className="text-2xl font-bold text-zinc-100">
+              <h1 className="text-2xl font-bold" style={{ color: 'var(--text)' }}>
                 {t('onboarding.welcome.title')}
               </h1>
-              <p className="text-sm text-zinc-400 leading-relaxed">
+              <p className="text-sm leading-relaxed" style={{ color: 'var(--text2)' }}>
                 {t('onboarding.welcome.body')}
               </p>
             </div>
 
             <label className="flex flex-col gap-1.5 text-sm">
-              <span className="font-medium text-zinc-300">
+              <span className="font-medium" style={{ color: 'var(--text2)' }}>
                 {t('onboarding.welcome.languageLabel')}
               </span>
               <select
                 value={locale}
                 onChange={(e) => void setLocale(e.target.value as Locale)}
                 className={inputClass}
+                style={inputStyle}
               >
                 <option value="de">{t('settings.language.de')}</option>
                 <option value="en">{t('settings.language.en')}</option>
@@ -139,26 +144,27 @@ export function OnboardingWizard({ open, onFinish }: Props): React.JSX.Element |
         {step === 2 && (
           <>
             <div className="flex flex-col gap-2">
-              <h2 className="text-xl font-bold text-zinc-100">{t('onboarding.client.title')}</h2>
-              <p className="text-sm text-zinc-400">{t('onboarding.client.body')}</p>
+              <h2 className="text-xl font-bold" style={{ color: 'var(--text)' }}>{t('onboarding.client.title')}</h2>
+              <p className="text-sm" style={{ color: 'var(--text2)' }}>{t('onboarding.client.body')}</p>
             </div>
 
             <div className="flex flex-col gap-4">
               <label className="flex flex-col gap-1.5 text-sm">
-                <span className="font-medium text-zinc-300">{t('onboarding.client.nameLabel')}</span>
+                <span className="font-medium" style={{ color: 'var(--text2)' }}>{t('onboarding.client.nameLabel')}</span>
                 <input
                   type="text"
                   value={clientName}
                   onChange={(e) => setClientName(e.target.value)}
                   placeholder={t('onboarding.client.namePlaceholder')}
                   className={inputClass}
+                  style={inputStyle}
                   autoFocus
                   disabled={clientBusy}
                 />
               </label>
 
               <label className="flex flex-col gap-1.5 text-sm">
-                <span className="font-medium text-zinc-300">{t('onboarding.client.rateLabel')}</span>
+                <span className="font-medium" style={{ color: 'var(--text2)' }}>{t('onboarding.client.rateLabel')}</span>
                 <div className="flex items-center gap-2">
                   <input
                     type="number"
@@ -167,15 +173,16 @@ export function OnboardingWizard({ open, onFinish }: Props): React.JSX.Element |
                     value={clientRate}
                     onChange={(e) => setClientRate(e.target.value)}
                     placeholder={t('onboarding.client.ratePlaceholder')}
-                    className="rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-zinc-100 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 w-28"
+                    className="rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 w-28"
+                    style={{ background: 'var(--input-bg)', borderColor: 'var(--card-border)', color: 'var(--text)' }}
                     disabled={clientBusy}
                   />
-                  <span className="text-sm text-zinc-400">{t('onboarding.client.rateUnit')}</span>
+                  <span className="text-sm" style={{ color: 'var(--text2)' }}>{t('onboarding.client.rateUnit')}</span>
                 </div>
               </label>
 
               <div className="flex flex-col gap-1.5 text-sm">
-                <span className="font-medium text-zinc-300">{t('onboarding.client.colorLabel')}</span>
+                <span className="font-medium" style={{ color: 'var(--text2)' }}>{t('onboarding.client.colorLabel')}</span>
                 <div className="flex flex-wrap gap-2">
                   {PRESET_COLORS.map((c) => (
                     <button
@@ -183,7 +190,7 @@ export function OnboardingWizard({ open, onFinish }: Props): React.JSX.Element |
                       type="button"
                       onClick={() => setClientColor(c)}
                       title={c}
-                      className={`h-7 w-7 rounded-full ring-offset-2 ring-offset-zinc-900 transition-all focus:outline-none focus:ring-2 focus:ring-indigo-400 ${
+                      className={`h-7 w-7 rounded-full ring-offset-2 transition-all focus:outline-none focus:ring-2 focus:ring-indigo-400 ${
                         clientColor === c ? 'ring-2 ring-white scale-110' : 'hover:scale-105'
                       }`}
                       style={{ background: c }}
@@ -214,14 +221,14 @@ export function OnboardingWizard({ open, onFinish }: Props): React.JSX.Element |
         {step === 3 && (
           <>
             <div className="flex flex-col gap-2">
-              <h2 className="text-xl font-bold text-zinc-100">{t('onboarding.hotkey.title')}</h2>
-              <p className="text-sm text-zinc-400">{t('onboarding.hotkey.body')}</p>
+              <h2 className="text-xl font-bold" style={{ color: 'var(--text)' }}>{t('onboarding.hotkey.title')}</h2>
+              <p className="text-sm" style={{ color: 'var(--text2)' }}>{t('onboarding.hotkey.body')}</p>
             </div>
 
             <div className="flex flex-col gap-4">
               <HotkeyHint label={t('onboarding.hotkey.default', { hotkey: 'Alt+Shift+S' })} />
               <HotkeyHint label={t('onboarding.hotkey.mini', { hotkey: 'Alt+Shift+M' })} />
-              <p className="text-xs text-zinc-500">{t('onboarding.hotkey.hint')}</p>
+              <p className="text-xs" style={{ color: 'var(--text3)' }}>{t('onboarding.hotkey.hint')}</p>
 
               {clientCreated && (
                 <p className="rounded-lg bg-emerald-900/30 px-3 py-2 text-sm text-emerald-300">
@@ -276,14 +283,18 @@ function HotkeyHint({ label }: { label: string }): React.JSX.Element {
   // Extract and bold the hotkey token (looks like "Alt+Shift+S" or "Alt+Shift+M").
   const parts = label.split(/(\b[A-Z][a-zA-Z+]+[A-Z]\b)/)
   return (
-    <div className="flex items-start gap-3 rounded-xl bg-zinc-800 px-4 py-3">
+    <div
+      className="flex items-start gap-3 rounded-xl border px-4 py-3 backdrop-blur-xl"
+      style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)' }}
+    >
       <span className="mt-0.5 text-indigo-400">⌨</span>
-      <p className="text-sm text-zinc-300">
+      <p className="text-sm" style={{ color: 'var(--text2)' }}>
         {parts.map((part, i) =>
           /^[A-Z]/.test(part) && part.includes('+') ? (
             <kbd
               key={i}
-              className="rounded bg-zinc-700 px-1.5 py-0.5 font-mono text-xs text-zinc-100"
+              className="rounded px-1.5 py-0.5 font-mono text-xs border"
+              style={{ background: 'var(--input-bg)', borderColor: 'var(--card-border)', color: 'var(--text)' }}
             >
               {part}
             </kbd>

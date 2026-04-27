@@ -4,6 +4,7 @@ import { formatRateInput, parseRateInput } from '../../../shared/rate'
 import { useClientsStore } from '../store/clientsStore'
 import { useT } from '../contexts/I18nContext'
 import type { TranslationKey } from '../../../shared/locales/de'
+import * as Icons from '../components/Icons'
 
 const COLORS = [
   '#6366f1', // indigo
@@ -95,12 +96,12 @@ export default function ClientsView() {
   return (
     <div className="max-w-xl mx-auto">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-xl font-semibold text-slate-100">{t('clients.title')}</h1>
+        <h1 className="text-xl font-semibold" style={{ color: 'var(--text)' }}>{t('clients.title')}</h1>
         <button
           onClick={openNew}
-          className="bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium
-            px-4 py-2 rounded-lg transition-colors"
+          className="flex items-center gap-2 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium px-4 py-1.5 transition-colors"
         >
+          <Icons.Plus />
           {t('clients.addNew')}
         </button>
       </div>
@@ -224,24 +225,24 @@ function ClientItem({
       <button
         onClick={() => onToggleActive(c)}
         title={c.active ? t('clients.action.archive') : t('clients.action.reactivate')}
-        className="text-sm transition-colors px-1 hover:opacity-80"
+        className="rounded p-1 transition-colors hover:bg-white/10"
         style={{ color: 'var(--text3)' }}
       >
-        {c.active ? '📦' : '♻️'}
+        {c.active ? <Icons.Archive /> : <Icons.Unarchive />}
       </button>
       <button
         onClick={() => onEdit(c)}
-        className="text-sm transition-colors px-1 hover:opacity-80"
+        className="rounded p-1 transition-colors hover:bg-white/10"
         style={{ color: 'var(--text3)' }}
       >
-        ✏️
+        <Icons.Edit />
       </button>
       <button
         onClick={() => onDelete(c)}
-        className="text-sm transition-colors px-1 hover:opacity-80"
+        className="rounded p-1 transition-colors hover:bg-white/10"
         style={{ color: 'var(--danger)' }}
       >
-        🗑️
+        <Icons.Trash />
       </button>
     </li>
   )

@@ -1,3 +1,7 @@
+import '@fontsource-variable/inter'
+import '@fontsource/jetbrains-mono/400.css'
+import '@fontsource/jetbrains-mono/600.css'
+import './assets/base.css'
 import './assets/main.css'
 // v1.5 PR A — route renderer console.* through main-process electron-log
 // (which is initialized with spyRendererConsole: true). Picked up via IPC.

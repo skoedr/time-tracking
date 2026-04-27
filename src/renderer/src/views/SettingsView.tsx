@@ -40,6 +40,7 @@ function parseAccelerator(e: KeyboardEvent): string | null {
 export default function SettingsView(): React.JSX.Element {
   const t = useT()
   const { locale, setLocale } = useLocale()
+  const { themeMode, setThemeMode } = useTheme()
   const [settings, setSettings] = useState<Settings | null>(null)
   const [paths, setPaths] = useState<{
     db: string
@@ -175,8 +176,6 @@ export default function SettingsView(): React.JSX.Element {
 
   const latestBackup = backups[0] ?? null
 
-  const { themeMode, setThemeMode } = useTheme()
-
   const NAV_ITEMS: { id: SettingsTab; label: string }[] = [
     { id: 'general', label: t('settings.nav.general') },
     { id: 'timer', label: t('settings.nav.timer') },
@@ -194,11 +193,12 @@ export default function SettingsView(): React.JSX.Element {
             key={item.id}
             type="button"
             onClick={() => { setTab(item.id); setStatusMsg(null) }}
-            className={`w-full rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
+            className={`w-full rounded-full px-4 py-2 text-left text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
               tab === item.id
                 ? 'bg-indigo-600 text-white'
-                : 'hover:bg-white/10 hover:text-[var(--text)]'
-            } text-[var(--text2)]`}
+                : 'hover:bg-white/10'
+            }`}
+            style={tab !== item.id ? { color: 'var(--text2)' } : undefined}
           >
             {item.label}
           </button>
@@ -206,7 +206,7 @@ export default function SettingsView(): React.JSX.Element {
       </nav>
 
       {/* Content */}
-      <div className="flex-1 min-w-0 flex flex-col gap-8">
+      <div className="flex-1 min-w-0 flex flex-col gap-6 max-w-xl">
         {statusMsg && (
           <div
             className="rounded-md px-3 py-2 text-sm"
@@ -218,23 +218,15 @@ export default function SettingsView(): React.JSX.Element {
         {tab === 'general' && (
           <Section title={t('settings.section.general')}>
             <Row label={t('settings.theme.title')}>
-              <div className="inline-flex rounded-lg border overflow-hidden" style={{ borderColor: 'var(--card-border)' }}>
-                {(['light', 'dark', 'system'] as ThemeMode[]).map((m) => (
-                  <button
-                    key={m}
-                    type="button"
-                    onClick={() => setThemeMode(m)}
-                    className={`px-4 py-1.5 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${
-                      themeMode === m
-                        ? 'bg-indigo-600 text-white'
-                        : 'hover:bg-white/10'
-                    }`}
-                    style={themeMode !== m ? { color: 'var(--text2)' } : {}}
-                  >
-                    {t(`settings.theme.${m}` as `settings.theme.${'light' | 'dark' | 'system'}`)}
-                  </button>
-                ))}
-              </div>
+              <SegmentedPicker
+                options={[
+                  { value: 'light' as ThemeMode, label: t('settings.theme.light') },
+                  { value: 'dark' as ThemeMode, label: t('settings.theme.dark') },
+                  { value: 'system' as ThemeMode, label: t('settings.theme.system') }
+                ]}
+                value={themeMode}
+                onChange={setThemeMode}
+              />
             </Row>
             <Row label={t('settings.language.title')}>
               <select
@@ -259,16 +251,11 @@ export default function SettingsView(): React.JSX.Element {
                 {t('settings.onboarding.retrigger')}
               </button>
             </Row>
-            <Row label={t('settings.general.autoStart')}>
-              <label className="inline-flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={settings.auto_start === '1'}
-                  onChange={(e) => update('auto_start', e.target.checked ? '1' : '0')}
-                  className="h-4 w-4 rounded accent-indigo-500"
-                />
-                <span className="text-sm" style={{ color: 'var(--text)' }}>{t('settings.general.autoStartLabel')}</span>
-              </label>
+            <Row label={t('settings.general.autoStart')} hint={t('settings.general.autoStartLabel')}>
+              <Toggle
+                checked={settings.auto_start === '1'}
+                onChange={(v) => update('auto_start', v ? '1' : '0')}
+              />
             </Row>
             <Row label={t('settings.general.company')}>
               <input
@@ -335,17 +322,28 @@ export default function SettingsView(): React.JSX.Element {
                 )}
               </Row>
               <Row label={t('settings.timer.rounding')} hint={t('settings.timer.roundingHint')}>
-                <select
-                  aria-label={t('settings.timer.roundingHint')}
+                <SegmentedPicker
+                  options={[
+                    { value: '5' as Settings['rounding_minutes'], label: '5 min' },
+                    { value: '10' as Settings['rounding_minutes'], label: '10 min' },
+                    { value: '15' as Settings['rounding_minutes'], label: '15 min' },
+                    { value: '30' as Settings['rounding_minutes'], label: '30 min' }
+                  ]}
+                  value={settings.rounding_minutes}
+                  onChange={(v) => update('rounding_minutes', v)}
+                />
+              </Row>
+              <Row label={t('settings.timer.roundingMethod')}>
+                <SegmentedPicker
+                  options={[
+                    { value: 'none' as Settings['rounding_mode'], label: t('settings.timer.roundingNone') },
+                    { value: 'ceil' as Settings['rounding_mode'], label: t('settings.timer.roundingCeil') },
+                    { value: 'round' as Settings['rounding_mode'], label: t('settings.timer.roundingRound') },
+                    { value: 'floor' as Settings['rounding_mode'], label: t('settings.timer.roundingFloor') }
+                  ]}
                   value={settings.rounding_mode}
-                  onChange={(e) => update('rounding_mode', e.target.value as Settings['rounding_mode'])}
-                  className={inputClass}
-                >
-                  <option value="none">{t('settings.timer.roundingNone')}</option>
-                  <option value="ceil">{t('settings.timer.roundingCeil')}</option>
-                  <option value="floor">{t('settings.timer.roundingFloor')}</option>
-                  <option value="round">{t('settings.timer.roundingRound')}</option>
-                </select>
+                  onChange={(v) => update('rounding_mode', v)}
+                />
               </Row>
             </Section>
 
@@ -355,15 +353,10 @@ export default function SettingsView(): React.JSX.Element {
                 label={t('settings.mini.enable')}
                 hint={t('settings.mini.enableHint')}
               >
-                <label className="inline-flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={settings.mini_enabled === '1'}
-                    onChange={(e) => update('mini_enabled', e.target.checked ? '1' : '0')}
-                    className="h-4 w-4 rounded accent-indigo-500"
-                  />
-                  <span className="text-sm" style={{ color: 'var(--text)' }}>{t('settings.mini.enableLabel')}</span>
-                </label>
+                <Toggle
+                  checked={settings.mini_enabled === '1'}
+                  onChange={(v) => update('mini_enabled', v ? '1' : '0')}
+                />
               </Row>
               <Row
                 label={t('settings.mini.hotkey')}
@@ -423,7 +416,7 @@ export default function SettingsView(): React.JSX.Element {
         {/* PDF & Export */}
         {tab === 'export' && (
           <Section title={t('settings.section.pdf')}>
-            <Row label={t('settings.pdf.logo')} hint={t('settings.pdf.logoHint')}>
+            <Row label={t('settings.pdf.logo')} hint={t('settings.pdf.logoHint')} stacked>
               <div className="flex items-center gap-3">
                 {settings.pdf_logo_path ? (
                   <code className="flex-1 truncate rounded px-3 py-1.5 text-xs" style={{ background: 'var(--card-bg)', color: 'var(--text2)' }}>
@@ -442,7 +435,7 @@ export default function SettingsView(): React.JSX.Element {
                 )}
               </div>
             </Row>
-            <Row label={t('settings.pdf.sender')} hint={t('settings.pdf.senderHint')}>
+            <Row label={t('settings.pdf.sender')} hint={t('settings.pdf.senderHint')} stacked>
               <textarea
                 rows={4}
                 value={settings.pdf_sender_address}
@@ -478,7 +471,7 @@ export default function SettingsView(): React.JSX.Element {
                 </code>
               </div>
             </Row>
-            <Row label={t('settings.pdf.footer')} hint={t('settings.pdf.footerHint')}>
+            <Row label={t('settings.pdf.footer')} hint={t('settings.pdf.footerHint')} stacked>
               <textarea
                 rows={3}
                 value={settings.pdf_footer_text}
@@ -488,17 +481,17 @@ export default function SettingsView(): React.JSX.Element {
               />
             </Row>
             <Row label={t('settings.pdf.roundMinutes')} hint={t('settings.pdf.roundMinutesHint')}>
-              <select
+              <SegmentedPicker
+                options={[
+                  { value: '0', label: t('settings.pdf.roundNone') },
+                  { value: '5', label: '5 min' },
+                  { value: '10', label: '10 min' },
+                  { value: '15', label: '15 min' },
+                  { value: '30', label: '30 min' }
+                ]}
                 value={settings.pdf_round_minutes || '0'}
-                onChange={(e) => update('pdf_round_minutes', e.target.value)}
-                className={inputClass}
-              >
-                <option value="0">{t('settings.pdf.roundNone')}</option>
-                <option value="5">5 Minuten</option>
-                <option value="10">10 Minuten</option>
-                <option value="15">15 Minuten</option>
-                <option value="30">30 Minuten</option>
-              </select>
+                onChange={(v) => update('pdf_round_minutes', v)}
+              />
             </Row>
           </Section>
         )}
@@ -507,7 +500,7 @@ export default function SettingsView(): React.JSX.Element {
         {tab === 'data' && (
           <>
             <Section title={t('settings.section.data')}>
-              <Row label={t('settings.data.database')}>
+              <Row label={t('settings.data.database')} stacked>
                 <div className="flex items-center gap-2">
                   <code className="flex-1 truncate rounded px-3 py-1.5 text-xs" style={{ background: 'var(--card-bg)', color: 'var(--text2)' }}>
                     {paths.db}
@@ -521,7 +514,7 @@ export default function SettingsView(): React.JSX.Element {
                   </button>
                 </div>
               </Row>
-              <Row label={t('settings.data.backupsFolder')}>
+              <Row label={t('settings.data.backupsFolder')} stacked>
                 <div className="flex items-center gap-2">
                   <code className="flex-1 truncate rounded px-3 py-1.5 text-xs" style={{ background: 'var(--card-bg)', color: 'var(--text2)' }}>
                     {paths.backups}
@@ -535,35 +528,25 @@ export default function SettingsView(): React.JSX.Element {
                   </button>
                 </div>
               </Row>
-              <Row label={t('settings.data.lastBackup')}>
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-sm text-slate-300">
-                    {latestBackup
-                      ? `${new Date(latestBackup.createdAt).toLocaleString('de-DE')} (${latestBackup.reason})`
-                      : t('settings.data.noBackup')}
-                  </span>
-                  <button type="button" onClick={createBackupNow} className={btnSecondaryClass}>
-                    {t('settings.data.createBackup')}
-                  </button>
-                </div>
-                {backups.length > 0 && (
-                  <p className="mt-1 text-xs" style={{ color: 'var(--text3)' }}>
-                    {backups.length === 1 ? t('settings.data.backupCount') : t('settings.data.backupCountPlural', { count: String(backups.length) })}
-                  </p>
-                )}
+              <Row
+                label={t('settings.data.lastBackup')}
+                hint={
+                  latestBackup
+                    ? `${new Date(latestBackup.createdAt).toLocaleString('de-DE')} (${latestBackup.reason})${backups.length > 1 ? ` \u00b7 ${backups.length} Backups` : ''}`
+                    : t('settings.data.noBackup')
+                }
+              >
+                <button type="button" onClick={createBackupNow} className={btnSecondaryClass}>
+                  {t('settings.data.createBackup')}
+                </button>
               </Row>
-              <Row label={t('settings.data.jsonExport')}>
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-sm" style={{ color: 'var(--text)' }}>
-                    {t('settings.data.jsonExportDesc')}
-                  </span>
-                  <button type="button" onClick={exportJson} className={btnSecondaryClass}>
-                    {t('settings.data.jsonExportBtn')}
-                  </button>
-                </div>
-                <p className="mt-1 text-xs" style={{ color: 'var(--text3)' }}>
-                  {t('settings.data.jsonExportHint')}
-                </p>
+              <Row
+                label={t('settings.data.jsonExport')}
+                hint={`${t('settings.data.jsonExportDesc')} \u2014 ${t('settings.data.jsonExportHint')}`}
+              >
+                <button type="button" onClick={exportJson} className={btnSecondaryClass}>
+                  {t('settings.data.jsonExportBtn')}
+                </button>
               </Row>
             </Section>
 
@@ -572,6 +555,7 @@ export default function SettingsView(): React.JSX.Element {
               <Row
                 label="Log-Datei"
                 hint={t('settings.diagnose.hint')}
+                stacked
               >
                 <div className="flex items-center gap-2">
                   <code className="flex-1 truncate rounded px-3 py-1.5 text-xs" style={{ background: 'var(--card-bg)', color: 'var(--text2)' }}>
@@ -630,7 +614,7 @@ export default function SettingsView(): React.JSX.Element {
 }
 
 const inputClass =
-  'rounded-lg px-3 py-2 text-sm border backdrop-blur-xl ' +
+  'w-full rounded-lg px-3 py-2 text-sm border backdrop-blur-xl ' +
   '[background:var(--input-bg)] [border-color:var(--card-border)] [color:var(--text)] ' +
   'focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent'
 
@@ -647,10 +631,15 @@ function Section({
   children: React.ReactNode
 }): React.JSX.Element {
   return (
-    <section className="flex flex-col gap-4">
-      <h2 className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text3)' }}>{title}</h2>
+    <section className="flex flex-col gap-2.5">
+      <h2
+        className="text-xs font-bold uppercase tracking-widest px-1"
+        style={{ color: 'var(--text3)' }}
+      >
+        {title}
+      </h2>
       <div
-        className="flex flex-col gap-5 rounded-lg border p-5 backdrop-blur-xl"
+        className="rounded-2xl border overflow-hidden backdrop-blur-xl [&>*:last-child]:border-b-0"
         style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)' }}
       >
         {children}
@@ -662,17 +651,93 @@ function Section({
 function Row({
   label,
   hint,
-  children
+  children,
+  stacked
 }: {
   label: string
   hint?: string
   children: React.ReactNode
+  stacked?: boolean
 }): React.JSX.Element {
   return (
-    <div className="flex flex-col gap-1.5">
-      <label className="text-sm font-medium" style={{ color: 'var(--text)' }}>{label}</label>
-      {children}
-      {hint && <p className="text-xs" style={{ color: 'var(--text3)' }}>{hint}</p>}
+    <div
+      className={`flex ${stacked ? 'flex-col gap-2.5' : 'items-center justify-between gap-4'} px-[18px] py-[13px]`}
+      style={{ borderBottom: '1px solid var(--card-border)' }}
+    >
+      <div className="flex flex-col gap-0.5 min-w-0" style={{ flex: stacked ? undefined : '1 1 0%' }}>
+        <span className="text-sm font-medium" style={{ color: 'var(--text)' }}>{label}</span>
+        {hint && <span className="text-xs" style={{ color: 'var(--text3)' }}>{hint}</span>}
+      </div>
+      <div className={stacked ? 'w-full' : 'shrink-0'}>{children}</div>
+    </div>
+  )
+}
+
+function Toggle({
+  checked,
+  onChange
+}: {
+  checked: boolean
+  onChange: (v: boolean) => void
+}): React.JSX.Element {
+  return (
+    <div
+      role="switch"
+      aria-checked={checked}
+      onClick={() => onChange(!checked)}
+      className="relative cursor-pointer transition-all duration-200 shrink-0"
+      style={{
+        width: 40,
+        height: 22,
+        borderRadius: 11,
+        background: checked ? 'var(--accent)' : 'var(--card-bg)',
+        border: `1px solid ${checked ? 'var(--accent)' : 'var(--card-border)'}`,
+        boxShadow: checked ? '0 0 12px var(--accent-glow)' : 'none'
+      }}
+    >
+      <div
+        className="absolute top-0.5 transition-all duration-200"
+        style={{
+          left: checked ? 20 : 2,
+          width: 16,
+          height: 16,
+          borderRadius: '50%',
+          background: '#fff',
+          boxShadow: '0 1px 4px rgba(0,0,0,.3)'
+        }}
+      />
+    </div>
+  )
+}
+
+function SegmentedPicker<T extends string>({
+  options,
+  value,
+  onChange
+}: {
+  options: { value: T; label: string }[]
+  value: T
+  onChange: (v: T) => void
+}): React.JSX.Element {
+  return (
+    <div className="flex gap-1">
+      {options.map((opt) => (
+        <button
+          key={opt.value}
+          type="button"
+          onClick={() => onChange(opt.value)}
+          className="text-xs font-semibold cursor-pointer transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+          style={{
+            padding: '5px 12px',
+            borderRadius: 8,
+            border: `1px solid ${value === opt.value ? 'var(--accent)' : 'var(--card-border)'}`,
+            background: value === opt.value ? 'var(--accent-bg)' : 'var(--card-bg)',
+            color: value === opt.value ? 'var(--accent)' : 'var(--text2)'
+          }}
+        >
+          {opt.label}
+        </button>
+      ))}
     </div>
   )
 }
@@ -726,9 +791,7 @@ function UpdatesSection(): React.JSX.Element {
   return (
     <Section title={t('settings.update.title')}>
       <Row label={t('settings.update.version', { version: appVersion || '—' })}>
-        <code className="inline-block w-fit rounded px-3 py-1.5 text-xs" style={{ background: 'var(--card-bg)', color: 'var(--text2)' }}>
-          {appVersion || '—'}
-        </code>
+        <span className="text-sm" style={{ color: 'var(--text2)' }}>{appVersion || '\u2014'}</span>
       </Row>
       <Row label={t('settings.update.status')} hint={`${t('settings.update.lastCheck')}: ${lastCheckedLabel}`}>
         <p
@@ -739,7 +802,7 @@ function UpdatesSection(): React.JSX.Element {
           {statusLabel}
         </p>
       </Row>
-      <Row label={t('settings.update.actions')}>
+      <Row label={t('settings.update.actions')} hint={t('settings.update.autoInfo')}>
         <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
@@ -759,9 +822,6 @@ function UpdatesSection(): React.JSX.Element {
             </button>
           )}
         </div>
-        <p className="mt-1 text-xs" style={{ color: 'var(--text3)' }}>
-          {t('settings.update.autoInfo')}
-        </p>
       </Row>
     </Section>
   )

@@ -6,6 +6,7 @@ import { useTimer, formatDuration } from '../hooks/useTimer'
 import { Dialog } from '../components/Dialog'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { EntryEditForm } from '../components/EntryEditForm'
+import * as Icons from '../components/Icons'
 import type { TFunction } from '../contexts/I18nContext'
 import { useT } from '../contexts/I18nContext'
 
@@ -373,18 +374,18 @@ function RecentList({
                       aria-label={t('common.edit')}
                       title={t('common.edit')}
                     >
-                      ✏️
+                      <Icons.Edit />
                     </button>
                     <button
                       type="button"
                       onClick={() => onDelete(e)}
                       disabled={e.stopped_at === null}
                       className="rounded p-1 hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-red-400 disabled:cursor-not-allowed disabled:opacity-30 transition-colors"
-                      style={{ color: 'var(--text2)' }}
+                      style={{ color: 'var(--danger)' }}
                       aria-label={t('common.delete')}
                       title={e.stopped_at === null ? t('common.stopRunningFirst') : t('common.delete')}
                     >
-                      🗑️
+                      <Icons.Trash />
                     </button>
                   </div>
                 </td>

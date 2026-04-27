@@ -124,14 +124,15 @@ export function PdfExportModal(props: Props): React.JSX.Element {
     <Dialog open={open} onClose={onClose} title="Stundennachweis als PDF" widthClass="w-[520px]">
       <div className="flex flex-col gap-4">
         <label className="flex flex-col gap-1 text-sm">
-          <span className="font-medium text-zinc-300">Kunde</span>
+          <span className="font-medium" style={{ color: 'var(--text2)' }}>Kunde</span>
           <select
             value={clientId ?? ''}
             onChange={(e) =>
               setClientId(e.target.value === '' ? null : Number.parseInt(e.target.value, 10))
             }
             disabled={busy}
-            className="rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+            className="rounded-lg border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+            style={{ background: 'var(--input-bg)', borderColor: 'var(--card-border)', color: 'var(--text)' }}
           >
             <option value="">— Kunde wählen —</option>
             {clients.map((c) => (
@@ -145,60 +146,64 @@ export function PdfExportModal(props: Props): React.JSX.Element {
 
         <div className="grid grid-cols-2 gap-3">
           <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium text-zinc-300">Von</span>
+            <span className="font-medium" style={{ color: 'var(--text2)' }}>Von</span>
             <input
               type="date"
               value={fromIso}
               onChange={(e) => setFromIso(e.target.value)}
               disabled={busy}
-              className="rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+              className="rounded-lg border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+              style={{ background: 'var(--input-bg)', borderColor: 'var(--card-border)', color: 'var(--text)' }}
             />
           </label>
           <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium text-zinc-300">Bis</span>
+            <span className="font-medium" style={{ color: 'var(--text2)' }}>Bis</span>
             <input
               type="date"
               value={toIso}
               onChange={(e) => setToIso(e.target.value)}
               disabled={busy}
-              className="rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+              className="rounded-lg border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+              style={{ background: 'var(--input-bg)', borderColor: 'var(--card-border)', color: 'var(--text)' }}
             />
           </label>
         </div>
 
-        <label className="flex items-start gap-2 text-sm text-zinc-300">
+        <label className="flex items-start gap-2 text-sm" style={{ color: 'var(--text)' }}>
           <input
             type="checkbox"
             checked={groupByTag}
             onChange={(e) => setGroupByTag(e.target.checked)}
             disabled={busy}
-            className="mt-0.5 h-4 w-4 rounded border-zinc-600 bg-zinc-800 text-indigo-500 focus:ring-indigo-400 focus:ring-offset-0"
+            className="mt-0.5 h-4 w-4 rounded border text-indigo-500 focus:ring-indigo-400 focus:ring-offset-0"
+            style={{ background: 'var(--input-bg)', borderColor: 'var(--card-border)' }}
           />
           <span>
             Nach Tag gruppieren
-            <span className="block text-xs text-zinc-500">
+            <span className="block text-xs" style={{ color: 'var(--text3)' }}>
               Einträge mit Tags werden in separaten Abschnitten zusammengefasst.
             </span>
           </span>
         </label>
 
-        <label className="flex items-start gap-2 text-sm text-zinc-300">
+        <label className="flex items-start gap-2 text-sm" style={{ color: 'var(--text)' }}>
           <input
             type="checkbox"
             checked={includeSignatures}
             onChange={(e) => setIncludeSignatures(e.target.checked)}
             disabled={busy}
-            className="mt-0.5 h-4 w-4 rounded border-zinc-600 bg-zinc-800 text-indigo-500 focus:ring-indigo-400 focus:ring-offset-0"
+            className="mt-0.5 h-4 w-4 rounded border text-indigo-500 focus:ring-indigo-400 focus:ring-offset-0"
+            style={{ background: 'var(--input-bg)', borderColor: 'var(--card-border)' }}
           />
           <span>
             Unterschriftsfelder einblenden
-            <span className="block text-xs text-zinc-500">
+            <span className="block text-xs" style={{ color: 'var(--text3)' }}>
               Fügt unten zwei Linien für Auftragnehmer / Auftraggeber hinzu.
             </span>
           </span>
         </label>
 
-        <label className="flex items-start gap-2 text-sm text-zinc-300">
+        <label className="flex items-start gap-2 text-sm" style={{ color: 'var(--text)' }}>
           <input
             type="checkbox"
             checked={mergeInvoice}
@@ -207,11 +212,12 @@ export function PdfExportModal(props: Props): React.JSX.Element {
               if (!e.target.checked) setInvoicePath(null)
             }}
             disabled={busy}
-            className="mt-0.5 h-4 w-4 rounded border-zinc-600 bg-zinc-800 text-indigo-500 focus:ring-indigo-400 focus:ring-offset-0"
+            className="mt-0.5 h-4 w-4 rounded border text-indigo-500 focus:ring-indigo-400 focus:ring-offset-0"
+            style={{ background: 'var(--input-bg)', borderColor: 'var(--card-border)' }}
           />
           <span>
             An Rechnung anhängen
-            <span className="block text-xs text-zinc-500">
+            <span className="block text-xs" style={{ color: 'var(--text3)' }}>
               Stundennachweis wird am Ende der gewählten PDF angefügt. Original bleibt unverändert.
             </span>
           </span>
@@ -233,11 +239,12 @@ export function PdfExportModal(props: Props): React.JSX.Element {
               onClick={handlePickInvoice}
               disabled={busy}
               aria-label="Rechnung-PDF auswählen"
-              className="rounded-lg border border-zinc-600 bg-zinc-800 px-3 py-1.5 text-xs text-zinc-200 hover:bg-zinc-700 focus:outline-none focus:ring-2 focus:ring-indigo-400 disabled:opacity-50"
+              className="rounded-lg border px-3 py-1.5 text-xs hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-400 disabled:opacity-50 transition-colors"
+              style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)', color: 'var(--text2)' }}
             >
               {invoicePath ? 'Rechnung wechseln …' : 'Rechnung wählen …'}
             </button>
-            <span className="max-w-[200px] truncate text-xs text-zinc-500">
+            <span className="max-w-[200px] truncate text-xs" style={{ color: 'var(--text3)' }}>
               {invoicePath ? basename(invoicePath) : 'keine Datei gewählt'}
             </span>
           </div>
@@ -250,7 +257,7 @@ export function PdfExportModal(props: Props): React.JSX.Element {
                 ? 'rounded-lg bg-red-900/40 px-3 py-2 text-sm text-red-200'
                 : statusKind === 'success'
                   ? 'rounded-lg bg-emerald-900/40 px-3 py-2 text-sm text-emerald-200'
-                  : 'rounded-lg bg-zinc-800 px-3 py-2 text-sm text-zinc-300'
+                  : 'rounded-lg border px-3 py-2 text-sm'
             }
             role={statusKind === 'error' ? 'alert' : undefined}
             aria-live="polite"
@@ -264,7 +271,8 @@ export function PdfExportModal(props: Props): React.JSX.Element {
             type="button"
             onClick={onClose}
             disabled={busy}
-            className="rounded-lg border border-zinc-700 bg-zinc-800 px-4 py-2 text-sm font-medium text-zinc-200 hover:bg-zinc-700 focus:outline-none focus:ring-2 focus:ring-zinc-500 disabled:opacity-50"
+            className="rounded-lg border px-4 py-2 text-sm font-medium hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-400 disabled:opacity-50 transition-colors"
+            style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)', color: 'var(--text2)' }}
           >
             Schließen
           </button>
@@ -278,9 +286,9 @@ export function PdfExportModal(props: Props): React.JSX.Element {
           </button>
         </div>
 
-        <p className="text-xs text-zinc-500">
+        <p className="text-xs" style={{ color: 'var(--text3)' }}>
           Vorlage anpassen unter{' '}
-          <span className="font-medium text-zinc-400">Einstellungen → PDF-Vorlage</span>.
+          <span className="font-medium" style={{ color: 'var(--text2)' }}>Einstellungen → PDF-Vorlage</span>.
         </p>
       </div>
     </Dialog>

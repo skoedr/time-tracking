@@ -139,15 +139,17 @@ export function ExportModal(props: Props): React.JSX.Element {
   }
 
   const inputClass =
-    'rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-400'
+    'rounded-lg border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400'
+  const inputStyle = { background: 'var(--input-bg)', borderColor: 'var(--card-border)', color: 'var(--text)' } as React.CSSProperties
   const checkboxClass =
-    'mt-0.5 h-4 w-4 rounded border-zinc-600 bg-zinc-800 text-indigo-500 focus:ring-indigo-400 focus:ring-offset-0'
+    'mt-0.5 h-4 w-4 rounded border text-indigo-500 focus:ring-indigo-400 focus:ring-offset-0'
+  const checkboxStyle = { background: 'var(--input-bg)', borderColor: 'var(--card-border)' } as React.CSSProperties
 
   return (
     <Dialog open={open} onClose={onClose} title={t('export.title')} widthClass="w-[520px]">
       <div className="flex flex-col gap-4">
         {/* Tab bar */}
-        <div className="flex gap-1 rounded-lg bg-zinc-800 p-1">
+        <div className="flex gap-1 rounded-lg p-1 border" style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)' }}>
           {(['pdf', 'csv'] as Tab[]).map((tabKey) => (
             <button
               key={tabKey}
@@ -156,8 +158,9 @@ export function ExportModal(props: Props): React.JSX.Element {
               className={`flex-1 rounded-md py-1.5 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-400 ${
                 tab === tabKey
                   ? 'bg-indigo-600 text-white'
-                  : 'text-zinc-400 hover:text-zinc-200'
+                  : 'hover:bg-white/10'
               }`}
+              style={tab !== tabKey ? { color: 'var(--text2)' } : undefined}
             >
               {tabKey === 'pdf' ? t('export.tab.pdf') : t('export.tab.csv')}
             </button>
@@ -166,7 +169,7 @@ export function ExportModal(props: Props): React.JSX.Element {
 
         {/* Shared: client + date range */}
         <label className="flex flex-col gap-1 text-sm">
-          <span className="font-medium text-zinc-300">{t('export.client.label')}</span>
+          <span className="font-medium" style={{ color: 'var(--text2)' }}>{t('export.client.label')}</span>
           <select
             title={t('export.client.label')}
             value={clientId ?? ''}
@@ -175,6 +178,7 @@ export function ExportModal(props: Props): React.JSX.Element {
             }
             disabled={busy}
             className={inputClass}
+            style={inputStyle}
           >
             <option value="">{t('export.client.placeholder')}</option>
             {clients.map((c) => (
@@ -188,23 +192,25 @@ export function ExportModal(props: Props): React.JSX.Element {
 
         <div className="grid grid-cols-2 gap-3">
           <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium text-zinc-300">{t('export.from')}</span>
+            <span className="font-medium" style={{ color: 'var(--text2)' }}>{t('export.from')}</span>
             <input
               type="date"
               value={fromIso}
               onChange={(e) => setFromIso(e.target.value)}
               disabled={busy}
               className={inputClass}
+              style={inputStyle}
             />
           </label>
           <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium text-zinc-300">{t('export.to')}</span>
+            <span className="font-medium" style={{ color: 'var(--text2)' }}>{t('export.to')}</span>
             <input
               type="date"
               value={toIso}
               onChange={(e) => setToIso(e.target.value)}
               disabled={busy}
               className={inputClass}
+              style={inputStyle}
             />
           </label>
         </div>
@@ -212,32 +218,34 @@ export function ExportModal(props: Props): React.JSX.Element {
         {/* PDF-specific options */}
         {tab === 'pdf' && (
           <div className="flex flex-col gap-3">
-            <label className="flex items-start gap-2 text-sm text-zinc-300">
+            <label className="flex items-start gap-2 text-sm" style={{ color: 'var(--text)' }}>
               <input
                 type="checkbox"
                 checked={groupByTag}
                 onChange={(e) => setGroupByTag(e.target.checked)}
                 disabled={busy}
                 className={checkboxClass}
+                style={checkboxStyle}
               />
               <span>
                 {t('export.pdf.groupByTag')}
-                <span className="block text-xs text-zinc-500">
+                <span className="block text-xs" style={{ color: 'var(--text3)' }}>
                   {t('export.pdf.groupByTagHint')}
                 </span>
               </span>
             </label>
-            <label className="flex items-start gap-2 text-sm text-zinc-300">
+            <label className="flex items-start gap-2 text-sm" style={{ color: 'var(--text)' }}>
               <input
                 type="checkbox"
                 checked={includeSignatures}
                 onChange={(e) => setIncludeSignatures(e.target.checked)}
                 disabled={busy}
                 className={checkboxClass}
+                style={checkboxStyle}
               />
               <span>
                 {t('export.pdf.signatures')}
-                <span className="block text-xs text-zinc-500">
+                <span className="block text-xs" style={{ color: 'var(--text3)' }}>
                   {t('export.pdf.signaturesHint')}
                 </span>
               </span>
@@ -248,24 +256,25 @@ export function ExportModal(props: Props): React.JSX.Element {
         {/* CSV-specific options */}
         {tab === 'csv' && (
           <div className="flex flex-col gap-2">
-            <label className="flex items-start gap-2 text-sm text-zinc-300">
+            <label className="flex items-start gap-2 text-sm" style={{ color: 'var(--text)' }}>
               <input
                 type="checkbox"
                 checked={csvGroupByTag}
                 onChange={(e) => setCsvGroupByTag(e.target.checked)}
                 disabled={busy}
                 className={checkboxClass}
+                style={checkboxStyle}
               />
               <span>
                 {t('export.csv.groupByTag')}
-                <span className="block text-xs text-zinc-500">
+                <span className="block text-xs" style={{ color: 'var(--text3)' }}>
                   {t('export.csv.groupByTagHint')}
                 </span>
               </span>
             </label>
-            <span className="text-sm font-medium text-zinc-300">{t('export.csv.format')}</span>
+            <span className="text-sm font-medium" style={{ color: 'var(--text2)' }}>{t('export.csv.format')}</span>
             <div className="flex gap-4">
-              <label className="flex items-center gap-2 text-sm text-zinc-300 cursor-pointer">
+              <label className="flex items-center gap-2 text-sm cursor-pointer" style={{ color: 'var(--text)' }}>
                 <input
                   type="radio"
                   name="csvFormat"
@@ -276,10 +285,10 @@ export function ExportModal(props: Props): React.JSX.Element {
                   className="h-4 w-4 text-indigo-500 focus:ring-indigo-400"
                 />
                 <span>
-                  DE <span className="text-xs text-zinc-500">{t('export.csv.formatDeHint')}</span>
+                  DE <span className="text-xs" style={{ color: 'var(--text3)' }}>{t('export.csv.formatDeHint')}</span>
                 </span>
               </label>
-              <label className="flex items-center gap-2 text-sm text-zinc-300 cursor-pointer">
+              <label className="flex items-center gap-2 text-sm cursor-pointer" style={{ color: 'var(--text)' }}>
                 <input
                   type="radio"
                   name="csvFormat"
@@ -290,11 +299,11 @@ export function ExportModal(props: Props): React.JSX.Element {
                   className="h-4 w-4 text-indigo-500 focus:ring-indigo-400"
                 />
                 <span>
-                  US <span className="text-xs text-zinc-500">{t('export.csv.formatUsHint')}</span>
+                  US <span className="text-xs" style={{ color: 'var(--text3)' }}>{t('export.csv.formatUsHint')}</span>
                 </span>
               </label>
             </div>
-            <p className="text-xs text-zinc-500">
+            <p className="text-xs" style={{ color: 'var(--text3)' }}>
               {t('export.csv.encodingNote')}
             </p>
           </div>

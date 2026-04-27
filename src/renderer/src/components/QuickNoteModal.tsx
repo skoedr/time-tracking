@@ -73,11 +73,14 @@ export function QuickNoteModal({ entry, onDone }: Props) {
       aria-modal="true"
       aria-labelledby="quicknote-title"
     >
-      <div className="w-[420px] rounded-xl bg-zinc-900 p-6 shadow-2xl ring-1 ring-zinc-700">
-        <h2 id="quicknote-title" className="mb-1 text-xl font-semibold text-zinc-100">
+      <div
+        className="w-[420px] rounded-xl p-6 shadow-2xl border backdrop-blur-xl"
+        style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)' }}
+      >
+        <h2 id="quicknote-title" className="mb-1 text-xl font-semibold" style={{ color: 'var(--text)' }}>
           {t('quicknote.title')}
         </h2>
-        <p className="mb-4 text-sm text-zinc-400">
+        <p className="mb-4 text-sm" style={{ color: 'var(--text2)' }}>
           {t('quicknote.body')}
         </p>
 
@@ -88,13 +91,13 @@ export function QuickNoteModal({ entry, onDone }: Props) {
           onChange={(e) => setText(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder={t('quicknote.placeholder')}
-          className="mb-4 w-full rounded-lg bg-zinc-800 px-3 py-2.5 text-sm text-zinc-100
-            placeholder:text-zinc-500 outline-none ring-1 ring-zinc-700
-            focus:ring-2 focus:ring-indigo-500"
+          className="mb-4 w-full rounded-lg px-3 py-2.5 text-sm border outline-none
+            focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+          style={{ background: 'var(--input-bg)', borderColor: 'var(--card-border)', color: 'var(--text)' }}
         />
 
         {/* Progress bar */}
-        <div className="mb-5 h-1 w-full overflow-hidden rounded-full bg-zinc-700">
+        <div className="mb-5 h-1 w-full overflow-hidden rounded-full" style={{ background: 'var(--card-border)' }}>
           <div
             className="h-1 rounded-full bg-indigo-500 transition-none"
             style={{ width: `${progressPct}%` }}
@@ -115,8 +118,9 @@ export function QuickNoteModal({ entry, onDone }: Props) {
           <button
             type="button"
             onClick={onDone}
-            className="rounded-lg bg-zinc-800 px-4 py-2.5 text-sm font-medium text-zinc-300
-              hover:bg-zinc-700 focus:outline-none focus:ring-2 focus:ring-zinc-500"
+            className="rounded-lg px-4 py-2.5 text-sm font-medium border
+              hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition-colors"
+            style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)', color: 'var(--text2)' }}
           >
             {t('quicknote.skip', { remaining: String(remaining) })}
           </button>
