@@ -4,7 +4,6 @@ import { formatTimeHHMM, parseTimeToDate } from '../../../shared/date'
 import { useEntriesStore } from '../store/entriesStore'
 import { useT } from '../contexts/I18nContext'
 import { TagInput } from './TagInput'
-import { useT } from '../contexts/I18nContext'
 
 interface Props {
   /** Existing entry to edit; omit for create-mode. */
@@ -51,8 +50,6 @@ export function EntryEditForm({
   const initialStop = entry?.stopped_at
     ? new Date(entry.stopped_at)
     : new Date(initialStart.getTime() + 60 * 60 * 1000)
-
-  const t = useT()
 
   const [date, setDate] = useState(toDateInputValue(initialStart))
   const [startTime, setStartTime] = useState(formatTimeHHMM(initialStart))
@@ -175,7 +172,7 @@ export function EntryEditForm({
       </div>
 
       <label className="flex flex-col gap-1">
-          <span className="text-xs text-zinc-400">{t('entry.client')}</span>
+        <span className="text-xs text-zinc-400">{t('entry.client')}</span>
         <select
           value={clientId}
           onChange={(e) => setClientId(parseInt(e.target.value, 10))}
@@ -208,7 +205,7 @@ export function EntryEditForm({
       </label>
 
       <div className="flex flex-col gap-1">
-          <span className="text-xs text-zinc-400">{t('entry.tags')}</span>
+        <span className="text-xs text-zinc-400">{t('entry.tags')}</span>
         <TagInput
           value={tags}
           onChange={(serialized) => setTags(serialized)}
