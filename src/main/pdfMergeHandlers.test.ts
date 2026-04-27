@@ -3,6 +3,17 @@ import { resolve } from 'path'
 import { PDFDocument } from 'pdf-lib'
 import { mergeOnlyHandler, pdfInfoHandler } from './pdfMergeHandlers'
 import type { FsDeps, DialogDeps } from './pdfMergeHandlers'
+import type { IpcResult } from '../shared/types'
+
+function unwrapErr<T>(res: IpcResult<T>): string {
+  if (!res.ok) return res.error
+  throw new Error('Expected IpcResult to be error, got ok')
+}
+
+function unwrapData<T>(res: IpcResult<T>): T {
+  if (res.ok) return res.data
+  throw new Error(`Expected IpcResult to be ok, got error: ${res.error}`)
+}
 
 async function makeMinimalPdf(pageCount = 1): Promise<Buffer> {
   const doc = await PDFDocument.create()
@@ -54,7 +65,7 @@ describe('mergeOnlyHandler', () => {
   it('rejects null request', async () => {
     const res = await mergeOnlyHandler(null, mockFs({}), noDialog)
     expect(res.ok).toBe(false)
-    expect(res.error).toMatch(/Pfade/)
+    expect(unwrapErr(res)).toMatch(/Pfade/)
   })
 
   it('rejects empty object', async () => {
@@ -69,7 +80,7 @@ describe('mergeOnlyHandler', () => {
       noDialog
     )
     expect(res.ok).toBe(false)
-    expect(res.error).toMatch(/keine PDF/)
+    expect(unwrapErr(res)).toMatch(/keine PDF/)
   })
 
   it('rejects non-pdf extension on invoice path', async () => {
@@ -79,7 +90,7 @@ describe('mergeOnlyHandler', () => {
       noDialog
     )
     expect(res.ok).toBe(false)
-    expect(res.error).toMatch(/keine PDF/)
+    expect(unwrapErr(res)).toMatch(/keine PDF/)
   })
 
   it('rejects SN file over 50 MB', async () => {
@@ -95,7 +106,7 @@ describe('mergeOnlyHandler', () => {
       noDialog
     )
     expect(res.ok).toBe(false)
-    expect(res.error).toMatch(/zu groß/)
+    expect(unwrapErr(res)).toMatch(/zu groß/)
   })
 
   it('rejects invoice file over 50 MB', async () => {
@@ -111,7 +122,7 @@ describe('mergeOnlyHandler', () => {
       noDialog
     )
     expect(res.ok).toBe(false)
-    expect(res.error).toMatch(/zu groß/)
+    expect(unwrapErr(res)).toMatch(/zu groß/)
   })
 
   it('returns EBUSY error for locked SN file', async () => {
@@ -121,7 +132,7 @@ describe('mergeOnlyHandler', () => {
       noDialog
     )
     expect(res.ok).toBe(false)
-    expect(res.error).toMatch(/gesperrt/)
+    expect(unwrapErr(res)).toMatch(/gesperrt/)
   })
 
   it('returns EBUSY error for locked invoice file', async () => {
@@ -131,7 +142,7 @@ describe('mergeOnlyHandler', () => {
       noDialog
     )
     expect(res.ok).toBe(false)
-    expect(res.error).toMatch(/gesperrt/)
+    expect(unwrapErr(res)).toMatch(/gesperrt/)
   })
 
   it('happy path: merges two PDFs and returns output path', async () => {
@@ -148,7 +159,7 @@ describe('mergeOnlyHandler', () => {
       noDialog
     )
     expect(res.ok).toBe(true)
-    expect(res.data?.path).toContain('inkl_Stundennachweis')
+    expect(unwrapData(res).path).toContain('inkl_Stundennachweis')
     expect(written).toHaveLength(1)
 
     // Verify merged output has 3 pages (pdf2 = 2 + pdf1 = 1).
@@ -170,7 +181,7 @@ describe('mergeOnlyHandler', () => {
       noDialog
     )
     expect(res.ok).toBe(true)
-    expect(res.data?.path).toMatch(/inkl_Stundennachweis_\d{4}-\d{2}-\d{2}/)
+    expect(unwrapData(res).path).toMatch(/inkl_Stundennachweis_\d{4}-\d{2}-\d{2}/)
   })
 
   it('falls back to save dialog on EPERM write error', async () => {
@@ -193,7 +204,7 @@ describe('mergeOnlyHandler', () => {
       mockDialog
     )
     expect(res.ok).toBe(true)
-    expect(res.data?.path).toBe('C:/fallback_merged.pdf')
+    expect(unwrapData(res).path).toBe('C:/fallback_merged.pdf')
   })
 
   it('returns error when save dialog is cancelled', async () => {
@@ -209,7 +220,7 @@ describe('mergeOnlyHandler', () => {
       noDialog
     )
     expect(res.ok).toBe(false)
-    expect(res.error).toMatch(/abgebrochen/)
+    expect(unwrapErr(res)).toMatch(/abgebrochen/)
   })
 })
 
@@ -224,7 +235,7 @@ describe('pdfInfoHandler', () => {
   it('rejects empty filePath', async () => {
     const res = await pdfInfoHandler({ filePath: '' }, mockFs({}))
     expect(res.ok).toBe(false)
-    expect(res.error).toMatch(/Pfad/)
+    expect(unwrapErr(res)).toMatch(/Pfad/)
   })
 
   it('rejects non-pdf extension', async () => {
@@ -233,7 +244,7 @@ describe('pdfInfoHandler', () => {
       mockFs({ 'C:/doc.txt': pdf1 })
     )
     expect(res.ok).toBe(false)
-    expect(res.error).toMatch(/keine PDF/)
+    expect(unwrapErr(res)).toMatch(/keine PDF/)
   })
 
   it('rejects file over 50 MB', async () => {
@@ -245,7 +256,7 @@ describe('pdfInfoHandler', () => {
     }
     const res = await pdfInfoHandler({ filePath: 'C:/big.pdf' }, fs)
     expect(res.ok).toBe(false)
-    expect(res.error).toMatch(/zu groß/)
+    expect(unwrapErr(res)).toMatch(/zu groß/)
   })
 
   it('returns EBUSY error for locked file', async () => {
@@ -254,7 +265,7 @@ describe('pdfInfoHandler', () => {
       mockFs({ 'C:/locked.pdf': 'EBUSY' })
     )
     expect(res.ok).toBe(false)
-    expect(res.error).toMatch(/gesperrt/)
+    expect(unwrapErr(res)).toMatch(/gesperrt/)
   })
 
   it('returns error for corrupt PDF', async () => {
@@ -266,7 +277,7 @@ describe('pdfInfoHandler', () => {
     }
     const res = await pdfInfoHandler({ filePath: 'C:/corrupt.pdf' }, fs)
     expect(res.ok).toBe(false)
-    expect(res.error).toMatch(/Ungültige|verschlüsselt/)
+    expect(unwrapErr(res)).toMatch(/Ungültige|verschlüsselt/)
   })
 
   it('returns page count for valid 3-page PDF', async () => {
@@ -278,6 +289,6 @@ describe('pdfInfoHandler', () => {
     }
     const res = await pdfInfoHandler({ filePath: 'C:/three.pdf' }, fs)
     expect(res.ok).toBe(true)
-    expect(res.data?.pageCount).toBe(3)
+    expect(unwrapData(res).pageCount).toBe(3)
   })
 })
