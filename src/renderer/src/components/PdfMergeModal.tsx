@@ -181,22 +181,23 @@ export function PdfMergeModal({ open, onClose }: Props): React.JSX.Element {
       <div className="flex flex-col gap-4">
         {/* Stundennachweis slot */}
         <div className="flex flex-col gap-1">
-          <span className="text-sm font-medium text-zinc-300">{t('merge.sn.label')}</span>
+          <span className="text-sm font-medium" style={{ color: 'var(--text2)' }}>{t('merge.sn.label')}</span>
           <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={() => void handlePickFile('sn')}
               disabled={busy}
-              className="rounded-lg border border-zinc-600 bg-zinc-800 px-3 py-1.5 text-xs text-zinc-200 hover:bg-zinc-700 focus:outline-none focus:ring-2 focus:ring-indigo-400 disabled:opacity-50"
+              className="rounded-lg border px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-400 disabled:opacity-50 hover:opacity-80"
+              style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)', color: 'var(--text2)' }}
             >
               {snPath ? t('merge.sn.change') : t('merge.sn.pick')}
             </button>
-            <span className="max-w-[260px] truncate text-xs text-zinc-400">
+            <span className="max-w-[260px] truncate text-xs" style={{ color: 'var(--text3)' }}>
               {snPath ? basename(snPath) : t('merge.sn.noFile')}
             </span>
           </div>
           {snPath && (
-            <span className="text-xs text-zinc-500">
+            <span className="text-xs" style={{ color: 'var(--text3)' }}>
               {snPages === null ? t('merge.sn.loading') : (snPages === 1 ? t('merge.sn.pages.one') : t('merge.sn.pages.other', { count: String(snPages) }))}
             </span>
           )}
@@ -216,22 +217,23 @@ export function PdfMergeModal({ open, onClose }: Props): React.JSX.Element {
 
         {/* Invoice slot */}
         <div className="flex flex-col gap-1">
-          <span className="text-sm font-medium text-zinc-300">{t('merge.inv.label')}</span>
+          <span className="text-sm font-medium" style={{ color: 'var(--text2)' }}>{t('merge.inv.label')}</span>
           <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={() => void handlePickFile('invoice')}
               disabled={busy}
-              className="rounded-lg border border-zinc-600 bg-zinc-800 px-3 py-1.5 text-xs text-zinc-200 hover:bg-zinc-700 focus:outline-none focus:ring-2 focus:ring-indigo-400 disabled:opacity-50"
+              className="rounded-lg border px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-400 disabled:opacity-50 hover:opacity-80"
+              style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)', color: 'var(--text2)' }}
             >
               {invPath ? t('merge.sn.change') : t('merge.sn.pick')}
             </button>
-            <span className="max-w-[260px] truncate text-xs text-zinc-400">
+            <span className="max-w-[260px] truncate text-xs" style={{ color: 'var(--text3)' }}>
               {invPath ? basename(invPath) : t('merge.sn.noFile')}
             </span>
           </div>
           {invPath && (
-            <span className="text-xs text-zinc-500">
+            <span className="text-xs" style={{ color: 'var(--text3)' }}>
               {invPages === null ? t('merge.sn.loading') : (invPages === 1 ? t('merge.sn.pages.one') : t('merge.sn.pages.other', { count: String(invPages) }))}
             </span>
           )}
@@ -251,7 +253,7 @@ export function PdfMergeModal({ open, onClose }: Props): React.JSX.Element {
 
         {/* Page count preview */}
         {snPages !== null && invPages !== null && (
-          <div className="rounded-lg bg-zinc-800 px-3 py-2 text-sm text-zinc-300">
+          <div className="rounded-lg px-3 py-2 text-sm border" style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)', color: 'var(--text2)' }}>
             {t('merge.preview', { inv: String(invPages), sn: String(snPages), total: String(invPages! + snPages!) })}
           </div>
         )}
@@ -262,8 +264,9 @@ export function PdfMergeModal({ open, onClose }: Props): React.JSX.Element {
             className={
               statusKind === 'error'
                 ? 'rounded-lg bg-red-900/40 px-3 py-2 text-sm text-red-200'
-                : 'rounded-lg bg-zinc-800 px-3 py-2 text-sm text-zinc-300'
+                : 'rounded-lg px-3 py-2 text-sm border'
             }
+            style={statusKind !== 'error' ? { background: 'var(--card-bg)', borderColor: 'var(--card-border)', color: 'var(--text2)' } : undefined}
             role={statusKind === 'error' ? 'alert' : undefined}
             aria-live="polite"
           >
@@ -292,7 +295,8 @@ export function PdfMergeModal({ open, onClose }: Props): React.JSX.Element {
             type="button"
             onClick={onClose}
             disabled={busy}
-            className="rounded-lg border border-zinc-700 bg-zinc-800 px-4 py-2 text-sm font-medium text-zinc-200 hover:bg-zinc-700 focus:outline-none focus:ring-2 focus:ring-zinc-500 disabled:opacity-50"
+            className="rounded-lg border px-4 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-400 disabled:opacity-50 hover:opacity-80"
+            style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)', color: 'var(--text2)' }}
           >
             {t('common.close')}
           </button>
@@ -300,7 +304,8 @@ export function PdfMergeModal({ open, onClose }: Props): React.JSX.Element {
             type="button"
             onClick={() => void handleMerge()}
             disabled={!canMerge}
-            className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-300 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-lg px-4 py-2 text-sm font-semibold text-white focus:outline-none focus:ring-2 focus:ring-indigo-300 disabled:cursor-not-allowed disabled:opacity-50 hover:opacity-90"
+            style={{ background: 'var(--accent)' }}
           >
               {busy ? t('merge.button.merging') : t('merge.button.merge')}
           </button>

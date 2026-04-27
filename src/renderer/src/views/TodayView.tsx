@@ -126,8 +126,10 @@ export default function TodayView(): React.JSX.Element {
         type="button"
         onClick={() => setCreateOpen(true)}
         disabled={clients.length === 0}
-        className="self-start rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-400 disabled:cursor-not-allowed disabled:opacity-50"
+        className="self-start flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium text-white hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-indigo-400 disabled:cursor-not-allowed disabled:opacity-50"
+          style={{ background: 'var(--accent)' }}
       >
+        <Icons.Plus />
         {t('today.addEntry')}
       </button>
 

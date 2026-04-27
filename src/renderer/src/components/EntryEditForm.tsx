@@ -4,6 +4,7 @@ import { formatTimeHHMM, parseTimeToDate } from '../../../shared/date'
 import { useEntriesStore } from '../store/entriesStore'
 import { useT } from '../contexts/I18nContext'
 import { TagInput } from './TagInput'
+import { Toggle } from './Toggle'
 
 interface Props {
   /** Existing entry to edit; omit for create-mode. */
@@ -243,20 +244,15 @@ export function EntryEditForm({
         <span className="text-xs" style={{ color: 'var(--text3)' }}>{t('entry.reference.hint')}</span>
       </label>
 
-      <label className="flex items-center gap-2 cursor-pointer select-none">
-        <input
-          type="checkbox"
-          checked={billable === 1}
-          onChange={(e) => setBillable(e.target.checked ? 1 : 0)}
-          className="h-4 w-4 rounded accent-indigo-500"
-          style={{ borderColor: 'var(--card-border)' }}
-          disabled={isSaving}
-        />
+      <div className="flex items-center justify-between">
         <span className="text-xs" style={{ color: 'var(--text2)' }}>{t('entry.billable.label')}</span>
-        {billable === 0 && (
-          <span className="ml-auto text-xs" style={{ color: '#f59e0b' }}>{t('entry.billable.hint')}</span>
-        )}
-      </label>
+        <div className="flex items-center gap-2">
+          {billable === 0 && (
+            <span className="text-xs" style={{ color: '#f59e0b' }}>{t('entry.billable.hint')}</span>
+          )}
+          <Toggle checked={billable === 1} onChange={(v) => setBillable(v ? 1 : 0)} disabled={isSaving} />
+        </div>
+      </div>
 
       <label className="flex flex-col gap-1">
         <span className="text-xs" style={{ color: 'var(--text2)' }}>{t('entry.privateNote.label')}</span>

@@ -62,7 +62,7 @@ export function Dialog({
 
   return (
     <div
-      className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+      className="fixed inset-0 z-40 flex items-start justify-center overflow-y-auto bg-black/70 backdrop-blur-sm py-8"
       role="dialog"
       aria-modal="true"
       aria-labelledby="dialog-title"
@@ -72,7 +72,7 @@ export function Dialog({
     >
       <div
         ref={containerRef}
-        className={`${widthClass} rounded-xl border p-6 shadow-2xl backdrop-blur-xl`}
+        className={`${widthClass} rounded-xl border p-6 shadow-2xl backdrop-blur-xl my-auto`}
         style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)' }}
       >
         <div className="mb-4 flex items-center justify-between">

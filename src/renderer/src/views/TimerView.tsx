@@ -26,9 +26,11 @@ export default function TimerView() {
       {/* Timer Display */}
       <div className="text-center">
         <div
-          className={`text-7xl font-mono font-bold tabular-nums transition-colors ${
-            isRunning ? 'text-green-400' : 'text-slate-300'
-          }`}
+          className="text-7xl font-bold tabular-nums transition-colors"
+          style={{
+            fontFamily: "'JetBrains Mono', monospace",
+            color: isRunning ? 'var(--green)' : 'var(--text3)'
+          }}
         >
           {formatDuration(elapsedSeconds)}
         </div>
@@ -38,14 +40,14 @@ export default function TimerView() {
               className="inline-block w-3 h-3 rounded-full animate-pulse"
               style={{ backgroundColor: selectedClient.color }}
             />
-            <span className="text-slate-400 text-sm">{selectedClient.name}</span>
+            <span className="text-sm" style={{ color: 'var(--text2)' }}>{selectedClient.name}</span>
           </div>
         )}
       </div>
 
       {/* Client Selector */}
       <div className="flex flex-col gap-1.5">
-        <label className="text-slate-400 text-xs font-medium uppercase tracking-wide">{t('timer.client.label')}</label>
+        <label className="text-xs font-medium uppercase tracking-wide" style={{ color: 'var(--text3)' }}>{t('timer.client.label')}</label>
         <select
           value={selectedClientId ?? ''}
           onChange={(e) => setSelectedClientId(e.target.value ? Number(e.target.value) : null)}
@@ -63,16 +65,16 @@ export default function TimerView() {
           ))}
         </select>
         {activeClients.length === 0 && (
-          <p className="text-slate-500 text-xs">
+          <p className="text-xs" style={{ color: 'var(--text3)' }}>
             {t('timer.client.noClientsHint')}{' '}
-            <span className="text-indigo-400">{t('timer.client.noClientsLink')}</span>{t('timer.client.noClientsSuffix')}
+            <span style={{ color: 'var(--accent)' }}>{t('timer.client.noClientsLink')}</span>{t('timer.client.noClientsSuffix')}
           </p>
         )}
       </div>
 
       {/* Description */}
       <div className="flex flex-col gap-1.5">
-        <label className="text-slate-400 text-xs font-medium uppercase tracking-wide">
+        <label className="text-xs font-medium uppercase tracking-wide" style={{ color: 'var(--text3)' }}>
           {t('timer.description.label')}
         </label>
         <input
@@ -113,8 +115,8 @@ export default function TimerView() {
 
       {/* Running status hint */}
       {isRunning && (
-        <p className="text-center text-slate-500 text-xs">
-          {t('timer.running.hint')} · <kbd className="font-mono text-slate-400">Alt+Shift+S</kbd> {t('timer.running.stopHint')}
+        <p className="text-center text-xs" style={{ color: 'var(--text3)' }}>
+          {t('timer.running.hint')} · <kbd className="font-mono" style={{ color: 'var(--text2)' }}>Alt+Shift+S</kbd> {t('timer.running.stopHint')}
         </p>
       )}
     </div>

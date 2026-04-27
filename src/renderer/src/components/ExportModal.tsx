@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import type { Client } from '../../../shared/types'
 import { useT } from '../contexts/I18nContext'
 import { Dialog } from './Dialog'
+import { Toggle } from './Toggle'
 
 interface Props {
   open: boolean
@@ -141,9 +142,6 @@ export function ExportModal(props: Props): React.JSX.Element {
   const inputClass =
     'rounded-lg border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400'
   const inputStyle = { background: 'var(--input-bg)', borderColor: 'var(--card-border)', color: 'var(--text)' } as React.CSSProperties
-  const checkboxClass =
-    'mt-0.5 h-4 w-4 rounded border text-indigo-500 focus:ring-indigo-400 focus:ring-offset-0'
-  const checkboxStyle = { background: 'var(--input-bg)', borderColor: 'var(--card-border)' } as React.CSSProperties
 
   return (
     <Dialog open={open} onClose={onClose} title={t('export.title')} widthClass="w-[520px]">
@@ -218,60 +216,33 @@ export function ExportModal(props: Props): React.JSX.Element {
         {/* PDF-specific options */}
         {tab === 'pdf' && (
           <div className="flex flex-col gap-3">
-            <label className="flex items-start gap-2 text-sm" style={{ color: 'var(--text)' }}>
-              <input
-                type="checkbox"
-                checked={groupByTag}
-                onChange={(e) => setGroupByTag(e.target.checked)}
-                disabled={busy}
-                className={checkboxClass}
-                style={checkboxStyle}
-              />
-              <span>
-                {t('export.pdf.groupByTag')}
-                <span className="block text-xs" style={{ color: 'var(--text3)' }}>
-                  {t('export.pdf.groupByTagHint')}
-                </span>
-              </span>
-            </label>
-            <label className="flex items-start gap-2 text-sm" style={{ color: 'var(--text)' }}>
-              <input
-                type="checkbox"
-                checked={includeSignatures}
-                onChange={(e) => setIncludeSignatures(e.target.checked)}
-                disabled={busy}
-                className={checkboxClass}
-                style={checkboxStyle}
-              />
-              <span>
-                {t('export.pdf.signatures')}
-                <span className="block text-xs" style={{ color: 'var(--text3)' }}>
-                  {t('export.pdf.signaturesHint')}
-                </span>
-              </span>
-            </label>
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center justify-between">
+                <span className="text-sm" style={{ color: 'var(--text)' }}>{t('export.pdf.groupByTag')}</span>
+                <Toggle checked={groupByTag} onChange={setGroupByTag} disabled={busy} />
+              </div>
+              <span className="text-xs" style={{ color: 'var(--text3)' }}>{t('export.pdf.groupByTagHint')}</span>
+            </div>
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center justify-between">
+                <span className="text-sm" style={{ color: 'var(--text)' }}>{t('export.pdf.signatures')}</span>
+                <Toggle checked={includeSignatures} onChange={setIncludeSignatures} disabled={busy} />
+              </div>
+              <span className="text-xs" style={{ color: 'var(--text3)' }}>{t('export.pdf.signaturesHint')}</span>
+            </div>
           </div>
         )}
 
         {/* CSV-specific options */}
         {tab === 'csv' && (
           <div className="flex flex-col gap-2">
-            <label className="flex items-start gap-2 text-sm" style={{ color: 'var(--text)' }}>
-              <input
-                type="checkbox"
-                checked={csvGroupByTag}
-                onChange={(e) => setCsvGroupByTag(e.target.checked)}
-                disabled={busy}
-                className={checkboxClass}
-                style={checkboxStyle}
-              />
-              <span>
-                {t('export.csv.groupByTag')}
-                <span className="block text-xs" style={{ color: 'var(--text3)' }}>
-                  {t('export.csv.groupByTagHint')}
-                </span>
-              </span>
-            </label>
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center justify-between">
+                <span className="text-sm" style={{ color: 'var(--text)' }}>{t('export.csv.groupByTag')}</span>
+                <Toggle checked={csvGroupByTag} onChange={setCsvGroupByTag} disabled={busy} />
+              </div>
+              <span className="text-xs" style={{ color: 'var(--text3)' }}>{t('export.csv.groupByTagHint')}</span>
+            </div>
             <span className="text-sm font-medium" style={{ color: 'var(--text2)' }}>{t('export.csv.format')}</span>
             <div className="flex gap-4">
               <label className="flex items-center gap-2 text-sm cursor-pointer" style={{ color: 'var(--text)' }}>

@@ -288,11 +288,11 @@ function ClientFormModal({
 
   return (
     <div
-      className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 backdrop-blur-sm"
+      className="fixed inset-0 bg-black/70 flex items-start justify-center z-50 backdrop-blur-sm py-8 overflow-y-auto"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <div
-        className="rounded-2xl p-6 w-full max-w-sm mx-4 shadow-2xl border backdrop-blur-xl"
+        className="rounded-2xl p-6 w-full max-w-sm mx-4 shadow-2xl border backdrop-blur-xl my-auto"
         style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)' }}
       >
         <h2 className="text-lg font-semibold mb-5" style={{ color: 'var(--text)' }}>
@@ -385,7 +385,7 @@ function ClientFormModal({
               type="button"
               onClick={onClose}
               className="flex-1 font-medium py-2.5 rounded-lg transition-colors hover:opacity-90"
-              style={{ background: 'var(--card-border)', color: 'var(--text)' }}
+              style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--text2)' }}
             >
               {t('common.cancel')}
             </button>

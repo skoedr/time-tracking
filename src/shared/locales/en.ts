@@ -158,7 +158,7 @@ export const en: Record<TranslationKey, string> = {
   'today.table.description': 'Description',
   'today.table.duration': 'Duration',
   'today.noTimer': 'No timer running',
-  'today.addEntry': '+ Add entry',
+  'today.addEntry': 'Add entry',
   'today.dialog.add': 'Add entry',
   'today.dialog.edit': 'Edit entry',
 
@@ -201,7 +201,7 @@ export const en: Record<TranslationKey, string> = {
 
   // ── ClientsView ───────────────────────────────────────────────────────────
   'clients.title': 'Clients',
-  'clients.addNew': '+ New client',
+  'clients.addNew': 'New client',
   'clients.loading': 'Loading...',
   'clients.empty.title': 'No clients yet',
   'clients.empty.hint': 'Create your first client.',
@@ -262,7 +262,7 @@ export const en: Record<TranslationKey, string> = {
   'drawer.filter.apply': 'Filter by #{tag}',
   'drawer.empty.noEntries': 'No entries on this day.',
   'drawer.empty.noEntriesWithTag': 'No entries with tag #{tag}.',
-  'drawer.footer.addEntry': '+ Add entry for {date}',
+  'drawer.footer.addEntry': 'Add entry for {date}',
   'drawer.aria': 'Entries for {date}',
 
   // ── IdleModal ─────────────────────────────────────────────────────────────

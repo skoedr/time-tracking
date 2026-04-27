@@ -159,7 +159,7 @@ export const de = {
   'today.table.description': 'Beschreibung',
   'today.table.duration': 'Dauer',
   'today.noTimer': 'Kein Timer läuft',
-  'today.addEntry': '+ Eintrag nachtragen',
+  'today.addEntry': 'Eintrag nachtragen',
   'today.dialog.add': 'Eintrag nachtragen',
   'today.dialog.edit': 'Eintrag bearbeiten',
 
@@ -202,7 +202,7 @@ export const de = {
 
   // ── ClientsView ──────────────────────────────────────────────────────────
   'clients.title': 'Kunden',
-  'clients.addNew': '+ Neuer Kunde',
+  'clients.addNew': 'Neuer Kunde',
   'clients.loading': 'Lädt...',
   'clients.empty.title': 'Noch keine Kunden',
   'clients.empty.hint': 'Lege deinen ersten Kunden an.',
@@ -263,7 +263,7 @@ export const de = {
   'drawer.filter.apply': 'Nach #{tag} filtern',
   'drawer.empty.noEntries': 'Kein Eintrag an diesem Tag.',
   'drawer.empty.noEntriesWithTag': 'Keine Einträge mit Tag #{tag}.',
-  'drawer.footer.addEntry': '+ Eintrag für {date} hinzufügen',
+  'drawer.footer.addEntry': 'Eintrag für {date} hinzufügen',
   'drawer.aria': 'Einträge für {date}',
 
   // ── IdleModal ─────────────────────────────────────────────────────────────

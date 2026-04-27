@@ -7,6 +7,7 @@ import { ConfirmDialog } from './ConfirmDialog'
 import { EntryEditForm } from './EntryEditForm'
 import { useT } from '../contexts/I18nContext'
 import type { TFunction } from '../contexts/I18nContext'
+import * as Icons from './Icons'
 
 interface Props {
   open: boolean
@@ -239,7 +240,7 @@ export function CalendarDrawer({
                         aria-label={t('common.edit')}
                         title={t('common.edit')}
                       >
-                        ✏️
+                        <Icons.Edit width={15} height={15} />
                       </button>
                       <button
                         type="button"
@@ -250,7 +251,7 @@ export function CalendarDrawer({
                         aria-label={t('common.delete')}
                         title={e.stopped_at === null ? t('common.stopRunningFirst') : t('common.delete')}
                       >
-                        🗑️
+                        <Icons.Trash width={15} height={15} />
                       </button>
                     </div>
                   )}
@@ -299,9 +300,10 @@ export function CalendarDrawer({
               type="button"
               onClick={() => setCreating(true)}
               disabled={clients.length === 0}
-              className="w-full rounded-lg px-4 py-2 text-sm font-medium text-white hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-indigo-400 disabled:cursor-not-allowed disabled:opacity-50"
+              className="w-full flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-white hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-indigo-400 disabled:cursor-not-allowed disabled:opacity-50"
               style={{ background: 'var(--accent)' }}
             >
+              <Icons.Plus width={15} height={15} />
               {t('drawer.footer.addEntry', { date: dateLabel })}
             </button>
           </div>
