@@ -10,6 +10,17 @@ import type { TranslationKey } from './de'
  * sections). Remaining DE-only UI strings get an EN translation in v1.6.
  */
 export const en: Record<TranslationKey, string> = {
+  // ── Navigation tabs ───────────────────────────────────────────────────
+  'nav.today': 'Today',
+  'nav.timer': 'Timer',
+  'nav.calendar': 'Calendar',
+  'nav.clients': 'Clients',
+  'nav.settings': 'Settings',
+  // ── Mini-Widget ────────────────────────────────────────────────────
+  'miniWidget.noTimer': 'No timer',
+  'miniWidget.timerRunning': 'Timer running',
+  'miniWidget.stop': 'Stop timer',
+  'miniWidget.start': 'Start timer',
   // ── UpdateBanner ────────────────────────────────────────────────────────
   'update.checking': 'Checking for updates …',
   'update.available': 'Version {version} available — downloading …',

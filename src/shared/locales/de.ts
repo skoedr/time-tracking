@@ -10,6 +10,17 @@
  * Update + Language sections). Other views stay hardcoded until v1.6.
  */
 export const de = {
+  // ── Navigation tabs ───────────────────────────────────────────────────
+  'nav.today': 'Heute',
+  'nav.timer': 'Timer',
+  'nav.calendar': 'Kalender',
+  'nav.clients': 'Kunden',
+  'nav.settings': 'Einstellungen',
+  // ── Mini-Widget ────────────────────────────────────────────────────
+  'miniWidget.noTimer': 'Kein Timer',
+  'miniWidget.timerRunning': 'Timer läuft',
+  'miniWidget.stop': 'Timer stoppen',
+  'miniWidget.start': 'Timer starten',
   // ── UpdateBanner ────────────────────────────────────────────────────────
   'update.checking': 'Suche nach Updates …',
   'update.available': 'Version {version} verfügbar — wird heruntergeladen …',

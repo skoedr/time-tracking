@@ -10,18 +10,12 @@ import { ToastTray } from './components/Toast'
 import { UpdateBanner } from './components/UpdateBanner'
 import { OnboardingWizard } from './components/OnboardingWizard'
 import { useTimer } from './hooks/useTimer'
+import { useT } from './contexts/I18nContext'
 
 type View = 'today' | 'timer' | 'calendar' | 'clients' | 'settings'
 
-const NAV_LABEL: Record<View, string> = {
-  today: 'Heute',
-  timer: 'Timer',
-  calendar: 'Kalender',
-  clients: 'Kunden',
-  settings: 'Einstellungen'
-}
-
 function App(): React.JSX.Element {
+  const t = useT()
   const [view, setView] = useState<View>('today')
   const [showOnboarding, setShowOnboarding] = useState(false)
   const { idleEvent, idleKeep, idleStopAtIdle, idleMarkPause, quickNoteEntry, setQuickNoteEntry } =
@@ -54,7 +48,7 @@ function App(): React.JSX.Element {
               focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500
               ${view === v ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-700'}`}
           >
-            {NAV_LABEL[v]}
+            {t(('nav.' + v) as `nav.${View}`)}
           </button>
         ))}
       </nav>

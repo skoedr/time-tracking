@@ -94,13 +94,13 @@ export default function ClientsView() {
   return (
     <div className="max-w-xl mx-auto">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-xl font-semibold text-slate-100">Kunden</h1>
+        <h1 className="text-xl font-semibold text-slate-100">{t('clients.title')}</h1>
         <button
           onClick={openNew}
           className="bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium
             px-4 py-2 rounded-lg transition-colors"
         >
-          + {t('clients.addNew')}
+          {t('clients.addNew')}
         </button>
       </div>
 
