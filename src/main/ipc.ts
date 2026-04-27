@@ -336,8 +336,8 @@ export function registerIpcHandlers(hooks: IpcHooks): void {
           `SELECT COALESCE(SUM(
              CASE
                WHEN stopped_at IS NULL
-                 THEN (julianday('now') - julianday(started_at)) * 86400
-               ELSE (julianday(stopped_at) - julianday(started_at)) * 86400
+                 THEN CAST(strftime('%s', 'now') AS INTEGER) - CAST(strftime('%s', started_at) AS INTEGER)
+               ELSE CAST(strftime('%s', stopped_at) AS INTEGER) - CAST(strftime('%s', started_at) AS INTEGER)
              END
            ), 0) AS seconds
            FROM entries
@@ -366,8 +366,8 @@ export function registerIpcHandlers(hooks: IpcHooks): void {
             `SELECT COALESCE(SUM(
                CASE
                  WHEN stopped_at IS NULL
-                   THEN (julianday('now') - julianday(started_at)) * 86400
-                 ELSE (julianday(stopped_at) - julianday(started_at)) * 86400
+                   THEN CAST(strftime('%s', 'now') AS INTEGER) - CAST(strftime('%s', started_at) AS INTEGER)
+                 ELSE CAST(strftime('%s', stopped_at) AS INTEGER) - CAST(strftime('%s', started_at) AS INTEGER)
                END
              ), 0) AS seconds
              FROM entries
@@ -385,8 +385,8 @@ export function registerIpcHandlers(hooks: IpcHooks): void {
             `SELECT COALESCE(SUM(
                CASE
                  WHEN stopped_at IS NULL
-                   THEN (julianday('now') - julianday(started_at)) * 86400
-                 ELSE (julianday(stopped_at) - julianday(started_at)) * 86400
+                   THEN CAST(strftime('%s', 'now') AS INTEGER) - CAST(strftime('%s', started_at) AS INTEGER)
+                 ELSE CAST(strftime('%s', stopped_at) AS INTEGER) - CAST(strftime('%s', started_at) AS INTEGER)
                END
              ), 0) AS seconds
              FROM entries
@@ -413,8 +413,8 @@ export function registerIpcHandlers(hooks: IpcHooks): void {
                     COALESCE(SUM(
                       CASE
                         WHEN e.stopped_at IS NULL
-                          THEN (julianday('now') - julianday(e.started_at)) * 86400
-                        ELSE (julianday(e.stopped_at) - julianday(e.started_at)) * 86400
+                          THEN CAST(strftime('%s', 'now') AS INTEGER) - CAST(strftime('%s', e.started_at) AS INTEGER)
+                        ELSE CAST(strftime('%s', e.stopped_at) AS INTEGER) - CAST(strftime('%s', e.started_at) AS INTEGER)
                       END
                     ), 0) AS seconds
                FROM clients c

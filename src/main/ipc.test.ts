@@ -392,3 +392,67 @@ describe('pdf:merge-only — request validation', () => {
     ).toBeNull()
   })
 })
+
+// ---------------------------------------------------------------------------
+// Regression test: dashboard:summary duration calculation must return exact
+// integer seconds for entries with round durations (e.g. exactly 1 hour).
+//
+// Root cause of the bug: julianday() arithmetic in SQLite uses IEEE-754
+// floating point and can return 3599.9999... for a 3600-second interval.
+// Math.floor(3599.999) = 3599 → "00:59" instead of "01:00".
+// Fix: use strftime('%s', ...) which returns Unix epoch integers → exact.
+// ---------------------------------------------------------------------------
+describe('dashboard:summary — duration precision', () => {
+  let db: Database.Database | null = null
+  let tmpDir: string
+
+  beforeAll(async () => {
+    if (!DatabaseImpl) return
+    tmpDir = mkdtempSync(join(tmpdir(), 'tt-duration-'))
+    db = new DatabaseImpl(join(tmpDir, 'test.sqlite'))
+    for (const m of migrations) {
+      m.up(db)
+    }
+  })
+
+  afterEach(() => {
+    if (!db) return
+    db.prepare('DELETE FROM entries').run()
+  })
+
+  it.skipIf(!DatabaseImpl)(
+    'returns exactly 3600 seconds for a 1-hour entry (not 3599)',
+    () => {
+      const d = db!
+      const clientId = (
+        d
+          .prepare(`INSERT INTO clients (name, color, rate_cent, active) VALUES (?,?,?,1)`)
+          .run('Test', '#fff', 0) as { lastInsertRowid: number | bigint }
+      ).lastInsertRowid
+
+      // Insert an entry that is exactly 1 hour (3600 s)
+      const start = '2026-01-01T10:00:00.000Z'
+      const stop = '2026-01-01T11:00:00.000Z'
+      d.prepare(
+        `INSERT INTO entries (client_id, description, started_at, stopped_at, heartbeat_at, rounded_min, link_id, tags)
+         VALUES (?, '', ?, ?, ?, 60, NULL, '')`
+      ).run(clientId, start, stop, stop)
+
+      const row = d
+        .prepare(
+          `SELECT COALESCE(SUM(
+             CASE
+               WHEN stopped_at IS NULL
+                 THEN CAST(strftime('%s', 'now') AS INTEGER) - CAST(strftime('%s', started_at) AS INTEGER)
+               ELSE CAST(strftime('%s', stopped_at) AS INTEGER) - CAST(strftime('%s', started_at) AS INTEGER)
+             END
+           ), 0) AS seconds
+           FROM entries
+           WHERE deleted_at IS NULL`
+        )
+        .get() as { seconds: number }
+
+      expect(row.seconds).toBe(3600)
+    }
+  )
+})
