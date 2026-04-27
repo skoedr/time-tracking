@@ -6,12 +6,18 @@ const MAX_PDF_BYTES = 50 * 1024 * 1024 // 50 MB
 /**
  * Validates any PDF file path: non-empty, .pdf extension (case-insensitive), file exists.
  * Used for both invoice and Stundennachweis paths in merge handlers.
+ *
+ * The optional `existsFn` parameter allows injecting a mock for unit tests.
+ * Callers that need the real filesystem omit it (defaults to existsSync).
  */
-export function validatePdfPath(raw: string): string | null {
+export function validatePdfPath(
+  raw: string,
+  existsFn: (p: string) => boolean = existsSync
+): string | null {
   if (!raw) return 'Kein Rechnungspfad angegeben'
   const resolved = resolve(raw)
   if (extname(resolved).toLowerCase() !== '.pdf') return 'Die gewählte Datei ist keine PDF'
-  if (!existsSync(resolved)) return 'Datei nicht gefunden'
+  if (!existsFn(resolved)) return 'Datei nicht gefunden'
   return null
 }
 
