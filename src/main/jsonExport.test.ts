@@ -66,7 +66,7 @@ describe('buildJsonExportPayload', () => {
 
   it('emits meta with current schema version + appVersion + ISO exportedAt', () => {
     const payload = buildJsonExportPayload(db, '1.3.0')
-    expect(payload.meta.schemaVersion).toBe(9)
+    expect(payload.meta.schemaVersion).toBe(migrations.length)
     expect(payload.meta.appVersion).toBe('1.3.0')
     expect(payload.meta.exportedAt).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/)
   })
