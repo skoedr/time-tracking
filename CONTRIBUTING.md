@@ -87,10 +87,55 @@ Beispiele:
 - **Pure-Funktionen** in `src/shared/` – keine Electron- oder DOM-Imports dort.
 - **DB-Migrationen** sind unveränderlich. Neue Schemaänderung = neue
   Migrationsdatei in `src/main/migrations/` + DB-Version hochzählen.
-- **i18n:** Nutzersichtbare Strings über `useT()` / `t(...)` und in
-  `src/shared/locales/{de,en}.ts` pflegen. `pnpm exec node scripts/find-untranslated.mjs`
-  findet vergessene Stellen.
+- **i18n — Pflicht ab v1.8:** Jeder nutzersichtbare String **muss** über `useT()` /
+  `t(key)` laufen und einen Eintrag in **beiden** Locale-Dateien haben:
+  `src/shared/locales/de.ts` (Source of Truth) und `src/shared/locales/en.ts`.
+  Hardcodierte deutsche oder englische Strings im JSX/TSX sind ein Review-Blocker.
+  Prüfen mit: `pnpm exec node scripts/find-untranslated.mjs`
 - **Keine Telemetrie.** Siehe [PRIVACY.md](./PRIVACY.md).
+
+## i18n-Workflow
+
+Ab v1.8 sind alle nutzersichtbaren Strings zweisprachig (DE/EN). Dieses Muster ist
+**Pflicht** für jede neue UI-Änderung:
+
+```typescript
+// In Components / Views — Hook holen:
+import { useT } from '../contexts/I18nContext'
+const t = useT()
+
+// Verwendung:
+t('some.key')                          // einfacher String
+t('some.key', { variable: value })    // Interpolation: Key enthält {variable}
+
+// Wenn t an eine Hilfsfunktion weitergegeben wird:
+import type { TFunction } from '../contexts/I18nContext'
+function helper(t: TFunction) { ... }
+```
+
+Neue Keys immer in **beiden** Dateien gleichzeitig ergänzen:
+
+```typescript
+// src/shared/locales/de.ts  ← Source of Truth
+export const de = {
+  myFeature: {
+    title: 'Mein Feature',
+    description: 'Beschreibung mit {name}',
+  },
+}
+
+// src/shared/locales/en.ts  ← muss alle Keys aus de.ts spiegeln (TypeScript erzwingt es)
+export const en: typeof de = {
+  myFeature: {
+    title: 'My Feature',
+    description: 'Description with {name}',
+  },
+}
+```
+
+Keys sind dot-namespaced und werden nach Feature-Bereich gruppiert
+(`nav.*`, `settings.*`, `entry.*` usw.). `pnpm exec node scripts/find-untranslated.mjs`
+findet vergessene Stellen.
 
 ## Release-Prozess (nur Maintainer)
 
