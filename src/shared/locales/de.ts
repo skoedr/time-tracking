@@ -92,6 +92,15 @@ export const de = {
   'entry.reference.hint': 'z. B. JIRA-123 oder #42 (optional)',
   'entry.reference.placeholder': 'Ticket oder Issue-Nummer',
 
+  // ── EntryEditForm — Abrechenbar-Flag (#71) ───────────────────
+  'entry.billable.label': 'Abrechenbar',
+  'entry.billable.hint': 'Nicht abrechenbar — wird aus Exporten ausgeschlossen',
+
+  // ── EntryEditForm — Private Notiz (#72) ──────────────────────
+  'entry.privateNote.label': 'Interne Notiz',
+  'entry.privateNote.hint': 'Nur in der App sichtbar, nicht in Exporten enthalten',
+  'entry.privateNote.placeholder': 'Interne Anmerkungen (optional)',
+
   // ── ClientsView ──────────────────────────────────────────────────────────
   'clients.archivedSection': 'Archiviert ({count})',
 

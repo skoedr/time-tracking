@@ -19,6 +19,7 @@ type FormState = 'idle' | 'saving' | 'success'
 
 const MAX_DESCRIPTION_LEN = 500
 const MAX_REFERENCE_LEN = 200
+const MAX_NOTE_LEN = 1000
 
 function toDateInputValue(d: Date): string {
   // <input type="date"> wants YYYY-MM-DD in LOCAL time.
@@ -58,6 +59,8 @@ export function EntryEditForm({
   const [description, setDescription] = useState(entry?.description ?? '')
   const [tags, setTags] = useState(entry?.tags ?? '')
   const [reference, setReference] = useState(entry?.reference ?? '')
+  const [billable, setBillable] = useState(entry?.billable ?? 1)
+  const [privateNote, setPrivateNote] = useState(entry?.private_note ?? '')
   const [state, setState] = useState<FormState>('idle')
   const [error, setError] = useState<string | null>(null)
   const bumpVersion = useEntriesStore((s) => s.bumpVersion)
@@ -112,7 +115,9 @@ export function EntryEditForm({
           started_at: start,
           stopped_at: stop,
           tags,
-          reference: reference.trim()
+          reference: reference.trim(),
+          billable,
+          private_note: privateNote.trim()
         })
       : await window.api.entries.create({
           client_id: clientId,
@@ -120,7 +125,9 @@ export function EntryEditForm({
           started_at: start,
           stopped_at: stop,
           tags,
-          reference: reference.trim()
+          reference: reference.trim(),
+          billable,
+          private_note: privateNote.trim()
         })
     if (!res.ok) {
       setState('idle')
@@ -228,6 +235,34 @@ export function EntryEditForm({
           disabled={isSaving}
         />
         <span className="text-xs text-zinc-600">{t('entry.reference.hint')}</span>
+      </label>
+
+      <label className="flex items-center gap-2 cursor-pointer select-none">
+        <input
+          type="checkbox"
+          checked={billable === 1}
+          onChange={(e) => setBillable(e.target.checked ? 1 : 0)}
+          className="h-4 w-4 rounded border-zinc-700 bg-zinc-900 accent-indigo-500"
+          disabled={isSaving}
+        />
+        <span className="text-xs text-zinc-400">{t('entry.billable.label')}</span>
+        {billable === 0 && (
+          <span className="ml-auto text-xs text-amber-400">{t('entry.billable.hint')}</span>
+        )}
+      </label>
+
+      <label className="flex flex-col gap-1">
+        <span className="text-xs text-zinc-400">{t('entry.privateNote.label')}</span>
+        <textarea
+          value={privateNote}
+          onChange={(e) => setPrivateNote(e.target.value)}
+          rows={2}
+          maxLength={MAX_NOTE_LEN}
+          placeholder={t('entry.privateNote.placeholder')}
+          className="rounded border border-zinc-700 bg-zinc-900 px-2 py-1.5 text-zinc-100 placeholder-zinc-600 focus:border-indigo-500 focus:outline-none"
+          disabled={isSaving}
+        />
+        <span className="text-xs text-zinc-600">{t('entry.privateNote.hint')}</span>
       </label>
 
       {visibleError && (

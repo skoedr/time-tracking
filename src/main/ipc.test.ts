@@ -485,6 +485,103 @@ describe('reference field — insertEntrySegments round-trip', () => {
 })
 
 // ---------------------------------------------------------------------------
+// Round-trip tests: billable flag + private_note stored and retrieved (#71/#72)
+// ---------------------------------------------------------------------------
+describe('billable + private_note — DB round-trip', () => {
+  let tmpDir: string
+  let db: Database.Database
+
+  const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000)
+  function todayAt(hh: number, mm: number): string {
+    const d = new Date(yesterday)
+    d.setHours(hh, mm, 0, 0)
+    return d.toISOString()
+  }
+
+  beforeEach((ctx) => {
+    if (!DatabaseImpl) {
+      ctx.skip()
+      return
+    }
+    tmpDir = mkdtempSync(join(tmpdir(), 'tt-billable-'))
+    db = new DatabaseImpl(join(tmpDir, 'test.sqlite'))
+    db.pragma('foreign_keys = ON')
+    db.exec(
+      `CREATE TABLE schema_version (
+         version INTEGER PRIMARY KEY,
+         name TEXT NOT NULL,
+         applied_at TEXT NOT NULL DEFAULT (datetime('now'))
+       )`
+    )
+    for (const m of migrations) {
+      const tx = db.transaction(() => {
+        db.exec(m.up)
+        db.prepare('INSERT INTO schema_version (version, name) VALUES (?, ?)').run(
+          m.version,
+          m.name
+        )
+      })
+      tx()
+    }
+    db.prepare(`INSERT INTO clients (id, name) VALUES (1, 'Acme')`).run()
+  })
+
+  afterEach(() => {
+    if (!db) return
+    db.close()
+    rmSync(tmpDir, { recursive: true, force: true })
+  })
+
+  function insertEntry(overrides: { billable?: number; private_note?: string } = {}): number {
+    const start = todayAt(8, 0)
+    const stop = todayAt(9, 0)
+    const info = db.prepare(
+      `INSERT INTO entries (client_id, description, started_at, stopped_at, heartbeat_at,
+        rounded_min, link_id, tags, reference, billable, private_note)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    ).run(
+      1, 'work', start, stop, stop, 60, null, '', '',
+      overrides.billable ?? 1,
+      overrides.private_note ?? ''
+    )
+    return Number(info.lastInsertRowid)
+  }
+
+  it('billable defaults to 1', () => {
+    const id = insertEntry()
+    const row = db.prepare('SELECT billable FROM entries WHERE id = ?').get(id) as { billable: number }
+    expect(row.billable).toBe(1)
+  })
+
+  it('persists billable = 0 (non-billable)', () => {
+    const id = insertEntry({ billable: 0 })
+    const row = db.prepare('SELECT billable FROM entries WHERE id = ?').get(id) as { billable: number }
+    expect(row.billable).toBe(0)
+  })
+
+  it('private_note defaults to empty string', () => {
+    const id = insertEntry()
+    const row = db.prepare('SELECT private_note FROM entries WHERE id = ?').get(id) as { private_note: string }
+    expect(row.private_note).toBe('')
+  })
+
+  it('persists non-empty private_note', () => {
+    const id = insertEntry({ private_note: 'Interner Hinweis' })
+    const row = db.prepare('SELECT private_note FROM entries WHERE id = ?').get(id) as { private_note: string }
+    expect(row.private_note).toBe('Interner Hinweis')
+  })
+
+  it('billable and private_note columns are present in SELECT *', () => {
+    const id = insertEntry({ billable: 0, private_note: 'Test' })
+    const row = db.prepare('SELECT * FROM entries WHERE id = ?').get(id) as Record<string, unknown>
+    expect('billable' in row).toBe(true)
+    expect('private_note' in row).toBe(true)
+    expect(row.billable).toBe(0)
+    expect(row.private_note).toBe('Test')
+  })
+})
+
+// ---------------------------------------------------------------------------
 // Regression test: dashboard:summary duration calculation must return exact
 // integer seconds for entries with round durations (e.g. exactly 1 hour).
 //

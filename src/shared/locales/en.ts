@@ -91,6 +91,15 @@ export const en: Record<TranslationKey, string> = {
   'entry.reference.hint': 'e.g. JIRA-123 or #42 (optional)',
   'entry.reference.placeholder': 'Ticket or issue number',
 
+  // ── EntryEditForm — billable flag (#71) ──────────────────────
+  'entry.billable.label': 'Billable',
+  'entry.billable.hint': 'Non-billable — excluded from exports',
+
+  // ── EntryEditForm — private note (#72) ───────────────────────
+  'entry.privateNote.label': 'Internal note',
+  'entry.privateNote.hint': 'Visible in the app only, not included in any export',
+  'entry.privateNote.placeholder': 'Internal notes (optional)',
+
   // ── ClientsView ──────────────────────────────────────────────
   'clients.archivedSection': 'Archived ({count})',
 
