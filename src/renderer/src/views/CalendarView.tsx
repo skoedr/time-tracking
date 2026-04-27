@@ -16,6 +16,7 @@ import { useEntriesStore } from '../store/entriesStore'
 import { useTimer } from '../hooks/useTimer'
 import { CalendarDrawer } from '../components/CalendarDrawer'
 import { ExportModal } from '../components/ExportModal'
+import { PdfMergeModal } from '../components/PdfMergeModal'
 
 /**
  * Month-grid calendar view. 7×N rows, KW column on the left.
@@ -89,6 +90,7 @@ export default function CalendarView(): React.JSX.Element {
   // PDF export modal state — opened by the quick-filter pills with the
   // selected range pre-filled (#21).
   const [pdfRange, setPdfRange] = useState<{ fromIso: string; toIso: string } | null>(null)
+  const [mergeOpen, setMergeOpen] = useState(false)
 
   const onQuickRange = useCallback((kind: QuickRangeKind) => {
     const range = getQuickRange(kind, new Date())
@@ -182,6 +184,14 @@ export default function CalendarView(): React.JSX.Element {
             {QUICK_RANGE_LABELS[k]}
           </button>
         ))}
+        <button
+          type="button"
+          onClick={() => setMergeOpen(true)}
+          className="ml-auto rounded-full border border-slate-700 bg-slate-800 px-3 py-1.5 text-xs font-medium text-slate-300 hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+          title="Vorhandene PDFs zusammenführen"
+        >
+          PDFs zusammenführen
+        </button>
       </div>
 
       {/* Header row: KW + Mo–So */}
@@ -237,6 +247,8 @@ export default function CalendarView(): React.JSX.Element {
         prefilledRange={pdfRange ?? undefined}
         onClose={() => setPdfRange(null)}
       />
+
+      <PdfMergeModal open={mergeOpen} onClose={() => setMergeOpen(false)} />
     </div>
   )
 }
