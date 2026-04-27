@@ -37,6 +37,7 @@ export default function ClientsView() {
   const [isLoading, setIsLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [editingClient, setEditingClient] = useState<Client | null>(null)
+  const [archivedExpanded, setArchivedExpanded] = useState(false)
   const bumpClientsVersion = useClientsStore((s) => s.bumpVersion)
 
   useEffect(() => {
@@ -127,16 +128,35 @@ export default function ClientsView() {
 
           {inactiveClients.length > 0 && (
             <div className="mt-6">
-              <p className="text-slate-500 text-xs font-medium uppercase tracking-wide mb-2">
-                {t('clients.archived.label')}
-              </p>
-              <ClientList
-                clients={inactiveClients}
-                onEdit={openEdit}
-                onDelete={handleDelete}
-                onToggleActive={handleToggleActive}
-                dimmed
-              />
+              <button
+                onClick={() => setArchivedExpanded((v) => !v)}
+                aria-expanded={archivedExpanded}
+                className="flex items-center gap-1.5 text-slate-500 hover:text-slate-300
+                  text-xs font-medium uppercase tracking-wide mb-2 transition-colors"
+              >
+                <svg
+                  aria-hidden="true"
+                  className={`w-3 h-3 transition-transform duration-200 ${archivedExpanded ? 'rotate-90' : ''}`}
+                  viewBox="0 0 12 12"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M4 2l4 4-4 4" />
+                </svg>
+                {t('clients.archivedSection', { count: inactiveClients.length })}
+              </button>
+              {archivedExpanded && (
+                <ClientList
+                  clients={inactiveClients}
+                  onEdit={openEdit}
+                  onDelete={handleDelete}
+                  onToggleActive={handleToggleActive}
+                  dimmed
+                />
+              )}
             </div>
           )}
         </>

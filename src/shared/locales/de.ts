@@ -92,6 +92,9 @@ export const de = {
   'entry.reference.hint': 'z. B. JIRA-123 oder #42 (optional)',
   'entry.reference.placeholder': 'Ticket oder Issue-Nummer',
 
+  // ── ClientsView ──────────────────────────────────────────────────────────
+  'clients.archivedSection': 'Archiviert ({count})',
+
   // ── About-Dialog ─────────────────────────────────────────────
   'about.title': 'Über TimeTrack',
   'about.version': 'Version',
