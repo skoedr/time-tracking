@@ -22,7 +22,8 @@ export default function TimerView() {
   const canStart = selectedClientId !== null && !isRunning
 
   return (
-    <div className="max-w-md mx-auto mt-12 flex flex-col gap-6">
+    <div className="flex flex-1 flex-col items-center justify-center gap-8 h-full">
+      <div className="w-full max-w-md flex flex-col gap-6">
       {/* Timer Display */}
       <div className="text-center">
         <div
@@ -119,6 +120,7 @@ export default function TimerView() {
           {t('timer.running.hint')} · <kbd className="font-mono" style={{ color: 'var(--text2)' }}>Alt+Shift+S</kbd> {t('timer.running.stopHint')}
         </p>
       )}
+      </div>
     </div>
   )
 }

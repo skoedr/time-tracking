@@ -82,8 +82,8 @@ function App(): React.JSX.Element {
       </nav>
 
       {/* Content */}
-      <main className="relative z-10 flex-1 overflow-y-auto p-6">
-        <div key={view} className="view-enter">
+      <main className="relative z-10 flex-1 overflow-y-auto p-6 flex flex-col">
+        <div key={view} className="view-enter flex-1 flex flex-col">
           {view === 'today' && <TodayView />}
           {view === 'timer' && <TimerView />}
           {view === 'calendar' && <CalendarView />}
