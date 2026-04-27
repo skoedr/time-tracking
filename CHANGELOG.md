@@ -2,6 +2,12 @@
 
 All notable changes to TimeTrack are documented here.
 
+## [1.7.1] — 2026-04-27
+
+### Fixed
+
+- **Kunden-Refresh ohne App-Neustart** — Nach dem Anlegen, Archivieren oder Reaktivieren eines Kunden wurde `timerStore.clients` nicht aktualisiert. TodayView und CalendarView zeigten daher veraltete Daten, bis die App neu gestartet wurde. Fix: neuer `clientsStore` (Version-Counter-Pattern, analog `entriesStore`). `useTimer` re-fetcht die Kundenliste bei jeder Version-Erhöhung; `ClientsView` bumpt die Version nach jedem Mutations-IPC-Call. ([#66](https://github.com/skoedr/time-tracking/issues/66))
+
 ## [1.7.0] — 2026-04-26
 
 ### Added

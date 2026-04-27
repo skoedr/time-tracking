@@ -1,5 +1,6 @@
 import { useEffect, useRef, useCallback } from 'react'
 import { useTimerStore } from '../store/timerStore'
+import { useClientsStore } from '../store/clientsStore'
 import { formatDuration as _formatDuration } from '../../../shared/duration'
 
 /**
@@ -63,8 +64,20 @@ export function useTimer() {
     setQuickNoteEntry
   } = useTimerStore()
 
+  const clientsVersion = useClientsStore((s) => s.version)
+
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  // Re-fetch client list whenever clientsVersion is bumped (create/update/delete
+  // in ClientsView). Skip version 0 — the init effect below handles the initial
+  // load so we don't double-fetch on mount.
+  useEffect(() => {
+    if (clientsVersion === 0) return
+    void window.api.clients.getAll().then((res) => {
+      if (res.ok) setClients(res.data)
+    })
+  }, [clientsVersion])
 
   // Load clients + check for running entry on first mount only (idempotent).
   useEffect(() => {
