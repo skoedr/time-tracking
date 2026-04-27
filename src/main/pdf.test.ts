@@ -339,4 +339,46 @@ describe('buildPdfHtml', () => {
     expect(buildPdfHtml(makePayload({ roundMinutes: 15 }))).not.toMatch(/gerundet|rounded/i)
     expect(buildPdfHtml(makePayload({ roundMinutes: 30 }))).not.toMatch(/gerundet|rounded/i)
   })
+
+  it('renders entry-ref div when reference is non-empty', () => {
+    const html = buildPdfHtml(
+      makePayload({
+        rows: [
+          {
+            date: '15.04.2026',
+            startTime: '08:00',
+            stopTime: '09:30',
+            description: 'Work',
+            minutes: 90,
+            feeCent: 12750,
+            reference: 'JIRA-123'
+          }
+        ]
+      })
+    )
+    expect(html).toContain('class="entry-ref"')
+    expect(html).toContain('JIRA-123')
+  })
+
+  it('omits entry-ref div when reference is empty or absent', () => {
+    const htmlEmpty = buildPdfHtml(
+      makePayload({
+        rows: [
+          {
+            date: '15.04.2026',
+            startTime: '08:00',
+            stopTime: '09:30',
+            description: 'Work',
+            minutes: 90,
+            feeCent: 12750,
+            reference: ''
+          }
+        ]
+      })
+    )
+    expect(htmlEmpty).not.toContain('class="entry-ref"')
+
+    const htmlAbsent = buildPdfHtml(makePayload())
+    expect(htmlAbsent).not.toContain('class="entry-ref"')
+  })
 })

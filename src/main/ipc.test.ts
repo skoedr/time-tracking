@@ -394,6 +394,97 @@ describe('pdf:merge-only — request validation', () => {
 })
 
 // ---------------------------------------------------------------------------
+// Round-trip tests: reference field stored and retrieved via insertEntrySegments
+// ---------------------------------------------------------------------------
+describe('reference field — insertEntrySegments round-trip', () => {
+  let tmpDir: string
+  let db: Database.Database
+
+  const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000)
+  function todayAt(hh: number, mm: number): string {
+    const d = new Date(yesterday)
+    d.setHours(hh, mm, 0, 0)
+    return d.toISOString()
+  }
+
+  beforeEach((ctx) => {
+    if (!DatabaseImpl) {
+      ctx.skip()
+      return
+    }
+    tmpDir = mkdtempSync(join(tmpdir(), 'tt-ref-'))
+    db = new DatabaseImpl(join(tmpDir, 'test.sqlite'))
+    db.pragma('foreign_keys = ON')
+    db.exec(
+      `CREATE TABLE schema_version (
+         version INTEGER PRIMARY KEY,
+         name TEXT NOT NULL,
+         applied_at TEXT NOT NULL DEFAULT (datetime('now'))
+       )`
+    )
+    for (const m of migrations) {
+      const tx = db.transaction(() => {
+        db.exec(m.up)
+        db.prepare('INSERT INTO schema_version (version, name) VALUES (?, ?)').run(
+          m.version,
+          m.name
+        )
+      })
+      tx()
+    }
+    db.prepare(`INSERT INTO clients (id, name) VALUES (1, 'Acme')`).run()
+  })
+
+  afterEach(() => {
+    if (!db) return
+    db.close()
+    rmSync(tmpDir, { recursive: true, force: true })
+  })
+
+  it('persists non-empty reference and returns it on the inserted row', () => {
+    const linkId: string | null = null
+    const insertStmt = db.prepare(
+      `INSERT INTO entries (client_id, description, started_at, stopped_at, heartbeat_at, rounded_min, link_id, tags, reference)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    )
+    const start = todayAt(8, 0)
+    const stop = todayAt(9, 30)
+    const info = insertStmt.run(
+      1, 'work', start, stop, stop, 90, linkId, '', 'JIRA-123'
+    )
+    const row = db.prepare('SELECT reference FROM entries WHERE id = ?').get(info.lastInsertRowid) as { reference: string }
+    expect(row.reference).toBe('JIRA-123')
+  })
+
+  it('persists empty reference (default) and returns empty string', () => {
+    const insertStmt = db.prepare(
+      `INSERT INTO entries (client_id, description, started_at, stopped_at, heartbeat_at, rounded_min, link_id, tags, reference)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    )
+    const start = todayAt(10, 0)
+    const stop = todayAt(11, 0)
+    const info = insertStmt.run(
+      1, 'work', start, stop, stop, 60, null, '', ''
+    )
+    const row = db.prepare('SELECT reference FROM entries WHERE id = ?').get(info.lastInsertRowid) as { reference: string }
+    expect(row.reference).toBe('')
+  })
+
+  it('reference column is included in SELECT * FROM entries', () => {
+    const insertStmt = db.prepare(
+      `INSERT INTO entries (client_id, description, started_at, stopped_at, heartbeat_at, rounded_min, link_id, tags, reference)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    )
+    const start = todayAt(14, 0)
+    const stop = todayAt(15, 30)
+    insertStmt.run(1, 'review', start, stop, stop, 90, null, '', 'GH-42')
+    const row = db.prepare('SELECT * FROM entries').get() as Record<string, unknown>
+    expect('reference' in row).toBe(true)
+    expect(row.reference).toBe('GH-42')
+  })
+})
+
+// ---------------------------------------------------------------------------
 // Regression test: dashboard:summary duration calculation must return exact
 // integer seconds for entries with round durations (e.g. exactly 1 hour).
 //
