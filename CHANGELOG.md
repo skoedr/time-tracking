@@ -2,6 +2,12 @@
 
 All notable changes to TimeTrack are documented here.
 
+## [1.7.2] — 2026-04-27
+
+### Fixed
+
+- **Tagesübersicht zeigt 59 Min statt 1 Stunde** — `julianday()`-Arithmetik in SQLite nutzt IEEE-754 Gleitkomma; ein exakt 1-stündiger Eintrag lieferte `3599.9999...` statt `3600`, was nach `Math.floor()` als `00:59` angezeigt wurde. Fix: alle vier Dashboard-SQL-Ausdrücke auf `CAST(strftime('%s', col) AS INTEGER)` umgestellt (Unix-Epoch-Ganzzahlen, kein Gleitkomma). Regressionstest in `ipc.test.ts` hinzugefügt.
+
 ## [1.7.1] — 2026-04-27
 
 ### Fixed
