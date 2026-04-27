@@ -19,15 +19,16 @@ import type {
 import type { CsvRequest } from '../main/csvExport'
 
 // ── v1.8 #76: FOUC prevention ─────────────────────────────────────────────
-// Reads theme_mode synchronously (before React mounts) so the .dark class is
-// set on <html> before the first paint. ipcRenderer.sendSync blocks the
-// renderer thread briefly — acceptable here because it's a single SQLite row.
-{
+// document.documentElement is null when the preload runs (HTML not yet parsed).
+// DOMContentLoaded is still FOUC-safe in Electron: the main window is only
+// shown after ready-to-show, which fires after DOMContentLoaded + first paint.
+// By the time the user sees anything, .dark is already set.
+document.addEventListener('DOMContentLoaded', () => {
   const rawMode = ipcRenderer.sendSync('settings:getSync', 'theme_mode') as string | null
   const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
   const isDark = rawMode === 'dark' || (rawMode !== 'light' && prefersDark)
   document.documentElement.classList.toggle('dark', isDark)
-}
+})
 // ──────────────────────────────────────────────────────────────────────────
 
 const api = {
