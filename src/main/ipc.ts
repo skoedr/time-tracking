@@ -15,6 +15,7 @@ import { buildPdfHtml, buildPdfPayload, type PdfRequest } from './pdf'
 import { renderPdfBuffer } from './pdfWindow'
 import { readLogoAsDataUrl, removeLogo, saveLogo } from './logo'
 import { handleCsvExport, type CsvRequest } from './csvExport'
+import { validatePdfPath, validateMergeExportRequest } from './pdfMergeValidation'
 import type {
   Client,
   Entry,
@@ -663,19 +664,13 @@ export function registerIpcHandlers(hooks: IpcHooks): void {
       req: PdfRequest & { invoicePath: string }
     ): Promise<IpcResult<{ path: string }>> => {
       try {
-        if (!req || typeof req.clientId !== 'number' || !req.fromIso || !req.toIso) {
-          return fail('Ungültige PDF-Anfrage')
-        }
-        if (!req.invoicePath) return fail('Kein Rechnungspfad angegeben')
+        const reqErr = validateMergeExportRequest(req)
+        if (reqErr) return fail(reqErr)
 
-        // Security: normalise path and require .pdf extension.
+        const pathErr = validatePdfPath(req.invoicePath)
+        if (pathErr) return fail(pathErr)
+
         const resolvedInvoice = resolve(req.invoicePath)
-        if (extname(resolvedInvoice).toLowerCase() !== '.pdf') {
-          return fail('Die gewählte Datei ist keine PDF')
-        }
-        if (!existsSync(resolvedInvoice)) {
-          return fail('Datei nicht gefunden')
-        }
 
         // Size check via stat before reading to avoid loading huge files.
         const MAX_INVOICE_BYTES = 50 * 1024 * 1024 // 50 MB

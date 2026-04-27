@@ -254,55 +254,46 @@ describe('entries:create / entries:update validation contract', () => {
 })
 
 // ---------------------------------------------------------------------------
-// pdf:merge-export — path validation logic
+// pdf:merge-export / pdf:merge-only — validation contract tests
 //
-// The full IPC handler requires an Electron runtime and is not exercised here.
-// The core merge logic is covered in pdfMerge.test.ts.
-// This suite tests the standalone validation rules extracted from the handler.
+// The full IPC handlers require an Electron runtime and are not exercised here.
+// Handler logic is covered in pdfMergeHandlers.test.ts.
+// This suite tests the shared validation helpers from pdfMergeValidation.ts.
 // ---------------------------------------------------------------------------
 
-import { extname, resolve } from 'path'
-import { existsSync } from 'fs'
-
-function validateInvoicePath(raw: string): string | null {
-  if (!raw) return 'Kein Rechnungspfad angegeben'
-  const resolved = resolve(raw)
-  if (extname(resolved).toLowerCase() !== '.pdf') return 'Die gewählte Datei ist keine PDF'
-  if (!existsSync(resolved)) return 'Datei nicht gefunden'
-  return null
-}
-
-function validateInvoiceSize(buf: Buffer): string | null {
-  const MAX = 50 * 1024 * 1024
-  return buf.length > MAX ? 'Rechnungs-PDF zu groß (max. 50 MB)' : null
-}
+import {
+  validatePdfPath,
+  validateInvoiceSize,
+  validateMergeExportRequest,
+  validateMergeOnlyRequest
+} from './pdfMergeValidation'
 
 describe('pdf:merge-export — path validation', () => {
   it('rejects empty invoicePath', () => {
-    expect(validateInvoicePath('')).toBe('Kein Rechnungspfad angegeben')
+    expect(validatePdfPath('')).toBe('Kein Rechnungspfad angegeben')
   })
 
   it('rejects non-pdf extension (.txt)', () => {
-    expect(validateInvoicePath('C:/invoices/rechnung.txt')).toBe('Die gewählte Datei ist keine PDF')
+    expect(validatePdfPath('C:/invoices/rechnung.txt')).toBe('Die gewählte Datei ist keine PDF')
   })
 
   it('rejects non-pdf extension (.docx)', () => {
-    expect(validateInvoicePath('C:/invoices/rechnung.docx')).toBe('Die gewählte Datei ist keine PDF')
+    expect(validatePdfPath('C:/invoices/rechnung.docx')).toBe('Die gewählte Datei ist keine PDF')
   })
 
   it('accepts .pdf extension (lowercase)', () => {
     // File does not exist — will fail at existsSync, not at extension check.
-    const err = validateInvoicePath('C:/does-not-exist/rechnung.pdf')
+    const err = validatePdfPath('C:/does-not-exist/rechnung.pdf')
     expect(err).toBe('Datei nicht gefunden')
   })
 
   it('accepts .PDF extension (uppercase, Windows drag-from-Explorer)', () => {
-    const err = validateInvoicePath('C:/does-not-exist/rechnung.PDF')
+    const err = validatePdfPath('C:/does-not-exist/rechnung.PDF')
     expect(err).toBe('Datei nicht gefunden')
   })
 
   it('rejects path traversal with non-pdf extension', () => {
-    expect(validateInvoicePath('../../secret.exe')).toBe('Die gewählte Datei ist keine PDF')
+    expect(validatePdfPath('../../secret.exe')).toBe('Die gewählte Datei ist keine PDF')
   })
 })
 
@@ -327,58 +318,77 @@ describe('pdf:merge-export — size validation', () => {
 // Mirrors the guard at the top of the IPC handler before any FS access.
 // ---------------------------------------------------------------------------
 
-type PdfMergeReq = {
-  clientId?: unknown
-  fromIso?: unknown
-  toIso?: unknown
-  invoicePath?: unknown
-}
-
-function validateMergeRequest(req: PdfMergeReq | null | undefined): string | null {
-  if (!req || typeof req.clientId !== 'number' || !req.fromIso || !req.toIso) {
-    return 'Ungültige PDF-Anfrage'
-  }
-  if (!req.invoicePath) return 'Kein Rechnungspfad angegeben'
-  return null
-}
-
 describe('pdf:merge-export — request validation', () => {
   it('rejects null request', () => {
-    expect(validateMergeRequest(null)).toBe('Ungültige PDF-Anfrage')
+    expect(validateMergeExportRequest(null)).toBe('Ungültige PDF-Anfrage')
   })
 
   it('rejects request with non-number clientId', () => {
-    expect(validateMergeRequest({ clientId: '1', fromIso: '2026-01-01', toIso: '2026-01-31' })).toBe(
+    expect(validateMergeExportRequest({ clientId: '1', fromIso: '2026-01-01', toIso: '2026-01-31' })).toBe(
       'Ungültige PDF-Anfrage'
     )
   })
 
   it('rejects request with missing fromIso', () => {
-    expect(validateMergeRequest({ clientId: 1, fromIso: '', toIso: '2026-01-31' })).toBe(
+    expect(validateMergeExportRequest({ clientId: 1, fromIso: '', toIso: '2026-01-31' })).toBe(
       'Ungültige PDF-Anfrage'
     )
   })
 
   it('rejects request with missing toIso', () => {
-    expect(validateMergeRequest({ clientId: 1, fromIso: '2026-01-01', toIso: '' })).toBe(
+    expect(validateMergeExportRequest({ clientId: 1, fromIso: '2026-01-01', toIso: '' })).toBe(
       'Ungültige PDF-Anfrage'
     )
   })
 
   it('rejects valid request fields but missing invoicePath', () => {
     expect(
-      validateMergeRequest({ clientId: 1, fromIso: '2026-01-01', toIso: '2026-01-31', invoicePath: '' })
+      validateMergeExportRequest({ clientId: 1, fromIso: '2026-01-01', toIso: '2026-01-31', invoicePath: '' })
     ).toBe('Kein Rechnungspfad angegeben')
   })
 
   it('accepts a fully valid request object', () => {
     expect(
-      validateMergeRequest({
+      validateMergeExportRequest({
         clientId: 1,
         fromIso: '2026-01-01',
         toIso: '2026-01-31',
         invoicePath: 'C:/invoices/rechnung.pdf'
       })
+    ).toBeNull()
+  })
+})
+
+describe('pdf:merge-only — request validation', () => {
+  it('rejects null request', () => {
+    expect(validateMergeOnlyRequest(null)).toBe('Beide PDF-Pfade sind erforderlich')
+  })
+
+  it('rejects empty object', () => {
+    expect(validateMergeOnlyRequest({})).toBe('Beide PDF-Pfade sind erforderlich')
+  })
+
+  it('rejects request with only stundennachweisPath', () => {
+    expect(validateMergeOnlyRequest({ stundennachweisPath: 'a.pdf' })).toBe(
+      'Beide PDF-Pfade sind erforderlich'
+    )
+  })
+
+  it('rejects request with only invoicePath', () => {
+    expect(validateMergeOnlyRequest({ invoicePath: 'b.pdf' })).toBe(
+      'Beide PDF-Pfade sind erforderlich'
+    )
+  })
+
+  it('rejects request with empty string paths', () => {
+    expect(validateMergeOnlyRequest({ stundennachweisPath: '', invoicePath: '' })).toBe(
+      'Beide PDF-Pfade sind erforderlich'
+    )
+  })
+
+  it('accepts a fully valid request with both paths', () => {
+    expect(
+      validateMergeOnlyRequest({ stundennachweisPath: 'a.pdf', invoicePath: 'b.pdf' })
     ).toBeNull()
   })
 })
