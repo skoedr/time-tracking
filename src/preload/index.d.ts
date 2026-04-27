@@ -136,6 +136,7 @@ declare global {
           fromIso: string
           toIso: string
           format?: 'de' | 'us'
+          groupByTag?: boolean
         }): Promise<IpcResult<{ path: string }>>
       }
       update: {

@@ -298,6 +298,8 @@ export const en: Record<TranslationKey, string> = {
   'export.csv.formatDeHint': '(Semicolon, comma decimal — Excel DE)',
   'export.csv.formatUsHint': '(Comma, period decimal — DATEV)',
   'export.csv.encodingNote': 'UTF-8 with BOM. Excel opens the file without encoding prompts.',
+  'export.csv.groupByTag': 'Group by tag',
+  'export.csv.groupByTagHint': 'Inserts a header row and subtotal for each tag.',
   'export.footer.pdfHint': 'Customize template under',
   'export.footer.pdfHintPath': 'Settings → PDF template',
   'export.footer.csvHint': 'Includes all completed entries in the selected period.',
