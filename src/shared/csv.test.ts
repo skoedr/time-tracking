@@ -26,6 +26,7 @@ function makeEntry(overrides: Partial<Entry> = {}): Entry {
     created_at: '2026-04-25T09:00:00.000Z',
     link_id: null,
     tags: '',
+    reference: '',
     ...overrides
   }
 }
@@ -33,7 +34,7 @@ function makeEntry(overrides: Partial<Entry> = {}): Entry {
 describe('formatCsv', () => {
   it('produces UTF-8 BOM', () => {
     const csv = formatCsv([], CLIENT_MAP)
-    expect(csv.startsWith('\uFEFF')).toBe(true)
+    expect(csv.startsWith('﻿')).toBe(true)
   })
 
   it('produces CRLF line endings', () => {
@@ -44,19 +45,19 @@ describe('formatCsv', () => {
 
   it('outputs header row', () => {
     const csv = formatCsv([], CLIENT_MAP)
-    expect(csv).toContain('Datum;Start;Ende;Dauer;Kunde;Beschreibung;Tags;Stundensatz;Betrag')
+    expect(csv).toContain('Datum;Start;Ende;Dauer;Kunde;Beschreibung;Tags;Referenz;Stundensatz;Betrag')
   })
 
   it('empty list → header only', () => {
     const csv = formatCsv([], CLIENT_MAP)
-    const lines = csv.replace('\uFEFF', '').split('\r\n').filter(Boolean)
+    const lines = csv.replace('﻿', '').split('\r\n').filter(Boolean)
     expect(lines).toHaveLength(1) // just the header
   })
 
   it('skips running entries (stopped_at = null)', () => {
     const running = makeEntry({ stopped_at: null })
     const csv = formatCsv([running], CLIENT_MAP)
-    const lines = csv.replace('\uFEFF', '').split('\r\n').filter(Boolean)
+    const lines = csv.replace('﻿', '').split('\r\n').filter(Boolean)
     expect(lines).toHaveLength(1) // only header
   })
 
@@ -85,7 +86,7 @@ describe('formatCsv', () => {
     const map = new Map([[1, noRateClient]])
     const csv = formatCsv([makeEntry()], map)
     // last two fields should be empty → line ends with ";;..." trailing sep
-    const dataLine = csv.replace('\uFEFF', '').split('\r\n')[1]
+    const dataLine = csv.replace('﻿', '').split('\r\n')[1]
     expect(dataLine).toMatch(/;;$/)
   })
 
@@ -98,10 +99,32 @@ describe('formatCsv', () => {
   it('empty tags → empty tags field', () => {
     const entry = makeEntry({ tags: '' })
     const csv = formatCsv([entry], CLIENT_MAP)
-    // tags column is 7th (0-indexed 6), should be empty between two separators
-    const dataLine = csv.replace('\uFEFF', '').split('\r\n')[1]
+    // tags column is index 6: Datum(0) Start(1) Ende(2) Dauer(3) Kunde(4) Beschreibung(5) Tags(6)
+    const dataLine = csv.replace('﻿', '').split('\r\n')[1]
     const fields = dataLine.split(';')
     expect(fields[6]).toBe('') // tags
+  })
+
+  it('reference field appears as Referenz column (index 7)', () => {
+    const entry = makeEntry({ reference: 'JIRA-123' })
+    const csv = formatCsv([entry], CLIENT_MAP)
+    const dataLine = csv.replace('﻿', '').split('\r\n')[1]
+    const fields = dataLine.split(';')
+    expect(fields[7]).toBe('JIRA-123')
+  })
+
+  it('empty reference → empty Referenz column', () => {
+    const entry = makeEntry({ reference: '' })
+    const csv = formatCsv([entry], CLIENT_MAP)
+    const dataLine = csv.replace('﻿', '').split('\r\n')[1]
+    const fields = dataLine.split(';')
+    expect(fields[7]).toBe('')
+  })
+
+  it('reference containing separator is quoted', () => {
+    const entry = makeEntry({ reference: 'PROJ; TICKET-42' })
+    const csv = formatCsv([entry], CLIENT_MAP)
+    expect(csv).toContain('"PROJ; TICKET-42"')
   })
 
   it('escapes fields containing the separator', () => {
@@ -126,7 +149,7 @@ describe('formatCsv', () => {
     const entry = makeEntry({ client_id: 999 })
     const csv = formatCsv([entry], CLIENT_MAP)
     // client name field (index 4) should be empty string
-    const dataLine = csv.replace('\uFEFF', '').split('\r\n')[1]
+    const dataLine = csv.replace('﻿', '').split('\r\n')[1]
     const fields = dataLine.split(';')
     expect(fields[4]).toBe('') // no client → empty
   })
@@ -146,7 +169,7 @@ describe('formatCsv', () => {
       link_id: linkId
     })
     const csv = formatCsv([first, second], CLIENT_MAP)
-    const lines = csv.replace('\uFEFF', '').split('\r\n').filter(Boolean)
+    const lines = csv.replace('﻿', '').split('\r\n').filter(Boolean)
     expect(lines).toHaveLength(3) // header + 2 data rows
   })
 })

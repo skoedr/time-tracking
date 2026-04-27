@@ -34,6 +34,7 @@ import type {
 } from '../shared/types'
 
 const MAX_DESCRIPTION_LEN = 500
+const MAX_REFERENCE_LEN = 200
 const MAX_DURATION_SECONDS = 24 * 3600
 
 export interface IpcHooks {
@@ -218,7 +219,7 @@ export function registerIpcHandlers(hooks: IpcHooks): void {
       const err = validateManualEntry(db, input)
       if (err) return fail(err)
       const segments = splitAtMidnight(new Date(input.started_at), new Date(input.stopped_at))
-      const insertedRow = insertEntrySegments(db, input, segments, input.tags ?? '')
+      const insertedRow = insertEntrySegments(db, input, segments, input.tags ?? '', input.reference ?? '')
       return ok(insertedRow)
     } catch (e) {
       return fail(e)
@@ -246,7 +247,7 @@ export function registerIpcHandlers(hooks: IpcHooks): void {
         } else {
           db.prepare(`DELETE FROM entries WHERE id = ?`).run(input.id)
         }
-        return insertEntrySegments(db, input, segments, input.tags ?? '')
+        return insertEntrySegments(db, input, segments, input.tags ?? '', input.reference ?? '')
       })
       const row = tx()
       return ok(row)
@@ -857,6 +858,7 @@ function validateManualEntry(
     description: string
     started_at: string
     stopped_at: string
+    reference?: string
   },
   excludeId?: number,
   excludeLinkId?: string
@@ -872,6 +874,9 @@ function validateManualEntry(
   if (durationSec > MAX_DURATION_SECONDS) return 'Dauer überschreitet 24 Stunden'
   if ((input.description ?? '').length > MAX_DESCRIPTION_LEN) {
     return `Beschreibung überschreitet ${MAX_DESCRIPTION_LEN} Zeichen`
+  }
+  if ((input.reference ?? '').length > MAX_REFERENCE_LEN) {
+    return `Referenz überschreitet ${MAX_REFERENCE_LEN} Zeichen`
   }
   const clientRow = db.prepare(`SELECT id FROM clients WHERE id = ?`).get(input.client_id) as
     | { id: number }
@@ -914,13 +919,14 @@ function insertEntrySegments(
   db: ReturnType<typeof getDb>,
   input: { client_id: number; description: string },
   segments: Array<{ start: Date; stop: Date }>,
-  tags = ''
+  tags = '',
+  reference = ''
 ): Entry {
   const linkId = segments.length > 1 ? randomUUID() : null
   const description = input.description.trim()
   const insertStmt = db.prepare(
-    `INSERT INTO entries (client_id, description, started_at, stopped_at, heartbeat_at, rounded_min, link_id, tags)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+    `INSERT INTO entries (client_id, description, started_at, stopped_at, heartbeat_at, rounded_min, link_id, tags, reference)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
   )
   const tx = db.transaction((): Entry => {
     let firstId = 0
@@ -935,7 +941,8 @@ function insertEntrySegments(
         stoppedAt,
         Math.round((seg.stop.getTime() - seg.start.getTime()) / 60000),
         linkId,
-        tags
+        tags,
+        reference
       )
       if (firstId === 0) firstId = Number(info.lastInsertRowid)
     }

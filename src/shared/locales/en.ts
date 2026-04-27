@@ -86,6 +86,11 @@ export const en: Record<TranslationKey, string> = {
   // Settings — Re-Trigger
   'settings.onboarding.retrigger': 'Show onboarding again',
 
+  // ── EntryEditForm — reference field (#70) ────────────────────
+  'entry.reference.label': 'Reference',
+  'entry.reference.hint': 'e.g. JIRA-123 or #42 (optional)',
+  'entry.reference.placeholder': 'Ticket or issue number',
+
   // ── About-Dialog ─────────────────────────────────────────────
   'about.title': 'About TimeTrack',
   'about.version': 'Version',

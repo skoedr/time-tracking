@@ -46,6 +46,8 @@ export interface PdfRow {
   feeCent: number | null
   /** Raw serialized tags string from the DB column (`,bug,ux,` format). Optional — only needed for `groupByTag`. */
   tags?: string
+  /** Free-text ticket/reference (e.g. 'JIRA-123'). Empty string = no reference. */
+  reference?: string
 }
 
 /** One group when `groupByTag` is true. tag='' means "Ohne Tag". */
@@ -219,7 +221,8 @@ export function buildPdfPayload(
       description: e.description ?? '',
       minutes,
       feeCent: fee,
-      tags: e.tags ?? ''
+      tags: e.tags ?? '',
+      reference: e.reference ?? ''
     }
   })
 
@@ -337,7 +340,7 @@ export function buildPdfHtml(p: PdfPayload): string {
         <td class="col-date">${esc(r.date)}</td>
         <td class="col-time">${esc(r.startTime)}</td>
         <td class="col-time">${esc(r.stopTime)}</td>
-        <td class="col-desc">${esc(r.description)}</td>
+        <td class="col-desc">${esc(r.description)}${r.reference ? `<div class="entry-ref">${esc(r.reference)}</div>` : ''}</td>
         <td class="col-dur">${esc(formatHoursMinutes(r.minutes))}</td>
         ${showFee ? `<td class="col-fee">${esc(formatEur(r.feeCent ?? 0))}</td>` : ''}
       </tr>`
@@ -477,6 +480,7 @@ export function buildPdfHtml(p: PdfPayload): string {
   table.entries .col-date { white-space: nowrap; width: 76px; }
   table.entries .col-time { white-space: nowrap; width: 52px; text-align: right; }
   table.entries .col-desc { word-break: break-word; }
+  table.entries .entry-ref { font-size: 8pt; color: #64748b; margin-top: 1px; }
   table.entries .col-dur { white-space: nowrap; text-align: right; width: 60px; font-variant-numeric: tabular-nums; }
   table.entries .col-fee { white-space: nowrap; text-align: right; width: 84px; font-variant-numeric: tabular-nums; }
   table.entries tr.total td {

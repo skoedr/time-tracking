@@ -87,6 +87,11 @@ export const de = {
   // Settings — Re-Trigger
   'settings.onboarding.retrigger': 'Onboarding erneut anzeigen',
 
+  // ── EntryEditForm — Referenz-Feld (#70) ─────────────────────
+  'entry.reference.label': 'Referenz',
+  'entry.reference.hint': 'z. B. JIRA-123 oder #42 (optional)',
+  'entry.reference.placeholder': 'Ticket oder Issue-Nummer',
+
   // ── About-Dialog ─────────────────────────────────────────────
   'about.title': 'Über TimeTrack',
   'about.version': 'Version',

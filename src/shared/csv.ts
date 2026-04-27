@@ -6,7 +6,7 @@
  * Optional: comma separator + dot decimal (US / DATEV).
  *
  * Columns:
- *   Datum ; Start ; Ende ; Dauer ; Kunde ; Beschreibung ; Tags ; Stundensatz ; Betrag
+ *   Datum ; Start ; Ende ; Dauer ; Kunde ; Beschreibung ; Tags ; Referenz ; Stundensatz ; Betrag
  *
  * - Datum / Start / Ende in DE locale (dd.MM.yyyy / HH:mm).
  * - Dauer as HH:mm:ss so Excel [h]:mm:ss format works.
@@ -36,6 +36,7 @@ const HEADER = [
   'Kunde',
   'Beschreibung',
   'Tags',
+  'Referenz',
   'Stundensatz',
   'Betrag'
 ]
@@ -93,6 +94,7 @@ export function formatCsv(
       rateCent > 0 ? formatDecimal((durationSec / 3600) * (rateCent / 100), dec) : ''
 
     const tags = deserializeTags(entry.tags).join('|')
+    const reference = entry.reference ?? ''
 
     const row = [
       datum,
@@ -102,6 +104,7 @@ export function formatCsv(
       clientName,
       entry.description,
       tags,
+      reference,
       rateStr,
       betragStr
     ]

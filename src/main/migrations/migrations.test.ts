@@ -509,4 +509,41 @@ describe('migration SQL execution', () => {
       .get() as { value: string }
     expect(row.value).toBe('0')
   })
+
+  it('migration 009 adds entries.reference column (NOT NULL, default empty string)', () => {
+    applyAll()
+    const cols = db.prepare(`PRAGMA table_info(entries)`).all() as Array<{
+      name: string
+      notnull: number
+      dflt_value: string | null
+      type: string
+    }>
+    const refCol = cols.find((c) => c.name === 'reference')
+    expect(refCol).toBeDefined()
+    expect(refCol?.notnull).toBe(1)
+    expect(refCol?.dflt_value).toBe("''")
+    expect(refCol?.type.toUpperCase()).toBe('TEXT')
+  })
+
+  it('migration 009 — existing entries have empty reference by default', () => {
+    applyAll()
+    db.prepare(`INSERT INTO clients (id, name) VALUES (1, 'Acme')`).run()
+    db.prepare(
+      `INSERT INTO entries (client_id, started_at, stopped_at)
+       VALUES (1, '2026-05-01T08:00:00Z', '2026-05-01T09:00:00Z')`
+    ).run()
+    const row = db.prepare('SELECT reference FROM entries').get() as { reference: string }
+    expect(row.reference).toBe('')
+  })
+
+  it('migration 009 — reference column stores free-text values', () => {
+    applyAll()
+    db.prepare(`INSERT INTO clients (id, name) VALUES (1, 'Acme')`).run()
+    db.prepare(
+      `INSERT INTO entries (client_id, started_at, stopped_at, reference)
+       VALUES (1, '2026-05-01T08:00:00Z', '2026-05-01T09:00:00Z', 'JIRA-123')`
+    ).run()
+    const row = db.prepare('SELECT reference FROM entries').get() as { reference: string }
+    expect(row.reference).toBe('JIRA-123')
+  })
 })

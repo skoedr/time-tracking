@@ -32,6 +32,12 @@ export interface Entry {
    * to convert to an array for UI consumption.
    */
   tags: string
+  /**
+   * v1.8 #70: optional free-text reference (Jira ticket, GitHub issue, …).
+   * Empty string means no reference. Never null — the DB column has
+   * NOT NULL DEFAULT ''.
+   */
+  reference: string
 }
 
 export interface Settings {
@@ -102,6 +108,8 @@ export interface CreateManualEntryInput {
   stopped_at: string
   /** Serialized tags string (e.g. `,bug,ux,`). Optional — defaults to '' */
   tags?: string
+  /** Free-text ticket/reference (e.g. 'JIRA-123'). Optional — defaults to '' */
+  reference?: string
 }
 
 export interface UpdateEntryInput {
@@ -112,6 +120,8 @@ export interface UpdateEntryInput {
   stopped_at: string
   /** Serialized tags string (e.g. `,bug,ux,`). Optional — defaults to '' */
   tags?: string
+  /** Free-text ticket/reference (e.g. 'JIRA-123'). Optional — defaults to '' */
+  reference?: string
 }
 
 export interface MonthQuery {
