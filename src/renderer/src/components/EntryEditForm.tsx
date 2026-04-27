@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import type { Client, Entry } from '../../../shared/types'
 import { formatTimeHHMM, parseTimeToDate } from '../../../shared/date'
 import { useEntriesStore } from '../store/entriesStore'
+import { useT } from '../contexts/I18nContext'
 import { TagInput } from './TagInput'
 import { useT } from '../contexts/I18nContext'
 
@@ -18,6 +19,7 @@ interface Props {
 type FormState = 'idle' | 'saving' | 'success'
 
 const MAX_DESCRIPTION_LEN = 500
+const MAX_REFERENCE_LEN = 200
 
 function toDateInputValue(d: Date): string {
   // <input type="date"> wants YYYY-MM-DD in LOCAL time.
@@ -50,12 +52,15 @@ export function EntryEditForm({
     ? new Date(entry.stopped_at)
     : new Date(initialStart.getTime() + 60 * 60 * 1000)
 
+  const t = useT()
+
   const [date, setDate] = useState(toDateInputValue(initialStart))
   const [startTime, setStartTime] = useState(formatTimeHHMM(initialStart))
   const [stopTime, setStopTime] = useState(formatTimeHHMM(initialStop))
   const [clientId, setClientId] = useState<number>(entry?.client_id ?? clients[0]?.id ?? 0)
   const [description, setDescription] = useState(entry?.description ?? '')
   const [tags, setTags] = useState(entry?.tags ?? '')
+  const [reference, setReference] = useState(entry?.reference ?? '')
   const [state, setState] = useState<FormState>('idle')
   const [error, setError] = useState<string | null>(null)
   const bumpVersion = useEntriesStore((s) => s.bumpVersion)
@@ -109,14 +114,16 @@ export function EntryEditForm({
           description: description.trim(),
           started_at: start,
           stopped_at: stop,
-          tags
+          tags,
+          reference: reference.trim()
         })
       : await window.api.entries.create({
           client_id: clientId,
           description: description.trim(),
           started_at: start,
           stopped_at: stop,
-          tags
+          tags,
+          reference: reference.trim()
         })
     if (!res.ok) {
       setState('idle')
@@ -211,6 +218,20 @@ export function EntryEditForm({
           {t('entry.tagsHint')}
         </span>
       </div>
+
+      <label className="flex flex-col gap-1">
+        <span className="text-xs text-zinc-400">{t('entry.reference.label')}</span>
+        <input
+          type="text"
+          value={reference}
+          onChange={(e) => setReference(e.target.value)}
+          maxLength={MAX_REFERENCE_LEN}
+          placeholder={t('entry.reference.placeholder')}
+          className="rounded border border-zinc-700 bg-zinc-900 px-2 py-1.5 text-zinc-100 placeholder-zinc-600 focus:border-indigo-500 focus:outline-none"
+          disabled={isSaving}
+        />
+        <span className="text-xs text-zinc-600">{t('entry.reference.hint')}</span>
+      </label>
 
       {visibleError && (
         <p role="alert" className="text-xs text-red-400">
