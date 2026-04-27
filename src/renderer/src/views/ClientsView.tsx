@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import type { Client, CreateClientInput, UpdateClientInput } from '../../../shared/types'
 import { formatRateInput, parseRateInput } from '../../../shared/rate'
+import { useClientsStore } from '../store/clientsStore'
 
 const COLORS = [
   '#6366f1', // indigo
@@ -33,6 +34,7 @@ export default function ClientsView() {
   const [isLoading, setIsLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [editingClient, setEditingClient] = useState<Client | null>(null)
+  const bumpClientsVersion = useClientsStore((s) => s.bumpVersion)
 
   useEffect(() => {
     loadClients()
@@ -60,11 +62,13 @@ export default function ClientsView() {
       return
     await window.api.clients.delete(client.id)
     await loadClients()
+    bumpClientsVersion()
   }
 
   async function handleToggleActive(client: Client) {
     await window.api.clients.update({ ...client, active: client.active ? 0 : 1 })
     await loadClients()
+    bumpClientsVersion()
   }
 
   async function handleSave(data: { name: string; color: string; rate_cent: number }) {
@@ -76,6 +80,7 @@ export default function ClientsView() {
       await window.api.clients.create(input)
     }
     await loadClients()
+    bumpClientsVersion()
     setShowForm(false)
     setEditingClient(null)
   }
