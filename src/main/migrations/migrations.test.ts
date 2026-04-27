@@ -132,7 +132,9 @@ describe('migration SQL execution', () => {
       { key: 'pdf_sender_address', value: '' },
       { key: 'pdf_tax_id', value: '' },
       { key: 'rounding_minutes', value: '15' },
-      { key: 'rounding_mode', value: 'none' }
+      { key: 'rounding_mode', value: 'none' },
+      // Migration 011 — Light/Dark/System theme (v1.8 #76)
+      { key: 'theme_mode', value: 'system' }
     ])
   })
 
