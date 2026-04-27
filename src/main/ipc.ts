@@ -753,6 +753,22 @@ export function registerIpcHandlers(hooks: IpcHooks): void {
   // show page counts before confirming a merge.
   ipcMain.handle('pdf:pdf-info', (_e, req) => pdfInfoHandler(req))
 
+  // PDF open dialog: opens a native file picker and returns the selected path.
+  // Safer than relying on file.path in the renderer (not available with contextIsolation).
+  ipcMain.handle('pdf:open-pdf-dialog', async (): Promise<IpcResult<{ filePath: string } | null>> => {
+    try {
+      const result = await dialog.showOpenDialog({
+        title: 'PDF auswählen',
+        filters: [{ name: 'PDF', extensions: ['pdf'] }],
+        properties: ['openFile']
+      })
+      if (result.canceled || !result.filePaths[0]) return ok(null)
+      return ok({ filePath: result.filePaths[0] })
+    } catch (e) {
+      return fail(e)
+    }
+  })
+
   // Logo picker — copies user-chosen image into userData/pdf-logo.<ext>
   // and persists the path into settings.pdf_logo_path.
   ipcMain.handle('logo:set', async (): Promise<IpcResult<{ path: string }>> => {

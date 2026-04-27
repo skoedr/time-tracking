@@ -124,6 +124,7 @@ declare global {
         pdfInfo(req: {
           filePath: string
         }): Promise<IpcResult<{ pageCount: number }>>
+        openPdfDialog(): Promise<IpcResult<{ filePath: string } | null>>
       }
       logo: {
         set(): Promise<IpcResult<{ path: string }>>

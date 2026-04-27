@@ -27,10 +27,7 @@ export function PdfMergeModal({ open, onClose }: Props): React.JSX.Element {
   const snInfoVersion = useRef(0)
   const invInfoVersion = useRef(0)
 
-  const snInputRef = useRef<HTMLInputElement>(null)
-  const invInputRef = useRef<HTMLInputElement>(null)
-
-  // Pre-fill from localStorage on open. Any failure = treat as gone.
+  // Pre-fill from localStorage on open. Any failure = treat path as gone.
   useEffect(() => {
     if (!open) return
     setStatusMsg(null)
@@ -69,16 +66,14 @@ export function PdfMergeModal({ open, onClose }: Props): React.JSX.Element {
     }
   }, [open])
 
-  async function loadFileInfo(
-    filePath: string,
-    slot: 'sn' | 'invoice'
-  ): Promise<void> {
+  async function loadFileInfo(filePath: string, slot: 'sn' | 'invoice'): Promise<void> {
     if (slot === 'sn') {
       snInfoVersion.current++
       const v = snInfoVersion.current
       setSnPath(filePath)
       setSnPages(null)
       setSwapOffer(null)
+      setStatusMsg(null)
       localStorage.setItem(LS_SN_KEY, filePath)
 
       const purpose = detectFilePurpose(basename(filePath))
@@ -101,6 +96,7 @@ export function PdfMergeModal({ open, onClose }: Props): React.JSX.Element {
       setInvPath(filePath)
       setInvPages(null)
       setSwapOffer(null)
+      setStatusMsg(null)
       localStorage.setItem(LS_INV_KEY, filePath)
 
       const purpose = detectFilePurpose(basename(filePath))
@@ -120,22 +116,15 @@ export function PdfMergeModal({ open, onClose }: Props): React.JSX.Element {
     }
   }
 
-  function handleFileChange(
-    e: React.ChangeEvent<HTMLInputElement>,
-    slot: 'sn' | 'invoice'
-  ): void {
-    const file = e.target.files?.[0]
-    if (!file) return
-    const filePath = (file as File & { path: string }).path
-    if (!filePath) {
+  async function handlePickFile(slot: 'sn' | 'invoice'): Promise<void> {
+    const res = await window.api.pdf.openPdfDialog()
+    if (!res.ok) {
       setStatusKind('error')
-      setStatusMsg('Dateipfad konnte nicht ermittelt werden.')
-      e.target.value = ''
+      setStatusMsg(`Fehler beim Öffnen: ${res.error}`)
       return
     }
-    e.target.value = ''
-    setStatusMsg(null)
-    void loadFileInfo(filePath, slot)
+    if (res.data === null) return // user cancelled — do nothing
+    void loadFileInfo(res.data.filePath, slot)
   }
 
   function executeSwap(): void {
@@ -165,7 +154,7 @@ export function PdfMergeModal({ open, onClose }: Props): React.JSX.Element {
 
     if (res.ok) {
       setStatusKind('success')
-      setStatusMsg(basename(res.data.path))
+      setStatusMsg(res.data.path)
     } else if (res.error === 'Speichern abgebrochen') {
       setStatusKind('info')
       setStatusMsg(null)
@@ -188,44 +177,24 @@ export function PdfMergeModal({ open, onClose }: Props): React.JSX.Element {
   return (
     <Dialog open={open} onClose={onClose} title="PDFs zusammenführen" widthClass="w-[520px]">
       <div className="flex flex-col gap-4">
-        {/* Hidden file inputs */}
-        <input
-          ref={snInputRef}
-          type="file"
-          accept=".pdf,.PDF"
-          aria-label="Stundennachweis-PDF auswählen"
-          className="hidden"
-          onChange={(e) => handleFileChange(e, 'sn')}
-        />
-        <input
-          ref={invInputRef}
-          type="file"
-          accept=".pdf,.PDF"
-          aria-label="Rechnung-PDF auswählen"
-          className="hidden"
-          onChange={(e) => handleFileChange(e, 'invoice')}
-        />
-
         {/* Stundennachweis slot */}
         <div className="flex flex-col gap-1">
           <span className="text-sm font-medium text-zinc-300">Stundennachweis-PDF</span>
           <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={() => snInputRef.current?.click()}
+              onClick={() => void handlePickFile('sn')}
               disabled={busy}
               className="rounded-lg border border-zinc-600 bg-zinc-800 px-3 py-1.5 text-xs text-zinc-200 hover:bg-zinc-700 focus:outline-none focus:ring-2 focus:ring-indigo-400 disabled:opacity-50"
             >
               {snPath ? 'Wechseln …' : 'Datei wählen …'}
             </button>
-            <span className="text-xs text-zinc-400">
-              {snPath
-                ? basename(snPath)
-                : 'keine Datei gewählt'}
+            <span className="max-w-[260px] truncate text-xs text-zinc-400">
+              {snPath ? basename(snPath) : 'keine Datei gewählt'}
             </span>
           </div>
           {snPath && (
-            <span className="ml-0 text-xs text-zinc-500">
+            <span className="text-xs text-zinc-500">
               {snPages === null ? 'lädt …' : `${snPages} Seite${snPages !== 1 ? 'n' : ''}`}
             </span>
           )}
@@ -249,20 +218,18 @@ export function PdfMergeModal({ open, onClose }: Props): React.JSX.Element {
           <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={() => invInputRef.current?.click()}
+              onClick={() => void handlePickFile('invoice')}
               disabled={busy}
               className="rounded-lg border border-zinc-600 bg-zinc-800 px-3 py-1.5 text-xs text-zinc-200 hover:bg-zinc-700 focus:outline-none focus:ring-2 focus:ring-indigo-400 disabled:opacity-50"
             >
               {invPath ? 'Wechseln …' : 'Datei wählen …'}
             </button>
-            <span className="text-xs text-zinc-400">
-              {invPath
-                ? basename(invPath)
-                : 'keine Datei gewählt'}
+            <span className="max-w-[260px] truncate text-xs text-zinc-400">
+              {invPath ? basename(invPath) : 'keine Datei gewählt'}
             </span>
           </div>
           {invPath && (
-            <span className="ml-0 text-xs text-zinc-500">
+            <span className="text-xs text-zinc-500">
               {invPages === null ? 'lädt …' : `${invPages} Seite${invPages !== 1 ? 'n' : ''}`}
             </span>
           )}
@@ -306,7 +273,7 @@ export function PdfMergeModal({ open, onClose }: Props): React.JSX.Element {
         {successPath && (
           <div className="rounded-lg bg-emerald-900/40 px-3 py-2 text-sm text-emerald-200">
             <div className="font-medium">✓ Gespeichert</div>
-            <div className="mt-0.5 text-xs text-emerald-300/80 truncate">{successPath}</div>
+            <div className="mt-0.5 truncate text-xs text-emerald-300/80">{basename(successPath)}</div>
             <button
               type="button"
               onClick={() => void window.api.shell.showItemInFolder(successPath)}

@@ -165,7 +165,9 @@ const api = {
     }): Promise<IpcResult<{ path: string }>> => ipcRenderer.invoke('pdf:merge-only', req),
     pdfInfo: (req: {
       filePath: string
-    }): Promise<IpcResult<{ pageCount: number }>> => ipcRenderer.invoke('pdf:pdf-info', req)
+    }): Promise<IpcResult<{ pageCount: number }>> => ipcRenderer.invoke('pdf:pdf-info', req),
+    openPdfDialog: (): Promise<IpcResult<{ filePath: string } | null>> =>
+      ipcRenderer.invoke('pdf:open-pdf-dialog')
   },
   logo: {
     set: (): Promise<IpcResult<{ path: string }>> => ipcRenderer.invoke('logo:set'),
