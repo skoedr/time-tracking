@@ -40,11 +40,35 @@ function App(): React.JSX.Element {
       className="h-screen flex flex-col overflow-hidden"
       style={{ background: 'var(--page-bg)', color: 'var(--text)' }}
     >
-      {/* Ambient glow blobs */}
-      <div className="pointer-events-none fixed inset-0 overflow-hidden" aria-hidden>
-        <div className="absolute -top-32 -left-32 h-96 w-96 rounded-full opacity-20 blur-3xl" style={{ background: 'var(--accent)' }} />
-        <div className="absolute -bottom-32 -right-32 h-96 w-96 rounded-full opacity-15 blur-3xl" style={{ background: 'var(--green)' }} />
-      </div>
+      {/* Ambient glow blobs — placed directly on the viewport (no clipping
+          wrapper) and tinted with already-dilute *-bg tokens so they fade
+          into the page bg instead of forming a visible frame. */}
+      <div
+        aria-hidden
+        className="pointer-events-none fixed rounded-full"
+        style={{
+          top: -100,
+          right: '20%',
+          width: 400,
+          height: 400,
+          background: 'var(--accent-bg)',
+          filter: 'blur(80px)',
+          zIndex: 0
+        }}
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none fixed rounded-full"
+        style={{
+          bottom: -50,
+          left: '10%',
+          width: 300,
+          height: 300,
+          background: 'var(--green-bg)',
+          filter: 'blur(80px)',
+          zIndex: 0
+        }}
+      />
 
       <UpdateBanner />
       {/* Nav */}

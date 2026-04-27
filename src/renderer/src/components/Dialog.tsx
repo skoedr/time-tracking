@@ -62,7 +62,7 @@ export function Dialog({
 
   return (
     <div
-      className="fixed inset-0 z-40 flex items-start justify-center overflow-y-auto bg-black/70 backdrop-blur-sm py-8"
+      className="fixed inset-0 z-40 flex items-center justify-center bg-black/70 backdrop-blur-sm p-6"
       role="dialog"
       aria-modal="true"
       aria-labelledby="dialog-title"
@@ -72,24 +72,31 @@ export function Dialog({
     >
       <div
         ref={containerRef}
-        className={`${widthClass} rounded-xl border p-6 shadow-2xl backdrop-blur-xl my-auto`}
-        style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)' }}
+        className={`${widthClass} flex max-h-[calc(100vh-3rem)] flex-col rounded-xl border backdrop-blur-xl`}
+        style={{
+          background: 'var(--modal-bg)',
+          borderColor: 'var(--card-border)',
+          boxShadow: 'var(--shadow)'
+        }}
       >
-        <div className="mb-4 flex items-center justify-between">
+        <div
+          className="flex shrink-0 items-center justify-between rounded-t-xl border-b px-6 py-4"
+          style={{ borderColor: 'var(--card-border)' }}
+        >
           <h2 id="dialog-title" className="text-lg font-semibold" style={{ color: 'var(--text)' }}>
             {title}
           </h2>
           <button
             type="button"
             onClick={onClose}
-            className="-mr-2 grid h-11 w-11 place-items-center rounded-lg hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+            className="-mr-2 grid h-9 w-9 place-items-center rounded-lg hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-400"
             style={{ color: 'var(--text2)' }}
             aria-label={t('common.close')}
           >
             ×
           </button>
         </div>
-        {children}
+        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">{children}</div>
       </div>
     </div>
   )

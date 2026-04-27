@@ -5,6 +5,7 @@ import { useClientsStore } from '../store/clientsStore'
 import { useT } from '../contexts/I18nContext'
 import type { TranslationKey } from '../../../shared/locales/de'
 import * as Icons from '../components/Icons'
+import { Dialog } from '../components/Dialog'
 
 const COLORS = [
   '#6366f1', // indigo
@@ -287,18 +288,12 @@ function ClientFormModal({
   }
 
   return (
-    <div
-      className="fixed inset-0 bg-black/70 flex items-start justify-center z-50 backdrop-blur-sm py-8 overflow-y-auto"
-      onClick={(e) => e.target === e.currentTarget && onClose()}
+    <Dialog
+      open
+      onClose={onClose}
+      title={client ? t('clients.form.editTitle') : t('clients.form.createTitle')}
+      widthClass="w-[400px]"
     >
-      <div
-        className="rounded-2xl p-6 w-full max-w-sm mx-4 shadow-2xl border backdrop-blur-xl my-auto"
-        style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)' }}
-      >
-        <h2 className="text-lg font-semibold mb-5" style={{ color: 'var(--text)' }}>
-          {client ? t('clients.form.editTitle') : t('clients.form.createTitle')}
-        </h2>
-
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           {/* Name */}
           <div className="flex flex-col gap-1.5">
@@ -399,7 +394,6 @@ function ClientFormModal({
             </button>
           </div>
         </form>
-      </div>
-    </div>
+    </Dialog>
   )
 }

@@ -1,5 +1,6 @@
 import { useTimer, formatDuration } from '../hooks/useTimer'
 import { useT } from '../contexts/I18nContext'
+import * as Icons from '../components/Icons'
 
 export default function TimerView() {
   const t = useT()
@@ -23,104 +24,183 @@ export default function TimerView() {
 
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-8 h-full">
-      <div className="w-full max-w-md flex flex-col gap-6">
-      {/* Timer Display */}
-      <div className="text-center">
+      {/* Clock + ambient glow */}
+      <div className="relative">
+        {isRunning && (
+          <div
+            aria-hidden
+            className="pointer-events-none absolute left-1/2 top-1/2 h-[120px] w-[320px] -translate-x-1/2 -translate-y-1/2 rounded-full blur-[40px]"
+            style={{ background: 'var(--green-bg)' }}
+          />
+        )}
         <div
-          className="text-7xl font-bold tabular-nums transition-colors"
+          className="relative tabular-nums"
           style={{
             fontFamily: "'JetBrains Mono', monospace",
-            color: isRunning ? 'var(--green)' : 'var(--text3)'
+            fontSize: 78,
+            fontWeight: 700,
+            letterSpacing: 4,
+            lineHeight: 1,
+            color: isRunning ? 'var(--green)' : 'var(--text3)',
+            textShadow: isRunning
+              ? '0 0 60px color-mix(in srgb, var(--green) 25%, transparent)'
+              : 'none',
+            transition: 'color .4s, text-shadow .4s'
           }}
         >
           {formatDuration(elapsedSeconds)}
         </div>
         {isRunning && selectedClient && (
-          <div className="mt-2 flex items-center justify-center gap-2">
+          <div className="mt-2.5 flex items-center justify-center gap-2">
             <span
-              className="inline-block w-3 h-3 rounded-full animate-pulse"
+              className="inline-block h-2 w-2 animate-pulse rounded-full"
               style={{ backgroundColor: selectedClient.color }}
             />
-            <span className="text-sm" style={{ color: 'var(--text2)' }}>{selectedClient.name}</span>
+            <span className="text-sm" style={{ color: 'var(--text2)' }}>
+              {selectedClient.name}
+            </span>
           </div>
         )}
       </div>
 
-      {/* Client Selector */}
-      <div className="flex flex-col gap-1.5">
-        <label className="text-xs font-medium uppercase tracking-wide" style={{ color: 'var(--text3)' }}>{t('timer.client.label')}</label>
-        <select
-          value={selectedClientId ?? ''}
-          onChange={(e) => setSelectedClientId(e.target.value ? Number(e.target.value) : null)}
-          disabled={isRunning}
-          className="rounded-lg px-3 py-2.5 border backdrop-blur-xl
-            focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent
-            disabled:opacity-50 disabled:cursor-not-allowed"
-          style={{ background: 'var(--input-bg)', borderColor: 'var(--card-border)', color: 'var(--text)' }}
-        >
-          <option value="">{t('timer.client.placeholder')}</option>
-          {activeClients.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </select>
-        {activeClients.length === 0 && (
-          <p className="text-xs" style={{ color: 'var(--text3)' }}>
-            {t('timer.client.noClientsHint')}{' '}
-            <span style={{ color: 'var(--accent)' }}>{t('timer.client.noClientsLink')}</span>{t('timer.client.noClientsSuffix')}
-          </p>
+      {/* Form card */}
+      <div
+        className="rounded-[14px] border backdrop-blur-xl"
+        style={{
+          background: 'var(--card-bg)',
+          borderColor: 'var(--card-border)',
+          padding: 24,
+          width: 420,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 14,
+          boxShadow: 'var(--shadow)'
+        }}
+      >
+        {/* Client */}
+        <div className="flex flex-col gap-1.5">
+          <label
+            className="text-xs font-semibold uppercase tracking-wide"
+            style={{ color: 'var(--text3)' }}
+          >
+            {t('timer.client.label')}
+          </label>
+          <div className="relative">
+            <select
+              aria-label={t('timer.client.label')}
+              value={selectedClientId ?? ''}
+              onChange={(e) =>
+                setSelectedClientId(e.target.value ? Number(e.target.value) : null)
+              }
+              disabled={isRunning}
+              className="w-full appearance-none rounded-[10px] border px-3.5 py-2.5 pr-9 text-sm backdrop-blur-xl
+                focus:outline-none focus:ring-2 focus:ring-indigo-500
+                disabled:cursor-not-allowed disabled:opacity-50"
+              style={{
+                background: 'var(--input-bg)',
+                borderColor: 'var(--card-border)',
+                color: 'var(--text)'
+              }}
+            >
+              <option value="">{t('timer.client.placeholder')}</option>
+              {activeClients.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+            <span
+              className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2"
+              style={{ color: 'var(--text3)' }}
+            >
+              <Icons.ChevronDown />
+            </span>
+          </div>
+          {activeClients.length === 0 && (
+            <p className="text-xs" style={{ color: 'var(--text3)' }}>
+              {t('timer.client.noClientsHint')}{' '}
+              <span style={{ color: 'var(--accent)' }}>{t('timer.client.noClientsLink')}</span>
+              {t('timer.client.noClientsSuffix')}
+            </p>
+          )}
+        </div>
+
+        {/* Description */}
+        <div className="flex flex-col gap-1.5">
+          <label
+            className="text-xs font-semibold uppercase tracking-wide"
+            style={{ color: 'var(--text3)' }}
+          >
+            {t('timer.description.label')}
+          </label>
+          <input
+            type="text"
+            placeholder={t('timer.description.placeholder')}
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            disabled={isRunning}
+            onKeyDown={(e) => e.key === 'Enter' && canStart && start()}
+            className="rounded-[10px] border px-3.5 py-2.5 text-sm backdrop-blur-xl
+              focus:outline-none focus:ring-2 focus:ring-indigo-500
+              disabled:cursor-not-allowed disabled:opacity-50"
+            style={{
+              background: 'var(--input-bg)',
+              borderColor: 'var(--card-border)',
+              color: 'var(--text)'
+            }}
+          />
+        </div>
+
+        {/* Start / Stop */}
+        {!isRunning ? (
+          <button
+            type="button"
+            onClick={start}
+            disabled={!canStart || isLoading}
+            className="flex items-center justify-center gap-2.5 rounded-[12px] py-3 text-base font-bold transition-all
+              disabled:cursor-not-allowed"
+            style={{
+              background: canStart && !isLoading ? 'var(--accent)' : 'var(--card-bg)',
+              color: canStart && !isLoading ? '#fff' : 'var(--text3)',
+              border: 'none',
+              boxShadow:
+                canStart && !isLoading ? '0 8px 32px var(--accent-glow)' : 'none'
+            }}
+          >
+            <Icons.Play width={16} height={16} />
+            {isLoading ? '…' : 'Start'}
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={stop}
+            disabled={isLoading}
+            className="flex items-center justify-center gap-2.5 rounded-[12px] py-3 text-base font-bold transition-all disabled:opacity-50"
+            style={{
+              background: 'var(--danger-bg)',
+              color: 'var(--danger)',
+              border: '1px solid var(--danger)'
+            }}
+          >
+            <Icons.Stop width={16} height={16} />
+            {isLoading ? '…' : 'Stop'}
+          </button>
         )}
       </div>
 
-      {/* Description */}
-      <div className="flex flex-col gap-1.5">
-        <label className="text-xs font-medium uppercase tracking-wide" style={{ color: 'var(--text3)' }}>
-          {t('timer.description.label')}
-        </label>
-        <input
-          type="text"
-          placeholder={t('timer.description.placeholder')}
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          disabled={isRunning}
-          onKeyDown={(e) => e.key === 'Enter' && canStart && start()}
-          className="rounded-lg px-3 py-2.5 border backdrop-blur-xl
-            focus:outline-none focus:ring-2 focus:ring-indigo-500
-            focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
-          style={{ background: 'var(--input-bg)', borderColor: 'var(--card-border)', color: 'var(--text)' }}
-        />
-      </div>
-
-      {/* Start / Stop Button */}
-      {!isRunning ? (
-        <button
-          onClick={start}
-          disabled={!canStart || isLoading}
-          className="text-white font-semibold py-3 rounded-xl transition-colors text-lg
-            disabled:cursor-not-allowed disabled:opacity-40"
-          style={{ background: canStart && !isLoading ? 'var(--accent)' : 'var(--card-bg)', color: canStart && !isLoading ? 'white' : 'var(--text3)' }}
-        >
-          {isLoading ? '...' : '▶ Start'}
-        </button>
-      ) : (
-        <button
-          onClick={stop}
-          disabled={isLoading}
-          className="font-semibold py-3 rounded-xl transition-colors text-lg disabled:opacity-50"
-          style={{ background: 'var(--danger)', color: 'white' }}
-        >
-          {isLoading ? '...' : '■ Stop'}
-        </button>
-      )}
-
-      {/* Running status hint */}
+      {/* Hint with hotkey */}
       {isRunning && (
-        <p className="text-center text-xs" style={{ color: 'var(--text3)' }}>
-          {t('timer.running.hint')} · <kbd className="font-mono" style={{ color: 'var(--text2)' }}>Alt+Shift+S</kbd> {t('timer.running.stopHint')}
+        <p className="text-xs" style={{ color: 'var(--text3)' }}>
+          {t('timer.running.hint')} ·{' '}
+          <kbd
+            className="font-mono"
+            style={{ color: 'var(--text2)', fontFamily: "'JetBrains Mono', monospace" }}
+          >
+            Alt+Shift+S
+          </kbd>{' '}
+          {t('timer.running.stopHint')}
         </p>
       )}
-      </div>
     </div>
   )
 }

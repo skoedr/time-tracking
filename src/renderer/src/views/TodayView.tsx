@@ -221,7 +221,11 @@ function ActiveTimerPill({
   return (
     <div
       className="flex items-center gap-3 rounded-[14px] border px-4 py-2 text-sm backdrop-blur-xl"
-      style={{ background: 'var(--green-bg)', borderColor: 'var(--green)', color: 'var(--text)' }}
+      style={{
+        background: 'linear-gradient(90deg, var(--green-bg), var(--card-bg))',
+        borderColor: 'var(--green)',
+        color: 'var(--text)'
+      }}
     >
       <span
         className="h-2.5 w-2.5 animate-pulse rounded-full"
