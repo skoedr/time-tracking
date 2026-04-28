@@ -2,6 +2,10 @@
 
 Deferred items from plan reviews. Items here have explicit decisions — they are NOT forgotten, they are scheduled.
 
+## Open Issues
+
+- **#87 — UI centering across views** (Low effort) — Settings ist der einzige Knackpunkt: Outer-Wrapper in `src/renderer/src/views/SettingsView.tsx:189` braucht `max-w-4xl mx-auto`. Today/Timer/Calendar/Clients sind in Toleranz oder pragmatisch korrekt (Verifikation gegen `design/issue-76-glass-reference.html` durchgeführt 2026-04-28). Optional: pixelgenaue Werte via `max-w-[740px]` / `max-w-[600px]` statt Tailwind-Tokens. → v1.9 candidate.
+
 ## Blocking v1.7 — RESOLVED
 
 - ~~**Workflow-Gap: Stundennachweis vor Rechnung**~~ — Implementiert (2026-04-27): `pdfMergeValidation.ts`, `pdfMergeHandlers.ts`, `PdfMergeModal.tsx`, CalendarView trigger. 201 Tests grün, 0 TS-Fehler.

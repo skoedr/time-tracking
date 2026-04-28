@@ -2,6 +2,13 @@
 
 All notable changes to TimeTrack are documented here.
 
+## [1.8.1] — 2026-04-28
+
+### Fixed
+
+- **SettingsView-Zentrierung** — Äußerer Wrapper bekommt `mx-auto max-w-4xl`, sodass die Sidebar-Navigation bei 900 px Fensterbreite mittig ausgerichtet ist. ([#87](https://github.com/skoedr/time-tracking/issues/87))
+- **Doppelter CSS-Reset entfernt** — `*, *::before, *::after { box-sizing: border-box; margin: 0 }` stand in `main.css` und `base.css` gleichzeitig; Duplikat aus `main.css` entfernt.
+
 ## [1.8.0] — 2026-04-27
 
 ### Added

@@ -3,13 +3,6 @@
 /* v1.8 #76 — class-based dark mode (Tailwind v4 syntax) */
 @custom-variant dark (&:where(.dark, .dark *));
 
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-  margin: 0;
-}
-
 html {
   background: var(--page-bg);
 }
