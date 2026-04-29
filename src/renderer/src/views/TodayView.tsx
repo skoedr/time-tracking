@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
-import type { Client, DashboardSummary, Entry } from '../../../shared/types'
+import type { Client, DashboardSummary, Entry, Project } from '../../../shared/types'
 import { useEntriesStore } from '../store/entriesStore'
+import { useProjectsStore } from '../store/projectsStore'
 import { useToastStore } from '../store/toastStore'
 import { useTimer, formatDuration } from '../hooks/useTimer'
 import { Dialog } from '../components/Dialog'
@@ -28,11 +29,13 @@ export default function TodayView(): React.JSX.Element {
   const t = useT()
   const { runningEntry, clients, startWithClient, stop } = useTimer()
   const version = useEntriesStore((s) => s.version)
+  const projectsVersion = useProjectsStore((s) => s.version)
   const showToast = useToastStore((s) => s.show)
 
   const [summary, setSummary] = useState<DashboardSummary | null>(null)
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  const [projectsById, setProjectsById] = useState<Map<number, Project>>(new Map())
 
   // Edit / create / delete dialog state
   const [createOpen, setCreateOpen] = useState(false)
@@ -65,6 +68,17 @@ export default function TodayView(): React.JSX.Element {
     for (const c of clients) map.set(c.id, c)
     return map
   }, [clients])
+
+  // Load all projects for name lookup — re-fetch when projects are added/edited
+  useEffect(() => {
+    void window.api.projects.getAll({}).then((res) => {
+      if (res.ok) {
+        const map = new Map<number, Project>()
+        for (const p of res.data) map.set(p.id, p)
+        setProjectsById(map)
+      }
+    })
+  }, [projectsVersion])
 
   async function confirmDelete(entry: Entry): Promise<void> {
     setDeleteCandidate(null)
@@ -116,6 +130,7 @@ export default function TodayView(): React.JSX.Element {
           <RecentList
             entries={summary.recentEntries}
             clientsById={clientsById}
+            projectsById={projectsById}
             onEdit={(e) => setEditEntry(e)}
             onDelete={(e) => setDeleteCandidate(e)}
           />
@@ -318,11 +333,13 @@ function QuickStartRow({
 function RecentList({
   entries,
   clientsById,
+  projectsById,
   onEdit,
   onDelete
 }: {
   entries: Entry[]
   clientsById: Map<number, Client>
+  projectsById: Map<number, Project>
   onEdit: (e: Entry) => void
   onDelete: (e: Entry) => void
 }): React.JSX.Element {
@@ -359,6 +376,7 @@ function RecentList({
       {/* Rows */}
       {entries.map((e) => {
         const client = clientsById.get(e.client_id)
+        const project = e.project_id != null ? projectsById.get(e.project_id) : undefined
         return (
           <div
             key={e.id}
@@ -370,7 +388,12 @@ function RecentList({
             </span>
             <span className="inline-flex items-center gap-2 overflow-hidden" style={{ color: 'var(--text)' }}>
               <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: client?.color ?? '#64748b' }} />
-              <span className="truncate">{client?.name ?? t('common.unknown')}</span>
+              <span className="truncate">
+                {client?.name ?? t('common.unknown')}
+                {project && (
+                  <span style={{ color: 'var(--text3)' }}> · {project.name}</span>
+                )}
+              </span>
             </span>
             <span className="truncate pr-2" style={{ color: 'var(--text2)' }} title={e.description}>
               {e.description || <span style={{ color: 'var(--text3)' }}>—</span>}
