@@ -49,6 +49,49 @@ export interface Entry {
    * Empty string means no note set.
    */
   private_note: string
+  /**
+   * v1.9 #75: optional project association. NULL means "no project / general".
+   */
+  project_id?: number | null
+}
+
+// ── Projects (v1.9 #75) ───────────────────────────────────────────────────
+
+export interface Project {
+  id: number
+  /** NULL = orphaned / no client (E4 escape hatch). */
+  client_id: number | null
+  name: string
+  /** '' = inherit client color. */
+  color: string
+  /** null = inherit client rate. */
+  rate_cent: number | null
+  /** 1 = active, 0 = archived. */
+  active: number
+  created_at: string
+  /**
+   * Only present in `projects:getAll` responses. Counts non-deleted entries.
+   */
+  entry_count?: number
+}
+
+/** Project guaranteed to include entry_count (returned by projects:getAll). */
+export type ProjectWithCount = Required<Pick<Project, 'entry_count'>> & Omit<Project, 'entry_count'>
+
+export interface CreateProjectInput {
+  client_id: number | null
+  name: string
+  color: string
+  rate_cent?: number | null
+}
+
+export interface UpdateProjectInput {
+  id: number
+  client_id: number | null
+  name: string
+  color: string
+  rate_cent?: number | null
+  active: number
 }
 
 export interface Settings {
@@ -106,6 +149,8 @@ export interface CreateEntryInput {
   client_id: number
   description: string
   started_at: string
+  /** v1.9 #75: optional project association. */
+  project_id?: number | null
 }
 
 /**
@@ -127,6 +172,8 @@ export interface CreateManualEntryInput {
   billable?: number
   /** Internal-only note, never exported. Optional — defaults to '' */
   private_note?: string
+  /** v1.9 #75: optional project association. */
+  project_id?: number | null
 }
 
 export interface UpdateEntryInput {
@@ -143,6 +190,8 @@ export interface UpdateEntryInput {
   billable?: number
   /** Internal-only note, never exported. Optional — defaults to '' */
   private_note?: string
+  /** v1.9 #75: optional project association. */
+  project_id?: number | null
 }
 
 export interface MonthQuery {

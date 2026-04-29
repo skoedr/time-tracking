@@ -2,11 +2,14 @@ import { ElectronAPI } from '@electron-toolkit/preload'
 import type {
   Client,
   Entry,
+  Project,
   CreateClientInput,
   UpdateClientInput,
   CreateEntryInput,
   CreateManualEntryInput,
   UpdateEntryInput,
+  CreateProjectInput,
+  UpdateProjectInput,
   MonthQuery,
   Settings,
   IpcResult,
@@ -138,6 +141,13 @@ declare global {
           format?: 'de' | 'us'
           groupByTag?: boolean
         }): Promise<IpcResult<{ path: string }>>
+      }
+      projects: {
+        getAll(req?: { clientId?: number | null }): Promise<IpcResult<Project[]>>
+        create(input: CreateProjectInput): Promise<IpcResult<Project>>
+        update(input: UpdateProjectInput): Promise<IpcResult<Project>>
+        archive(id: number): Promise<IpcResult<void>>
+        delete(id: number): Promise<IpcResult<void>>
       }
       update: {
         getStatus(): Promise<IpcResult<UpdateStatus>>

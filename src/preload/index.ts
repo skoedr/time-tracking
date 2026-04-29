@@ -3,11 +3,14 @@ import { electronAPI } from '@electron-toolkit/preload'
 import type {
   Client,
   Entry,
+  Project,
   CreateClientInput,
   UpdateClientInput,
   CreateEntryInput,
   CreateManualEntryInput,
   UpdateEntryInput,
+  CreateProjectInput,
+  UpdateProjectInput,
   MonthQuery,
   Settings,
   IpcResult,
@@ -190,6 +193,17 @@ const api = {
   csv: {
     export: (req: CsvRequest): Promise<IpcResult<{ path: string }>> =>
       ipcRenderer.invoke('csv:export', req)
+  },
+  // v1.9 #75 — Projects
+  projects: {
+    getAll: (req?: { clientId?: number | null }): Promise<IpcResult<Project[]>> =>
+      ipcRenderer.invoke('projects:getAll', req),
+    create: (input: CreateProjectInput): Promise<IpcResult<Project>> =>
+      ipcRenderer.invoke('projects:create', input),
+    update: (input: UpdateProjectInput): Promise<IpcResult<Project>> =>
+      ipcRenderer.invoke('projects:update', input),
+    archive: (id: number): Promise<IpcResult<void>> => ipcRenderer.invoke('projects:archive', id),
+    delete: (id: number): Promise<IpcResult<void>> => ipcRenderer.invoke('projects:delete', id)
   },
   // v1.5 PR B — auto-updater
   update: {
