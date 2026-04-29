@@ -1,7 +1,16 @@
-import { useState, useEffect } from 'react'
-import type { Client, CreateClientInput, UpdateClientInput } from '../../../shared/types'
+import { useState, useEffect, useCallback } from 'react'
+import type {
+  Client,
+  CreateClientInput,
+  UpdateClientInput,
+  Project,
+  ProjectWithCount,
+  CreateProjectInput,
+  UpdateProjectInput
+} from '../../../shared/types'
 import { formatRateInput, parseRateInput } from '../../../shared/rate'
 import { useClientsStore } from '../store/clientsStore'
+import { useProjectsStore } from '../store/projectsStore'
 import { useT } from '../contexts/I18nContext'
 import type { TranslationKey } from '../../../shared/locales/de'
 import * as Icons from '../components/Icons'
@@ -41,6 +50,14 @@ export default function ClientsView() {
   const [editingClient, setEditingClient] = useState<Client | null>(null)
   const [archivedExpanded, setArchivedExpanded] = useState(false)
   const bumpClientsVersion = useClientsStore((s) => s.bumpVersion)
+  const bumpProjectsVersion = useProjectsStore((s) => s.bumpVersion)
+
+  // Project sub-list state
+  const [expandedClientIds, setExpandedClientIds] = useState<Set<number>>(new Set())
+  const [projectsByClient, setProjectsByClient] = useState<Record<number, ProjectWithCount[]>>({})
+  const [showProjectForm, setShowProjectForm] = useState(false)
+  const [editingProject, setEditingProject] = useState<Project | null>(null)
+  const [projectFormClientId, setProjectFormClientId] = useState<number | null>(null)
 
   useEffect(() => {
     loadClients()
@@ -51,6 +68,26 @@ export default function ClientsView() {
     const res = await window.api.clients.getAll()
     if (res.ok) setClients(res.data)
     setIsLoading(false)
+  }
+
+  const loadProjectsForClient = useCallback(async (clientId: number) => {
+    const res = await window.api.projects.getAll({ clientId })
+    if (res.ok) {
+      setProjectsByClient((prev) => ({ ...prev, [clientId]: res.data as ProjectWithCount[] }))
+    }
+  }, [])
+
+  async function toggleClientExpanded(clientId: number) {
+    setExpandedClientIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(clientId)) {
+        next.delete(clientId)
+      } else {
+        next.add(clientId)
+        loadProjectsForClient(clientId)
+      }
+      return next
+    })
   }
 
   function openNew() {
@@ -91,6 +128,65 @@ export default function ClientsView() {
     setEditingClient(null)
   }
 
+  function openNewProject(clientId: number) {
+    setEditingProject(null)
+    setProjectFormClientId(clientId)
+    setShowProjectForm(true)
+  }
+
+  function openEditProject(project: Project) {
+    setEditingProject(project)
+    setProjectFormClientId(project.client_id)
+    setShowProjectForm(true)
+  }
+
+  async function handleProjectSave(data: {
+    name: string
+    color: string
+    rate_cent: number | null
+  }) {
+    if (!projectFormClientId && projectFormClientId !== 0) return
+    if (editingProject) {
+      const input: UpdateProjectInput = {
+        ...editingProject,
+        ...data,
+        client_id: projectFormClientId
+      }
+      await window.api.projects.update(input)
+    } else {
+      const input: CreateProjectInput = { client_id: projectFormClientId, ...data }
+      await window.api.projects.create(input)
+    }
+    await loadProjectsForClient(projectFormClientId)
+    bumpProjectsVersion()
+    setShowProjectForm(false)
+    setEditingProject(null)
+    setProjectFormClientId(null)
+  }
+
+  async function handleProjectArchive(project: Project) {
+    await window.api.projects.archive(project.id)
+    if (project.client_id !== null) await loadProjectsForClient(project.client_id)
+    bumpProjectsVersion()
+  }
+
+  async function handleProjectDelete(project: ProjectWithCount) {
+    if ((project.entry_count ?? 0) > 0) {
+      if (!confirm(t('projects.confirm.deleteWithEntries', { name: project.name, count: String(project.entry_count) })))
+        return
+    } else {
+      if (!confirm(t('projects.confirm.delete', { name: project.name })))
+        return
+    }
+    const res = await window.api.projects.delete(project.id)
+    if (!res.ok) {
+      alert(res.error)
+      return
+    }
+    if (project.client_id !== null) await loadProjectsForClient(project.client_id)
+    bumpProjectsVersion()
+  }
+
   const activeClients = clients.filter((c) => c.active)
   const inactiveClients = clients.filter((c) => !c.active)
 
@@ -122,9 +218,16 @@ export default function ClientsView() {
           {activeClients.length > 0 && (
             <ClientList
               clients={activeClients}
+              expandedClientIds={expandedClientIds}
+              projectsByClient={projectsByClient}
               onEdit={openEdit}
               onDelete={handleDelete}
               onToggleActive={handleToggleActive}
+              onToggleExpand={toggleClientExpanded}
+              onNewProject={openNewProject}
+              onEditProject={openEditProject}
+              onArchiveProject={handleProjectArchive}
+              onDeleteProject={handleProjectDelete}
             />
           )}
 
@@ -153,9 +256,16 @@ export default function ClientsView() {
               {archivedExpanded && (
                 <ClientList
                   clients={inactiveClients}
+                  expandedClientIds={expandedClientIds}
+                  projectsByClient={projectsByClient}
                   onEdit={openEdit}
                   onDelete={handleDelete}
                   onToggleActive={handleToggleActive}
+                  onToggleExpand={toggleClientExpanded}
+                  onNewProject={openNewProject}
+                  onEditProject={openEditProject}
+                  onArchiveProject={handleProjectArchive}
+                  onDeleteProject={handleProjectDelete}
                   dimmed
                 />
               )}
@@ -174,78 +284,338 @@ export default function ClientsView() {
           }}
         />
       )}
+
+      {showProjectForm && (
+        <ProjectFormModal
+          project={editingProject}
+          onSave={handleProjectSave}
+          onClose={() => {
+            setShowProjectForm(false)
+            setEditingProject(null)
+            setProjectFormClientId(null)
+          }}
+        />
+      )}
     </div>
   )
 }
 
 function ClientList({
   clients,
+  expandedClientIds,
+  projectsByClient,
   onEdit,
   onDelete,
   onToggleActive,
+  onToggleExpand,
+  onNewProject,
+  onEditProject,
+  onArchiveProject,
+  onDeleteProject,
   dimmed = false
 }: {
   clients: Client[]
+  expandedClientIds: Set<number>
+  projectsByClient: Record<number, ProjectWithCount[]>
   onEdit: (c: Client) => void
   onDelete: (c: Client) => void
   onToggleActive: (c: Client) => void
+  onToggleExpand: (clientId: number) => void
+  onNewProject: (clientId: number) => void
+  onEditProject: (p: Project) => void
+  onArchiveProject: (p: Project) => void
+  onDeleteProject: (p: ProjectWithCount) => void
   dimmed?: boolean
 }) {
   return (
     <ul className="flex flex-col gap-2">
       {clients.map((c) => (
-        <ClientItem key={c.id} client={c} onEdit={onEdit} onDelete={onDelete} onToggleActive={onToggleActive} dimmed={dimmed} />
+        <ClientItem
+          key={c.id}
+          client={c}
+          expanded={expandedClientIds.has(c.id)}
+          projects={projectsByClient[c.id]}
+          onEdit={onEdit}
+          onDelete={onDelete}
+          onToggleActive={onToggleActive}
+          onToggleExpand={onToggleExpand}
+          onNewProject={onNewProject}
+          onEditProject={onEditProject}
+          onArchiveProject={onArchiveProject}
+          onDeleteProject={onDeleteProject}
+          dimmed={dimmed}
+        />
       ))}
     </ul>
   )
 }
 
 function ClientItem({
-  client: c, onEdit, onDelete, onToggleActive, dimmed = false
+  client: c,
+  expanded,
+  projects,
+  onEdit,
+  onDelete,
+  onToggleActive,
+  onToggleExpand,
+  onNewProject,
+  onEditProject,
+  onArchiveProject,
+  onDeleteProject,
+  dimmed = false
 }: {
   client: Client
+  expanded: boolean
+  projects: ProjectWithCount[] | undefined
   onEdit: (c: Client) => void
   onDelete: (c: Client) => void
   onToggleActive: (c: Client) => void
+  onToggleExpand: (clientId: number) => void
+  onNewProject: (clientId: number) => void
+  onEditProject: (p: Project) => void
+  onArchiveProject: (p: Project) => void
+  onDeleteProject: (p: ProjectWithCount) => void
   dimmed?: boolean
 }) {
   const t = useT()
+  const activeProjects = projects?.filter((p) => p.active) ?? []
+  const archivedProjects = projects?.filter((p) => !p.active) ?? []
+  const allProjects = projects ?? []
+
   return (
     <li
-      key={c.id}
-      className="flex items-center gap-3 rounded-xl border px-4 py-3 backdrop-blur-xl transition-colors"
+      className="rounded-xl border backdrop-blur-xl transition-colors overflow-hidden"
       style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)' }}
     >
+      {/* Client row */}
+      <div className="flex items-center gap-3 px-4 py-3">
+        {/* Chevron toggle */}
+        <button
+          onClick={() => onToggleExpand(c.id)}
+          aria-expanded={expanded}
+          aria-label={expanded ? 'Projekte verbergen' : 'Projekte anzeigen'}
+          className="rounded p-0.5 transition-colors hover:bg-white/10 shrink-0"
+          style={{ color: 'var(--text3)' }}
+        >
+          <svg
+            className={`w-3.5 h-3.5 transition-transform duration-200 ${expanded ? 'rotate-90' : ''}`}
+            viewBox="0 0 12 12"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M4 2l4 4-4 4" />
+          </svg>
+        </button>
+
+        <span
+          className={`w-4 h-4 rounded-full shrink-0 ${dimmed ? 'opacity-40' : ''}`}
+          style={{ backgroundColor: c.color }}
+        />
+        <span className={`flex-1 font-medium ${dimmed ? 'opacity-50' : ''}`} style={{ color: 'var(--text)' }}>
+          {c.name}
+        </span>
+        {/* project count badge */}
+        {allProjects.length > 0 && !expanded && (
+          <span
+            className="text-xs px-1.5 py-0.5 rounded-full"
+            style={{ background: 'var(--input-bg)', color: 'var(--text3)' }}
+          >
+            {allProjects.length}
+          </span>
+        )}
+        <button
+          onClick={() => onToggleActive(c)}
+          title={c.active ? t('clients.action.archive') : t('clients.action.reactivate')}
+          className="rounded p-1 transition-colors hover:bg-white/10"
+          style={{ color: 'var(--text3)' }}
+        >
+          {c.active ? <Icons.Archive /> : <Icons.Unarchive />}
+        </button>
+        <button
+          onClick={() => onEdit(c)}
+          className="rounded p-1 transition-colors hover:bg-white/10"
+          style={{ color: 'var(--text3)' }}
+        >
+          <Icons.Edit />
+        </button>
+        <button
+          onClick={() => onDelete(c)}
+          className="rounded p-1 transition-colors hover:bg-white/10"
+          style={{ color: 'var(--danger)' }}
+        >
+          <Icons.Trash />
+        </button>
+      </div>
+
+      {/* Project sub-list (collapsible) */}
+      {expanded && (
+        <div
+          className="border-t px-4 pb-3 pt-2"
+          style={{ borderColor: 'var(--card-border)' }}
+        >
+          {/* Active projects */}
+          {activeProjects.length === 0 && archivedProjects.length === 0 && (
+            <p className="text-xs py-1" style={{ color: 'var(--text3)' }}>
+              {t('projects.empty')}
+            </p>
+          )}
+          {activeProjects.length > 0 && (
+            <ul className="flex flex-col gap-1.5 mb-2">
+              {activeProjects.map((p) => (
+                <ProjectItem
+                  key={p.id}
+                  project={p}
+                  clientColor={c.color}
+                  onEdit={onEditProject}
+                  onArchive={onArchiveProject}
+                  onDelete={onDeleteProject}
+                />
+              ))}
+            </ul>
+          )}
+          {/* Archived projects */}
+          {archivedProjects.length > 0 && (
+            <ArchivedProjectsSection
+              projects={archivedProjects}
+              clientColor={c.color}
+              onEdit={onEditProject}
+              onArchive={onArchiveProject}
+              onDelete={onDeleteProject}
+            />
+          )}
+          {/* Add project button */}
+          {c.active && (
+            <button
+              onClick={() => onNewProject(c.id)}
+              className="flex items-center gap-1.5 text-xs mt-1 rounded-lg px-2 py-1.5 transition-colors hover:bg-white/10"
+              style={{ color: 'var(--text2)' }}
+            >
+              <Icons.Plus />
+              {t('projects.addNew')}
+            </button>
+          )}
+        </div>
+      )}
+    </li>
+  )
+}
+
+function ProjectItem({
+  project: p,
+  clientColor,
+  onEdit,
+  onArchive,
+  onDelete
+}: {
+  project: ProjectWithCount
+  clientColor: string
+  onEdit: (p: Project) => void
+  onArchive: (p: Project) => void
+  onDelete: (p: ProjectWithCount) => void
+}) {
+  const t = useT()
+  const dotColor = p.color || clientColor
+  const rateLabel =
+    p.rate_cent !== null
+      ? formatRateInput(p.rate_cent) + ' €/h'
+      : t('projects.inheritedRate')
+
+  return (
+    <li className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 group"
+      style={{ background: 'var(--input-bg)' }}
+    >
       <span
-        className={`w-4 h-4 rounded-full shrink-0 ${dimmed ? 'opacity-40' : ''}`}
-        style={{ backgroundColor: c.color }}
+        className="w-3 h-3 rounded-full shrink-0"
+        style={{ backgroundColor: dotColor, opacity: p.color ? 1 : 0.5 }}
       />
-      <span className={`flex-1 font-medium ${dimmed ? 'opacity-50' : ''}`} style={{ color: 'var(--text)' }}>
-        {c.name}
+      <span className="flex-1 text-sm font-medium" style={{ color: 'var(--text)' }}>
+        {p.name}
+      </span>
+      <span className="text-xs" style={{ color: 'var(--text3)' }}>
+        {rateLabel}
       </span>
       <button
-        onClick={() => onToggleActive(c)}
-        title={c.active ? t('clients.action.archive') : t('clients.action.reactivate')}
-        className="rounded p-1 transition-colors hover:bg-white/10"
+        onClick={() => onArchive(p)}
+        title={p.active ? t('projects.action.archive') : t('projects.action.reactivate')}
+        className="rounded p-0.5 transition-colors hover:bg-white/10 opacity-0 group-hover:opacity-100"
         style={{ color: 'var(--text3)' }}
       >
-        {c.active ? <Icons.Archive /> : <Icons.Unarchive />}
+        {p.active ? <Icons.Archive /> : <Icons.Unarchive />}
       </button>
       <button
-        onClick={() => onEdit(c)}
-        className="rounded p-1 transition-colors hover:bg-white/10"
+        onClick={() => onEdit(p)}
+        className="rounded p-0.5 transition-colors hover:bg-white/10 opacity-0 group-hover:opacity-100"
         style={{ color: 'var(--text3)' }}
       >
         <Icons.Edit />
       </button>
       <button
-        onClick={() => onDelete(c)}
-        className="rounded p-1 transition-colors hover:bg-white/10"
+        onClick={() => onDelete(p)}
+        className="rounded p-0.5 transition-colors hover:bg-white/10 opacity-0 group-hover:opacity-100"
         style={{ color: 'var(--danger)' }}
       >
         <Icons.Trash />
       </button>
     </li>
+  )
+}
+
+function ArchivedProjectsSection({
+  projects,
+  clientColor,
+  onEdit,
+  onArchive,
+  onDelete
+}: {
+  projects: ProjectWithCount[]
+  clientColor: string
+  onEdit: (p: Project) => void
+  onArchive: (p: Project) => void
+  onDelete: (p: ProjectWithCount) => void
+}) {
+  const t = useT()
+  const [expanded, setExpanded] = useState(false)
+
+  return (
+    <div className="mt-1">
+      <button
+        onClick={() => setExpanded((v) => !v)}
+        className="flex items-center gap-1 text-xs mb-1 transition-colors hover:opacity-80"
+        style={{ color: 'var(--text3)' }}
+      >
+        <svg
+          className={`w-3 h-3 transition-transform duration-200 ${expanded ? 'rotate-90' : ''}`}
+          viewBox="0 0 12 12"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M4 2l4 4-4 4" />
+        </svg>
+        {t('projects.archivedSection', { count: String(projects.length) })}
+      </button>
+      {expanded && (
+        <ul className="flex flex-col gap-1.5 opacity-60">
+          {projects.map((p) => (
+            <ProjectItem
+              key={p.id}
+              project={p}
+              clientColor={clientColor}
+              onEdit={onEdit}
+              onArchive={onArchive}
+              onDelete={onDelete}
+            />
+          ))}
+        </ul>
+      )}
+    </div>
   )
 }
 
@@ -394,6 +764,184 @@ function ClientFormModal({
             </button>
           </div>
         </form>
+    </Dialog>
+  )
+}
+
+function ProjectFormModal({
+  project,
+  onSave,
+  onClose
+}: {
+  project: Project | null
+  onSave: (data: { name: string; color: string; rate_cent: number | null }) => Promise<void>
+  onClose: () => void
+}) {
+  const t = useT()
+  // '' means "inherit client color"
+  const [name, setName] = useState(project?.name ?? '')
+  const [color, setColor] = useState(project?.color ?? '')
+  const [rateInput, setRateInput] = useState(() =>
+    project?.rate_cent !== null && project?.rate_cent !== undefined
+      ? formatRateInput(project.rate_cent)
+      : ''
+  )
+  const [isSaving, setIsSaving] = useState(false)
+  const [error, setError] = useState('')
+  const [rateError, setRateError] = useState('')
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    const trimmed = name.trim()
+    if (!trimmed) {
+      setError(t('projects.form.nameRequired'))
+      return
+    }
+    let rate_cent: number | null = null
+    if (rateInput.trim() !== '') {
+      const parsed = parseRateInput(rateInput)
+      if (parsed === 'invalid') {
+        setRateError(t('projects.form.rateInvalid'))
+        return
+      }
+      if (parsed === 'negative') {
+        setRateError(t('projects.form.rateNegative'))
+        return
+      }
+      rate_cent = parsed === 0 ? null : parsed
+    }
+    setIsSaving(true)
+    await onSave({ name: trimmed, color, rate_cent })
+    setIsSaving(false)
+  }
+
+  return (
+    <Dialog
+      open
+      onClose={onClose}
+      title={project ? t('projects.form.editTitle') : t('projects.form.createTitle')}
+      widthClass="w-[400px]"
+    >
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        {/* Name */}
+        <div className="flex flex-col gap-1.5">
+          <label className="text-xs font-medium uppercase tracking-wide" style={{ color: 'var(--text2)' }}>
+            {t('projects.form.nameLabel')}
+          </label>
+          <input
+            autoFocus
+            type="text"
+            value={name}
+            onChange={(e) => {
+              setName(e.target.value)
+              setError('')
+            }}
+            placeholder={t('projects.form.namePlaceholder')}
+            className="rounded-lg px-3 py-2.5 border backdrop-blur-xl focus:outline-none
+              focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            style={{ background: 'var(--input-bg)', borderColor: 'var(--card-border)', color: 'var(--text)' }}
+          />
+          {error && <p className="text-xs" style={{ color: 'var(--danger)' }}>{error}</p>}
+        </div>
+
+        {/* Color */}
+        <div className="flex flex-col gap-1.5">
+          <label className="text-xs font-medium uppercase tracking-wide" style={{ color: 'var(--text2)' }}>
+            {t('projects.form.colorLabel')}
+          </label>
+          <div className="flex gap-2 flex-wrap items-center">
+            {/* Inherit option */}
+            <button
+              type="button"
+              title={t('projects.form.colorInherit')}
+              aria-label={t('projects.form.colorInherit')}
+              onClick={() => setColor('')}
+              className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-transform ${
+                color === ''
+                  ? 'scale-125 ring-2 ring-white ring-offset-2 border-slate-400'
+                  : 'hover:scale-110 border-slate-600'
+              }`}
+              style={{ background: 'var(--input-bg)' }}
+            >
+              <span className="text-xs" style={{ color: 'var(--text3)' }}>–</span>
+            </button>
+            {COLORS.map((c) => (
+              <button
+                key={c}
+                type="button"
+                title={t(COLOR_NAMES_KEYS[c] ?? 'clients.color.indigo')}
+                aria-label={t('clients.form.colorAria', { color: t(COLOR_NAMES_KEYS[c] ?? 'clients.color.indigo') })}
+                onClick={() => setColor(c)}
+                className={`w-8 h-8 rounded-full transition-transform ${
+                  color === c
+                    ? 'scale-125 ring-2 ring-white ring-offset-2'
+                    : 'hover:scale-110'
+                }`}
+                style={{ backgroundColor: c }}
+              />
+            ))}
+          </div>
+          {color === '' && (
+            <p className="text-xs" style={{ color: 'var(--text3)' }}>
+              {t('projects.form.colorInherit')}
+            </p>
+          )}
+        </div>
+
+        {/* Hourly rate override (optional) */}
+        <div className="flex flex-col gap-1.5">
+          <label
+            htmlFor="project-rate"
+            className="text-xs font-medium uppercase tracking-wide"
+            style={{ color: 'var(--text2)' }}
+          >
+            {t('projects.form.rateLabel')}
+          </label>
+          <div className="relative">
+            <input
+              id="project-rate"
+              type="text"
+              inputMode="decimal"
+              value={rateInput}
+              onChange={(e) => {
+                setRateInput(e.target.value)
+                setRateError('')
+              }}
+              placeholder={t('projects.form.ratePlaceholder')}
+              className="rounded-lg pl-3 pr-10 py-2.5 w-full border backdrop-blur-xl focus:outline-none
+                focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              style={{ background: 'var(--input-bg)', borderColor: 'var(--card-border)', color: 'var(--text)' }}
+            />
+            <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm" style={{ color: 'var(--text3)' }}>
+              €
+            </span>
+          </div>
+          {rateError && <p className="text-xs" style={{ color: 'var(--danger)' }}>{rateError}</p>}
+          {!rateError && (
+            <p className="text-xs" style={{ color: 'var(--text3)' }}>{t('projects.form.rateHint')}</p>
+          )}
+        </div>
+
+        {/* Buttons */}
+        <div className="flex gap-3 pt-1">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-1 font-medium py-2.5 rounded-lg transition-colors hover:opacity-90"
+            style={{ background: 'var(--input-bg)', border: '1px solid var(--card-border)', color: 'var(--text2)' }}
+          >
+            {t('common.cancel')}
+          </button>
+          <button
+            type="submit"
+            disabled={isSaving}
+            className="flex-1 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50
+              text-white font-medium py-2.5 rounded-lg transition-colors"
+          >
+            {isSaving ? t('common.saving') : t('common.save')}
+          </button>
+        </div>
+      </form>
     </Dialog>
   )
 }

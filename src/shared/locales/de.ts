@@ -234,6 +234,29 @@ export const de = {
   'clients.color.teal': 'Teal',
   'clients.color.lime': 'Lime',
 
+  // ── ProjectsView (v1.9 #75 PR 2) ─────────────────────────────────────────
+  'projects.addNew': '+ Projekt hinzufügen',
+  'projects.empty': 'Noch keine Projekte.',
+  'projects.inheritedRate': '(Kundensatz)',
+  'projects.archivedSection': 'Archiviert ({count})',
+  'projects.action.archive': 'Archivieren',
+  'projects.action.reactivate': 'Reaktivieren',
+  'projects.confirm.delete': 'Projekt „{name}" wirklich löschen?',
+  'projects.confirm.deleteWithEntries':
+    'Projekt „{name}" hat noch {count} Einträge. Trotzdem löschen?\nDie Einträge werden dem Kunden zugeordnet.',
+  'projects.form.createTitle': 'Neues Projekt',
+  'projects.form.editTitle': 'Projekt bearbeiten',
+  'projects.form.nameLabel': 'Name',
+  'projects.form.namePlaceholder': 'z.B. Website-Relaunch',
+  'projects.form.nameRequired': 'Name ist erforderlich.',
+  'projects.form.colorLabel': 'Farbe',
+  'projects.form.colorInherit': 'Kundenfarbe übernehmen',
+  'projects.form.rateLabel': 'Stundensatz (€/h)',
+  'projects.form.ratePlaceholder': 'Leer = Kundensatz',
+  'projects.form.rateHint': 'Leer lassen, um den Kundensatz zu verwenden.',
+  'projects.form.rateInvalid': 'Bitte eine Zahl eingeben (z.B. 85,00).',
+  'projects.form.rateNegative': 'Stundensatz darf nicht negativ sein.',
+
   // ── EntryEditForm ─────────────────────────────────────────────────────────
   'entry.date': 'Datum',
   'entry.start': 'Start',

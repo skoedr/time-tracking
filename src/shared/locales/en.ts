@@ -233,6 +233,29 @@ export const en: Record<TranslationKey, string> = {
   'clients.color.teal': 'Teal',
   'clients.color.lime': 'Lime',
 
+  // ── ProjectsView (v1.9 #75 PR 2) ──────────────────────────────────────────
+  'projects.addNew': '+ Add project',
+  'projects.empty': 'No projects yet.',
+  'projects.inheritedRate': '(Client rate)',
+  'projects.archivedSection': 'Archived ({count})',
+  'projects.action.archive': 'Archive',
+  'projects.action.reactivate': 'Reactivate',
+  'projects.confirm.delete': 'Really delete project "{name}"?',
+  'projects.confirm.deleteWithEntries':
+    'Project "{name}" still has {count} entries. Delete anyway?\nEntries will be reassigned to the client.',
+  'projects.form.createTitle': 'New project',
+  'projects.form.editTitle': 'Edit project',
+  'projects.form.nameLabel': 'Name',
+  'projects.form.namePlaceholder': 'e.g. Website Relaunch',
+  'projects.form.nameRequired': 'Name is required.',
+  'projects.form.colorLabel': 'Color',
+  'projects.form.colorInherit': 'Use client color',
+  'projects.form.rateLabel': 'Hourly rate (€/h)',
+  'projects.form.ratePlaceholder': 'Empty = client rate',
+  'projects.form.rateHint': 'Leave empty to use the client rate.',
+  'projects.form.rateInvalid': 'Please enter a number (e.g. 85.00).',
+  'projects.form.rateNegative': 'Hourly rate must not be negative.',
+
   // ── EntryEditForm ──────────────────────────────────────────────────────────
   'entry.date': 'Date',
   'entry.start': 'Start',

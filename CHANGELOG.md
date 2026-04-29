@@ -6,6 +6,7 @@ All notable changes to TimeTrack are documented here.
 
 ### Added
 
+- **Projekte pro Kunde — Projektverwaltung in ClientsView (PR 2/4)** — Renderer-seitige Projektverwaltung für Issue #75. Jeder Kunde kann per Chevron aufgeklappt werden und zeigt eine Sub-Liste seiner Projekte. CRUD-Aktionen (Erstellen, Bearbeiten, Archivieren, Löschen) via `ProjectFormModal` inline in `ClientsView`. Farbauswahl mit „Kundenfarbe übernehmen"-Option (`color = ''`), optionaler Stundensatz-Override. Archivierte Projekte in eigener Collapsible-Sektion. Neuer `projectsStore` (Zustand Version-Bump nach Mutationen). Vollständige i18n-Keys für DE/EN. ([#75](https://github.com/skoedr/time-tracking/issues/75))
 - **Projekte pro Kunde — DB, Types, IPC (PR 1/4)** — Foundation für Issue #75. Neue `projects`-Tabelle (client-scoped via FK, Soft-Delete via `active = 0`), `project_id`-Spalte auf `entries` (nullable, ON DELETE SET NULL), vollständige IPC-Handler (`projects:getAll`, `projects:create`, `projects:update`, `projects:archive`, `projects:delete`), TypeScript-Typen (`Project`, `CreateProjectInput`, `UpdateProjectInput`, `ProjectWithCount`) und Preload-Exposition (`window.api.projects.*`). ([#75](https://github.com/skoedr/time-tracking/issues/75))
 
 ### Fixed
