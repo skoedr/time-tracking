@@ -6,15 +6,28 @@ Deferred items from plan reviews. Items here have explicit decisions — they ar
 
 - **#87 — UI centering across views** (Optional polish) — Basiszentrierung implementiert in v1.8.1 (`max-w-4xl mx-auto` auf SettingsView-Wrapper). Optional: pixelgenaue Werte via `max-w-[740px]` / `max-w-[600px]` statt Tailwind-Tokens für Today/Timer/Calendar/Clients. → v2.0 candidate.
 
+- **#93 — Auswertungs-Tab (Analytics Dashboard)** — Monatskarte, Trendchart (Wochen/Monate), Verteilung nach Kunde + Wochentag, Pace-Tracker. Design-Gespräch mit Claude Design ausstehend.
+
+- **#94 — Stammdaten-Erweiterung Kunden + Projekte** — Rechnungsadresse + USt-IdNr. für PDF-Stundennachweis-Empfängerblock; Projektnummer, Stundenkontingent, Abrechnungstyp, Projektstatus. Kein Rechnungsfeature — nur Stundennachweis.
+
 ### Deferred from #79 /autoplan Final Gate (v1.9.5)
 
 - **T1 — UNC-Pfad-Support für Backup-Pfad** (Medium effort) — Wenn `backup_path` ein UNC-Pfad (z.B. `\\nas01\backups`) ist, soll eine explizite Fehlermeldung erscheinen wenn der Pfad nicht erreichbar ist, statt silent fail. `mkdirSync` auf UNC unter Windows benötigt gesondertes Handling. → v1.10 candidate.
 
 ### Deferred from #75 /autoplan Phase 1 (CEO Cherry-Picks)
 
-- **E1 — Auto-color-shift für Projekte** (Low effort, Low risk) — Projektfarbe automatisch aus Kundenfarbe ableiten (Helligkeitsverschiebung), statt manuelle Farbwahl im Project-Modal. Visual coherence pro Kunde. → v1.9.x oder v2.0.
-- **E3 — Projekt-Budget-Warnung** (Medium effort, Low risk) — Read-only "X von Y Stunden verbraucht"-Anzeige im Project-Modal und in TodayView. Setzt Stundenkontingent pro Projekt voraus. → v2.0.
-- **E5 — Project-Quick-Stats in ClientsView** (Low effort, Low risk) — Pro Projekt: Eintragsanzahl + letzte Aktivität neben dem Projektnamen in der Sub-Liste. → v1.9.x.
+- **E1 — Auto-color-shift für Projekte** (Low effort, Low risk) — Projektfarbe automatisch aus Kundenfarbe ableiten (Helligkeitsverschiebung), statt manuelle Farbwahl im Project-Modal. → v1.9.6
+
+- **E5 — Project-Quick-Stats in ClientsView** (Low effort, Low risk) — Pro Projekt: Eintragsanzahl + letzte Aktivität neben dem Projektnamen in der Sub-Liste. → v1.9.6
+
+### Design-Gespräche ausstehend
+
+- **Merge modal Nav-Trigger** — PdfMergeModal ist nur via CalendarView erreichbar. Zweiter Einstiegspunkt in Sidebar oder ExportModal. Design-Gespräch ausstehend.
+- **Competitive positioning** — README + App-Beschreibung auf LocalFirst / Datenschutz / Kein-Abo schärfen. Kein Code, nur Text. Gespräch ausstehend.
+
+### Nächster Hotfix (technisches Housekeeping)
+
+- **Handler extraction: pdf:merge-export** — `pdf:merge-export` in `ipc.ts` noch im alten Inline-Stil; in `pdfMergeHandlers.ts`-Muster überführen für testbarere Struktur. Kein User-Value, aber sauberer.
 
 ## Resolved in v1.9.0
 
@@ -27,11 +40,11 @@ Deferred items from plan reviews. Items here have explicit decisions — they ar
 
 ## Deferred from v1.7 (/autoplan 2026-04-26)
 
-- **Auto-detect watched folder for invoices** (Medium effort) — Instead of a file picker, watch a user-configured folder (Lexware default export path) and auto-pick the most recent PDF. Eliminates the file picker entirely. Blocked by: unvalidated assumption about Lexware/sevDesk folder conventions. Validate with 2–3 users before building. → v1.9 candidate.
+- ~~**Auto-detect watched folder for invoices**~~ — Zurückgestellt indefinitely. Kein fixer Lexware/sevDesk-Standardpfad; Nutzen noch nicht validiert.
 - **Multi-invoice support** (Low priority) — Attach multiple Stundennachweise to a single invoice, or vice versa. Surfaces when agencies/multi-project freelancers use the feature. → Post-v1.8 based on user feedback.
 - ~~**Preview before merge**~~ — Included in v1.7 via `pdf:pdf-info` handler + page count row in `PdfMergeModal`. Removed from backlog.
 - ~~**Full i18n DE/EN pass**~~ — Shipped in v1.8.0. All views, components and mini-widget migrated.
-- **Competitive positioning** — Reframe around local-first data ownership, not PDF glue layer. Invoicing tools (Billomat, sevDesk) are building native time-report attachment. TimeTrack's durable advantage is privacy-first local record-of-truth. → v1.9 strategy review.
-- **Merge modal: Nav sidebar trigger** (Low) — `PdfMergeModal` is currently only accessible via the CalendarView pill row. Users not in CalendarView can't discover the merge feature. Add a second trigger to the nav sidebar or a global toolbar. → v1.9.
-- **Handler extraction: pdf:merge-export** (Medium) — `pdf:merge-export` in `ipc.ts` uses the same inline handler pattern as the new handlers. Now that `pdfMergeHandlers.ts` establishes the injectable-deps pattern, apply it retroactively to `pdf:merge-export`. → post-v1.8.
-- **Type guard hygiene: `filePath` input in PDF handlers** (Low) — `pdfInfoHandler` and `mergeOnlyHandler` cast `r.filePath as string` without an explicit `typeof r.filePath !== 'string'` check. Both fail safely today. Identified by `/cso` audit 2026-04-27. → v1.9 candidate.
+- ~~**Competitive positioning**~~ → Kein Issue, Gespräch ausstehend (siehe oben).
+- ~~**Merge modal: Nav sidebar trigger**~~ → Kein Issue, Design-Gespräch ausstehend (siehe oben).
+- **Handler extraction: pdf:merge-export** → Verschoben in »Nächster Hotfix« (siehe oben).
+- **Type guard hygiene: `filePath` input in PDF handlers** (Low) — `pdfInfoHandler` und `mergeOnlyHandler` casten `r.filePath as string` ohne expliziten `typeof`-Check. Beide fallen sicher. → v1.9 candidate.
