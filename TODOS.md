@@ -12,13 +12,15 @@ Deferred items from plan reviews. Items here have explicit decisions — they ar
 
 ### Deferred from #79 /autoplan Final Gate (v1.9.5)
 
-- **T1 — UNC-Pfad-Support für Backup-Pfad** (Medium effort) — Wenn `backup_path` ein UNC-Pfad (z.B. `\\nas01\backups`) ist, soll eine explizite Fehlermeldung erscheinen wenn der Pfad nicht erreichbar ist, statt silent fail. `mkdirSync` auf UNC unter Windows benötigt gesondertes Handling. → v1.10 candidate.
+- **T1 — UNC-Pfad-Support für Backup-Pfad** (Medium effort) — Wenn `backup_path` ein UNC-Pfad (z.B. `\\nas01\backups`) ist, soll eine explizite Fehlermeldung erscheinen wenn der Pfad nicht erreichbar ist, statt silent fail. `mkdirSync` auf UNC unter Windows benötigt gesondertes Handling. → v1.10
+
+- **#96 — Quick Start 2.0: Last-Used Combo + Press-and-Hold Project Fan** — Pill zeigt letztes genutztes Projekt als Subtitle; Tap = sofort starten, Press & Hold (~300ms) = radialer Fächer öffnet sich mit allen Projekten des Kunden. Mini-Widget: nur Tap (kein Fächer). Keine neue DB-Tabelle nötig (letztes Projekt aus entries-History). → v1.10
 
 ### Deferred from #75 /autoplan Phase 1 (CEO Cherry-Picks)
 
-- **E1 — Auto-color-shift für Projekte** (Low effort, Low risk) — Projektfarbe automatisch aus Kundenfarbe ableiten (Helligkeitsverschiebung), statt manuelle Farbwahl im Project-Modal. → v1.9.6
+~~- **E1 — Auto-color-shift für Projekte**~~ → Resolved in v1.9.6
 
-- **E5 — Project-Quick-Stats in ClientsView** (Low effort, Low risk) — Pro Projekt: Eintragsanzahl + letzte Aktivität neben dem Projektnamen in der Sub-Liste. → v1.9.6
+~~- **E5 — Project-Quick-Stats in ClientsView**~~ → Resolved in v1.9.6
 
 ### Design-Gespräche ausstehend
 

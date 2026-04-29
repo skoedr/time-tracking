@@ -279,10 +279,14 @@ umziehen ohne Datenverlust. Projekte pro Kunde sind buchbar.
 
 ---
 
-## v1.10 — Reporting & Outlook-Vorbereitung
+## v1.10 — Reporting & Quick Start 2.0
 
-**Thema:** Mehr Einsicht in die eigenen Daten + Architektur-Skizze für v2.0.
+**Thema:** Mehr Einsicht in die eigenen Daten, schnellerer Timer-Start auf Projekt-Ebene + Architektur-Skizze für v2.0.
 
+- **Quick Start 2.0** (#96) — Pill merkt sich letzte [Kunde+Projekt]-Kombination als Subtitle.
+  **Tap** = sofort starten. **Press & Hold (~300ms)** = radialer Fächer öffnet sich mit allen
+  Projekten des Kunden; Release auf Projekt = auswählen. Mini-Widget: nur Tap, kein Fächer.
+  Kein Schema-Change (letztes Projekt via `MAX(started_at)` aus bestehenden Entries).
 - **Wochen- und Monats-Charts** in TodayView — Sparkline-Widget, SVG handgemalt
   (keine externe Chart-Lib). Stunden pro Tag als Bar-Chart, Top 3 Kunden als Donut.
   Reuse: `entriesStore` + `dateRanges.ts`, kein Schema-Change.
