@@ -18,11 +18,12 @@ const PRESET_COLORS = [
 ]
 
 /**
- * Three-step onboarding wizard (v1.5 PR E, issue #32).
+ * Onboarding wizard (v1.5 PR E, issue #32 / v1.9.5 #79).
  *
  * Step 1 — Welcome + language picker (live, uses I18nProvider)
  * Step 2 — Create first client (skippable)
  * Step 3 — Global hotkey hint
+ * Step 4 — (optional) Restore from backup, shown only when backups exist
  *
  * All strings go through `t()` so DE/EN switching in step 1 immediately
  * reflects in subsequent steps.
@@ -145,6 +146,7 @@ export function OnboardingWizard({ open, onFinish }: Props): React.JSX.Element |
 
             <WizardFooter
               step={step}
+              totalSteps={TOTAL_STEPS}
               onNext={next}
               onFinish={onFinish}
               t={t}
@@ -220,6 +222,7 @@ export function OnboardingWizard({ open, onFinish }: Props): React.JSX.Element |
 
             <WizardFooter
               step={step}
+              totalSteps={TOTAL_STEPS}
               onNext={() => void createClientAndNext()}
               onFinish={onFinish}
               nextLabel={clientName.trim() ? t('onboarding.client.create') : undefined}
@@ -251,7 +254,8 @@ export function OnboardingWizard({ open, onFinish }: Props): React.JSX.Element |
 
             <WizardFooter
               step={step}
-              onNext={onFinish}
+              totalSteps={TOTAL_STEPS}
+              onNext={next}
               onFinish={onFinish}
               t={t}
             />
@@ -291,7 +295,10 @@ export function OnboardingWizard({ open, onFinish }: Props): React.JSX.Element |
                   type="button"
                   onClick={async () => {
                     const res = await window.api.backups.restore(availableBackups[0].fullPath)
-                    if (res.ok) await window.api.app.relaunch()
+                    // Relaunch regardless: if restore failed, db.close() already ran in the
+                    // main process so subsequent IPC calls would hit a closed DB anyway.
+                    await window.api.app.relaunch()
+                    if (!res.ok) console.error('[onboarding] Restore failed:', res.error)
                   }}
                   className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-300 transition-colors"
                 >
@@ -321,6 +328,7 @@ export function OnboardingWizard({ open, onFinish }: Props): React.JSX.Element |
 
 interface FooterProps {
   step: number
+  totalSteps: number
   onNext: () => void
   onFinish: () => void
   nextLabel?: string
@@ -328,8 +336,8 @@ interface FooterProps {
   t: TFunction
 }
 
-function WizardFooter({ step, onNext, nextLabel, disabled, t }: FooterProps): React.JSX.Element {
-  const isLast = step === TOTAL_STEPS
+function WizardFooter({ step, totalSteps, onNext, nextLabel, disabled, t }: FooterProps): React.JSX.Element {
+  const isLast = step === totalSteps
   const label = isLast ? t('onboarding.finish') : (nextLabel ?? t('onboarding.next'))
 
   return (

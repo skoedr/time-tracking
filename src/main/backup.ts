@@ -163,10 +163,7 @@ export function rotateDailyBackups(retain = DAILY_RETENTION, backupDirOverride?:
  */
 export async function runDailyBackupIfNeeded(db: Database.Database): Promise<void> {
   try {
-    const row = db
-      .prepare("SELECT value FROM settings WHERE key = 'backup_path'")
-      .get() as { value: string } | undefined
-    const override = row?.value?.trim() || undefined
+    const override = readBackupPathSetting(db)
     const today = todayDate()
     const existing = listBackups(override).find(
       (b) => b.reason === 'daily' && b.filename.includes(today)
@@ -176,6 +173,21 @@ export async function runDailyBackupIfNeeded(db: Database.Database): Promise<voi
     rotateDailyBackups(DAILY_RETENTION, override)
   } catch (err) {
     console.warn('[backup] Daily backup failed (non-fatal):', err)
+  }
+}
+
+/**
+ * Read the `backup_path` setting from the DB.
+ * Returns the trimmed value, or `undefined` when absent / empty (meaning: use default dir).
+ */
+export function readBackupPathSetting(db: Database.Database): string | undefined {
+  try {
+    const row = db
+      .prepare("SELECT value FROM settings WHERE key = 'backup_path'")
+      .get() as { value: string } | undefined
+    return row?.value?.trim() || undefined
+  } catch {
+    return undefined
   }
 }
 

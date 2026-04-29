@@ -184,11 +184,12 @@ export default function SettingsView(): React.JSX.Element {
     setShowRestoreConfirm(false)
     setStatusMsg(t('settings.data.restoring'))
     const res = await window.api.backups.restore(selectedRestoreFile)
-    if (res.ok) {
-      await window.api.app.relaunch()
-    } else {
+    if (!res.ok) {
+      // db.close() already ran in the main process — subsequent IPC calls would
+      // hit a closed DB. Relaunch unconditionally so the app recovers cleanly.
       setStatusMsg(t('common.error', { error: res.error }))
     }
+    await window.api.app.relaunch()
   }
 
   async function exportJson(): Promise<void> {

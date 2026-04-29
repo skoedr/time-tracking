@@ -7,7 +7,7 @@ import { mergePdfs } from './pdfMerge'
 import log from 'electron-log/main'
 import { randomUUID } from 'crypto'
 import { getDb, getDbPath } from './db'
-import { getBackupsDir, getDefaultBackupsDir } from './backup'
+import { getBackupsDir, getDefaultBackupsDir, readBackupPathSetting } from './backup'
 import { createBackup, listBackups, restoreBackup as restoreBackupFile } from './backup'
 import { splitAtMidnight } from '../shared/midnightSplit'
 import { buildJsonExportPayload } from './jsonExport'
@@ -625,14 +625,7 @@ export function registerIpcHandlers(hooks: IpcHooks): void {
   // ── Backups ───────────────────────────────────
   /** Reads backup_path setting from DB (empty string = use default dir). */
   function getBackupPathSetting(): string {
-    try {
-      const row = db
-        .prepare("SELECT value FROM settings WHERE key = 'backup_path'")
-        .get() as { value: string } | undefined
-      return row?.value?.trim() ?? ''
-    } catch {
-      return ''
-    }
+    return readBackupPathSetting(db) ?? ''
   }
 
   ipcMain.handle('backup:list', (): IpcResult<BackupInfo[]> => {
@@ -657,9 +650,11 @@ export function registerIpcHandlers(hooks: IpcHooks): void {
     (_e, filePath: string): IpcResult<{ safetyBackupPath: string }> => {
       try {
         // Guard: allow paths from the default dir OR the user-configured dir.
-        const defaultDir = getDefaultBackupsDir()
+        // Use resolve() on both sides so casing/relative-path differences don't
+        // cause false rejections on Windows.
+        const defaultDir = resolve(getDefaultBackupsDir())
         const configuredPath = getBackupPathSetting()
-        const configuredDir = configuredPath ? normalize(configuredPath) : defaultDir
+        const configuredDir = configuredPath ? resolve(configuredPath) : defaultDir
         const resolved = resolve(filePath)
         if (
           !resolved.startsWith(defaultDir + sep) &&
