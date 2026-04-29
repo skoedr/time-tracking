@@ -15,7 +15,7 @@ A personal Windows desktop time-tracking app for freelancers. Lightweight Toggl 
 - **Stundensatz pro Kunde** — Optionales Honorar-Feld, fließt als €-Spalte ins PDF.
 - **JSON-Vollexport** — Kunden + Einträge + Settings als lesbare JSON-Datei (Daten-Portabilität).
 - **Cross-Midnight Auto-Split** — Einträge über Mitternacht werden automatisch in zwei verlinkte Tageshalften gesplittet — DST-sicher.
-- **Kunden-Verwaltung** — Anlegen, bearbeiten, archivieren, löschen, Farbcode + Stundensatz.
+- **Kunden- & Projektverwaltung** — Kunden anlegen, bearbeiten, archivieren, löschen (Farbcode + Stundensatz). Pro Kunde beliebig viele **Projekte** mit eigenem Farbcode und optionalem Stundensatz-Override. Timer, Heute-Ansicht, Kalender und Eintrag-Bearbeitung zeigen den Projektnamen; Export (PDF + CSV) nach Projekt filterbar.
 - **Global Hotkey** — `Alt+Shift+S` (konfigurierbar) startet/stoppt den Timer aus jedem Tab.
 - **Tray Icon + Quick-Start** — Rechtsklick auf die Tray öffnet aktive Kunden direkt als Buttons. Tray-Glyph wechselt je nach Timer-State.
 - **Mini-Widget** — Always-on-top 200×40 Overlay (Hotkey `Alt+Shift+M`, konfigurierbar). Zeigt laufenden Timer + Kunde + Stop/Start-Buttons — kein Hauptfenster nötig. Draggable, sichtbar über Vollbild-Apps.
@@ -106,7 +106,7 @@ src/
   main/          # Electron main process
     index.ts     # App entry, tray (with Quick-Start), global hotkey, smoke-test mode
     db.ts        # SQLite open + WAL setup
-    ipc.ts       # All IPC handlers (clients, entries, settings, dashboard, exports)
+    ipc.ts       # All IPC handlers (clients, projects, entries, settings, dashboard, exports)
     idle.ts      # powerMonitor-based idle watcher
     backup.ts    # Daily/manual/pre-migration backups + restore
     pdf.ts       # PDF payload builder + HTML template (Stundennachweis)
@@ -116,17 +116,17 @@ src/
     logo.ts      # Logo file -> base64 data URL for PDF embedding
     updater.ts   # electron-updater bridge + IPC handlers (auto-update)
     csvExport.ts # CSV export builder
-    migrations/  # Versioned schema migrations + runner (001..008)
+    migrations/  # Versioned schema migrations + runner (001..012)
   preload/
     index.ts     # Context Bridge (window.api)
     index.d.ts   # TypeScript types for renderer
   renderer/src/
     views/       # TimerView, TodayView, CalendarView, ClientsView, SettingsView
     components/  # Dialog, IdleModal, PdfExportModal, CalendarDrawer, EntryEditForm, Toast,
-                 # ConfirmDialog, UpdateBanner, OnboardingWizard, AboutDialog, ExportModal
+                 # ConfirmDialog, ProjectFormModal, PdfMergeModal, UpdateBanner, OnboardingWizard, AboutDialog, ExportModal
     contexts/    # I18nContext (DE/EN translations, useT hook)
     hooks/       # useTimer logic hook
-    store/       # Zustand stores (timer, entries, toast, updateStore)
+    store/       # Zustand stores (timer, entries, projects, clients, toast, updateStore)
   shared/
     types.ts     # Shared TypeScript interfaces
     duration.ts  # Time-formatting helpers
@@ -147,10 +147,11 @@ templates/
 
 ## Data Storage
 
-The SQLite database lives at `%AppData%\TimeTrack\timetrack.db`. Schema (as of v1.5, schema_version 8):
+The SQLite database lives at `%AppData%\TimeTrack\timetrack.db`. Schema (as of v1.9.0, schema_version 9):
 
 - `clients` — name, color, active flag, `rate_cent` (optional Stundensatz)
-- `entries` — client_id, description, started_at, stopped_at, heartbeat_at, `deleted_at` (soft-delete), `link_id` (cross-midnight pair UUID)
+- `projects` — client_id (FK), name, color, active flag, `rate_cent` (optional Stundensatz-Override)
+- `entries` — client_id, description, started_at, stopped_at, heartbeat_at, `deleted_at` (soft-delete), `link_id` (cross-midnight pair UUID), `project_id` (nullable FK → projects)
 - `settings` — key/value store (incl. PDF template settings: logo path, sender, tax id, accent color, footer, round minutes)
 
 On startup the app auto-stops any entries where the heartbeat is older than 5 minutes (crash recovery).

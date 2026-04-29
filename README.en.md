@@ -15,7 +15,7 @@ A personal Windows desktop time-tracking app for freelancers. Lightweight Toggl 
 - **Hourly Rate per Client** — Optional fee field, renders as €-column in the PDF.
 - **Full JSON Export** — Clients + entries + settings as a readable JSON file (data portability).
 - **Cross-Midnight Auto-Split** — Entries spanning midnight are automatically split into two linked half-day entries — DST-safe.
-- **Client Management** — Create, edit, archive, delete; color code + hourly rate.
+- **Client & Project Management** — Create, edit, archive, and delete clients (color code + hourly rate). Each client can have multiple **projects** with their own color and an optional hourly-rate override. Timer, Today View, Calendar, and entry editing all show the project name; export (PDF + CSV) can be filtered to a single project.
 - **Global Hotkey** — `Alt+Shift+S` (configurable) starts/stops the timer from any window.
 - **Tray Icon + Quick-Start** — Right-click the tray to launch active clients as direct buttons. Tray glyph changes with timer state.
 - **Mini Widget** — Always-on-top 200×40 overlay (hotkey `Alt+Shift+M`, configurable). Shows running timer + client + stop/start buttons — no main window needed. Draggable, visible over fullscreen apps.
@@ -105,26 +105,27 @@ src/
   main/          # Electron main process
     index.ts     # App entry, tray (with Quick-Start), global hotkey, smoke-test mode
     db.ts        # SQLite open + WAL setup
-    ipc.ts       # All IPC handlers (clients, entries, settings, dashboard, exports)
+    ipc.ts       # All IPC handlers (clients, projects, entries, settings, dashboard, exports)
     idle.ts      # powerMonitor-based idle watcher
     backup.ts    # Daily/manual/pre-migration backups + restore
     pdf.ts       # PDF payload builder + HTML template (timesheet)
     pdfWindow.ts # Hidden BrowserWindow renderer (printToPDF pipeline)
+    pdfMerge.ts  # PDF merge logic (mergePdfs via pdf-lib)
     jsonExport.ts# Full JSON export (clients + entries + settings)
     logo.ts      # Logo file -> base64 data URL for PDF embedding
     updater.ts   # electron-updater bridge + IPC handlers (auto-update)
     csvExport.ts # CSV export builder
-    migrations/  # Versioned schema migrations + runner (001..008)
+    migrations/  # Versioned schema migrations + runner (001..012)
   preload/
     index.ts     # Context Bridge (window.api)
     index.d.ts   # TypeScript types for renderer
   renderer/src/
     views/       # TimerView, TodayView, CalendarView, ClientsView, SettingsView
     components/  # Dialog, IdleModal, PdfExportModal, CalendarDrawer, EntryEditForm, Toast,
-                 # ConfirmDialog, UpdateBanner, OnboardingWizard, AboutDialog, ExportModal
+                 # ConfirmDialog, ProjectFormModal, PdfMergeModal, UpdateBanner, OnboardingWizard, AboutDialog, ExportModal
     contexts/    # I18nContext (DE/EN translations, useT hook)
     hooks/       # useTimer logic hook
-    store/       # Zustand stores (timer, entries, toast, updateStore)
+    store/       # Zustand stores (timer, entries, projects, clients, toast, updateStore)
   shared/
     types.ts     # Shared TypeScript interfaces
     duration.ts  # Time-formatting helpers
@@ -145,10 +146,11 @@ templates/
 
 ## Data Storage
 
-The SQLite database lives at `%AppData%\TimeTrack\timetrack.db`. Schema (as of v1.5, schema_version 8):
+The SQLite database lives at `%AppData%\TimeTrack\timetrack.db`. Schema (as of v1.9.0, schema_version 9):
 
 - `clients` — name, color, active flag, `rate_cent` (optional hourly rate)
-- `entries` — client_id, description, started_at, stopped_at, heartbeat_at, `deleted_at` (soft-delete), `link_id` (cross-midnight pair UUID)
+- `projects` — client_id (FK), name, color, active flag, `rate_cent` (optional hourly-rate override)
+- `entries` — client_id, description, started_at, stopped_at, heartbeat_at, `deleted_at` (soft-delete), `link_id` (cross-midnight pair UUID), `project_id` (nullable FK → projects)
 - `settings` — key/value store (incl. PDF template settings: logo path, sender, tax id, accent color, footer, round minutes)
 
 On startup the app auto-stops any entries where the heartbeat is older than 5 minutes (crash recovery).

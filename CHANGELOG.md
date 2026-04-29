@@ -13,8 +13,16 @@ All notable changes to TimeTrack are documented here.
 
 ### Fixed
 
-- **`insertEntrySegments` unterschlug `project_id`** — Der 11-Spalten-INSERT in der Hilfsfunktion übergab `project_id` nicht. Jetzt 12-Spalten-INSERT; beide Aufrufer (`entries:create`, `entries:update`) reichen `input.project_id ?? null` weiter.
-- **`entries:start` speicherte `project_id` nicht** — Der 4-Spalten-INSERT beim Starten eines Timers setzte `project_id` implizit auf NULL. Jetzt explizit übergeben.
+- **ConfirmDialog statt browser-nativem `confirm()`** — Löschen von Einträgen, Projekten und Kunden öffnet jetzt einen AppDialog statt des nativen `window.confirm()`. Visuell konsistent mit dem restlichen App-Design.
+- **Projektfarbe in allen Ansichten** — CalendarView, CalendarDrawer, TodayView und TimerView zeigen die Farbe des aktiven Projekts einheitlich als Akzentfarbe; kein Grau-Fallback mehr wenn ein Projekt gesetzt ist.
+- **`+`-Button im Kunden-Header** — Die Schaltfläche zum Anlegen eines neuen Projekts fehlte in der Kunden-Kopfzeile zwischen Archivieren- und Bearbeiten-Icon.
+- **Doppeltes `+` im Projektbutton-Label** — i18n-Schlüssel für „+ Projekt hinzufügen" enthielt fälschlicherweise zwei Plus-Zeichen; jetzt korrekt ein `+`.
+- **Projektzuweisung beim Anlegen/Bearbeiten nicht gespeichert** — Der 11-Spalten-INSERT in `insertEntrySegments` übergab `project_id` nicht; der 4-Spalten-INSERT beim Timer-Start setzte sie implizit auf NULL. Beide Pfade übergeben jetzt korrekt `input.project_id ?? null`.
+
+### Security
+
+- **Gitleaks-Konfiguration** — `.gitleaks.toml` mit `useDefault`-Ruleset verhindert versehentlich committete Credentials. Allowlist für Tailwind-Hexfarben und SHA-gepinnte Actions.
+- **CODEOWNERS für Workflows** — `.github/CODEOWNERS` erfordert explizites Review von `@skoedr` bei Änderungen an den GitHub-Actions-Workflows.
 
 ### Migration Note
 
