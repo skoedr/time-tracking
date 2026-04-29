@@ -2,7 +2,7 @@
 
 All notable changes to TimeTrack are documented here.
 
-## [1.9.0] — unreleased
+## [1.9.0] — 2026-04-29
 
 ### Added
 
