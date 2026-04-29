@@ -1,6 +1,6 @@
 import type Database from 'better-sqlite3'
 import { app } from 'electron'
-import { join } from 'path'
+import { join, normalize } from 'path'
 import {
   mkdirSync,
   existsSync,
@@ -32,8 +32,14 @@ const DAILY_RETENTION = 7
  * Rotation only deletes `daily` backups; manual + pre-migration are kept forever.
  */
 
-export function getBackupsDir(): string {
-  const dir = join(app.getPath('userData'), 'backups')
+export function getDefaultBackupsDir(): string {
+  return join(app.getPath('userData'), 'backups')
+}
+
+export function getBackupsDir(backupPathOverride?: string): string {
+  const dir = backupPathOverride?.trim()
+    ? normalize(backupPathOverride.trim())
+    : getDefaultBackupsDir()
   mkdirSync(dir, { recursive: true })
   return dir
 }
@@ -73,9 +79,10 @@ function classify(filename: string): BackupReason | null {
 export async function createBackup(
   db: Database.Database,
   reason: BackupReason,
-  fromVersion?: number
+  fromVersion?: number,
+  backupDirOverride?: string
 ): Promise<string> {
-  const dir = getBackupsDir()
+  const dir = getBackupsDir(backupDirOverride)
   const targetPath = join(dir, buildFilename(reason, fromVersion))
   // db.backup() returns a Promise that resolves with progress info.
   await db.backup(targetPath)
@@ -94,15 +101,18 @@ export function createBackupSync(
   fromVersion?: number
 ): string | null {
   if (!existsSync(dbPath)) return null
-  const dir = getBackupsDir()
+  // Always use the default dir — called from the migration runner before
+  // DB settings are available, so backup_path cannot be read yet.
+  const dir = getDefaultBackupsDir()
+  mkdirSync(dir, { recursive: true })
   const targetPath = join(dir, buildFilename(reason, fromVersion))
   copyFileSync(dbPath, targetPath)
   console.log(`[backup] Created sync (${reason}): ${targetPath}`)
   return targetPath
 }
 
-export function listBackups(): BackupInfo[] {
-  const dir = getBackupsDir()
+export function listBackups(backupPathOverride?: string): BackupInfo[] {
+  const dir = getBackupsDir(backupPathOverride)
   const entries = readdirSync(dir)
   const result: BackupInfo[] = []
   for (const filename of entries) {
@@ -132,8 +142,8 @@ export function listBackups(): BackupInfo[] {
 /**
  * Keep only the last N daily backups. Manual + pre-migration are never deleted.
  */
-export function rotateDailyBackups(retain = DAILY_RETENTION): string[] {
-  const dailies = listBackups().filter((b) => b.reason === 'daily')
+export function rotateDailyBackups(retain = DAILY_RETENTION, backupDirOverride?: string): string[] {
+  const dailies = listBackups(backupDirOverride).filter((b) => b.reason === 'daily')
   // listBackups returns newest first; entries beyond `retain` are old.
   const toDelete = dailies.slice(retain)
   for (const b of toDelete) {
@@ -153,13 +163,17 @@ export function rotateDailyBackups(retain = DAILY_RETENTION): string[] {
  */
 export async function runDailyBackupIfNeeded(db: Database.Database): Promise<void> {
   try {
+    const row = db
+      .prepare("SELECT value FROM settings WHERE key = 'backup_path'")
+      .get() as { value: string } | undefined
+    const override = row?.value?.trim() || undefined
     const today = todayDate()
-    const existing = listBackups().find(
+    const existing = listBackups(override).find(
       (b) => b.reason === 'daily' && b.filename.includes(today)
     )
     if (existing) return
-    await createBackup(db, 'daily')
-    rotateDailyBackups()
+    await createBackup(db, 'daily', undefined, override)
+    rotateDailyBackups(DAILY_RETENTION, override)
   } catch (err) {
     console.warn('[backup] Daily backup failed (non-fatal):', err)
   }
@@ -180,8 +194,9 @@ export function restoreBackup(
   if (!existsSync(backupPath)) {
     throw new Error(`Backup file not found: ${backupPath}`)
   }
-  // Safety copy of the current DB before destruction.
-  const dir = getBackupsDir()
+  // Safety copy always goes to the default dir — never depends on network paths.
+  const dir = getDefaultBackupsDir()
+  mkdirSync(dir, { recursive: true })
   const safetyName = `backup-pre-restore-${isoTimestamp()}.sqlite`
   const safetyBackupPath = join(dir, safetyName)
   if (existsSync(currentDbPath)) {

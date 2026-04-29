@@ -83,6 +83,13 @@ export const en: Record<TranslationKey, string> = {
     'The mini widget stays always on top and shows the running timer. Show it with {hotkey}.',
   'onboarding.hotkey.hint': 'Both hotkeys can be changed in Settings.',
 
+  // Step 4 — Restore backup
+  'onboarding.restore.title': 'Restore data?',
+  'onboarding.restore.body': 'A backup was found. Would you like to restore your previous data now?',
+  'onboarding.restore.latestLabel': 'Latest backup:',
+  'onboarding.restore.restoreBtn': 'Restore',
+  'onboarding.restore.skip': 'Start without restoring',
+
   // Settings — Re-Trigger
   'settings.onboarding.retrigger': 'Show onboarding again',
 
@@ -407,6 +414,22 @@ export const en: Record<TranslationKey, string> = {
   'settings.data.openInExplorer': 'Open in Explorer',
   'settings.data.backupsFolder': 'Backups folder',
   'settings.data.open': 'Open',
+  'settings.data.backupPath': 'Backup path',
+  'settings.data.backupPathHint': 'Storage location for new backups (e.g. OneDrive folder)',
+  'settings.data.changeBackupPath': 'Change path…',
+  'settings.data.resetBackupPath': 'Reset',
+  'settings.data.backupPathChanging': 'Choosing path…',
+  'settings.data.backupPathChanged': 'Backup path saved.',
+  'settings.data.backupPathReset': 'Backup path reset to default.',
+  'settings.data.backupPathUnreachable': 'Backup path unreachable — new backups will be saved to the default location.',
+  'settings.data.restoreBackup': 'Restore from backup',
+  'settings.data.restoreBackupHint': 'The app will restart automatically after the restore.',
+  'settings.data.restoreBtn': 'Restore…',
+  'settings.data.restoreConfirmTitle': 'Restore backup?',
+  'settings.data.restoreConfirmBody': 'All current data will be replaced with the selected backup. A safety copy of the current state will be created first.',
+  'settings.data.restoreConfirmOk': 'Restore now',
+  'settings.data.restoring': 'Restoring…',
+  'settings.data.noBackupToRestore': 'No backups available',
   'settings.data.lastBackup': 'Last backup',
   'settings.data.noBackup': 'None yet',
   'settings.data.createBackup': 'Create backup now',

@@ -159,3 +159,93 @@ describe('restoreBackup', () => {
     expect(statSync(safetyBackupPath).size).toBeGreaterThan(0)
   })
 })
+
+// ── New tests for v1.9.5: custom backupPathOverride ──────────────────────────
+
+describe('getBackupsDir with override', () => {
+  it('uses override path when provided', async () => {
+    const { getBackupsDir } = await loadBackup()
+    const customDir = join(userDataDir, 'custom-backups')
+    const result = getBackupsDir(customDir)
+    expect(result).toBe(customDir)
+    expect(existsSync(customDir)).toBe(true)
+  })
+
+  it('falls back to default when override is empty string', async () => {
+    const { getBackupsDir, getDefaultBackupsDir } = await loadBackup()
+    const result = getBackupsDir('')
+    expect(result).toBe(getDefaultBackupsDir())
+  })
+
+  it('falls back to default when override is whitespace', async () => {
+    const { getBackupsDir, getDefaultBackupsDir } = await loadBackup()
+    const result = getBackupsDir('   ')
+    expect(result).toBe(getDefaultBackupsDir())
+  })
+})
+
+describe('listBackups with override', () => {
+  it('lists backups from the custom dir only', async () => {
+    const { listBackups, getBackupsDir } = await loadBackup()
+    const defaultDir = getBackupsDir()
+    const customDir = join(userDataDir, 'custom')
+    getBackupsDir(customDir) // creates dir
+
+    makeFile(join(defaultDir, 'backup-daily-2026-01-01.sqlite'))
+    makeFile(join(customDir, 'backup-daily-2026-02-01.sqlite'))
+    makeFile(join(customDir, 'backup-manual-2026-02-02T00-00-00-000Z.sqlite'))
+
+    const defaultList = listBackups()
+    expect(defaultList).toHaveLength(1)
+    expect(defaultList[0].filename).toContain('2026-01-01')
+
+    const customList = listBackups(customDir)
+    expect(customList).toHaveLength(2)
+    expect(customList.map((b) => b.filename).sort()).toEqual([
+      'backup-daily-2026-02-01.sqlite',
+      'backup-manual-2026-02-02T00-00-00-000Z.sqlite'
+    ])
+  })
+})
+
+describe('backup:restore path guard logic', () => {
+  it('accepts file path inside the default backups dir', async () => {
+    const { getDefaultBackupsDir, getBackupsDir } = await loadBackup()
+    const { resolve, normalize, sep } = await import('path')
+    const defaultDir = getDefaultBackupsDir()
+    // Mimic the guard from ipc.ts
+    const configuredPath = ''
+    const configuredDir = configuredPath ? normalize(configuredPath) : defaultDir
+    const testPath = join(getBackupsDir(), 'backup-daily-2026-04-01.sqlite')
+    const resolved = resolve(testPath)
+    const allowed =
+      resolved.startsWith(defaultDir + sep) || resolved.startsWith(configuredDir + sep)
+    expect(allowed).toBe(true)
+  })
+
+  it('accepts file path inside a custom configured dir', async () => {
+    const { getDefaultBackupsDir } = await loadBackup()
+    const { resolve, normalize, sep, join: pjoin } = await import('path')
+    const defaultDir = getDefaultBackupsDir()
+    const configuredPath = join(userDataDir, 'custom-backups')
+    const configuredDir = normalize(configuredPath)
+    const testPath = pjoin(configuredPath, 'backup-manual-2026-04-01T00-00-00-000Z.sqlite')
+    const resolved = resolve(testPath)
+    const allowed =
+      resolved.startsWith(defaultDir + sep) || resolved.startsWith(configuredDir + sep)
+    expect(allowed).toBe(true)
+  })
+
+  it('rejects file path outside both default and configured dir', async () => {
+    const { getDefaultBackupsDir } = await loadBackup()
+    const { resolve, normalize, sep, join: pjoin } = await import('path')
+    const defaultDir = getDefaultBackupsDir()
+    const configuredPath = join(userDataDir, 'custom-backups')
+    const configuredDir = normalize(configuredPath)
+    const maliciousPath = pjoin(userDataDir, '..', '..', 'etc', 'passwd')
+    const resolved = resolve(maliciousPath)
+    const allowed =
+      resolved.startsWith(defaultDir + sep) || resolved.startsWith(configuredDir + sep)
+    expect(allowed).toBe(false)
+  })
+})

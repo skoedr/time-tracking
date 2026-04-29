@@ -128,7 +128,11 @@ const api = {
     list: (): Promise<IpcResult<BackupInfo[]>> => ipcRenderer.invoke('backup:list'),
     create: (): Promise<IpcResult<string>> => ipcRenderer.invoke('backup:create'),
     restore: (filePath: string): Promise<IpcResult<{ safetyBackupPath: string }>> =>
-      ipcRenderer.invoke('backup:restore', filePath)
+      ipcRenderer.invoke('backup:restore', filePath),
+    setPath: (): Promise<IpcResult<string>> => ipcRenderer.invoke('backup:set-path'),
+    resetPath: (): Promise<IpcResult<void>> => ipcRenderer.invoke('backup:reset-path'),
+    getPathInfo: (): Promise<IpcResult<{ dir: string; isCustom: boolean; isReachable: boolean }>> =>
+      ipcRenderer.invoke('backup:get-path-info')
   },
   // Dashboard
   dashboard: {

@@ -1,14 +1,15 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useT, useLocale } from '../contexts/I18nContext'
 import type { TFunction } from '../contexts/I18nContext'
 import type { Locale } from '../../../shared/i18n'
+import type { BackupInfo } from '../../../shared/types'
 
 interface Props {
   open: boolean
   onFinish: () => void
 }
 
-const TOTAL_STEPS = 3
+const BASE_STEPS = 3
 
 // Default colors for new clients — same palette as ClientsView.
 const PRESET_COLORS = [
@@ -34,6 +35,17 @@ export function OnboardingWizard({ open, onFinish }: Props): React.JSX.Element |
   const { locale, setLocale } = useLocale()
 
   const [step, setStep] = useState(1)
+  const [availableBackups, setAvailableBackups] = useState<BackupInfo[]>([])
+  const [restoreConfirmed, setRestoreConfirmed] = useState(false)
+
+  const TOTAL_STEPS = availableBackups.length > 0 ? BASE_STEPS + 1 : BASE_STEPS
+
+  useEffect(() => {
+    if (!open) return
+    window.api.backups.list().then((res) => {
+      if (res.ok && res.data.length > 0) setAvailableBackups(res.data)
+    })
+  }, [open])
 
   // Step 2 form state
   const [clientName, setClientName] = useState('')
@@ -243,6 +255,61 @@ export function OnboardingWizard({ open, onFinish }: Props): React.JSX.Element |
               onFinish={onFinish}
               t={t}
             />
+          </>
+        )}
+        {/* ── Step 4: Restore ── */}
+        {step === 4 && availableBackups.length > 0 && (
+          <>
+            <div className="flex flex-col gap-2">
+              <h2 className="text-xl font-bold" style={{ color: 'var(--text)' }}>{t('onboarding.restore.title')}</h2>
+              <p className="text-sm" style={{ color: 'var(--text2)' }}>{t('onboarding.restore.body')}</p>
+            </div>
+
+            <div className="flex flex-col gap-3">
+              <div className="rounded-lg border p-3 text-sm" style={{ borderColor: 'var(--card-border)', background: 'var(--input-bg)' }}>
+                <span className="font-medium" style={{ color: 'var(--text2)' }}>
+                  {t('onboarding.restore.latestLabel')}
+                </span>{' '}
+                <span style={{ color: 'var(--text)' }}>
+                  {new Date(availableBackups[0].createdAt).toLocaleString('de-DE')}
+                  {' '}·{' '}
+                  {(availableBackups[0].sizeBytes / 1024).toFixed(0)} KB
+                </span>
+              </div>
+
+              {!restoreConfirmed ? (
+                <button
+                  type="button"
+                  onClick={() => setRestoreConfirmed(true)}
+                  className="rounded-lg border px-4 py-2 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                  style={{ borderColor: 'var(--card-border)', color: 'var(--text)' }}
+                >
+                  {t('onboarding.restore.restoreBtn')}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const res = await window.api.backups.restore(availableBackups[0].fullPath)
+                    if (res.ok) await window.api.app.relaunch()
+                  }}
+                  className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-300 transition-colors"
+                >
+                  {t('onboarding.restore.restoreBtn')}
+                </button>
+              )}
+            </div>
+
+            <div className="flex justify-between pt-2">
+              <button
+                type="button"
+                onClick={onFinish}
+                className="text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 rounded transition-opacity hover:opacity-80"
+                style={{ color: 'var(--text3)' }}
+              >
+                {t('onboarding.restore.skip')}
+              </button>
+            </div>
           </>
         )}
       </div>
