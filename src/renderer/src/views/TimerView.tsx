@@ -1,6 +1,8 @@
+import { useEffect, useState } from 'react'
 import { useTimer, formatDuration } from '../hooks/useTimer'
 import { useT } from '../contexts/I18nContext'
 import * as Icons from '../components/Icons'
+import type { Project } from '../../../shared/types'
 
 export default function TimerView() {
   const t = useT()
@@ -8,19 +10,59 @@ export default function TimerView() {
     clients,
     runningEntry,
     selectedClientId,
+    selectedProjectId,
     description,
     elapsedSeconds,
     isLoading,
     setSelectedClientId,
+    setSelectedProjectId,
     setDescription,
     start,
     stop
   } = useTimer()
 
+  const [projects, setProjects] = useState<Project[]>([])
+
+  // Load projects when client changes; reset selected project
+  useEffect(() => {
+    if (!selectedClientId) {
+      setProjects([])
+      setSelectedProjectId(null)
+      return
+    }
+    void window.api.projects
+      .getAll({ clientId: selectedClientId })
+      .then((res) => {
+        if (res.ok) {
+          const active = res.data.filter((p) => p.active === 1)
+          setProjects(active)
+          // Auto-select if exactly one active project
+          if (active.length === 1) {
+            setSelectedProjectId(active[0].id)
+          } else {
+            setSelectedProjectId(null)
+          }
+        }
+      })
+  }, [selectedClientId])
+
   const activeClients = clients.filter((c) => c.active)
   const selectedClient = clients.find((c) => c.id === selectedClientId)
+  const selectedProject = projects.find((p) => p.id === selectedProjectId)
   const isRunning = !!runningEntry
   const canStart = selectedClientId !== null && !isRunning
+
+  // Compute effective rate for display
+  function effectiveRateEuro(): number | null {
+    if (selectedProject?.rate_cent != null) return selectedProject.rate_cent / 100
+    if (selectedClient?.rate_cent) return selectedClient.rate_cent / 100
+    return null
+  }
+  const effectiveRate = effectiveRateEuro()
+  const showRateHint =
+    selectedProject?.rate_cent != null &&
+    selectedClient?.rate_cent != null &&
+    selectedProject.rate_cent !== selectedClient.rate_cent
 
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-8 h-full">
@@ -124,6 +166,59 @@ export default function TimerView() {
             </p>
           )}
         </div>
+
+        {/* Project — only shown when a client is selected and has projects */}
+        {selectedClientId !== null && projects.length > 0 && (
+          <div className="flex flex-col gap-1.5">
+            <label
+              className="text-xs font-semibold uppercase tracking-wide"
+              style={{ color: 'var(--text3)' }}
+            >
+              {t('timer.project.label')}
+            </label>
+            <div className="relative">
+              <select
+                aria-label={t('timer.project.label')}
+                value={selectedProjectId ?? ''}
+                onChange={(e) =>
+                  setSelectedProjectId(e.target.value ? Number(e.target.value) : null)
+                }
+                disabled={isRunning}
+                className="w-full appearance-none rounded-[10px] border px-3.5 py-2.5 pr-9 text-sm backdrop-blur-xl
+                  focus:outline-none focus:ring-2 focus:ring-indigo-500
+                  disabled:cursor-not-allowed disabled:opacity-50"
+                style={{
+                  background: 'var(--input-bg)',
+                  borderColor: 'var(--card-border)',
+                  color: 'var(--text)'
+                }}
+              >
+                <option value="">{t('timer.project.placeholder')}</option>
+                {projects.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
+              <span
+                className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2"
+                style={{ color: 'var(--text3)' }}
+              >
+                <Icons.ChevronDown />
+              </span>
+            </div>
+            {showRateHint && effectiveRate !== null && (
+              <p className="text-xs" style={{ color: 'var(--text3)' }}>
+                {t('timer.project.effectiveRate', {
+                  rate: effectiveRate.toLocaleString('de-DE', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                  })
+                })}
+              </p>
+            )}
+          </div>
+        )}
 
         {/* Description */}
         <div className="flex flex-col gap-1.5">

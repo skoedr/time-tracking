@@ -49,6 +49,7 @@ export function useTimer() {
     clients,
     runningEntry,
     selectedClientId,
+    selectedProjectId,
     description,
     elapsedSeconds,
     isLoading,
@@ -57,6 +58,7 @@ export function useTimer() {
     setClients,
     setRunningEntry,
     setSelectedClientId,
+    setSelectedProjectId,
     setDescription,
     setElapsedSeconds,
     setIsLoading,
@@ -148,8 +150,10 @@ export function useTimer() {
       setSelectedClientId(clientId)
     }
     setIsLoading(true)
+    const projectId = useTimerStore.getState().selectedProjectId
     const res = await window.api.entries.start({
       client_id: clientId,
+      project_id: projectId ?? undefined,
       description,
       started_at: new Date().toISOString()
     })
@@ -292,12 +296,14 @@ export function useTimer() {
     clients,
     runningEntry,
     selectedClientId,
+    selectedProjectId,
     description,
     elapsedSeconds,
     isLoading,
     idleEvent,
     quickNoteEntry,
     setSelectedClientId,
+    setSelectedProjectId,
     setDescription,
     setQuickNoteEntry,
     start,

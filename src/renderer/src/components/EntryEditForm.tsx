@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import type { Client, Entry } from '../../../shared/types'
+import type { Client, Entry, Project } from '../../../shared/types'
 import { formatTimeHHMM, parseTimeToDate } from '../../../shared/date'
 import { useEntriesStore } from '../store/entriesStore'
 import { useT } from '../contexts/I18nContext'
@@ -57,10 +57,28 @@ export function EntryEditForm({
   const [startTime, setStartTime] = useState(formatTimeHHMM(initialStart))
   const [stopTime, setStopTime] = useState(formatTimeHHMM(initialStop))
   const [clientId, setClientId] = useState<number>(entry?.client_id ?? clients[0]?.id ?? 0)
+  const [projectId, setProjectId] = useState<number | null>(entry?.project_id ?? null)
+  const [projects, setProjects] = useState<Project[]>([])
   const [description, setDescription] = useState(entry?.description ?? '')
   const [tags, setTags] = useState(entry?.tags ?? '')
   const [reference, setReference] = useState(entry?.reference ?? '')
   const [billable, setBillable] = useState(entry?.billable ?? 1)
+
+  // Load projects when client changes; reset project if client changes
+  useEffect(() => {
+    if (!clientId) {
+      setProjects([])
+      setProjectId(null)
+      return
+    }
+    void window.api.projects.getAll({ clientId }).then((res) => {
+      if (res.ok) {
+        setProjects(res.data.filter((p) => p.active === 1 || p.id === entry?.project_id))
+      }
+    })
+  // Only re-run when clientId changes (not on initial mount with existing project_id)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clientId])
   const [privateNote, setPrivateNote] = useState(entry?.private_note ?? '')
   const [state, setState] = useState<FormState>('idle')
   const [error, setError] = useState<string | null>(null)
@@ -112,6 +130,7 @@ export function EntryEditForm({
       ? await window.api.entries.update({
           id: entry.id,
           client_id: clientId,
+          project_id: projectId ?? undefined,
           description: description.trim(),
           started_at: start,
           stopped_at: stop,
@@ -122,6 +141,7 @@ export function EntryEditForm({
         })
       : await window.api.entries.create({
           client_id: clientId,
+          project_id: projectId ?? undefined,
           description: description.trim(),
           started_at: start,
           stopped_at: stop,
@@ -198,6 +218,27 @@ export function EntryEditForm({
           ))}
         </select>
       </label>
+
+      {/* Project picker — only shown when there are active projects for the client */}
+      {projects.length > 0 && (
+        <label className="flex flex-col gap-1">
+          <span className="text-xs" style={{ color: 'var(--text2)' }}>{t('entry.project')}</span>
+          <select
+            value={projectId ?? ''}
+            onChange={(e) => setProjectId(e.target.value ? parseInt(e.target.value, 10) : null)}
+            className="rounded border px-2 py-1.5 focus:border-indigo-500 focus:outline-none backdrop-blur-xl"
+            style={{ background: 'var(--input-bg)', borderColor: 'var(--card-border)', color: 'var(--text)' }}
+            disabled={isSaving}
+          >
+            <option value="">{t('entry.project.placeholder')}</option>
+            {projects.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
 
       <label className="flex flex-col gap-1">
         <span className="text-xs" style={{ color: 'var(--text2)' }}>

@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import type { Client, Entry } from '../../../shared/types'
+import type { Client, Entry, Project } from '../../../shared/types'
 import { deserializeTags, entryHasTag } from '../../../shared/tags'
 import { useEntriesStore } from '../store/entriesStore'
+import { useProjectsStore } from '../store/projectsStore'
 import { useToastStore } from '../store/toastStore'
 import { ConfirmDialog } from './ConfirmDialog'
 import { EntryEditForm } from './EntryEditForm'
@@ -37,10 +38,12 @@ export function CalendarDrawer({
 }: Props): React.ReactElement | null {
   const showToast = useToastStore((s) => s.show)
   const t = useT()
+  const projectsVersion = useProjectsStore((s) => s.version)
   const [tagFilter, setTagFilter] = useState<string | null>(null)
   const [editingId, setEditingId] = useState<number | null>(null)
   const [creating, setCreating] = useState(false)
   const [deleteCandidate, setDeleteCandidate] = useState<Entry | null>(null)
+  const [projectsById, setProjectsById] = useState<Map<number, Project>>(new Map())
   const drawerRef = useRef<HTMLDivElement>(null)
   const previouslyFocused = useRef<Element | null>(null)
 
@@ -71,6 +74,17 @@ export function CalendarDrawer({
     for (const c of clients) m.set(c.id, c)
     return m
   }, [clients])
+
+  // Load all projects for name display in entry rows
+  useEffect(() => {
+    void window.api.projects.getAll({}).then((res) => {
+      if (res.ok) {
+        const map = new Map<number, Project>()
+        for (const p of res.data) map.set(p.id, p)
+        setProjectsById(map)
+      }
+    })
+  }, [projectsVersion])
 
   // Collect all unique tags from today's entries for the filter pill bar.
   const allDayTags = useMemo(() => {
@@ -184,6 +198,7 @@ export function CalendarDrawer({
           <ul className="flex flex-col gap-2">
             {filteredEntries.map((e) => {
               const client = clientsById.get(e.client_id)
+              const project = e.project_id != null ? projectsById.get(e.project_id) : undefined
               const isEditing = editingId === e.id
               const entryTags = deserializeTags(e.tags)
               return (
@@ -204,6 +219,9 @@ export function CalendarDrawer({
                           <span>·</span>
                           <span className="truncate" style={{ color: 'var(--text)' }}>
                             {client?.name ?? t('common.unknown')}
+                            {project && (
+                              <span style={{ color: 'var(--text3)' }}> · {project.name}</span>
+                            )}
                           </span>
                         </div>
                         {e.description && (

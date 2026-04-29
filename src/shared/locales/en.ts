@@ -461,4 +461,16 @@ export const en: Record<TranslationKey, string> = {
   'settings.update.upToDate': 'You are using the latest version.',
   'settings.update.autoInfo':
     'Updates are checked automatically at app start and downloaded in the background. You decide when to install.',
+
+  // ── Timer — Project picker (v1.9 #75 PR 3) ───────────────────────────────
+  'timer.project.label': 'Project',
+  'timer.project.placeholder': '— No project —',
+  'timer.project.effectiveRate': 'Effective rate: {rate} €/h (project overrides client)',
+
+  // ── EntryEditForm — Project (v1.9 #75 PR 3) ──────────────────────────────
+  'entry.project': 'Project',
+  'entry.project.placeholder': '— No project —',
+
+  // ── CalendarView — Project filter (v1.9 #75 PR 3) ────────────────────────
+  'calendar.filter.allProjects': 'All projects',
 } as const satisfies Record<TranslationKey, string>

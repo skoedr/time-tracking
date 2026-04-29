@@ -469,6 +469,18 @@ export const de = {
   'settings.update.upToDate': 'Du verwendest die aktuelle Version.',
   'settings.update.autoInfo':
     'Updates werden bei App-Start automatisch geprüft und im Hintergrund geladen. Du entscheidest, wann installiert wird.',
+
+  // ── Timer — Projekt-Picker (v1.9 #75 PR 3) ────────────────────────────────
+  'timer.project.label': 'Projekt',
+  'timer.project.placeholder': '— Kein Projekt —',
+  'timer.project.effectiveRate': 'Effektiver Satz: {rate} €/h (Projekt überschreibt Kunden)',
+
+  // ── EntryEditForm — Projekt (v1.9 #75 PR 3) ───────────────────────────────
+  'entry.project': 'Projekt',
+  'entry.project.placeholder': '— Kein Projekt —',
+
+  // ── CalendarView — Projekt-Filter (v1.9 #75 PR 3) ────────────────────────
+  'calendar.filter.allProjects': 'Alle Projekte',
 } as const
 
 export type TranslationKey = keyof typeof de

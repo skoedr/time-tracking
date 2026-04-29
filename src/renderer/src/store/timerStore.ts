@@ -8,6 +8,7 @@ interface TimerState {
 
   // UI
   selectedClientId: number | null
+  selectedProjectId: number | null
   description: string
   elapsedSeconds: number
   isLoading: boolean
@@ -22,6 +23,7 @@ interface TimerState {
   setClients: (clients: Client[]) => void
   setRunningEntry: (entry: Entry | null) => void
   setSelectedClientId: (id: number | null) => void
+  setSelectedProjectId: (id: number | null) => void
   setDescription: (desc: string) => void
   setElapsedSeconds: (s: number) => void
   setIsLoading: (v: boolean) => void
@@ -33,6 +35,7 @@ export const useTimerStore = create<TimerState>((set) => ({
   clients: [],
   runningEntry: null,
   selectedClientId: null,
+  selectedProjectId: null,
   description: '',
   elapsedSeconds: 0,
   isLoading: false,
@@ -42,6 +45,7 @@ export const useTimerStore = create<TimerState>((set) => ({
   setClients: (clients) => set({ clients }),
   setRunningEntry: (runningEntry) => set({ runningEntry }),
   setSelectedClientId: (selectedClientId) => set({ selectedClientId }),
+  setSelectedProjectId: (selectedProjectId) => set({ selectedProjectId }),
   setDescription: (description) => set({ description }),
   setElapsedSeconds: (elapsedSeconds) => set({ elapsedSeconds }),
   setIsLoading: (isLoading) => set({ isLoading }),
