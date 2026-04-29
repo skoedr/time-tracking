@@ -590,6 +590,13 @@ export default function SettingsView(): React.JSX.Element {
                   </code>
                   <button
                     type="button"
+                    onClick={() => window.api.shell.openPath(backupPathInfo?.dir ?? paths.backups)}
+                    className={btnSecondaryClass}
+                  >
+                    {t('settings.data.open')}
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => void changeBackupPath()}
                     className={btnSecondaryClass}
                   >
@@ -607,20 +614,6 @@ export default function SettingsView(): React.JSX.Element {
                 </div>
               </Row>
 
-              <Row label={t('settings.data.backupsFolder')} stacked>
-                <div className="flex items-center gap-2">
-                  <code className="flex-1 truncate rounded px-3 py-1.5 text-xs" style={{ background: 'var(--card-bg)', color: 'var(--text2)' }}>
-                    {paths.backups}
-                  </code>
-                  <button
-                    type="button"
-                    onClick={() => window.api.shell.openPath(paths.backups)}
-                    className={btnSecondaryClass}
-                  >
-                    {t('settings.data.open')}
-                  </button>
-                </div>
-              </Row>
               <Row
                 label={t('settings.data.lastBackup')}
                 hint={
