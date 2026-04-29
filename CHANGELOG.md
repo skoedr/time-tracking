@@ -2,6 +2,13 @@
 
 All notable changes to TimeTrack are documented here.
 
+## [1.9.6] — unreleased
+
+### Added
+
+- **Auto-Projektfarbe aus Kundenfarbe (E1)** — Neue Projekte erhalten automatisch eine etwas hellere Variante der Kundenfarbe als Standard-Vorschlag (HSL-Helligkeitsverschiebung +18 %), statt keine Farbe vorzuschlagen. Der Farb-Picker bleibt unverändert — der Nutzer kann die Farbe weiterhin frei wählen oder auf „Kundenfarbe übernehmen" zurücksetzen. ([#75](https://github.com/skoedr/time-tracking/issues/75))
+- **Projekt-Quick-Stats in der Kundenliste (E5)** — Unter jedem Projektnamen wird jetzt eine kompakte Statistikzeile angezeigt: Anzahl Zeiteinträge + relativer Zeitstempel des letzten Eintrags (z.B. „12 Einträge · vor 3 Tagen"). Projekte ohne Einträge zeigen keine Statistik. ([#75](https://github.com/skoedr/time-tracking/issues/75))
+
 ## [1.9.5] — unreleased
 
 ### Added
