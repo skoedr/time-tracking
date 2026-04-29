@@ -2,10 +2,6 @@
 
 All notable changes to TimeTrack are documented here.
 
-## [1.10.0] — unreleased
-
-<!-- v1.10 — Reporting & Outlook-Vorbereitung -->
-
 ## [1.9.0] — 2026-04-29
 
 ### Added
