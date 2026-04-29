@@ -211,6 +211,7 @@ export const de = {
   'clients.action.reactivate': 'Reaktivieren',
   'clients.confirm.delete':
     'Kunde "{name}" wirklich löschen?\nAlle Zeiteinträge werden mitgelöscht.',
+  'clients.confirm.deleteTitle': 'Kunde löschen?',
   'clients.form.createTitle': 'Neuer Kunde',
   'clients.form.editTitle': 'Kunde bearbeiten',
   'clients.form.nameLabel': 'Name',
@@ -241,7 +242,8 @@ export const de = {
   'projects.archivedSection': 'Archiviert ({count})',
   'projects.action.archive': 'Archivieren',
   'projects.action.reactivate': 'Reaktivieren',
-  'projects.confirm.delete': 'Projekt „{name}" wirklich löschen?',
+  'projects.confirm.delete': 'Projekt „{name}“ wirklich löschen?',
+  'projects.confirm.deleteTitle': 'Projekt löschen?',
   'projects.confirm.deleteWithEntries':
     'Projekt „{name}" hat noch {count} Einträge. Trotzdem löschen?\nDie Einträge werden dem Kunden zugeordnet.',
   'projects.form.createTitle': 'Neues Projekt',
