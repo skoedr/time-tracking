@@ -2,7 +2,23 @@
 
 All notable changes to TimeTrack are documented here.
 
+## [1.9.0] — unreleased
+
+### Added
+
+- **Projekte pro Kunde — DB, Types, IPC (PR 1/4)** — Foundation für Issue #75. Neue `projects`-Tabelle (client-scoped via FK, Soft-Delete via `active = 0`), `project_id`-Spalte auf `entries` (nullable, ON DELETE SET NULL), vollständige IPC-Handler (`projects:getAll`, `projects:create`, `projects:update`, `projects:archive`, `projects:delete`), TypeScript-Typen (`Project`, `CreateProjectInput`, `UpdateProjectInput`, `ProjectWithCount`) und Preload-Exposition (`window.api.projects.*`). ([#75](https://github.com/skoedr/time-tracking/issues/75))
+
+### Fixed
+
+- **`insertEntrySegments` unterschlug `project_id`** — Der 11-Spalten-INSERT in der Hilfsfunktion übergab `project_id` nicht. Jetzt 12-Spalten-INSERT; beide Aufrufer (`entries:create`, `entries:update`) reichen `input.project_id ?? null` weiter.
+- **`entries:start` speicherte `project_id` nicht** — Der 4-Spalten-INSERT beim Starten eines Timers setzte `project_id` implizit auf NULL. Jetzt explizit übergeben.
+
+### Migration Note
+
+Migration 012 (`v1.9-projects`) fügt einen Index `idx_entries_project_started` auf der `entries`-Tabelle hinzu. Bei sehr großen Datenbanken (50.000+ Einträge) kann der erste App-Start nach dem Update 2–5 Sekunden länger dauern, während der Index aufgebaut wird.
+
 ## [1.8.1] — 2026-04-28
+
 
 ### Fixed
 

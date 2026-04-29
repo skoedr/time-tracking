@@ -548,4 +548,113 @@ describe('migration SQL execution', () => {
     const row = db.prepare('SELECT reference FROM entries').get() as { reference: string }
     expect(row.reference).toBe('JIRA-123')
   })
+
+  // ── Migration 012 — v1.9-projects ──────────────────────────────────────
+
+  it('migration 012 — projects table exists after full migration run', () => {
+    applyAll()
+    const tables = (
+      db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all() as Array<{
+        name: string
+      }>
+    ).map((r) => r.name)
+    expect(tables).toContain('projects')
+  })
+
+  it('migration 012 — entries.project_id column exists and is nullable', () => {
+    applyAll()
+    const cols = db.prepare('PRAGMA table_info(entries)').all() as Array<{
+      name: string
+      notnull: number
+    }>
+    const col = cols.find((c) => c.name === 'project_id')
+    expect(col).toBeDefined()
+    expect(col?.notnull).toBe(0)
+  })
+
+  it('migration 012 — idx_projects_client_active index exists', () => {
+    applyAll()
+    const idx = db
+      .prepare(
+        "SELECT name FROM sqlite_master WHERE type='index' AND name='idx_projects_client_active'"
+      )
+      .get()
+    expect(idx).toBeDefined()
+  })
+
+  it('migration 012 — existing entries survive with project_id = NULL', () => {
+    // Apply 001-011, insert entry, then apply 012.
+    const pre = migrations.filter((m) => m.version < 12)
+    for (const m of pre) {
+      const tx = db.transaction(() => {
+        db.exec(m.up)
+        db.prepare('INSERT INTO schema_version (version, name) VALUES (?, ?)').run(
+          m.version,
+          m.name
+        )
+      })
+      tx()
+    }
+    db.prepare(`INSERT INTO clients (id, name) VALUES (1, 'Acme')`).run()
+    db.prepare(
+      `INSERT INTO entries (client_id, started_at, stopped_at)
+       VALUES (1, '2026-05-01T08:00:00Z', '2026-05-01T09:00:00Z')`
+    ).run()
+    // Apply migration 012
+    const m012 = migrations.find((m) => m.version === 12)!
+    const tx = db.transaction(() => {
+      db.exec(m012.up)
+      db.prepare('INSERT INTO schema_version (version, name) VALUES (?, ?)').run(
+        m012.version,
+        m012.name
+      )
+    })
+    tx()
+    const row = db.prepare('SELECT project_id FROM entries').get() as {
+      project_id: number | null
+    }
+    expect(row.project_id).toBeNull()
+  })
+
+  it('migration 012 — deleting project sets entries.project_id to NULL (SET NULL)', () => {
+    applyAll()
+    db.prepare(`INSERT INTO clients (id, name) VALUES (1, 'Acme')`).run()
+    db.prepare(`INSERT INTO projects (id, client_id, name) VALUES (1, 1, 'App')`).run()
+    db.prepare(
+      `INSERT INTO entries (client_id, started_at, stopped_at, project_id)
+       VALUES (1, '2026-05-01T08:00:00Z', '2026-05-01T09:00:00Z', 1)`
+    ).run()
+    db.prepare('DELETE FROM projects WHERE id = 1').run()
+    const row = db.prepare('SELECT project_id FROM entries').get() as {
+      project_id: number | null
+    }
+    expect(row.project_id).toBeNull()
+  })
+
+  it('migration 012 — deleting client cascades to projects', () => {
+    applyAll()
+    db.prepare(`INSERT INTO clients (id, name) VALUES (1, 'Acme')`).run()
+    db.prepare(`INSERT INTO projects (client_id, name) VALUES (1, 'App')`).run()
+    db.prepare('DELETE FROM clients WHERE id = 1').run()
+    const count = db.prepare('SELECT COUNT(*) AS n FROM projects').get() as { n: number }
+    expect(count.n).toBe(0)
+  })
+
+  it('migration 012 — UNIQUE partial index: two active projects same name same client → rejected', () => {
+    applyAll()
+    db.prepare(`INSERT INTO clients (id, name) VALUES (1, 'Acme')`).run()
+    db.prepare(`INSERT INTO projects (client_id, name, active) VALUES (1, 'App', 1)`).run()
+    expect(() => {
+      db.prepare(`INSERT INTO projects (client_id, name, active) VALUES (1, 'App', 1)`).run()
+    }).toThrow()
+  })
+
+  it('migration 012 — UNIQUE partial index: two archived projects same name same client → allowed', () => {
+    applyAll()
+    db.prepare(`INSERT INTO clients (id, name) VALUES (1, 'Acme')`).run()
+    db.prepare(`INSERT INTO projects (client_id, name, active) VALUES (1, 'App', 0)`).run()
+    expect(() => {
+      db.prepare(`INSERT INTO projects (client_id, name, active) VALUES (1, 'App', 0)`).run()
+    }).not.toThrow()
+  })
 })

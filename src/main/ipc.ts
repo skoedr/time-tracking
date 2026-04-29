@@ -20,11 +20,14 @@ import { mergeOnlyHandler, pdfInfoHandler } from './pdfMergeHandlers'
 import type {
   Client,
   Entry,
+  Project,
   CreateClientInput,
   UpdateClientInput,
   CreateEntryInput,
   CreateManualEntryInput,
   UpdateEntryInput,
+  CreateProjectInput,
+  UpdateProjectInput,
   MonthQuery,
   Settings,
   IpcResult,
@@ -130,10 +133,10 @@ export function registerIpcHandlers(hooks: IpcHooks): void {
       )
       const info = db
         .prepare(
-          `INSERT INTO entries (client_id, description, started_at, heartbeat_at)
-           VALUES (?, ?, ?, ?)`
+          `INSERT INTO entries (client_id, description, started_at, heartbeat_at, project_id)
+           VALUES (?, ?, ?, ?, ?)`
         )
-        .run(input.client_id, input.description, input.started_at, input.started_at)
+        .run(input.client_id, input.description, input.started_at, input.started_at, input.project_id ?? null)
       const row = db
         .prepare(`SELECT * FROM entries WHERE id = ?`)
         .get(info.lastInsertRowid) as Entry
@@ -220,7 +223,7 @@ export function registerIpcHandlers(hooks: IpcHooks): void {
       const err = validateManualEntry(db, input)
       if (err) return fail(err)
       const segments = splitAtMidnight(new Date(input.started_at), new Date(input.stopped_at))
-      const insertedRow = insertEntrySegments(db, input, segments, input.tags ?? '', input.reference ?? '', input.billable ?? 1, input.private_note ?? '')
+      const insertedRow = insertEntrySegments(db, input, segments, input.tags ?? '', input.reference ?? '', input.billable ?? 1, input.private_note ?? '', input.project_id ?? null)
       return ok(insertedRow)
     } catch (e) {
       return fail(e)
@@ -248,7 +251,7 @@ export function registerIpcHandlers(hooks: IpcHooks): void {
         } else {
           db.prepare(`DELETE FROM entries WHERE id = ?`).run(input.id)
         }
-        return insertEntrySegments(db, input, segments, input.tags ?? '', input.reference ?? '', input.billable ?? 1, input.private_note ?? '')
+        return insertEntrySegments(db, input, segments, input.tags ?? '', input.reference ?? '', input.billable ?? 1, input.private_note ?? '', input.project_id ?? null)
       })
       const row = tx()
       return ok(row)
@@ -321,6 +324,121 @@ export function registerIpcHandlers(hooks: IpcHooks): void {
         .sort((a, b) => b[1] - a[1])
         .map(([tag]) => tag)
       return ok(sorted)
+    } catch (e) {
+      return fail(e)
+    }
+  })
+
+  // ── Projects (v1.9 #75) ──────────────────────────────────────
+  ipcMain.handle(
+    'projects:getAll',
+    (_e, req?: { clientId?: number | null }): IpcResult<Project[]> => {
+      try {
+        const base = `SELECT p.*, COALESCE(ec.cnt, 0) AS entry_count FROM projects p
+          LEFT JOIN (SELECT project_id, COUNT(*) AS cnt FROM entries WHERE deleted_at IS NULL GROUP BY project_id) ec
+            ON ec.project_id = p.id`
+        let query: string
+        let params: unknown[]
+        if (req !== undefined && req !== null && 'clientId' in req) {
+          if (req.clientId === null) {
+            query = `${base} WHERE p.client_id IS NULL ORDER BY p.active DESC, p.name`
+            params = []
+          } else {
+            query = `${base} WHERE p.client_id = ? ORDER BY p.active DESC, p.name`
+            params = [req.clientId]
+          }
+        } else {
+          query = `${base} ORDER BY p.active DESC, p.name`
+          params = []
+        }
+        const rows = db.prepare(query).all(...params) as Project[]
+        return ok(rows)
+      } catch (e) {
+        return fail(e)
+      }
+    }
+  )
+
+  ipcMain.handle('projects:create', (_e, input: CreateProjectInput): IpcResult<Project> => {
+    try {
+      const err = validateProject(input, db)
+      if (err) return fail(err)
+      const result = db
+        .prepare(
+          `INSERT INTO projects (client_id, name, color, rate_cent) VALUES (?, ?, ?, ?) RETURNING *`
+        )
+        .get(
+          input.client_id ?? null,
+          input.name.trim(),
+          input.color ?? '',
+          input.rate_cent ?? null
+        ) as Project
+      return ok(result)
+    } catch (e) {
+      return fail(e)
+    }
+  })
+
+  ipcMain.handle('projects:update', (_e, input: UpdateProjectInput): IpcResult<Project> => {
+    try {
+      const err = validateProject(input, db)
+      if (err) return fail(err)
+      const current = db
+        .prepare('SELECT client_id FROM projects WHERE id = ?')
+        .get(input.id) as { client_id: number | null } | undefined
+      if (!current) return fail('Projekt nicht gefunden')
+      if (current.client_id !== input.client_id) {
+        const countRow = db
+          .prepare(
+            `SELECT COUNT(*) AS n FROM entries WHERE project_id = ? AND deleted_at IS NULL`
+          )
+          .get(input.id) as { n: number }
+        if (countRow.n > 0) {
+          return fail(
+            'Projekt hat Einträge und kann nicht zu einem anderen Kunden verschoben werden'
+          )
+        }
+      }
+      const result = db
+        .prepare(
+          `UPDATE projects SET client_id=?, name=?, color=?, rate_cent=?, active=? WHERE id=? RETURNING *`
+        )
+        .get(
+          input.client_id ?? null,
+          input.name.trim(),
+          input.color ?? '',
+          input.rate_cent ?? null,
+          input.active,
+          input.id
+        ) as Project
+      return ok(result)
+    } catch (e) {
+      return fail(e)
+    }
+  })
+
+  ipcMain.handle('projects:archive', (_e, id: number): IpcResult<void> => {
+    try {
+      db.prepare('UPDATE projects SET active = 0 WHERE id = ?').run(id)
+      return ok(undefined)
+    } catch (e) {
+      return fail(e)
+    }
+  })
+
+  ipcMain.handle('projects:delete', (_e, id: number): IpcResult<void> => {
+    try {
+      const tx = db.transaction(() => {
+        const countRow = db
+          .prepare(
+            `SELECT COUNT(*) AS n FROM entries WHERE project_id = ? AND deleted_at IS NULL`
+          )
+          .get(id) as { n: number }
+        if (countRow.n > 0) throw new Error('Projekt hat noch aktive Einträge')
+        db.prepare('DELETE FROM projects WHERE id = ?').run(id)
+      })
+      tx()
+      return ok(undefined)
     } catch (e) {
       return fail(e)
     }
@@ -846,6 +964,33 @@ export function registerIpcHandlers(hooks: IpcHooks): void {
 }
 
 /**
+ * Server-side validation for project create/update.
+ * Returns an error string if invalid, `null` if valid.
+ */
+function validateProject(
+  input: CreateProjectInput | UpdateProjectInput,
+  db?: ReturnType<typeof getDb>
+): string | null {
+  const name = input.name?.trim() ?? ''
+  if (name.length === 0) return 'Name darf nicht leer sein'
+  if (name.length > 100) return 'Name darf höchstens 100 Zeichen lang sein'
+  if (['allgemein', 'general'].includes(name.toLowerCase())) {
+    return `"${input.name}" ist ein reservierter Name`
+  }
+  if (input.rate_cent !== undefined && input.rate_cent !== null) {
+    const rate = Number(input.rate_cent)
+    if (!Number.isFinite(rate) || rate < 0) return 'Stundensatz darf nicht negativ sein'
+  }
+  if (db && input.client_id !== null && input.client_id !== undefined) {
+    const clientRow = db
+      .prepare('SELECT id FROM clients WHERE id = ?')
+      .get(input.client_id) as { id: number } | undefined
+    if (!clientRow) return 'Kunde existiert nicht'
+  }
+  return null
+}
+
+/**
  * Server-side validation contract for manual entry create/update (E3).
  * Returns an error string if invalid, `null` if valid. Single point of
  * truth: UI may pre-validate but must not be the only line of defence
@@ -941,13 +1086,14 @@ function insertEntrySegments(
   tags = '',
   reference = '',
   billable = 1,
-  private_note = ''
+  private_note = '',
+  project_id: number | null = null
 ): Entry {
   const linkId = segments.length > 1 ? randomUUID() : null
   const description = input.description.trim()
   const insertStmt = db.prepare(
-    `INSERT INTO entries (client_id, description, started_at, stopped_at, heartbeat_at, rounded_min, link_id, tags, reference, billable, private_note)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    `INSERT INTO entries (client_id, description, started_at, stopped_at, heartbeat_at, rounded_min, link_id, project_id, tags, reference, billable, private_note)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   )
   const tx = db.transaction((): Entry => {
     let firstId = 0
@@ -962,6 +1108,7 @@ function insertEntrySegments(
         stoppedAt,
         Math.round((seg.stop.getTime() - seg.start.getTime()) / 60000),
         linkId,
+        project_id,
         tags,
         reference,
         billable,

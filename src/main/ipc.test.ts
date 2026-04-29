@@ -582,8 +582,272 @@ describe('billable + private_note — DB round-trip', () => {
 })
 
 // ---------------------------------------------------------------------------
-// Regression test: dashboard:summary duration calculation must return exact
-// integer seconds for entries with round durations (e.g. exactly 1 hour).
+// projects — validateProject + projects:* IPC SQL contract tests
+// ---------------------------------------------------------------------------
+
+/**
+ * Local replica of validateProject from ipc.ts so we can test it without
+ * booting the Electron runtime.
+ */
+function validateProject(
+  input: { client_id: number | null; name: string; color: string; rate_cent?: number | null },
+  db?: Database.Database
+): string | null {
+  const name = input.name?.trim() ?? ''
+  if (name.length === 0) return 'Name darf nicht leer sein'
+  if (name.length > 100) return 'Name darf höchstens 100 Zeichen lang sein'
+  if (['allgemein', 'general'].includes(name.toLowerCase())) {
+    return `"${input.name}" ist ein reservierter Name`
+  }
+  if (input.rate_cent !== undefined && input.rate_cent !== null) {
+    const rate = Number(input.rate_cent)
+    if (!Number.isFinite(rate) || rate < 0) return 'Stundensatz darf nicht negativ sein'
+  }
+  if (db && input.client_id !== null && input.client_id !== undefined) {
+    const clientRow = db.prepare('SELECT id FROM clients WHERE id = ?').get(input.client_id) as
+      | { id: number }
+      | undefined
+    if (!clientRow) return 'Kunde existiert nicht'
+  }
+  return null
+}
+
+describe('projects — validateProject', () => {
+  let tmpDir: string
+  let db: Database.Database
+
+  beforeEach((ctx) => {
+    if (!DatabaseImpl) {
+      ctx.skip()
+      return
+    }
+    tmpDir = mkdtempSync(join(tmpdir(), 'tt-projects-'))
+    db = new DatabaseImpl(join(tmpDir, 'test.sqlite'))
+    db.pragma('foreign_keys = ON')
+    db.exec(
+      `CREATE TABLE schema_version (
+         version INTEGER PRIMARY KEY,
+         name TEXT NOT NULL,
+         applied_at TEXT NOT NULL DEFAULT (datetime('now'))
+       )`
+    )
+    for (const m of migrations) {
+      const tx = db.transaction(() => {
+        db.exec(m.up)
+        db.prepare('INSERT INTO schema_version (version, name) VALUES (?, ?)').run(
+          m.version,
+          m.name
+        )
+      })
+      tx()
+    }
+    db.prepare(`INSERT INTO clients (id, name) VALUES (1, 'Acme')`).run()
+    db.prepare(`INSERT INTO clients (id, name) VALUES (2, 'Other')`).run()
+  })
+
+  afterEach(() => {
+    if (!db) return
+    db.close()
+    rmSync(tmpDir, { recursive: true, force: true })
+  })
+
+  it('accepts valid project input', () => {
+    const err = validateProject({ client_id: 1, name: 'App', color: '#abc', rate_cent: null }, db)
+    expect(err).toBeNull()
+  })
+
+  it('rejects empty name', () => {
+    const err = validateProject({ client_id: 1, name: '  ', color: '' }, db)
+    expect(err).toMatch(/Name darf nicht leer/)
+  })
+
+  it('rejects name over 100 chars', () => {
+    const err = validateProject({ client_id: 1, name: 'x'.repeat(101), color: '' }, db)
+    expect(err).toMatch(/100 Zeichen/)
+  })
+
+  it('rejects reserved name "Allgemein"', () => {
+    const err = validateProject({ client_id: 1, name: 'Allgemein', color: '' }, db)
+    expect(err).toMatch(/reservierter Name/)
+  })
+
+  it('rejects reserved name "allgemein" (case-insensitive)', () => {
+    const err = validateProject({ client_id: 1, name: 'allgemein', color: '' }, db)
+    expect(err).toMatch(/reservierter Name/)
+  })
+
+  it('rejects negative rate_cent', () => {
+    const err = validateProject({ client_id: 1, name: 'App', color: '', rate_cent: -100 }, db)
+    expect(err).toMatch(/negativ/)
+  })
+
+  it('rejects unknown client_id', () => {
+    const err = validateProject({ client_id: 999, name: 'App', color: '' }, db)
+    expect(err).toMatch(/Kunde existiert nicht/)
+  })
+
+  it('allows null client_id (E4 orphan escape hatch)', () => {
+    const err = validateProject({ client_id: null, name: 'App', color: '' }, db)
+    expect(err).toBeNull()
+  })
+})
+
+describe('projects — SQL contract tests', () => {
+  let tmpDir: string
+  let db: Database.Database
+
+  beforeEach((ctx) => {
+    if (!DatabaseImpl) {
+      ctx.skip()
+      return
+    }
+    tmpDir = mkdtempSync(join(tmpdir(), 'tt-projects-sql-'))
+    db = new DatabaseImpl(join(tmpDir, 'test.sqlite'))
+    db.pragma('foreign_keys = ON')
+    db.exec(
+      `CREATE TABLE schema_version (
+         version INTEGER PRIMARY KEY,
+         name TEXT NOT NULL,
+         applied_at TEXT NOT NULL DEFAULT (datetime('now'))
+       )`
+    )
+    for (const m of migrations) {
+      const tx = db.transaction(() => {
+        db.exec(m.up)
+        db.prepare('INSERT INTO schema_version (version, name) VALUES (?, ?)').run(
+          m.version,
+          m.name
+        )
+      })
+      tx()
+    }
+    db.prepare(`INSERT INTO clients (id, name) VALUES (1, 'Acme')`).run()
+    db.prepare(`INSERT INTO clients (id, name) VALUES (2, 'Other')`).run()
+  })
+
+  afterEach(() => {
+    if (!db) return
+    db.close()
+    rmSync(tmpDir, { recursive: true, force: true })
+  })
+
+  // Helper: insert a project and return its id
+  function createProject(clientId: number | null, name: string, active = 1): number {
+    const row = db
+      .prepare(
+        `INSERT INTO projects (client_id, name, color, rate_cent, active) VALUES (?, ?, '', NULL, ?) RETURNING id`
+      )
+      .get(clientId, name, active) as { id: number }
+    return row.id
+  }
+
+  // Helper: insert an entry for a project
+  function createEntry(
+    clientId: number,
+    projectId: number | null,
+    deletedAt: string | null = null
+  ): number {
+    const start = new Date(Date.now() - 2 * 3600 * 1000).toISOString()
+    const stop = new Date(Date.now() - 1 * 3600 * 1000).toISOString()
+    const info = db
+      .prepare(
+        `INSERT INTO entries (client_id, started_at, stopped_at, project_id, deleted_at)
+         VALUES (?, ?, ?, ?, ?)`
+      )
+      .run(clientId, start, stop, projectId, deletedAt)
+    return info.lastInsertRowid as number
+  }
+
+  it('projects:update — blocks client_id change when entries exist', () => {
+    const pid = createProject(1, 'App')
+    createEntry(1, pid)
+    // Simulate the IPC guard: count entries
+    const { n } = db
+      .prepare(`SELECT COUNT(*) AS n FROM entries WHERE project_id = ? AND deleted_at IS NULL`)
+      .get(pid) as { n: number }
+    expect(n).toBeGreaterThan(0)
+    // The handler would return fail() here — validate the guard
+    const current = db
+      .prepare('SELECT client_id FROM projects WHERE id = ?')
+      .get(pid) as { client_id: number | null }
+    expect(current.client_id).toBe(1)
+    // Moving to client 2 should be blocked
+    const wouldBlock = current.client_id !== 2 && n > 0
+    expect(wouldBlock).toBe(true)
+  })
+
+  it('projects:update — allows client_id change when no entries exist', () => {
+    const pid = createProject(1, 'App')
+    const { n } = db
+      .prepare(`SELECT COUNT(*) AS n FROM entries WHERE project_id = ? AND deleted_at IS NULL`)
+      .get(pid) as { n: number }
+    expect(n).toBe(0)
+    db.prepare(`UPDATE projects SET client_id = 2 WHERE id = ?`).run(pid)
+    const updated = db.prepare('SELECT client_id FROM projects WHERE id = ?').get(pid) as {
+      client_id: number
+    }
+    expect(updated.client_id).toBe(2)
+  })
+
+  it('projects:delete — blocked when active entries exist', () => {
+    const pid = createProject(1, 'App')
+    createEntry(1, pid)
+    const { n } = db
+      .prepare(`SELECT COUNT(*) AS n FROM entries WHERE project_id = ? AND deleted_at IS NULL`)
+      .get(pid) as { n: number }
+    expect(n).toBe(1)
+    // Should throw inside the transaction
+    expect(() => {
+      const tx = db.transaction(() => {
+        const countRow = db
+          .prepare(`SELECT COUNT(*) AS n FROM entries WHERE project_id = ? AND deleted_at IS NULL`)
+          .get(pid) as { n: number }
+        if (countRow.n > 0) throw new Error('Projekt hat noch aktive Einträge')
+        db.prepare('DELETE FROM projects WHERE id = ?').run(pid)
+      })
+      tx()
+    }).toThrow(/aktive Einträge/)
+    // Project must still exist
+    const still = db.prepare('SELECT id FROM projects WHERE id = ?').get(pid)
+    expect(still).toBeDefined()
+  })
+
+  it('projects:delete — succeeds when only soft-deleted entries exist', () => {
+    const pid = createProject(1, 'App')
+    createEntry(1, pid, new Date().toISOString()) // soft-deleted
+    const { n } = db
+      .prepare(`SELECT COUNT(*) AS n FROM entries WHERE project_id = ? AND deleted_at IS NULL`)
+      .get(pid) as { n: number }
+    expect(n).toBe(0)
+    db.prepare('DELETE FROM projects WHERE id = ?').run(pid)
+    const gone = db.prepare('SELECT id FROM projects WHERE id = ?').get(pid)
+    expect(gone).toBeUndefined()
+  })
+
+  it('projects:getAll — entry_count excludes soft-deleted entries', () => {
+    const pid = createProject(1, 'App')
+    createEntry(1, pid) // active
+    createEntry(1, pid, new Date().toISOString()) // soft-deleted
+    const row = db
+      .prepare(
+        `SELECT p.*, COALESCE(ec.cnt, 0) AS entry_count FROM projects p
+         LEFT JOIN (SELECT project_id, COUNT(*) AS cnt FROM entries WHERE deleted_at IS NULL GROUP BY project_id) ec
+           ON ec.project_id = p.id
+         WHERE p.id = ?`
+      )
+      .get(pid) as { entry_count: number }
+    expect(row.entry_count).toBe(1)
+  })
+
+  it('entries — project_id is stored and retrieved correctly', () => {
+    const pid = createProject(1, 'App')
+    const eid = createEntry(1, pid)
+    const row = db.prepare('SELECT project_id FROM entries WHERE id = ?').get(eid) as {
+      project_id: number | null
+    }
+    expect(row.project_id).toBe(pid)
+  })
+})
 //
 // Root cause of the bug: julianday() arithmetic in SQLite uses IEEE-754
 // floating point and can return 3599.9999... for a 3600-second interval.
