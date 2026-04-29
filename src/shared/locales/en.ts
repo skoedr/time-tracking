@@ -235,7 +235,7 @@ export const en: Record<TranslationKey, string> = {
   'clients.color.lime': 'Lime',
 
   // ── ProjectsView (v1.9 #75 PR 2) ──────────────────────────────────────────
-  'projects.addNew': '+ Add project',
+  'projects.addNew': 'Add project',
   'projects.empty': 'No projects yet.',
   'projects.inheritedRate': '(Client rate)',
   'projects.archivedSection': 'Archived ({count})',

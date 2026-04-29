@@ -236,7 +236,7 @@ export const de = {
   'clients.color.lime': 'Lime',
 
   // ── ProjectsView (v1.9 #75 PR 2) ─────────────────────────────────────────
-  'projects.addNew': '+ Projekt hinzufügen',
+  'projects.addNew': 'Projekt hinzufügen',
   'projects.empty': 'Noch keine Projekte.',
   'projects.inheritedRate': '(Kundensatz)',
   'projects.archivedSection': 'Archiviert ({count})',
