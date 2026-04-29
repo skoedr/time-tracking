@@ -1,0 +1,28 @@
+title = "TimeTrack Gitleaks Config"
+
+# Extend the built-in gitleaks ruleset (covers AWS keys, GH tokens,
+# Slack tokens, generic high-entropy strings, etc.)
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Project-specific false-positive suppression"
+
+# Files that contain hashes / long strings that aren't secrets
+paths = [
+  # Lockfile integrity hashes
+  '''pnpm-lock.yaml''',
+  # Package license metadata
+  '''resources/licenses.json''',
+  # Local gstack reports (never committed — gitignored, belt-and-suspenders)
+  '''.gstack/''',
+  # Design review screenshots
+  '''.design-review/''',
+]
+
+regexes = [
+  # Tailwind / CSS hex color literals — #10b981, #4f46e5, etc.
+  '''#[0-9a-fA-F]{6}\b''',
+  # GitHub Actions SHA pins in workflow files — @93cb6efe18208431...
+  '''@[0-9a-f]{40}''',
+]

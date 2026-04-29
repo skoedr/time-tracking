@@ -210,6 +210,7 @@ export const en: Record<TranslationKey, string> = {
   'clients.action.reactivate': 'Reactivate',
   'clients.confirm.delete':
     'Really delete client "{name}"?\nAll time entries will be deleted too.',
+  'clients.confirm.deleteTitle': 'Delete client?',
   'clients.form.createTitle': 'New client',
   'clients.form.editTitle': 'Edit client',
   'clients.form.nameLabel': 'Name',
@@ -234,13 +235,14 @@ export const en: Record<TranslationKey, string> = {
   'clients.color.lime': 'Lime',
 
   // ── ProjectsView (v1.9 #75 PR 2) ──────────────────────────────────────────
-  'projects.addNew': '+ Add project',
+  'projects.addNew': 'Add project',
   'projects.empty': 'No projects yet.',
   'projects.inheritedRate': '(Client rate)',
   'projects.archivedSection': 'Archived ({count})',
   'projects.action.archive': 'Archive',
   'projects.action.reactivate': 'Reactivate',
   'projects.confirm.delete': 'Really delete project "{name}"?',
+  'projects.confirm.deleteTitle': 'Delete project?',
   'projects.confirm.deleteWithEntries':
     'Project "{name}" still has {count} entries. Delete anyway?\nEntries will be reassigned to the client.',
   'projects.form.createTitle': 'New project',
@@ -311,6 +313,8 @@ export const en: Record<TranslationKey, string> = {
   'export.client.label': 'Client',
   'export.client.placeholder': '— Select client —',
   'export.client.noRate': '(no rate)',
+  'export.project.label': 'Project',
+  'export.project.placeholder': '— All projects —',
   'export.from': 'From',
   'export.to': 'To',
   'export.pdf.groupByTag': 'Group by tag',

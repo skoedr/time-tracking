@@ -211,6 +211,7 @@ export const de = {
   'clients.action.reactivate': 'Reaktivieren',
   'clients.confirm.delete':
     'Kunde "{name}" wirklich löschen?\nAlle Zeiteinträge werden mitgelöscht.',
+  'clients.confirm.deleteTitle': 'Kunde löschen?',
   'clients.form.createTitle': 'Neuer Kunde',
   'clients.form.editTitle': 'Kunde bearbeiten',
   'clients.form.nameLabel': 'Name',
@@ -235,13 +236,14 @@ export const de = {
   'clients.color.lime': 'Lime',
 
   // ── ProjectsView (v1.9 #75 PR 2) ─────────────────────────────────────────
-  'projects.addNew': '+ Projekt hinzufügen',
+  'projects.addNew': 'Projekt hinzufügen',
   'projects.empty': 'Noch keine Projekte.',
   'projects.inheritedRate': '(Kundensatz)',
   'projects.archivedSection': 'Archiviert ({count})',
   'projects.action.archive': 'Archivieren',
   'projects.action.reactivate': 'Reaktivieren',
-  'projects.confirm.delete': 'Projekt „{name}" wirklich löschen?',
+  'projects.confirm.delete': 'Projekt „{name}“ wirklich löschen?',
+  'projects.confirm.deleteTitle': 'Projekt löschen?',
   'projects.confirm.deleteWithEntries':
     'Projekt „{name}" hat noch {count} Einträge. Trotzdem löschen?\nDie Einträge werden dem Kunden zugeordnet.',
   'projects.form.createTitle': 'Neues Projekt',
@@ -312,6 +314,8 @@ export const de = {
   'export.client.label': 'Kunde',
   'export.client.placeholder': '— Kunde wählen —',
   'export.client.noRate': '(kein Tarif)',
+  'export.project.label': 'Projekt',
+  'export.project.placeholder': '— Alle Projekte —',
   'export.from': 'Von',
   'export.to': 'Bis',
   'export.pdf.groupByTag': 'Nach Tag gruppieren',

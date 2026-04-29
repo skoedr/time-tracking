@@ -11,6 +11,7 @@ import { UpdateBanner } from './components/UpdateBanner'
 import { OnboardingWizard } from './components/OnboardingWizard'
 import { useTimer } from './hooks/useTimer'
 import { useT } from './contexts/I18nContext'
+import { useProjectsStore } from './store/projectsStore'
 
 type View = 'today' | 'timer' | 'calendar' | 'clients' | 'settings'
 
@@ -20,6 +21,21 @@ function App(): React.JSX.Element {
   const [showOnboarding, setShowOnboarding] = useState(false)
   const { idleEvent, idleKeep, idleStopAtIdle, idleMarkPause, quickNoteEntry, setQuickNoteEntry, runningEntry, clients } =
     useTimer()
+  const projectsVersion = useProjectsStore((s) => s.version)
+  const [runningProjectColor, setRunningProjectColor] = useState<string | undefined>(undefined)
+
+  // Track the color of the currently running entry's project for the nav pill.
+  useEffect(() => {
+    if (runningEntry?.project_id == null) {
+      setRunningProjectColor(undefined)
+      return
+    }
+    void window.api.projects.getAll({}).then((res) => {
+      if (!res.ok) return
+      const p = res.data.find((proj) => proj.id === runningEntry.project_id)
+      setRunningProjectColor(p?.color || undefined)
+    })
+  }, [runningEntry?.project_id, projectsVersion])
 
   // Check onboarding flag on mount — show wizard only for fresh installs.
   useEffect(() => {
@@ -100,6 +116,7 @@ function App(): React.JSX.Element {
               startedAt={runningEntry.started_at}
               clientName={client?.name}
               clientColor={client?.color}
+              projectColor={runningProjectColor}
             />
           )
         })()}
@@ -142,11 +159,13 @@ export default App
 function RunningPill({
   startedAt,
   clientName,
-  clientColor
+  clientColor,
+  projectColor
 }: {
   startedAt: string
   clientName?: string
   clientColor?: string
+  projectColor?: string
 }): React.JSX.Element {
   const [, setTick] = useState(0)
   useEffect(() => {
@@ -167,7 +186,7 @@ function RunningPill({
     >
       <span
         className="h-2 w-2 animate-pulse rounded-full"
-        style={{ backgroundColor: clientColor ?? 'var(--green)' }}
+        style={{ backgroundColor: projectColor || (clientColor ?? 'var(--green)') }}
       />
       {clientName && <span className="font-medium" style={{ color: 'var(--text)' }}>{clientName}</span>}
       <span className="tabular-nums" style={{ fontFamily: "'JetBrains Mono', monospace" }}>{label}</span>

@@ -96,7 +96,7 @@ export default function TimerView() {
           <div className="mt-2.5 flex items-center justify-center gap-2">
             <span
               className="inline-block h-2 w-2 animate-pulse rounded-full"
-              style={{ backgroundColor: selectedClient.color }}
+              style={{ backgroundColor: selectedProject?.color || selectedClient.color }}
             />
             <span className="text-sm" style={{ color: 'var(--text2)' }}>
               {selectedClient.name}

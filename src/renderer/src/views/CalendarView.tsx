@@ -12,7 +12,8 @@ import {
   startOfWeek
 } from 'date-fns'
 import type { Entry } from '../../../shared/types'
-import type { Client } from '../../../shared/types'
+import type { Client, Project } from '../../../shared/types'
+import { useProjectsStore } from '../store/projectsStore'
 import { getQuickRange, type QuickRangeKind } from '../../../shared/dateRanges'
 import { useEntriesStore } from '../store/entriesStore'
 import { useTimer } from '../hooks/useTimer'
@@ -34,6 +35,15 @@ export default function CalendarView(): React.JSX.Element {
   const t = useT()
   const { clients } = useTimer()
   const version = useEntriesStore((s) => s.version)
+  const projectsVersion = useProjectsStore((s) => s.version)
+
+  const [projects, setProjects] = useState<Project[]>([])
+
+  useEffect(() => {
+    void window.api.projects.getAll({}).then((res) => {
+      if (res.ok) setProjects(res.data)
+    })
+  }, [projectsVersion])
 
   const months = MONTHS_KEYS.map((k) => t(k as import('../../../shared/locales/de').TranslationKey))
 
@@ -243,6 +253,7 @@ export default function CalendarView(): React.JSX.Element {
             cursor={cursor}
             byDay={byDay}
             clients={clients}
+            projects={projects}
             focusDay={focusDay}
             months={months}
             onSelect={(d) => {
@@ -284,6 +295,7 @@ function Week({
   cursor,
   byDay,
   clients,
+  projects,
   focusDay,
   months,
   onSelect
@@ -292,6 +304,7 @@ function Week({
   cursor: Date
   byDay: Map<string, Entry[]>
   clients: Client[]
+  projects: Project[]
   focusDay: Date
   months: readonly string[]
   onSelect: (d: Date) => void
@@ -345,7 +358,7 @@ function Week({
                 </span>
               )}
             </div>
-            <DayBars entries={dayEntries} clients={clients} />
+            <DayBars entries={dayEntries} clients={clients} projects={projects} />
           </button>
         )
       })}
@@ -362,19 +375,23 @@ const DEFAULT_BAR_COLOR = '#6366f1'
 
 function DayBars({
   entries,
-  clients
+  clients,
+  projects
 }: {
   entries: Entry[]
   clients: Client[]
+  projects: Project[]
 }): React.JSX.Element | null {
   if (entries.length === 0) return null
   const visible = entries.slice(0, MAX_BARS)
   const overflow = entries.length - visible.length
   const colorById = new Map(clients.map((c) => [c.id, c.color]))
+  const projectColorById = new Map(projects.map((p) => [p.id, p.color]))
   return (
     <div className="mt-auto flex flex-col gap-[2px]">
       {visible.map((e) => {
-        const color = colorById.get(e.client_id) ?? DEFAULT_BAR_COLOR
+        const projectColor = e.project_id != null ? projectColorById.get(e.project_id) : undefined
+        const color = (projectColor || colorById.get(e.client_id)) ?? DEFAULT_BAR_COLOR
         const clientName = clients.find((c) => c.id === e.client_id)?.name ?? 'Eintrag'
         const label = e.description ? `${clientName} — ${e.description}` : clientName
         return (

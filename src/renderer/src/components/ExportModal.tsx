@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import type { Client } from '../../../shared/types'
+import type { Client, Project } from '../../../shared/types'
 import { useT } from '../contexts/I18nContext'
 import { Dialog } from './Dialog'
 import { Toggle } from './Toggle'
@@ -32,6 +32,8 @@ export function ExportModal(props: Props): React.JSX.Element {
   const [tab, setTab] = useState<Tab>('pdf')
   const [clients, setClients] = useState<Client[]>([])
   const [clientId, setClientId] = useState<number | null>(prefilledClientId ?? null)
+  const [projects, setProjects] = useState<Project[]>([])
+  const [projectId, setProjectId] = useState<number | null>(null)
   const [fromIso, setFromIso] = useState(prefilledRange?.fromIso ?? '')
   const [toIso, setToIso] = useState(prefilledRange?.toIso ?? '')
 
@@ -80,6 +82,22 @@ export function ExportModal(props: Props): React.JSX.Element {
     }
   }, [prefilledRange])
 
+  // Load active projects when a client is selected; reset project filter on change.
+  useEffect(() => {
+    if (clientId == null) {
+      setProjects([])
+      setProjectId(null)
+      return
+    }
+    void window.api.projects.getAll({ clientId }).then((res) => {
+      if (res.ok) {
+        const active = res.data.filter((p) => p.active === 1)
+        setProjects(active)
+        setProjectId(null)
+      }
+    })
+  }, [clientId])
+
   const canExport = clientId != null && fromIso !== '' && toIso !== '' && !busy
 
   function validateRange(): boolean {
@@ -100,6 +118,7 @@ export function ExportModal(props: Props): React.JSX.Element {
       clientId: clientId!,
       fromIso,
       toIso,
+      projectId: projectId ?? undefined,
       includeSignatures,
       groupByTag
     })
@@ -124,6 +143,7 @@ export function ExportModal(props: Props): React.JSX.Element {
       clientId: clientId!,
       fromIso,
       toIso,
+      projectId: projectId ?? undefined,
       format: csvFormat,
       groupByTag: csvGroupByTag
     })
@@ -187,6 +207,30 @@ export function ExportModal(props: Props): React.JSX.Element {
             ))}
           </select>
         </label>
+
+        {/* Project filter — only shown when client has projects */}
+        {projects.length > 0 && (
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="font-medium" style={{ color: 'var(--text2)' }}>{t('export.project.label')}</span>
+            <select
+              title={t('export.project.label')}
+              value={projectId ?? ''}
+              onChange={(e) =>
+                setProjectId(e.target.value === '' ? null : Number.parseInt(e.target.value, 10))
+              }
+              disabled={busy}
+              className={inputClass}
+              style={inputStyle}
+            >
+              <option value="">{t('export.project.placeholder')}</option>
+              {projects.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
 
         <div className="grid grid-cols-2 gap-3">
           <label className="flex flex-col gap-1 text-sm">

@@ -15,6 +15,7 @@ import { useT } from '../contexts/I18nContext'
 import type { TranslationKey } from '../../../shared/locales/de'
 import * as Icons from '../components/Icons'
 import { Dialog } from '../components/Dialog'
+import { ConfirmDialog } from '../components/ConfirmDialog'
 
 const COLORS = [
   '#6366f1', // indigo
@@ -59,6 +60,10 @@ export default function ClientsView() {
   const [editingProject, setEditingProject] = useState<Project | null>(null)
   const [projectFormClientId, setProjectFormClientId] = useState<number | null>(null)
 
+  // Pending-delete state (drives ConfirmDialog instead of native confirm())
+  const [pendingDeleteClient, setPendingDeleteClient] = useState<Client | null>(null)
+  const [pendingDeleteProject, setPendingDeleteProject] = useState<ProjectWithCount | null>(null)
+
   useEffect(() => {
     loadClients()
   }, [])
@@ -101,9 +106,13 @@ export default function ClientsView() {
   }
 
   async function handleDelete(client: Client) {
-    if (!confirm(t('clients.confirm.delete', { name: client.name })))
-      return
-    await window.api.clients.delete(client.id)
+    setPendingDeleteClient(client)
+  }
+
+  async function doDeleteClient() {
+    if (!pendingDeleteClient) return
+    await window.api.clients.delete(pendingDeleteClient.id)
+    setPendingDeleteClient(null)
     await loadClients()
     bumpClientsVersion()
   }
@@ -171,19 +180,16 @@ export default function ClientsView() {
   }
 
   async function handleProjectDelete(project: ProjectWithCount) {
-    if ((project.entry_count ?? 0) > 0) {
-      if (!confirm(t('projects.confirm.deleteWithEntries', { name: project.name, count: String(project.entry_count) })))
-        return
-    } else {
-      if (!confirm(t('projects.confirm.delete', { name: project.name })))
-        return
-    }
-    const res = await window.api.projects.delete(project.id)
-    if (!res.ok) {
-      alert(res.error)
-      return
-    }
-    if (project.client_id !== null) await loadProjectsForClient(project.client_id)
+    setPendingDeleteProject(project)
+  }
+
+  async function doDeleteProject() {
+    if (!pendingDeleteProject) return
+    const res = await window.api.projects.delete(pendingDeleteProject.id)
+    const clientId = pendingDeleteProject.client_id
+    setPendingDeleteProject(null)
+    if (!res.ok) return
+    if (clientId !== null) await loadProjectsForClient(clientId)
     bumpProjectsVersion()
   }
 
@@ -296,6 +302,37 @@ export default function ClientsView() {
           }}
         />
       )}
+
+      <ConfirmDialog
+        open={pendingDeleteClient !== null}
+        variant="danger"
+        title={t('clients.confirm.deleteTitle')}
+        message={pendingDeleteClient ? t('clients.confirm.delete', { name: pendingDeleteClient.name }) : ''}
+        confirmLabel={t('common.delete')}
+        cancelLabel={t('common.cancel')}
+        onConfirm={() => void doDeleteClient()}
+        onCancel={() => setPendingDeleteClient(null)}
+      />
+
+      <ConfirmDialog
+        open={pendingDeleteProject !== null}
+        variant="danger"
+        title={t('projects.confirm.deleteTitle')}
+        message={
+          pendingDeleteProject
+            ? (pendingDeleteProject.entry_count ?? 0) > 0
+              ? t('projects.confirm.deleteWithEntries', {
+                  name: pendingDeleteProject.name,
+                  count: String(pendingDeleteProject.entry_count)
+                })
+              : t('projects.confirm.delete', { name: pendingDeleteProject.name })
+            : ''
+        }
+        confirmLabel={t('common.delete')}
+        cancelLabel={t('common.cancel')}
+        onConfirm={() => void doDeleteProject()}
+        onCancel={() => setPendingDeleteProject(null)}
+      />
     </div>
   )
 }
@@ -435,6 +472,16 @@ function ClientItem({
         >
           {c.active ? <Icons.Archive /> : <Icons.Unarchive />}
         </button>
+        {c.active && (
+          <button
+            onClick={() => onNewProject(c.id)}
+            title={t('projects.addNew')}
+            className="rounded p-1 transition-colors hover:bg-white/10"
+            style={{ color: 'var(--text3)' }}
+          >
+            <Icons.Plus />
+          </button>
+        )}
         <button
           onClick={() => onEdit(c)}
           className="rounded p-1 transition-colors hover:bg-white/10"

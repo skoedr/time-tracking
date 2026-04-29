@@ -2,18 +2,27 @@
 
 All notable changes to TimeTrack are documented here.
 
-## [1.9.0] — unreleased
+## [1.9.0] — 2026-04-29
 
 ### Added
 
+- **Projekte pro Kunde — Export projektgefiltert (PR 4/4, schließt #75)** — PDF- und CSV-Export können optional auf ein einzelnes Projekt eines Kunden gefiltert werden. `ExportModal` zeigt nach Kunden-Wahl einen Projekt-Picker (nur aktive Projekte des Kunden; „Alle Projekte" als Standard). `PdfRequest` und `CsvRequest` akzeptieren `projectId?`; der SQL-Filter `AND (? IS NULL OR project_id = ?)` greift nur, wenn ein Projekt gesetzt ist. PDF-Header zeigt „Projekt: …" wenn gefiltert. CSV- und PDF-Dateiname erhält den Projektnamen als Suffix (z.B. `Zeiterfassung-Musterkunde-Webprojekt-2026-04.csv`). i18n-Keys `export.project.label` und `export.project.placeholder` für DE/EN ergänzt. ([#75](https://github.com/skoedr/time-tracking/issues/75))
 - **Projekte pro Kunde — Timer/Today/Calendar/EntryEdit projektbewusst (PR 3/4)** — Timer-View zeigt nach Kunden-Auswahl einen kaskadierten Projekt-Picker (gefiltert auf aktive Projekte des Kunden; Auto-Select bei genau einem Projekt; effektiver Stundensatz-Hinweis wenn Projekt-Satz den Kunden-Satz überschreibt). Recent-Liste in TodayView zeigt `Kundenname · Projektname`. CalendarDrawer zeigt Projektname in Entry-Zeilen. EntryEditForm hat neuen Projekt-Picker zwischen Kunde und Beschreibung, lädt Projekte bei Kunden-Wechsel nach. Neues `selectedProjectId` in `timerStore` und `useTimer`. i18n-Keys für DE/EN ergänzt. ([#75](https://github.com/skoedr/time-tracking/issues/75))
 - **Projekte pro Kunde — Projektverwaltung in ClientsView (PR 2/4)** — Renderer-seitige Projektverwaltung für Issue #75. Jeder Kunde kann per Chevron aufgeklappt werden und zeigt eine Sub-Liste seiner Projekte. CRUD-Aktionen (Erstellen, Bearbeiten, Archivieren, Löschen) via `ProjectFormModal` inline in `ClientsView`. Farbauswahl mit „Kundenfarbe übernehmen"-Option (`color = ''`), optionaler Stundensatz-Override. Archivierte Projekte in eigener Collapsible-Sektion. Neuer `projectsStore` (Zustand Version-Bump nach Mutationen). Vollständige i18n-Keys für DE/EN. ([#75](https://github.com/skoedr/time-tracking/issues/75))
 - **Projekte pro Kunde — DB, Types, IPC (PR 1/4)** — Foundation für Issue #75. Neue `projects`-Tabelle (client-scoped via FK, Soft-Delete via `active = 0`), `project_id`-Spalte auf `entries` (nullable, ON DELETE SET NULL), vollständige IPC-Handler (`projects:getAll`, `projects:create`, `projects:update`, `projects:archive`, `projects:delete`), TypeScript-Typen (`Project`, `CreateProjectInput`, `UpdateProjectInput`, `ProjectWithCount`) und Preload-Exposition (`window.api.projects.*`). ([#75](https://github.com/skoedr/time-tracking/issues/75))
 
 ### Fixed
 
-- **`insertEntrySegments` unterschlug `project_id`** — Der 11-Spalten-INSERT in der Hilfsfunktion übergab `project_id` nicht. Jetzt 12-Spalten-INSERT; beide Aufrufer (`entries:create`, `entries:update`) reichen `input.project_id ?? null` weiter.
-- **`entries:start` speicherte `project_id` nicht** — Der 4-Spalten-INSERT beim Starten eines Timers setzte `project_id` implizit auf NULL. Jetzt explizit übergeben.
+- **ConfirmDialog statt browser-nativem `confirm()`** — Löschen von Einträgen, Projekten und Kunden öffnet jetzt einen AppDialog statt des nativen `window.confirm()`. Visuell konsistent mit dem restlichen App-Design.
+- **Projektfarbe in allen Ansichten** — CalendarView, CalendarDrawer, TodayView und TimerView zeigen die Farbe des aktiven Projekts einheitlich als Akzentfarbe; kein Grau-Fallback mehr wenn ein Projekt gesetzt ist.
+- **`+`-Button im Kunden-Header** — Die Schaltfläche zum Anlegen eines neuen Projekts fehlte in der Kunden-Kopfzeile zwischen Archivieren- und Bearbeiten-Icon.
+- **Doppeltes `+` im Projektbutton-Label** — i18n-Schlüssel für „+ Projekt hinzufügen" enthielt fälschlicherweise zwei Plus-Zeichen; jetzt korrekt ein `+`.
+- **Projektzuweisung beim Anlegen/Bearbeiten nicht gespeichert** — Der 11-Spalten-INSERT in `insertEntrySegments` übergab `project_id` nicht; der 4-Spalten-INSERT beim Timer-Start setzte sie implizit auf NULL. Beide Pfade übergeben jetzt korrekt `input.project_id ?? null`.
+
+### Security
+
+- **Gitleaks-Konfiguration** — `.gitleaks.toml` mit `useDefault`-Ruleset verhindert versehentlich committete Credentials. Allowlist für Tailwind-Hexfarben und SHA-gepinnte Actions.
+- **CODEOWNERS für Workflows** — `.github/CODEOWNERS` erfordert explizites Review von `@skoedr` bei Änderungen an den GitHub-Actions-Workflows.
 
 ### Migration Note
 

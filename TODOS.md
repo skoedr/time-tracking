@@ -4,14 +4,17 @@ Deferred items from plan reviews. Items here have explicit decisions — they ar
 
 ## Open Issues
 
-- **#87 — UI centering across views** (Low effort) — Settings ist der einzige Knackpunkt: Outer-Wrapper in `src/renderer/src/views/SettingsView.tsx:189` braucht `max-w-4xl mx-auto`. Today/Timer/Calendar/Clients sind in Toleranz oder pragmatisch korrekt (Verifikation gegen `design/issue-76-glass-reference.html` durchgeführt 2026-04-28). Optional: pixelgenaue Werte via `max-w-[740px]` / `max-w-[600px]` statt Tailwind-Tokens. → v1.9 candidate.
-- **#75 — Projekte pro Kunde** (Medium-Large effort) — Plan akzeptiert (2026-04-29), `/autoplan` Phase 1 (CEO) abgeschlossen 2026-04-29. Hierarchie Kunde→Projekt→Eintrag mit eigener Tabelle, Migration 012, optional eigener Stundensatz pro Projekt, projektgefilterte Exporte. **Aktueller Stand:** Approach B + Cherry-Picks E2/E4/E6 locked (E2: "Allgemein"-virtual-project; E4: projects.client_id nullable für v2.0-escape-hatch; E6: starts_on/ends_on aus v1.9 entfernt — YAGNI). Premissen P1-P4 bestätigt. **Nächste Schritte:** `/autoplan` Phase 2 (Design Review), Phase 3 (Eng Review), Final Gate. Danach 4 sequenzielle PRs (DB+IPC → Project-CRUD-UI → Timer/Today/Calendar → Exports). → v1.9.
+- **#87 — UI centering across views** (Optional polish) — Basiszentrierung implementiert in v1.8.1 (`max-w-4xl mx-auto` auf SettingsView-Wrapper). Optional: pixelgenaue Werte via `max-w-[740px]` / `max-w-[600px]` statt Tailwind-Tokens für Today/Timer/Calendar/Clients. → v2.0 candidate.
 
 ### Deferred from #75 /autoplan Phase 1 (CEO Cherry-Picks)
 
 - **E1 — Auto-color-shift für Projekte** (Low effort, Low risk) — Projektfarbe automatisch aus Kundenfarbe ableiten (Helligkeitsverschiebung), statt manuelle Farbwahl im Project-Modal. Visual coherence pro Kunde. → v1.9.x oder v2.0.
 - **E3 — Projekt-Budget-Warnung** (Medium effort, Low risk) — Read-only "X von Y Stunden verbraucht"-Anzeige im Project-Modal und in TodayView. Setzt Stundenkontingent pro Projekt voraus. → v2.0.
 - **E5 — Project-Quick-Stats in ClientsView** (Low effort, Low risk) — Pro Projekt: Eintragsanzahl + letzte Aktivität neben dem Projektnamen in der Sub-Liste. → v1.9.x.
+
+## Resolved in v1.9.0
+
+- ~~**#75 — Projekte pro Kunde**~~ — Abgeschlossen (v1.9.0, 2026-05-02): Migration 012, `projects`-Tabelle, vollständige CRUD-UI in ClientsView, projektbewusste Timer/Today/Calendar/EntryEditForm, projektgefilterter PDF- + CSV-Export. **Completed:** v1.9.0
 
 ## Blocking v1.7 — RESOLVED
 

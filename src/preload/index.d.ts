@@ -109,6 +109,7 @@ declare global {
           clientId: number
           fromIso: string
           toIso: string
+          projectId?: number | null
           includeSignatures?: boolean
           groupByTag?: boolean
         }): Promise<IpcResult<{ path: string }>>
@@ -116,6 +117,7 @@ declare global {
           clientId: number
           fromIso: string
           toIso: string
+          projectId?: number | null
           includeSignatures?: boolean
           groupByTag?: boolean
           invoicePath: string
@@ -138,6 +140,7 @@ declare global {
           clientId: number
           fromIso: string
           toIso: string
+          projectId?: number | null
           format?: 'de' | 'us'
           groupByTag?: boolean
         }): Promise<IpcResult<{ path: string }>>

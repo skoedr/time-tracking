@@ -758,9 +758,19 @@ export function registerIpcHandlers(hooks: IpcHooks): void {
         const monthHint = req.fromIso.slice(0, 7) // YYYY-MM
         // Strip filesystem-hostile chars from the client name for the suggested filename.
         const safeName = client.name.replace(/[\\/:*?"<>|]/g, '_').trim() || 'Kunde'
+        // v1.9 #75: append project name when filtered to a single project.
+        let projectSuffix = ''
+        if (req.projectId != null) {
+          const proj = db.prepare(`SELECT name FROM projects WHERE id = ?`).get(req.projectId) as
+            | { name: string }
+            | undefined
+          if (proj) {
+            projectSuffix = `-${proj.name.replace(/[\\/:*?"<>|]/g, '_').trim()}`
+          }
+        }
         const result = await dialog.showSaveDialog({
           title: 'Stundennachweis speichern',
-          defaultPath: `Stundennachweis-${safeName}-${monthHint}.pdf`,
+          defaultPath: `Stundennachweis-${safeName}${projectSuffix}-${monthHint}.pdf`,
           filters: [{ name: 'PDF', extensions: ['pdf'] }]
         })
         if (result.canceled || !result.filePath) {

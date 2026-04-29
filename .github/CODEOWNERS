@@ -1,0 +1,5 @@
+# CODEOWNERS — require review from @skoedr for security-sensitive paths.
+# Changes to CI/CD workflows must be reviewed before merge to prevent
+# unauthorized pipeline modifications.
+
+/.github/workflows/ @skoedr

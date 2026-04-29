@@ -211,7 +211,7 @@ export function CalendarDrawer({
                     <div className="flex items-center gap-2 p-2">
                       <span
                         className="h-2.5 w-2.5 shrink-0 rounded-full"
-                        style={{ backgroundColor: client?.color ?? '#64748b' }}
+                        style={{ backgroundColor: project?.color || (client?.color ?? '#64748b') }}
                       />
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--text2)' }}>
