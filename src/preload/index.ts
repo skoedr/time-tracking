@@ -164,6 +164,7 @@ const api = {
       clientId: number
       fromIso: string
       toIso: string
+      projectId?: number | null
       includeSignatures?: boolean
       groupByTag?: boolean
     }): Promise<IpcResult<{ path: string }>> => ipcRenderer.invoke('pdf:export', req),
@@ -171,6 +172,7 @@ const api = {
       clientId: number
       fromIso: string
       toIso: string
+      projectId?: number | null
       includeSignatures?: boolean
       groupByTag?: boolean
       invoicePath: string

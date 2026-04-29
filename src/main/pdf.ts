@@ -22,6 +22,11 @@ export interface PdfRequest {
   fromIso: string
   toIso: string
   /**
+   * v1.9 #75: optional project filter. When set, only entries with this
+   * project_id are included in the PDF. `undefined` / `null` = all projects.
+   */
+  projectId?: number | null
+  /**
    * Render the two signature lines ("Datum, Auftragnehmer" / "Datum,
    * Auftraggeber") at the bottom of the document. Default `false` —
    * most users never need them, and an empty signature row at the end
@@ -90,6 +95,11 @@ export interface PdfPayload {
    * renderer. null = flat layout (default). Empty `tag` = "Ohne Tag".
    */
   groups: PdfGroup[] | null
+  /**
+   * v1.9 #75: optional project name for the PDF header when the export
+   * is filtered to a single project. Undefined = all projects (no label shown).
+   */
+  projectName?: string
 }
 
 const DATE_FMT = new Intl.DateTimeFormat('de-DE', {
@@ -183,9 +193,10 @@ export function buildPdfPayload(
            AND stopped_at IS NOT NULL
            AND started_at >= ?
            AND started_at < ?
+           AND (? IS NULL OR project_id = ?)
          ORDER BY started_at ASC, id ASC`
     )
-    .all(client.id, fromTs, toExclusive) as Entry[]
+    .all(client.id, fromTs, toExclusive, req.projectId ?? null, req.projectId ?? null) as Entry[]
 
   const rows: PdfRow[] = entries.map((e) => {
     const start = new Date(e.started_at)
@@ -261,6 +272,15 @@ export function buildPdfPayload(
     })
   }
 
+  // v1.9 #75: load project name when filtered to a specific project
+  let projectName: string | undefined
+  if (req.projectId != null) {
+    const proj = db
+      .prepare(`SELECT name FROM projects WHERE id = ?`)
+      .get(req.projectId) as { name: string } | undefined
+    projectName = proj?.name
+  }
+
   return {
     client,
     sender: {
@@ -278,7 +298,8 @@ export function buildPdfPayload(
     roundMinutes: roundStep,
     includeSignatures: req.includeSignatures === true,
     generatedAtIso,
-    groups
+    groups,
+    projectName
   }
 }
 
@@ -455,6 +476,7 @@ export function buildPdfHtml(p: PdfPayload): string {
   .recipient { font-size: 11pt; }
   .recipient .label { font-size: 8pt; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; margin-bottom: 2px; }
   .recipient .name { font-weight: 600; }
+  .recipient .project-label { font-size: 9pt; color: #475569; margin-top: 2px; }
   .range { font-size: 10pt; color: #334155; }
   .range .label { font-size: 8pt; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; }
   .range .value { font-weight: 600; color: #0f172a; }
@@ -554,6 +576,7 @@ export function buildPdfHtml(p: PdfPayload): string {
       <div class="recipient">
         <div class="label">Kunde</div>
         <div class="name">${esc(p.client.name)}</div>
+        ${p.projectName ? `<div class="project-label">Projekt: ${esc(p.projectName)}</div>` : ''}
       </div>
       <div class="range">
         <div class="label">Zeitraum</div>

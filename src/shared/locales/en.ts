@@ -311,6 +311,8 @@ export const en: Record<TranslationKey, string> = {
   'export.client.label': 'Client',
   'export.client.placeholder': '— Select client —',
   'export.client.noRate': '(no rate)',
+  'export.project.label': 'Project',
+  'export.project.placeholder': '— All projects —',
   'export.from': 'From',
   'export.to': 'To',
   'export.pdf.groupByTag': 'Group by tag',

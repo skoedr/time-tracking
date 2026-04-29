@@ -312,6 +312,8 @@ export const de = {
   'export.client.label': 'Kunde',
   'export.client.placeholder': '— Kunde wählen —',
   'export.client.noRate': '(kein Tarif)',
+  'export.project.label': 'Projekt',
+  'export.project.placeholder': '— Alle Projekte —',
   'export.from': 'Von',
   'export.to': 'Bis',
   'export.pdf.groupByTag': 'Nach Tag gruppieren',

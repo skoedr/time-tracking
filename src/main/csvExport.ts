@@ -24,6 +24,11 @@ export interface CsvRequest {
   format?: 'de' | 'us'
   /** When true, entries are grouped by their first tag with subtotal rows. Default: false. */
   groupByTag?: boolean
+  /**
+   * v1.9 #75: optional project filter. When set, only entries with this
+   * project_id are included. undefined / null = all projects.
+   */
+  projectId?: number | null
 }
 
 function ok<T>(data: T): IpcResult<T> {
@@ -53,18 +58,30 @@ export async function handleCsvExport(
          WHERE client_id = ?
            AND date(started_at) >= date(?)
            AND date(started_at) <= date(?)
+           AND (? IS NULL OR project_id = ?)
            AND deleted_at IS NULL
            AND stopped_at IS NOT NULL
          ORDER BY started_at ASC`
       )
-      .all(req.clientId, req.fromIso, req.toIso) as Entry[]
+      .all(req.clientId, req.fromIso, req.toIso, req.projectId ?? null, req.projectId ?? null) as Entry[]
 
     const rangeHint = `${req.fromIso.slice(0, 7)}`
     const safeName = client.name.replace(/[\\/:*?"<>|]/g, '_').trim() || 'Kunde'
 
+    // When filtered by project, append the project name to the filename.
+    let projectSuffix = ''
+    if (req.projectId != null) {
+      const proj = db
+        .prepare(`SELECT name FROM projects WHERE id = ?`)
+        .get(req.projectId) as { name: string } | undefined
+      if (proj) {
+        projectSuffix = `-${proj.name.replace(/[\\/:*?"<>|]/g, '_').trim()}`
+      }
+    }
+
     const result = await dialog.showSaveDialog({
       title: 'CSV speichern',
-      defaultPath: `Zeiterfassung-${safeName}-${rangeHint}.csv`,
+      defaultPath: `Zeiterfassung-${safeName}${projectSuffix}-${rangeHint}.csv`,
       filters: [{ name: 'CSV', extensions: ['csv'] }]
     })
     if (result.canceled || !result.filePath) {
