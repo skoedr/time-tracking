@@ -536,7 +536,10 @@ export function registerIpcHandlers(hooks: IpcHooks): void {
                           THEN CAST(strftime('%s', 'now') AS INTEGER) - CAST(strftime('%s', e.started_at) AS INTEGER)
                         ELSE CAST(strftime('%s', e.stopped_at) AS INTEGER) - CAST(strftime('%s', e.started_at) AS INTEGER)
                       END
-                    ), 0) AS seconds
+                    ), 0) AS seconds,
+                    (SELECT project_id FROM entries
+                       WHERE client_id = c.id AND deleted_at IS NULL
+                       ORDER BY started_at DESC LIMIT 1) AS last_project_id
                FROM clients c
                LEFT JOIN entries e ON e.client_id = c.id
                  AND e.deleted_at IS NULL
@@ -552,6 +555,7 @@ export function registerIpcHandlers(hooks: IpcHooks): void {
           name: string
           color: string
           seconds: number
+          last_project_id: number | null
         }>
 
         return {
@@ -560,7 +564,8 @@ export function registerIpcHandlers(hooks: IpcHooks): void {
           recentEntries,
           topClients30d: topClients30d.map((r) => ({
             ...r,
-            seconds: Math.max(0, Math.floor(r.seconds ?? 0))
+            seconds: Math.max(0, Math.floor(r.seconds ?? 0)),
+            last_project_id: r.last_project_id ?? null
           }))
         }
       })

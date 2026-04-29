@@ -228,7 +228,7 @@ export interface DashboardSummary {
   todaySeconds: number
   weekSeconds: number
   recentEntries: Entry[]
-  topClients30d: Array<{ client_id: number; name: string; color: string; seconds: number }>
+  topClients30d: Array<{ client_id: number; name: string; color: string; seconds: number; last_project_id: number | null }>
 }
 
 /**

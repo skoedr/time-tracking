@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Client, DashboardSummary, Entry, Project } from '../../../shared/types'
 import { useEntriesStore } from '../store/entriesStore'
 import { useProjectsStore } from '../store/projectsStore'
@@ -124,7 +124,8 @@ export default function TodayView(): React.JSX.Element {
             topClients={summary.topClients30d}
             disabled={!!runningEntry}
             clientsById={clientsById}
-            onStart={(id) => void startWithClient(id)}
+            projectsById={projectsById}
+            onStart={(id, projectId) => void startWithClient(id, projectId)}
           />
 
           <RecentList
@@ -299,36 +300,213 @@ function QuickStartRow({
   topClients,
   disabled,
   clientsById,
+  projectsById,
   onStart
 }: {
   topClients: DashboardSummary['topClients30d']
   disabled: boolean
   clientsById: Map<number, Client>
-  onStart: (clientId: number) => void
+  projectsById: Map<number, Project>
+  onStart: (clientId: number, projectId: number | null) => void
 }): React.JSX.Element | null {
   const t = useT()
   if (topClients.length === 0) return null
   return (
     <div className="flex flex-wrap items-center gap-2">
       <span className="text-xs uppercase tracking-wide" style={{ color: 'var(--text3)' }}>{t('today.quickstart.label')}</span>
-      {topClients.map((c) => {
-        const stillActive = clientsById.get(c.client_id)?.active === 1
-        return (
-          <button
-            key={c.client_id}
-            type="button"
-            disabled={disabled || !stillActive}
-            onClick={() => onStart(c.client_id)}
-            className="flex items-center gap-2 rounded-full border px-3 py-1 text-sm backdrop-blur-xl hover:border-indigo-500 disabled:cursor-not-allowed disabled:opacity-50 transition-colors"
-            style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)', color: 'var(--text)' }}
-            title={stillActive ? t('today.quickstart.startFor', { name: c.name }) : t('today.quickstart.clientInactive')}
-          >
-            <span className="h-2 w-2 rounded-full" style={{ backgroundColor: c.color }} />
-            {c.name}
-            <Icons.Play width={11} height={11} />
-          </button>
-        )
-      })}
+      {topClients.map((c) => (
+        <QuickStartPill
+          key={c.client_id}
+          clientId={c.client_id}
+          name={c.name}
+          color={c.color}
+          lastProjectId={c.last_project_id}
+          projectsById={projectsById}
+          clientsById={clientsById}
+          disabled={disabled}
+          onStart={onStart}
+        />
+      ))}
+    </div>
+  )
+}
+
+function QuickStartPill({
+  clientId,
+  name,
+  color,
+  lastProjectId,
+  projectsById,
+  clientsById,
+  disabled,
+  onStart
+}: {
+  clientId: number
+  name: string
+  color: string
+  lastProjectId: number | null
+  projectsById: Map<number, Project>
+  clientsById: Map<number, Client>
+  disabled: boolean
+  onStart: (clientId: number, projectId: number | null) => void
+}): React.JSX.Element {
+  const t = useT()
+  const [holdProgress, setHoldProgress] = useState(0)
+  const [fanOpen, setFanOpen] = useState(false)
+  const holdTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const progressIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const isPressingRef = useRef(false)
+  const startTimeRef = useRef(0)
+
+  const stillActive = clientsById.get(clientId)?.active === 1
+  const lastProject = lastProjectId != null ? projectsById.get(lastProjectId) : undefined
+
+  const clientProjects = useMemo(
+    () => Array.from(projectsById.values()).filter((p) => p.client_id === clientId && p.active === 1),
+    [projectsById, clientId]
+  )
+  const hasProjects = clientProjects.length > 0
+
+  const fanItems: Array<{ id: number | null; name: string; color: string }> = useMemo(
+    () => [
+      ...clientProjects.map((p) => ({ id: p.id, name: p.name, color: p.color || color })),
+      { id: null, name: t('today.quickstart.noProject'), color: 'var(--text3)' }
+    ],
+    [clientProjects, color, t]
+  )
+
+  function clearHoldTimer(): void {
+    if (holdTimerRef.current) { clearTimeout(holdTimerRef.current); holdTimerRef.current = null }
+    if (progressIntervalRef.current) { clearInterval(progressIntervalRef.current); progressIntervalRef.current = null }
+  }
+
+  function getFanPos(index: number): { x: number; y: number } {
+    const N = fanItems.length
+    const R = 72
+    if (N === 1) return { x: 0, y: -R }
+    const spread = Math.min(120, (N - 1) * 30)
+    const angleDeg = -spread / 2 + index * (spread / (N - 1))
+    const rad = angleDeg * (Math.PI / 180)
+    return { x: R * Math.sin(rad), y: -R * Math.cos(rad) }
+  }
+
+  function handlePointerDown(e: React.PointerEvent): void {
+    if (disabled || !stillActive || fanOpen) return
+    e.preventDefault()
+    isPressingRef.current = true
+    if (!hasProjects) return
+    startTimeRef.current = Date.now()
+    const HOLD_MS = 300
+    progressIntervalRef.current = setInterval(() => {
+      setHoldProgress(Math.min((Date.now() - startTimeRef.current) / HOLD_MS, 0.999))
+    }, 16)
+    holdTimerRef.current = setTimeout(() => {
+      clearHoldTimer()
+      setHoldProgress(0)
+      setFanOpen(true)
+    }, HOLD_MS)
+  }
+
+  function handlePointerUp(): void {
+    const wasPressing = isPressingRef.current
+    isPressingRef.current = false
+    clearHoldTimer()
+    setHoldProgress(0)
+    if (!wasPressing || fanOpen) return
+    if (!disabled && stillActive) {
+      onStart(clientId, lastProjectId ?? null)
+    }
+  }
+
+  function handlePointerLeave(): void {
+    if (!fanOpen) {
+      isPressingRef.current = false
+      clearHoldTimer()
+      setHoldProgress(0)
+    }
+  }
+
+  return (
+    <div style={{ position: 'relative', display: 'inline-block' }}>
+      {fanOpen && (
+        <div
+          style={{ position: 'fixed', inset: 0, zIndex: 49 }}
+          onPointerDown={() => setFanOpen(false)}
+        />
+      )}
+      {fanOpen &&
+        fanItems.map((item, i) => {
+          const pos = getFanPos(i)
+          return (
+            <button
+              key={item.id ?? 'none'}
+              type="button"
+              onClick={() => { setFanOpen(false); onStart(clientId, item.id) }}
+              className="flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium backdrop-blur-xl transition-colors hover:border-indigo-400"
+              style={{
+                position: 'absolute',
+                left: `calc(50% + ${pos.x}px)`,
+                top: `calc(50% + ${pos.y}px)`,
+                transform: 'translate(-50%, -50%)',
+                zIndex: 50,
+                whiteSpace: 'nowrap',
+                background: 'var(--card-bg)',
+                borderColor: 'var(--card-border)',
+                color: 'var(--text)',
+                animation: `qs-fan-in 150ms ease-out ${i * 25}ms both`
+              }}
+            >
+              <span
+                className="h-1.5 w-1.5 flex-shrink-0 rounded-full"
+                style={{ backgroundColor: item.id != null ? item.color : 'var(--text3)' }}
+              />
+              {item.name}
+            </button>
+          )
+        })}
+      <button
+        type="button"
+        disabled={disabled || !stillActive}
+        onPointerDown={handlePointerDown}
+        onPointerUp={handlePointerUp}
+        onPointerLeave={handlePointerLeave}
+        onContextMenu={(e) => {
+          if (hasProjects && !disabled && stillActive) {
+            e.preventDefault()
+            setFanOpen(true)
+          }
+        }}
+        className="flex flex-col items-start rounded-[14px] border px-3 py-1.5 text-sm backdrop-blur-xl transition-colors hover:border-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
+        style={{
+          background: 'var(--card-bg)',
+          borderColor: holdProgress > 0 ? color : 'var(--card-border)',
+          color: 'var(--text)',
+          transform: holdProgress > 0 ? `scale(${(1 - holdProgress * 0.04).toFixed(4)})` : undefined,
+          boxShadow: holdProgress > 0 ? `0 0 0 ${(holdProgress * 3).toFixed(1)}px ${color}50` : undefined,
+          userSelect: 'none'
+        }}
+        title={
+          stillActive
+            ? hasProjects
+              ? t('today.quickstart.holdHint')
+              : t('today.quickstart.startFor', { name })
+            : t('today.quickstart.clientInactive')
+        }
+      >
+        <div className="flex items-center gap-2">
+          <span className="h-2 w-2 flex-shrink-0 rounded-full" style={{ backgroundColor: color }} />
+          <span className="font-medium">{name}</span>
+          {hasProjects && (
+            <Icons.ChevronDown width={10} height={10} style={{ color: 'var(--text3)', opacity: 0.6 }} />
+          )}
+          <Icons.Play width={11} height={11} style={{ color: 'var(--text3)' }} />
+        </div>
+        {lastProject && (
+          <div className="pl-4 text-xs leading-tight" style={{ color: 'var(--text3)', marginTop: 2 }}>
+            {lastProject.name}
+          </div>
+        )}
+      </button>
     </div>
   )
 }

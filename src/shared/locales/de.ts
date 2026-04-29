@@ -159,6 +159,8 @@ export const de = {
   'today.quickstart.label': 'Quick-Start',
   'today.quickstart.startFor': 'Timer für {name} starten',
   'today.quickstart.clientInactive': 'Kunde inaktiv',
+  'today.quickstart.noProject': 'Kein Projekt',
+  'today.quickstart.holdHint': 'Gedrückt halten für Projektwahl',
   'today.recent.empty': 'Noch kein Eintrag heute',
   'today.recent.emptyHint': 'Starte einen Timer oder lege einen Eintrag manuell nach.',
   'today.table.time': 'Zeit',
