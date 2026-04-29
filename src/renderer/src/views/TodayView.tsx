@@ -97,7 +97,7 @@ export default function TodayView(): React.JSX.Element {
 
   return (
     <div className="mx-auto w-full max-w-3xl flex flex-col gap-6">
-      <ActiveTimerPill runningEntry={runningEntry} clientsById={clientsById} onStop={() => void stop()} />
+      <ActiveTimerPill runningEntry={runningEntry} clientsById={clientsById} projectsById={projectsById} onStop={() => void stop()} />
 
       {status === 'loading' && <SummarySkeleton />}
       {status === 'error' && (
@@ -205,10 +205,12 @@ export default function TodayView(): React.JSX.Element {
 function ActiveTimerPill({
   runningEntry,
   clientsById,
+  projectsById,
   onStop
 }: {
   runningEntry: Entry | null
   clientsById: Map<number, Client>
+  projectsById: Map<number, Project>
   onStop: () => void
 }): React.JSX.Element {
   const t = useT()
@@ -233,6 +235,7 @@ function ActiveTimerPill({
     )
   }
   const client = clientsById.get(runningEntry.client_id)
+  const runningProject = runningEntry.project_id != null ? projectsById.get(runningEntry.project_id) : undefined
   return (
     <div
       className="flex items-center gap-3 rounded-[14px] border px-4 py-2 text-sm backdrop-blur-xl"
@@ -244,7 +247,7 @@ function ActiveTimerPill({
     >
       <span
         className="h-2.5 w-2.5 animate-pulse rounded-full"
-        style={{ backgroundColor: client?.color ?? '#10b981' }}
+        style={{ backgroundColor: runningProject?.color || (client?.color ?? '#10b981') }}
       />
       <span className="font-medium" style={{ color: 'var(--text)' }}>{client?.name ?? t('common.unknown')}</span>
       {runningEntry.description && (
@@ -387,7 +390,7 @@ function RecentList({
               {formatTimeRange(e)}
             </span>
             <span className="inline-flex items-center gap-2 overflow-hidden" style={{ color: 'var(--text)' }}>
-              <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: client?.color ?? '#64748b' }} />
+              <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: project?.color || (client?.color ?? '#64748b') }} />
               <span className="truncate">
                 {client?.name ?? t('common.unknown')}
                 {project && (
