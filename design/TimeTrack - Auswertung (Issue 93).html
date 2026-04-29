@@ -1,0 +1,1467 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TimeTrack — Auswertung (Issue #93)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { width: 100%; height: 100%; overflow: hidden; }
+    #root { width: 100%; height: 100%; }
+
+    @keyframes pulse-dot { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(.85)} }
+    @keyframes spin { to { transform: rotate(360deg) } }
+    @keyframes fadeIn { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:translateY(0)} }
+    @keyframes slideIn { from{transform:translateX(100%)} to{transform:translateX(0)} }
+
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,.12); border-radius:3px; }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useEffect, useMemo, useRef, useCallback } = React
+
+/* ─────────────────────────────────────────────────────
+   DESIGN TOKENS
+───────────────────────────────────────────────────── */
+function makeTokens(dark) {
+  return dark ? {
+    dark: true,
+    pageBg:    'linear-gradient(145deg, #0d0f1e 0%, #080c1a 60%, #0a0d1c 100%)',
+    card:      'rgba(255,255,255,0.045)',
+    cardHover: 'rgba(255,255,255,0.07)',
+    cardSolid: '#111827',
+    navBg:     'rgba(10,12,28,0.8)',
+    border:    'rgba(255,255,255,0.08)',
+    borderSub: 'rgba(255,255,255,0.04)',
+    borderFocus:'rgba(139,124,248,0.6)',
+    text:      '#e8eaf6',
+    text2:     '#8b93bc',
+    text3:     '#4a5270',
+    inputBg:   'rgba(0,0,0,0.3)',
+    accent:    '#8b7cf8',
+    accentHov: '#a095fb',
+    accentBg:  'rgba(139,124,248,0.12)',
+    accentGlow:'rgba(139,124,248,0.25)',
+    green:     '#4ade80',
+    greenBg:   'rgba(74,222,128,0.1)',
+    greenBdr:  'rgba(74,222,128,0.2)',
+    amber:     '#fbbf24',
+    danger:    '#f87171',
+    dangerBg:  'rgba(248,113,113,0.1)',
+    blur:      'blur(20px)',
+    shadow:    '0 8px 32px rgba(0,0,0,0.5)',
+    shadowSm:  '0 2px 12px rgba(0,0,0,0.4)',
+    radius:    14,
+    mono:      "'JetBrains Mono', monospace",
+    font:      "'Inter', sans-serif",
+  } : {
+    dark: false,
+    pageBg:    'linear-gradient(145deg, #dde4f8 0%, #e8edfb 60%, #e0e8f8 100%)',
+    card:      'rgba(255,255,255,0.7)',
+    cardHover: 'rgba(255,255,255,0.88)',
+    cardSolid: '#fff',
+    navBg:     'rgba(255,255,255,0.75)',
+    border:    'rgba(0,0,0,0.07)',
+    borderSub: 'rgba(0,0,0,0.04)',
+    borderFocus:'rgba(91,78,240,0.5)',
+    text:      '#1a1c2e',
+    text2:     '#5b6080',
+    text3:     '#9098b8',
+    inputBg:   'rgba(255,255,255,0.9)',
+    accent:    '#5b4ef0',
+    accentHov: '#4a3dd8',
+    accentBg:  'rgba(91,78,240,0.08)',
+    accentGlow:'rgba(91,78,240,0.18)',
+    green:     '#16a34a',
+    greenBg:   'rgba(22,163,74,0.07)',
+    greenBdr:  'rgba(22,163,74,0.18)',
+    amber:     '#d97706',
+    danger:    '#dc2626',
+    dangerBg:  'rgba(220,38,38,0.07)',
+    blur:      'blur(20px)',
+    shadow:    '0 8px 32px rgba(100,120,200,0.12)',
+    shadowSm:  '0 2px 12px rgba(100,120,200,0.1)',
+    radius:    14,
+    mono:      "'JetBrains Mono', monospace",
+    font:      "'Inter', sans-serif",
+  }
+}
+
+/* ─────────────────────────────────────────────────────
+   SVG ICON LIBRARY
+───────────────────────────────────────────────────── */
+const Icon = {
+  Edit: (p={}) => (
+    <svg width={p.size||14} height={p.size||14} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M11.5 2.5a1.414 1.414 0 0 1 2 2L5 13H3v-2L11.5 2.5z"/>
+    </svg>
+  ),
+  Trash: (p={}) => (
+    <svg width={p.size||14} height={p.size||14} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M2 4h12M6 4V2.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 .5.5V4M5 4l.667 9h4.666L11 4"/>
+    </svg>
+  ),
+  Archive: (p={}) => (
+    <svg width={p.size||14} height={p.size||14} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="3" width="12" height="3" rx="1"/><path d="M3 6v7a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V6M6.5 9h3"/>
+    </svg>
+  ),
+  Unarchive: (p={}) => (
+    <svg width={p.size||14} height={p.size||14} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="3" width="12" height="3" rx="1"/><path d="M3 6v7a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V6M8 9v3M6.5 10.5L8 9l1.5 1.5"/>
+    </svg>
+  ),
+  Plus: (p={}) => (
+    <svg width={p.size||14} height={p.size||14} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+      <path d="M8 3v10M3 8h10"/>
+    </svg>
+  ),
+  ChevLeft: (p={}) => (
+    <svg width={p.size||16} height={p.size||16} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M10 12L6 8l4-4"/>
+    </svg>
+  ),
+  ChevRight: (p={}) => (
+    <svg width={p.size||16} height={p.size||16} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M6 4l4 4-4 4"/>
+    </svg>
+  ),
+  ChevDown: (p={}) => (
+    <svg width={p.size||14} height={p.size||14} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 6l4 4 4-4"/>
+    </svg>
+  ),
+  Play: (p={}) => (
+    <svg width={p.size||16} height={p.size||16} viewBox="0 0 16 16" fill="currentColor">
+      <path d="M5 3.5l8 4.5-8 4.5V3.5z"/>
+    </svg>
+  ),
+  Stop: (p={}) => (
+    <svg width={p.size||16} height={p.size||16} viewBox="0 0 16 16" fill="currentColor">
+      <rect x="3.5" y="3.5" width="9" height="9" rx="1.5"/>
+    </svg>
+  ),
+  Clock: (p={}) => (
+    <svg width={p.size||14} height={p.size||14} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
+      <circle cx="8" cy="8" r="6"/><path d="M8 5v3.5l2.5 1.5"/>
+    </svg>
+  ),
+  File: (p={}) => (
+    <svg width={p.size||14} height={p.size||14} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9 2H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V6L9 2z"/><path d="M9 2v4h4"/>
+    </svg>
+  ),
+  X: (p={}) => (
+    <svg width={p.size||14} height={p.size||14} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+      <path d="M4 4l8 8M12 4l-8 8"/>
+    </svg>
+  ),
+  Check: (p={}) => (
+    <svg width={p.size||14} height={p.size||14} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 8l4 4 6-6"/>
+    </svg>
+  ),
+  Sun: (p={}) => (
+    <svg width={p.size||15} height={p.size||15} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
+      <circle cx="8" cy="8" r="3"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.5 3.5l1.4 1.4M11.1 11.1l1.4 1.4M3.5 12.5l1.4-1.4M11.1 4.9l1.4-1.4"/>
+    </svg>
+  ),
+  Moon: (p={}) => (
+    <svg width={p.size||15} height={p.size||15} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
+      <path d="M13 10A6 6 0 0 1 6 3a6 6 0 1 0 7 7z"/>
+    </svg>
+  ),
+  TrendUp: (p={}) => (
+    <svg width={p.size||12} height={p.size||12} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M2 11l4-4 3 3 5-6"/><path d="M10 4h4v4"/>
+    </svg>
+  ),
+  TrendDown: (p={}) => (
+    <svg width={p.size||12} height={p.size||12} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M2 5l4 4 3-3 5 6"/><path d="M10 12h4V8"/>
+    </svg>
+  ),
+  Target: (p={}) => (
+    <svg width={p.size||14} height={p.size||14} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
+      <circle cx="8" cy="8" r="6"/><circle cx="8" cy="8" r="3"/><circle cx="8" cy="8" r=".5" fill="currentColor"/>
+    </svg>
+  ),
+  Sparkles: (p={}) => (
+    <svg width={p.size||13} height={p.size||13} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M8 2v3M8 11v3M2 8h3M11 8h3M4 4l2 2M10 10l2 2M12 4l-2 2M6 10l-2 2"/>
+    </svg>
+  ),
+  BarsIcon: (p={}) => (
+    <svg width={p.size||14} height={p.size||14} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
+      <path d="M3 13V8M8 13V3M13 13v-7"/>
+    </svg>
+  ),
+  Empty: (p={}) => (
+    <svg width={p.size||56} height={p.size||56} viewBox="0 0 64 64" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="10" y="22" width="44" height="32" rx="4"/>
+      <path d="M18 44V36M26 44V32M34 44V38M42 44V30M50 44V34"/>
+      <circle cx="48" cy="16" r="6"/><path d="M48 13v6M45 16h6"/>
+    </svg>
+  ),
+  Dot: ({ color, pulse }) => (
+    <span style={{ width:8, height:8, borderRadius:'50%', background:color, display:'inline-block', flexShrink:0, animation: pulse?'pulse-dot 2s infinite':undefined }} />
+  ),
+}
+
+/* ─────────────────────────────────────────────────────
+   MOCK DATA
+───────────────────────────────────────────────────── */
+const CLIENTS = [
+  { id:1, name:'Lingua Masters GmbH', color:'#8b7cf8', active:true },
+  { id:2, name:'Testkunde AG',         color:'#4ade80', active:true },
+  { id:3, name:'Webprojekt KG',        color:'#fbbf24', active:true },
+  { id:4, name:'Altprojekt GbR',       color:'#f87171', active:false },
+]
+const ENTRIES = [
+  { id:1, client_id:1, time:'08:00–10:30', desc:'Übersetzung Jahresbericht', dur:'02:30' },
+  { id:2, client_id:2, time:'11:00–12:15', desc:'Review Meeting',            dur:'01:15' },
+  { id:3, client_id:1, time:'13:30–15:45', desc:'Lektorat Kapitel 3–5',      dur:'02:15' },
+  { id:4, client_id:3, time:'16:00–17:00', desc:'Wireframes Onboarding',     dur:'01:00' },
+]
+const RUNNING = { client_id:2, desc:'API Integration', elapsed:'01:23:47' }
+const cl = (id) => CLIENTS.find(c => c.id === id) || CLIENTS[0]
+
+const CAL_BARS = {
+  '2026-04-03': [1], '2026-04-07': [1,2], '2026-04-08': [2],
+  '2026-04-09': [1,3], '2026-04-14': [1], '2026-04-15': [2,1],
+  '2026-04-16': [3], '2026-04-21': [1,2], '2026-04-22': [2],
+  '2026-04-24': [1,3], '2026-04-25': [2,1], '2026-04-27': [1,2,3],
+  '2026-04-28': [2], '2026-04-29': [1],
+}
+
+/* ─────────────────────────────────────────────────────
+   SHARED UI PRIMITIVES
+───────────────────────────────────────────────────── */
+function GlassCard({ tk, style, children, onClick }) {
+  return (
+    <div onClick={onClick} style={{
+      background: tk.card, backdropFilter: tk.blur, WebkitBackdropFilter: tk.blur,
+      border: `1px solid ${tk.border}`, borderRadius: tk.radius,
+      boxShadow: tk.shadowSm, ...style
+    }}>
+      {children}
+    </div>
+  )
+}
+
+function IconBtn({ tk, icon, danger, onClick, title }) {
+  const [hover, setHover] = useState(false)
+  return (
+    <button
+      title={title}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      onClick={onClick}
+      style={{
+        width:30, height:30, display:'grid', placeItems:'center', borderRadius:8,
+        border:`1px solid ${hover?(danger?tk.danger:tk.border):tk.borderSub}`,
+        background: hover ? (danger?tk.dangerBg:tk.accentBg) : 'transparent',
+        color: hover ? (danger?tk.danger:tk.accent) : tk.text3,
+        cursor:'pointer', transition:'all .15s', flexShrink:0
+      }}
+    >
+      {icon}
+    </button>
+  )
+}
+
+function PillBtn({ tk, children, active, onClick, small }) {
+  const [hover, setHover] = useState(false)
+  return (
+    <button
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      onClick={onClick}
+      style={{
+        padding: small?'5px 12px':'7px 16px',
+        borderRadius:24, border:`1px solid ${active||hover?tk.accent:tk.border}`,
+        background: active ? tk.accent : hover ? tk.accentBg : tk.card,
+        backdropFilter: tk.blur, WebkitBackdropFilter: tk.blur,
+        color: active ? '#fff' : hover ? tk.accent : tk.text2,
+        fontSize:12, fontWeight:500, cursor:'pointer', transition:'all .15s',
+        display:'inline-flex', alignItems:'center', gap:6, whiteSpace:'nowrap',
+        fontFamily: tk.font
+      }}
+    >
+      {children}
+    </button>
+  )
+}
+
+function GlassInput({ tk, value, onChange, placeholder, disabled, type='text' }) {
+  return (
+    <input
+      type={type} value={value} onChange={onChange}
+      placeholder={placeholder} disabled={disabled}
+      style={{
+        width:'100%', padding:'10px 14px', borderRadius:10,
+        background: tk.inputBg, backdropFilter: tk.blur,
+        border: `1px solid ${tk.border}`, color: tk.text,
+        fontSize:13, fontFamily: tk.font, outline:'none',
+        opacity: disabled ? .5 : 1
+      }}
+    />
+  )
+}
+
+function GlassSelect({ tk, value, onChange, disabled, children }) {
+  return (
+    <select
+      value={value} onChange={onChange} disabled={disabled}
+      style={{
+        width:'100%', padding:'10px 14px', borderRadius:10,
+        background: tk.inputBg, border: `1px solid ${tk.border}`,
+        color: tk.text, fontSize:13, fontFamily: tk.font,
+        outline:'none', cursor:'pointer', opacity: disabled?.5:1,
+        appearance:'none', WebkitAppearance:'none'
+      }}
+    >
+      {children}
+    </select>
+  )
+}
+
+/* ─────────────────────────────────────────────────────
+   VIEW: HEUTE
+───────────────────────────────────────────────────── */
+function HeuteView({ tk }) {
+  return (
+    <div style={{ display:'flex', flexDirection:'column', gap:16, maxWidth:740, margin:'0 auto', animation:'fadeIn .2s ease' }}>
+
+      {/* Running timer pill */}
+      <GlassCard tk={tk} style={{
+        padding:'12px 18px', display:'flex', alignItems:'center', gap:12,
+        background:`linear-gradient(90deg, ${tk.greenBg}, ${tk.card})`,
+        borderColor: tk.greenBdr
+      }}>
+        <Icon.Dot color={tk.green} pulse />
+        <span style={{ fontWeight:600, fontSize:14, color: tk.text }}>{cl(RUNNING.client_id).name}</span>
+        <span style={{ color: tk.text2, fontSize:13 }}>— {RUNNING.desc}</span>
+        <span style={{ marginLeft:'auto', fontFamily: tk.mono, fontSize:14, fontWeight:600, color: tk.green, fontVariantNumeric:'tabular-nums', letterSpacing:1 }}>{RUNNING.elapsed}</span>
+        <IconBtn tk={tk} icon={<Icon.Stop size={14}/>} danger onClick={()=>{}} title="Timer stoppen" />
+      </GlassCard>
+
+      {/* Stat cards */}
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+        {[['Heute','05:00', tk.accent],['Diese Woche','18:45', tk.green]].map(([lbl,val,col])=>(
+          <GlassCard key={lbl} tk={tk} style={{ padding:'18px 22px' }}>
+            <div style={{ fontSize:11, fontWeight:600, color: tk.text3, letterSpacing:.5, marginBottom:10 }}>{lbl}</div>
+            <div style={{ fontSize:40, fontWeight:700, fontFamily: tk.mono, color: col, letterSpacing:2, lineHeight:1, fontVariantNumeric:'tabular-nums' }}>{val}</div>
+          </GlassCard>
+        ))}
+      </div>
+
+      {/* Quick start */}
+      <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap' }}>
+        <span style={{ fontSize:11, fontWeight:600, color: tk.text3, letterSpacing:.5 }}>Quick-Start</span>
+        {CLIENTS.filter(c=>c.active).slice(0,3).map(c=>(
+          <PillBtn key={c.id} tk={tk} small>
+            <Icon.Dot color={c.color} />
+            {c.name}
+            <Icon.Play size={11}/>
+          </PillBtn>
+        ))}
+      </div>
+
+      {/* Recent entries */}
+      <GlassCard tk={tk} style={{ overflow:'hidden', padding:0 }}>
+        <div style={{ display:'grid', gridTemplateColumns:'110px 1fr 1fr 70px 72px', padding:'8px 18px', borderBottom:`1px solid ${tk.borderSub}`, fontSize:11, fontWeight:600, color: tk.text3, letterSpacing:.5, gap:16, textTransform:'uppercase' }}>
+          <span>Zeit</span><span>Kunde</span><span>Beschreibung</span><span style={{textAlign:'right'}}>Dauer</span><span></span>
+        </div>
+        {ENTRIES.map((e,i)=>(
+          <div key={e.id} style={{ display:'grid', gridTemplateColumns:'110px 1fr 1fr 70px 72px', padding:'11px 18px', borderTop: i>0?`1px solid ${tk.borderSub}`:'none', gap:16, alignItems:'center', fontSize:13 }}>
+            <span style={{ fontFamily: tk.mono, fontSize:11, color: tk.text2, fontVariantNumeric:'tabular-nums' }}>{e.time}</span>
+            <span style={{ display:'flex', alignItems:'center', gap:8, fontWeight:500, color: tk.text }}>
+              <Icon.Dot color={cl(e.client_id).color} />
+              {cl(e.client_id).name}
+            </span>
+            <span style={{ color: tk.text2, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{e.desc}</span>
+            <span style={{ fontFamily: tk.mono, fontSize:12, textAlign:'right', color: tk.text, fontVariantNumeric:'tabular-nums' }}>{e.dur}</span>
+            <div style={{ display:'flex', gap:4, justifyContent:'flex-end' }}>
+              <IconBtn tk={tk} icon={<Icon.Edit/>} title="Bearbeiten" />
+              <IconBtn tk={tk} icon={<Icon.Trash/>} danger title="Löschen" />
+            </div>
+          </div>
+        ))}
+      </GlassCard>
+
+      <div>
+        <PillBtn tk={tk}>
+          <Icon.Plus size={13}/>
+          Eintrag nachtragen
+        </PillBtn>
+      </div>
+    </div>
+  )
+}
+
+/* ─────────────────────────────────────────────────────
+   VIEW: TIMER
+───────────────────────────────────────────────────── */
+function TimerView({ tk }) {
+  const [running, setRunning] = useState(false)
+  const [secs, setSecs] = useState(0)
+  const [client, setClient] = useState('')
+  const [desc, setDesc] = useState('')
+
+  useEffect(() => {
+    if (!running) return
+    const id = setInterval(() => setSecs(s => s+1), 1000)
+    return () => clearInterval(id)
+  }, [running])
+
+  function fmt(s) {
+    const h = String(Math.floor(s/3600)).padStart(2,'0')
+    const m = String(Math.floor((s%3600)/60)).padStart(2,'0')
+    const sec = String(s%60).padStart(2,'0')
+    return `${h}:${m}:${sec}`
+  }
+
+  return (
+    <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', height:'100%', gap:32, animation:'fadeIn .2s ease' }}>
+      {/* Ambient glow behind clock */}
+      <div style={{ position:'relative' }}>
+        {running && <div style={{ position:'absolute', top:'50%', left:'50%', transform:'translate(-50%,-50%)', width:320, height:120, background: tk.greenBg, borderRadius:'50%', filter:'blur(40px)', pointerEvents:'none' }} />}
+        <div style={{ position:'relative', fontSize:78, fontFamily: tk.mono, fontWeight:700, letterSpacing:4, lineHeight:1, fontVariantNumeric:'tabular-nums', color: running ? tk.green : tk.text3, textShadow: running ? `0 0 60px ${tk.green}40` : 'none', transition:'color .4s, text-shadow .4s' }}>
+          {fmt(secs)}
+        </div>
+        {running && (
+          <div style={{ textAlign:'center', marginTop:10, display:'flex', alignItems:'center', justifyContent:'center', gap:8 }}>
+            <Icon.Dot color={cl(2).color} pulse />
+            <span style={{ fontSize:13, color: tk.text2 }}>{cl(2).name}</span>
+          </div>
+        )}
+      </div>
+
+      <GlassCard tk={tk} style={{ padding:24, display:'flex', flexDirection:'column', gap:14, width:420 }}>
+        <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+          <label style={{ fontSize:11, fontWeight:600, color: tk.text3, letterSpacing:.5 }}>KUNDE</label>
+          <div style={{ position:'relative' }}>
+            <GlassSelect tk={tk} value={client} onChange={e=>setClient(e.target.value)} disabled={running}>
+              <option value="">— Kunden auswählen —</option>
+              {CLIENTS.filter(c=>c.active).map(c=><option key={c.id} value={c.id}>{c.name}</option>)}
+            </GlassSelect>
+            <span style={{ position:'absolute', right:12, top:'50%', transform:'translateY(-50%)', color: tk.text3, pointerEvents:'none' }}><Icon.ChevDown/></span>
+          </div>
+        </div>
+        <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+          <label style={{ fontSize:11, fontWeight:600, color: tk.text3, letterSpacing:.5 }}>BESCHREIBUNG</label>
+          <GlassInput tk={tk} value={desc} onChange={e=>setDesc(e.target.value)} placeholder="Woran arbeitest du?" disabled={running} />
+        </div>
+        {!running ? (
+          <button
+            onClick={()=>{ if(client){ setRunning(true); setSecs(0) }}}
+            style={{
+              padding:'13px', borderRadius:12, border:'none',
+              background: client ? tk.accent : tk.card,
+              color: client ? '#fff' : tk.text3, fontSize:15, fontWeight:700, cursor: client?'pointer':'default',
+              display:'flex', alignItems:'center', justifyContent:'center', gap:10,
+              boxShadow: client ? `0 8px 32px ${tk.accentGlow}` : 'none',
+              transition:'all .2s', fontFamily: tk.font
+            }}
+          >
+            <Icon.Play size={16}/> Start
+          </button>
+        ) : (
+          <button
+            onClick={()=>setRunning(false)}
+            style={{
+              padding:'13px', borderRadius:12, border:`1px solid ${tk.danger}`,
+              background: tk.dangerBg, color: tk.danger, fontSize:15, fontWeight:700, cursor:'pointer',
+              display:'flex', alignItems:'center', justifyContent:'center', gap:10,
+              fontFamily: tk.font, transition:'all .2s'
+            }}
+          >
+            <Icon.Stop size={16}/> Stop
+          </button>
+        )}
+      </GlassCard>
+
+      {running && (
+        <p style={{ fontSize:11, color: tk.text3 }}>
+          Timer läuft · <span style={{ fontFamily: tk.mono, color: tk.text2 }}>Alt+Shift+S</span> zum Stoppen
+        </p>
+      )}
+    </div>
+  )
+}
+
+/* ─────────────────────────────────────────────────────
+   VIEW: KALENDER
+───────────────────────────────────────────────────── */
+function KalenderView({ tk }) {
+  const DAYS = ['Mo','Di','Mi','Do','Fr','Sa','So']
+  // April 2026: starts Wednesday (offset 2)
+  const offset = 2
+  const weeks = useMemo(() => {
+    const all = []
+    for(let i=0;i<35;i++){
+      const d = i-offset+1
+      const inMonth = d>=1 && d<=30
+      const key = `2026-04-${String(d).padStart(2,'0')}`
+      all.push({ d, inMonth, isToday: d===27, bars: inMonth?(CAL_BARS[key]||[]):[] })
+    }
+    const w=[]
+    for(let r=0;r<5;r++) w.push(all.slice(r*7,(r+1)*7))
+    return w
+  }, [])
+
+  return (
+    <div style={{ display:'flex', flexDirection:'column', gap:14, animation:'fadeIn .2s ease' }}>
+      {/* Header */}
+      <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+        <div style={{ display:'flex', gap:2 }}>
+          <button style={{ width:32, height:32, borderRadius:8, border:`1px solid ${tk.border}`, background: tk.card, backdropFilter: tk.blur, color: tk.text2, display:'grid', placeItems:'center', cursor:'pointer' }}><Icon.ChevLeft/></button>
+          <button style={{ width:32, height:32, borderRadius:8, border:`1px solid ${tk.border}`, background: tk.card, backdropFilter: tk.blur, color: tk.text2, display:'grid', placeItems:'center', cursor:'pointer' }}><Icon.ChevRight/></button>
+        </div>
+        <span style={{ fontSize:16, fontWeight:700, color: tk.text, minWidth:140 }}>April 2026</span>
+        <button style={{ fontSize:11, fontWeight:500, color: tk.text3, background:'transparent', border:`1px solid ${tk.border}`, padding:'4px 12px', borderRadius:24, cursor:'pointer', fontFamily: tk.font }}>Heute</button>
+        <div style={{ marginLeft:'auto', display:'flex', gap:6, flexWrap:'wrap' }}>
+          <PillBtn tk={tk} active small>
+            <Icon.File size={12}/> Letzter Monat
+          </PillBtn>
+          {['Diese Woche','Letzte Woche','Dieser Monat'].map(l=>(
+            <PillBtn key={l} tk={tk} small>{l}</PillBtn>
+          ))}
+        </div>
+      </div>
+
+      {/* Grid */}
+      <GlassCard tk={tk} style={{ overflow:'hidden', padding:0 }}>
+        {/* Day headers */}
+        <div style={{ display:'grid', gridTemplateColumns:'36px repeat(7,1fr)', borderBottom:`1px solid ${tk.border}` }}>
+          <div style={{ padding:'8px 4px', fontSize:10, color: tk.text3, textAlign:'center' }}>KW</div>
+          {DAYS.map(d=><div key={d} style={{ padding:'8px', fontSize:11, fontWeight:600, color: tk.text3, textAlign:'center', letterSpacing:.5 }}>{d}</div>)}
+        </div>
+        {weeks.map((week,wi)=>(
+          <div key={wi} style={{ display:'grid', gridTemplateColumns:'36px repeat(7,1fr)', borderTop: wi>0?`1px solid ${tk.borderSub}`:'none' }}>
+            <div style={{ fontSize:10, color: tk.text3, textAlign:'center', padding:'8px 2px', borderRight:`1px solid ${tk.borderSub}`, display:'flex', alignItems:'flex-start', justifyContent:'center', paddingTop:8 }}>{17+wi}</div>
+            {week.map((day,di)=>(
+              <div key={di} style={{
+                height:68, padding:'7px 10px', borderLeft: di>0?`1px solid ${tk.borderSub}`:'none',
+                background: day.isToday ? tk.accentBg : 'transparent',
+                opacity: day.inMonth?1:0.2, display:'flex', flexDirection:'column',
+                cursor:'pointer', transition:'background .15s',
+                outline: day.isToday ? `1.5px solid ${tk.accent}` : 'none',
+                outlineOffset:'-1.5px',
+              }}>
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
+                  <span style={{ fontSize:13, fontWeight: day.isToday?700:400, color: day.isToday?tk.accent:tk.text }}>{day.d>0&&day.d<=30?day.d:''}</span>
+                  {day.bars.length>0 && <span style={{ fontSize:9, fontFamily: tk.mono, color: tk.text3, fontVariantNumeric:'tabular-nums' }}>3:45</span>}
+                </div>
+                <div style={{ display:'flex', flexDirection:'column', gap:2.5, marginTop:'auto' }}>
+                  {day.bars.slice(0,4).map((cid,i)=>(
+                    <div key={i} style={{ height:3, borderRadius:2, background: cl(cid).color, boxShadow:`0 0 4px ${cl(cid).color}60` }} />
+                  ))}
+                  {day.bars.length>4 && <span style={{ fontSize:9, color: tk.text3 }}>+{day.bars.length-4}</span>}
+                </div>
+              </div>
+            ))}
+          </div>
+        ))}
+      </GlassCard>
+    </div>
+  )
+}
+
+/* ─────────────────────────────────────────────────────
+   VIEW: KUNDEN
+───────────────────────────────────────────────────── */
+const CLIENT_COLORS = ['#8b7cf8','#a78bf5','#ec4899','#fbbf24','#4ade80','#60a5fa','#f87171','#fb923c','#2dd4bf','#a3e635']
+
+function KundenView({ tk }) {
+  const [clients, setClients] = useState(CLIENTS)
+  const [showForm, setShowForm] = useState(false)
+  const [editing, setEditing] = useState(null)
+  const [archExpanded, setArchExpanded] = useState(false)
+
+  const active = clients.filter(c=>c.active)
+  const archived = clients.filter(c=>!c.active)
+
+  function toggleActive(c) { setClients(cs => cs.map(x => x.id===c.id?{...x,active:!x.active}:x)) }
+  function openEdit(c) { setEditing(c); setShowForm(true) }
+  function openNew() { setEditing(null); setShowForm(true) }
+
+  return (
+    <div style={{ maxWidth:600, margin:'0 auto', animation:'fadeIn .2s ease' }}>
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:20 }}>
+        <h1 style={{ fontSize:20, fontWeight:700, color: tk.text }}>Kunden</h1>
+        <PillBtn tk={tk} onClick={openNew} active>
+          <Icon.Plus size={13}/> Neuer Kunde
+        </PillBtn>
+      </div>
+
+      <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+        {active.map(c=>(
+          <GlassCard key={c.id} tk={tk} style={{ padding:'14px 18px', display:'flex', alignItems:'center', gap:12 }}>
+            <div style={{ width:14, height:14, borderRadius:'50%', background: c.color, flexShrink:0, boxShadow:`0 0 8px ${c.color}80` }} />
+            <span style={{ flex:1, fontWeight:600, color: tk.text, fontSize:14 }}>{c.name}</span>
+            <span style={{ fontSize:12, color: tk.text3, fontFamily: tk.mono }}>85,00 €/h</span>
+            <IconBtn tk={tk} icon={<Icon.Archive/>} title="Archivieren" onClick={()=>toggleActive(c)} />
+            <IconBtn tk={tk} icon={<Icon.Edit/>} title="Bearbeiten" onClick={()=>openEdit(c)} />
+            <IconBtn tk={tk} icon={<Icon.Trash/>} danger title="Löschen" />
+          </GlassCard>
+        ))}
+      </div>
+
+      {archived.length > 0 && (
+        <div style={{ marginTop:20 }}>
+          <button onClick={()=>setArchExpanded(v=>!v)} style={{ display:'flex', alignItems:'center', gap:6, background:'none', border:'none', color: tk.text3, fontSize:11, fontWeight:600, letterSpacing:.5, cursor:'pointer', marginBottom:8, fontFamily: tk.font }}>
+            <span style={{ display:'inline-block', transform: archExpanded?'rotate(90deg)':'rotate(0deg)', transition:'transform .2s' }}><Icon.ChevRight size={12}/></span>
+            ARCHIVIERT ({archived.length})
+          </button>
+          {archExpanded && (
+            <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+              {archived.map(c=>(
+                <GlassCard key={c.id} tk={tk} style={{ padding:'12px 18px', display:'flex', alignItems:'center', gap:12, opacity:.55 }}>
+                  <div style={{ width:14, height:14, borderRadius:'50%', background: c.color, flexShrink:0 }} />
+                  <span style={{ flex:1, fontWeight:500, color: tk.text }}>{c.name}</span>
+                  <IconBtn tk={tk} icon={<Icon.Unarchive/>} title="Reaktivieren" onClick={()=>toggleActive(c)} />
+                  <IconBtn tk={tk} icon={<Icon.Trash/>} danger title="Löschen" />
+                </GlassCard>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {showForm && (
+        <ClientModal tk={tk} client={editing} onClose={()=>setShowForm(false)}
+          onSave={(data)=>{ setClients(cs=>editing?cs.map(x=>x.id===editing.id?{...x,...data}:x):[...cs,{id:Date.now(),...data,active:true}]); setShowForm(false) }} />
+      )}
+    </div>
+  )
+}
+
+function ClientModal({ tk, client, onClose, onSave }) {
+  const [name, setName] = useState(client?.name||'')
+  const [color, setColor] = useState(client?.color||CLIENT_COLORS[0])
+  const [rate, setRate] = useState(client?'85,00':'')
+
+  return (
+    <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.55)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:50, backdropFilter:'blur(4px)' }} onClick={e=>e.target===e.currentTarget&&onClose()}>
+      <GlassCard tk={tk} style={{ padding:28, width:380, background: tk.dark?'rgba(15,17,35,.95)':'rgba(255,255,255,.96)' }}>
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:22 }}>
+          <h2 style={{ fontSize:17, fontWeight:700, color: tk.text }}>{client?'Kunde bearbeiten':'Neuer Kunde'}</h2>
+          <button onClick={onClose} style={{ background:'none', border:'none', color: tk.text3, cursor:'pointer' }}><Icon.X size={16}/></button>
+        </div>
+        <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
+          <div>
+            <label style={{ fontSize:11, fontWeight:600, color: tk.text3, letterSpacing:.5, display:'block', marginBottom:6 }}>NAME</label>
+            <GlassInput tk={tk} value={name} onChange={e=>setName(e.target.value)} placeholder="z.B. Mustermann GmbH" />
+          </div>
+          <div>
+            <label style={{ fontSize:11, fontWeight:600, color: tk.text3, letterSpacing:.5, display:'block', marginBottom:8 }}>FARBE</label>
+            <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
+              {CLIENT_COLORS.map(c=>(
+                <button key={c} onClick={()=>setColor(c)} style={{
+                  width:30, height:30, borderRadius:'50%', background:c, border:'none', cursor:'pointer',
+                  boxShadow: color===c ? `0 0 0 2px ${tk.dark?'#1a1c2e':'#fff'}, 0 0 0 4px ${c}, 0 0 12px ${c}60` : 'none',
+                  transform: color===c ? 'scale(1.15)' : 'scale(1)',
+                  transition:'all .15s'
+                }}/>
+              ))}
+            </div>
+          </div>
+          <div>
+            <label style={{ fontSize:11, fontWeight:600, color: tk.text3, letterSpacing:.5, display:'block', marginBottom:6 }}>STUNDENSATZ (€/h)</label>
+            <GlassInput tk={tk} value={rate} onChange={e=>setRate(e.target.value)} placeholder="Optional, z.B. 85,00" />
+          </div>
+          <div style={{ display:'flex', gap:10, paddingTop:4 }}>
+            <button onClick={onClose} style={{ flex:1, padding:'11px', borderRadius:10, border:`1px solid ${tk.border}`, background: tk.card, color: tk.text2, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily: tk.font }}>
+              Abbrechen
+            </button>
+            <button onClick={()=>onSave({name,color,rate})} style={{ flex:1, padding:'11px', borderRadius:10, border:'none', background: tk.accent, color:'#fff', fontSize:13, fontWeight:700, cursor:'pointer', boxShadow:`0 4px 20px ${tk.accentGlow}`, fontFamily: tk.font }}>
+              Speichern
+            </button>
+          </div>
+        </div>
+      </GlassCard>
+    </div>
+  )
+}
+
+/* ─────────────────────────────────────────────────────
+   VIEW: EINSTELLUNGEN
+───────────────────────────────────────────────────── */
+function EinstellungenView({ tk }) {
+  const [round, setRound] = useState('15')
+  const [mode, setMode] = useState('round')
+  const [autostart, setAutostart] = useState(false)
+  const [alwaysTop, setAlwaysTop] = useState(true)
+
+  function Toggle({ value, onChange }) {
+    return (
+      <div onClick={()=>onChange(!value)} style={{
+        width:40, height:22, borderRadius:11, background: value ? tk.accent : tk.card,
+        border:`1px solid ${value?tk.accent:tk.border}`, cursor:'pointer', position:'relative',
+        transition:'all .2s', boxShadow: value?`0 0 12px ${tk.accentGlow}`:'none'
+      }}>
+        <div style={{ position:'absolute', top:2, left: value?20:2, width:16, height:16, borderRadius:'50%', background:'#fff', transition:'left .2s', boxShadow:'0 1px 4px rgba(0,0,0,.3)' }}/>
+      </div>
+    )
+  }
+
+  function Section({ title, children }) {
+    return (
+      <div>
+        <div style={{ fontSize:11, fontWeight:700, letterSpacing:1, color: tk.text3, textTransform:'uppercase', marginBottom:10 }}>{title}</div>
+        <GlassCard tk={tk} style={{ padding:'4px 0' }}>{children}</GlassCard>
+      </div>
+    )
+  }
+  function Row({ label, sub, right }) {
+    return (
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'13px 18px', borderBottom:`1px solid ${tk.borderSub}` }}>
+        <div>
+          <div style={{ fontSize:13, fontWeight:500, color: tk.text }}>{label}</div>
+          {sub && <div style={{ fontSize:11, color: tk.text3, marginTop:2 }}>{sub}</div>}
+        </div>
+        {right}
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ maxWidth:580, margin:'0 auto', display:'flex', flexDirection:'column', gap:20, animation:'fadeIn .2s ease' }}>
+      <Section title="Rundungsmodus">
+        <Row label="Intervall" right={
+          <div style={{ display:'flex', gap:4 }}>
+            {['5','10','15','30'].map(v=>(
+              <button key={v} onClick={()=>setRound(v)} style={{
+                padding:'5px 12px', borderRadius:8, border:`1px solid ${round===v?tk.accent:tk.border}`,
+                background: round===v?tk.accentBg:tk.card, color: round===v?tk.accent:tk.text2,
+                fontSize:12, fontWeight:600, cursor:'pointer', fontFamily: tk.font
+              }}>{v} min</button>
+            ))}
+          </div>
+        }/>
+        <Row label="Methode" right={
+          <div style={{ display:'flex', gap:4 }}>
+            {[['ceil','Aufrunden'],['round','Runden'],['floor','Abrunden']].map(([v,l])=>(
+              <button key={v} onClick={()=>setMode(v)} style={{
+                padding:'5px 12px', borderRadius:8, border:`1px solid ${mode===v?tk.accent:tk.border}`,
+                background: mode===v?tk.accentBg:tk.card, color: mode===v?tk.accent:tk.text2,
+                fontSize:12, fontWeight:600, cursor:'pointer', fontFamily: tk.font
+              }}>{l}</button>
+            ))}
+          </div>
+        }/>
+      </Section>
+
+      <Section title="App-Verhalten">
+        <Row label="Mit Windows starten" sub="TimeTrack beim Systemstart öffnen" right={<Toggle value={autostart} onChange={setAutostart}/>}/>
+        <Row label="Immer im Vordergrund" sub="Mini-Modus bleibt über anderen Fenstern" right={<Toggle value={alwaysTop} onChange={setAlwaysTop}/>}/>
+      </Section>
+
+      <Section title="Branding (PDF-Export)">
+        <Row label="Firmenname" right={<div style={{ fontSize:12, color: tk.text2, background: tk.inputBg, padding:'6px 12px', borderRadius:8, border:`1px solid ${tk.border}`, minWidth:160, textAlign:'right' }}>Wald IT GmbH</div>}/>
+        <Row label="USt-IdNr." right={<div style={{ fontSize:12, color: tk.text2, fontFamily: tk.mono, background: tk.inputBg, padding:'6px 12px', borderRadius:8, border:`1px solid ${tk.border}` }}>DE 123 456 789</div>}/>
+        <Row label="Logo" right={
+          <button style={{ padding:'6px 14px', borderRadius:8, border:`1px solid ${tk.border}`, background: tk.card, color: tk.text2, fontSize:12, cursor:'pointer', fontFamily: tk.font }}>
+            Datei auswählen…
+          </button>
+        }/>
+      </Section>
+
+      <Section title="Backup">
+        <Row label="Auto-Backup" sub="Täglich in gewählten Ordner" right={<Toggle value={true} onChange={()=>{}}/>}/>
+        <Row label="Zielordner" right={
+          <div style={{ fontSize:11, fontFamily: tk.mono, color: tk.text3, maxWidth:200, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+            C:\Users\Wald\OneDrive\TimeTrack
+          </div>
+        }/>
+      </Section>
+    </div>
+  )
+}
+
+/* ─────────────────────────────────────────────────────
+   VIEW: AUSWERTUNG (Issue #93)
+───────────────────────────────────────────────────── */
+
+// Mock month data — laufender Monat April 2026, plus Vergleichswerte
+const ANALYTICS_MOCK = {
+  month: {
+    hours: 142.5, hoursPrev: 128.0,
+    revenue: 12112.50, revenuePrev: 10880.00,
+    forecast: 168.0,           // Hochrechnung Stunden
+    forecastRevenue: 14280.00, // Hochrechnung Umsatz
+    billable: 0.87,            // Billable Ratio
+    billablePrev: 0.82,
+    daysElapsed: 22, daysInMonth: 30,
+  },
+  // 12 Wochen — abrechenbar / nicht abrechenbar
+  weeks: [
+    { lbl:'KW07', b:24, n:6 }, { lbl:'KW08', b:31, n:4 },
+    { lbl:'KW09', b:28, n:5 }, { lbl:'KW10', b:34, n:7 },
+    { lbl:'KW11', b:22, n:3 }, { lbl:'KW12', b:36, n:8 },
+    { lbl:'KW13', b:33, n:5 }, { lbl:'KW14', b:38, n:6 },
+    { lbl:'KW15', b:30, n:4 }, { lbl:'KW16', b:35, n:7 },
+    { lbl:'KW17', b:39, n:5 }, { lbl:'KW18', b:18, n:2 },
+  ],
+  // 12 Monate — Stunden + Umsatz
+  months: [
+    { lbl:'Mai',  h: 132, r: 11220 }, { lbl:'Jun', h: 145, r: 12325 },
+    { lbl:'Jul',  h:  88, r:  7480 }, { lbl:'Aug', h: 112, r:  9520 },
+    { lbl:'Sep',  h: 156, r: 13260 }, { lbl:'Okt', h: 162, r: 13770 },
+    { lbl:'Nov',  h: 148, r: 12580 }, { lbl:'Dez', h:  96, r:  8160 },
+    { lbl:'Jan',  h: 158, r: 13430 }, { lbl:'Feb', h: 144, r: 12240 },
+    { lbl:'Mär',  h: 128, r: 10880 }, { lbl:'Apr', h: 142.5, r: 12112 },
+  ],
+  // Stunden nach Kunde (Top 8 + Sonstige)
+  byClient: [
+    { name:'Lingua Masters GmbH', color:'#8b7cf8', h: 58.5, rev: 4972 },
+    { name:'Testkunde AG',        color:'#4ade80', h: 34.0, rev: 2890 },
+    { name:'Webprojekt KG',       color:'#fbbf24', h: 22.5, rev: 1912 },
+    { name:'Müller Consulting',   color:'#60a5fa', h: 14.0, rev: 1190 },
+    { name:'Beispiel UG',         color:'#ec4899', h:  8.5, rev:  722 },
+    { name:'Sonstige',            color:'#9098b8', h:  5.0, rev:  425, rest:true },
+  ],
+  // Wochentag-Schnitt (h/Tag, letzte 90 Tage)
+  weekday: [
+    { d:'Mo', h: 6.8 }, { d:'Di', h: 7.2 }, { d:'Mi', h: 6.4 },
+    { d:'Do', h: 7.1 }, { d:'Fr', h: 5.6 }, { d:'Sa', h: 1.2 }, { d:'So', h: 0.3 },
+  ],
+  // Tags
+  byTag: [
+    { name:'#feature',    color:'#8b7cf8', h: 48.0 },
+    { name:'#bugfix',     color:'#f87171', h: 24.5 },
+    { name:'#meeting',    color:'#fbbf24', h: 18.0 },
+    { name:'#review',     color:'#4ade80', h: 12.5 },
+    { name:'#research',   color:'#60a5fa', h: 10.0 },
+  ],
+}
+
+function fmtH(h) { return h.toFixed(1).replace('.', ',') + ' h' }
+function fmtEUR(v) { return v.toLocaleString('de-DE', {minimumFractionDigits:0, maximumFractionDigits:0}) + ' €' }
+function fmtPct(v, sign) { const n = (v*100).toFixed(0); return (sign && v>0?'+':'') + n + ' %' }
+
+function StatCard({ tk, label, value, sub, accent, badge, foot }) {
+  return (
+    <GlassCard tk={tk} style={{ padding:'18px 20px', display:'flex', flexDirection:'column', gap:8, minHeight:128 }}>
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+        <div style={{ fontSize:11, fontWeight:600, color: tk.text3, letterSpacing:.5, textTransform:'uppercase' }}>{label}</div>
+        {badge}
+      </div>
+      <div style={{ fontSize:34, fontWeight:700, fontFamily: tk.mono, color: accent || tk.text, letterSpacing:1, lineHeight:1.05, fontVariantNumeric:'tabular-nums' }}>{value}</div>
+      {sub && <div style={{ fontSize:12, color: tk.text2 }}>{sub}</div>}
+      {foot && <div style={{ marginTop:'auto', paddingTop:6, fontSize:11, color: tk.text3 }}>{foot}</div>}
+    </GlassCard>
+  )
+}
+
+function DeltaPill({ tk, value, label, isHours }) {
+  const up = value >= 0
+  const col = up ? tk.green : tk.danger
+  const bg  = up ? tk.greenBg : tk.dangerBg
+  const bd  = up ? tk.greenBdr : `rgba(248,113,113,.22)`
+  return (
+    <span style={{
+      display:'inline-flex', alignItems:'center', gap:5, padding:'3px 9px',
+      borderRadius:20, background: bg, border:`1px solid ${bd}`,
+      fontSize:11, fontWeight:600, color: col, fontFamily: tk.font
+    }}>
+      {up ? <Icon.TrendUp size={11}/> : <Icon.TrendDown size={11}/>}
+      {fmtPct(value, true)}
+      <span style={{ color: tk.text3, fontWeight:500, marginLeft:2 }}>{label}</span>
+    </span>
+  )
+}
+
+/* ----- Trend Chart (Wochen / Monate) ----- */
+function TrendChart({ tk, mode, data, target }) {
+  // mode: 'week' (stacked b/n) | 'month' (h bars + revenue line)
+  const W = 720, H = 220, P = { l: 36, r: 44, t: 16, b: 28 }
+  const innerW = W - P.l - P.r, innerH = H - P.t - P.b
+  const max = mode==='week'
+    ? Math.max(...data.map(d => d.b + d.n), target || 0) * 1.05
+    : Math.max(...data.map(d => d.h)) * 1.1
+  const maxR = mode==='month' ? Math.max(...data.map(d => d.r)) * 1.1 : 0
+  const bw = innerW / data.length * 0.62
+  const step = innerW / data.length
+
+  // Y-ticks
+  const ticks = 4
+  const tickVals = Array.from({length:ticks+1}, (_,i)=> max * i/ticks)
+
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} style={{ width:'100%', height:'auto', display:'block' }}>
+      <defs>
+        <linearGradient id="barGrad" x1="0" x2="0" y1="0" y2="1">
+          <stop offset="0%" stopColor={tk.accent} stopOpacity=".95"/>
+          <stop offset="100%" stopColor={tk.accent} stopOpacity=".55"/>
+        </linearGradient>
+        <linearGradient id="barGradN" x1="0" x2="0" y1="0" y2="1">
+          <stop offset="0%" stopColor={tk.text3} stopOpacity=".55"/>
+          <stop offset="100%" stopColor={tk.text3} stopOpacity=".25"/>
+        </linearGradient>
+      </defs>
+
+      {/* Grid + Y axis labels */}
+      {tickVals.map((t,i) => {
+        const y = P.t + innerH - (t/max)*innerH
+        return (
+          <g key={i}>
+            <line x1={P.l} x2={P.l+innerW} y1={y} y2={y} stroke={tk.border} strokeWidth=".8" strokeDasharray={i===0?'none':'2 4'}/>
+            <text x={P.l-8} y={y+4} fontSize="9.5" fontFamily={tk.mono} fill={tk.text3} textAnchor="end">{Math.round(t)}h</text>
+          </g>
+        )
+      })}
+
+      {/* Right axis (revenue) for month mode */}
+      {mode==='month' && tickVals.map((_,i) => {
+        const t = maxR * i / ticks
+        const y = P.t + innerH - (t/maxR)*innerH
+        return (
+          <text key={i} x={P.l+innerW+8} y={y+4} fontSize="9.5" fontFamily={tk.mono} fill={tk.green} textAnchor="start">{Math.round(t/1000)}k</text>
+        )
+      })}
+
+      {/* Target line for week mode */}
+      {mode==='week' && target && (
+        <g>
+          <line
+            x1={P.l} x2={P.l+innerW}
+            y1={P.t + innerH - (target/max)*innerH} y2={P.t + innerH - (target/max)*innerH}
+            stroke={tk.accent} strokeWidth="1.2" strokeDasharray="3 3" opacity=".7"
+          />
+          <text
+            x={P.l+innerW-4} y={P.t + innerH - (target/max)*innerH - 4}
+            fontSize="9.5" fontFamily={tk.mono} fill={tk.accent} textAnchor="end" opacity=".9"
+          >Ziel {target}h</text>
+        </g>
+      )}
+
+      {/* Bars */}
+      {data.map((d,i) => {
+        const x = P.l + step*i + (step-bw)/2
+        if (mode==='week') {
+          const totalH = ((d.b + d.n) / max) * innerH
+          const billH  = (d.b / max) * innerH
+          const nbillH = (d.n / max) * innerH
+          const yTotal = P.t + innerH - totalH
+          return (
+            <g key={i}>
+              <rect x={x} y={yTotal+billH} width={bw} height={nbillH} fill="url(#barGradN)" rx="2"/>
+              <rect x={x} y={yTotal} width={bw} height={billH} fill="url(#barGrad)" rx="2"/>
+              <text x={x+bw/2} y={H-10} fontSize="9.5" fontFamily={tk.mono} fill={tk.text3} textAnchor="middle">{d.lbl.replace('KW','')}</text>
+              {/* total on top */}
+              <text x={x+bw/2} y={yTotal-5} fontSize="9" fontFamily={tk.mono} fill={tk.text2} textAnchor="middle" fontWeight="600">{d.b+d.n}</text>
+            </g>
+          )
+        } else {
+          const h = (d.h / max) * innerH
+          const y = P.t + innerH - h
+          return (
+            <g key={i}>
+              <rect x={x} y={y} width={bw} height={h} fill="url(#barGrad)" rx="2"/>
+              <text x={x+bw/2} y={H-10} fontSize="9.5" fontFamily={tk.font} fill={tk.text3} textAnchor="middle">{d.lbl}</text>
+            </g>
+          )
+        }
+      })}
+
+      {/* Revenue overlay line (month mode) */}
+      {mode==='month' && (
+        <g>
+          <path
+            d={data.map((d,i) => {
+              const cx = P.l + step*i + step/2
+              const cy = P.t + innerH - (d.r/maxR)*innerH
+              return `${i===0?'M':'L'} ${cx} ${cy}`
+            }).join(' ')}
+            fill="none" stroke={tk.green} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+            style={{ filter:`drop-shadow(0 0 4px ${tk.green})` }}
+          />
+          {data.map((d,i) => {
+            const cx = P.l + step*i + step/2
+            const cy = P.t + innerH - (d.r/maxR)*innerH
+            return <circle key={i} cx={cx} cy={cy} r="2.6" fill={tk.green}/>
+          })}
+        </g>
+      )}
+    </svg>
+  )
+}
+
+/* ----- Horizontaler Balken pro Kunde ----- */
+function ClientBars({ tk, items, totalKey='h' }) {
+  const total = items.reduce((s,x) => s + x[totalKey], 0)
+  const max = Math.max(...items.map(x => x[totalKey]))
+  return (
+    <div style={{ display:'flex', flexDirection:'column', gap:11 }}>
+      {items.map((it,i) => {
+        const pct = (it[totalKey] / max) * 100
+        const sharePct = (it[totalKey] / total) * 100
+        return (
+          <div key={i} style={{ display:'flex', flexDirection:'column', gap:4 }}>
+            <div style={{ display:'flex', alignItems:'center', gap:8, fontSize:12 }}>
+              <span style={{ width:9, height:9, borderRadius:'50%', background: it.color, flexShrink:0, opacity: it.rest?0.5:1 }}/>
+              <span style={{ flex:1, color: tk.text, fontWeight: it.rest?400:500, fontStyle: it.rest?'italic':'normal' }}>{it.name}</span>
+              <span style={{ fontFamily: tk.mono, fontSize:11.5, color: tk.text2, fontVariantNumeric:'tabular-nums' }}>{fmtH(it[totalKey])}</span>
+              <span style={{ fontFamily: tk.mono, fontSize:11, color: tk.text3, fontVariantNumeric:'tabular-nums', minWidth:40, textAlign:'right' }}>{sharePct.toFixed(0)}%</span>
+            </div>
+            <div style={{ height:5, borderRadius:3, background: tk.borderSub, overflow:'hidden' }}>
+              <div style={{
+                height:'100%', width: pct+'%', borderRadius:3,
+                background: it.rest ? tk.text3 : `linear-gradient(90deg, ${it.color}, ${it.color}cc)`,
+                boxShadow: it.rest?'none':`0 0 6px ${it.color}55`,
+                transition:'width .4s ease'
+              }}/>
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+/* ----- Wochentag Bars (vertikal) ----- */
+function WeekdayBars({ tk, data }) {
+  const max = Math.max(...data.map(d => d.h))
+  return (
+    <div style={{ display:'grid', gridTemplateColumns:'repeat(7,1fr)', gap:8, alignItems:'end', height:170 }}>
+      {data.map((d,i) => {
+        const h = (d.h / max) * 130
+        const isWeekend = d.d==='Sa' || d.d==='So'
+        const col = isWeekend ? tk.text3 : tk.accent
+        return (
+          <div key={i} style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:6, height:'100%', justifyContent:'flex-end' }}>
+            <span style={{ fontSize:10, fontFamily: tk.mono, color: tk.text2, fontVariantNumeric:'tabular-nums' }}>{d.h.toFixed(1)}</span>
+            <div style={{
+              width:'100%', height:Math.max(h, 2), borderRadius:'4px 4px 1px 1px',
+              background: isWeekend
+                ? `linear-gradient(180deg, ${tk.text3}66, ${tk.text3}33)`
+                : `linear-gradient(180deg, ${tk.accent}, ${tk.accent}88)`,
+              boxShadow: isWeekend?'none':`0 0 8px ${tk.accentGlow}`,
+              transition:'height .4s ease'
+            }}/>
+            <span style={{ fontSize:11, fontWeight: isWeekend?400:600, color: isWeekend ? tk.text3 : tk.text2 }}>{d.d}</span>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+/* ----- Empty State ----- */
+function EmptyState({ tk }) {
+  return (
+    <GlassCard tk={tk} style={{ padding:'56px 32px', display:'flex', flexDirection:'column', alignItems:'center', gap:18, textAlign:'center' }}>
+      <div style={{ color: tk.text3, opacity:.7 }}><Icon.Empty size={64}/></div>
+      <div>
+        <div style={{ fontSize:17, fontWeight:700, color: tk.text, marginBottom:6 }}>Noch keine Auswertung</div>
+        <div style={{ fontSize:13, color: tk.text2, maxWidth:340, lineHeight:1.5 }}>
+          Sobald du deinen ersten Eintrag erfasst hast, siehst du hier deine Stunden, deinen Umsatz und deine Top-Kunden auf einen Blick.
+        </div>
+      </div>
+      <div style={{ display:'flex', gap:8, marginTop:6 }}>
+        <PillBtn tk={tk} active>
+          <Icon.Play size={11}/> Timer starten
+        </PillBtn>
+        <PillBtn tk={tk}>
+          <Icon.Plus size={12}/> Eintrag nachtragen
+        </PillBtn>
+      </div>
+    </GlassCard>
+  )
+}
+
+/* ----- Pace Block (in Auswertung) ----- */
+function PaceBlock({ tk, todayH, todayGoal, weekH, weekGoal }) {
+  const Bar = ({ pct, col }) => (
+    <div style={{ height:8, borderRadius:4, background: tk.borderSub, overflow:'hidden' }}>
+      <div style={{
+        height:'100%', width: Math.min(pct,100)+'%', borderRadius:4,
+        background:`linear-gradient(90deg, ${col}, ${col}aa)`,
+        boxShadow:`0 0 8px ${col}55`, transition:'width .4s'
+      }}/>
+    </div>
+  )
+  const dayPct = (todayH/todayGoal)*100
+  const weekPct = (weekH/weekGoal)*100
+  return (
+    <GlassCard tk={tk} style={{ padding:'18px 22px', display:'flex', flexDirection:'column', gap:14 }}>
+      <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+        <span style={{ color: tk.accent }}><Icon.Target size={14}/></span>
+        <span style={{ fontSize:13, fontWeight:700, color: tk.text }}>Pace-Tracker</span>
+        <span style={{ marginLeft:'auto', fontSize:10, fontWeight:600, letterSpacing:.5, color: tk.text3, padding:'2px 7px', borderRadius:4, border:`1px solid ${tk.border}` }}>OPT-IN · v1.9.x</span>
+      </div>
+      <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+        <div style={{ display:'flex', justifyContent:'space-between', fontSize:12 }}>
+          <span style={{ color: tk.text2 }}>Heute</span>
+          <span style={{ fontFamily: tk.mono, color: tk.text, fontVariantNumeric:'tabular-nums' }}>
+            {fmtH(todayH)} <span style={{ color: tk.text3 }}>von {fmtH(todayGoal)}</span> · {dayPct.toFixed(0)}%
+          </span>
+        </div>
+        <Bar pct={dayPct} col={tk.accent}/>
+      </div>
+      <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+        <div style={{ display:'flex', justifyContent:'space-between', fontSize:12 }}>
+          <span style={{ color: tk.text2 }}>Diese Woche</span>
+          <span style={{ fontFamily: tk.mono, color: tk.text, fontVariantNumeric:'tabular-nums' }}>
+            {fmtH(weekH)} <span style={{ color: tk.text3 }}>von {fmtH(weekGoal)}</span> · {weekPct.toFixed(0)}%
+          </span>
+        </div>
+        <Bar pct={weekPct} col={tk.green}/>
+      </div>
+    </GlassCard>
+  )
+}
+
+function AuswertungView({ tk, opts }) {
+  const [tab, setTab] = useState('week') // week | month
+  const m = ANALYTICS_MOCK.month
+  const dHours   = (m.hours - m.hoursPrev) / m.hoursPrev
+  const dRevenue = (m.revenue - m.revenuePrev) / m.revenuePrev
+  const dBill    = m.billable - m.billablePrev
+
+  if (opts.empty) {
+    return (
+      <div style={{ maxWidth:920, margin:'0 auto', display:'flex', flexDirection:'column', gap:18, animation:'fadeIn .2s ease' }}>
+        <header style={{ display:'flex', alignItems:'baseline', gap:12 }}>
+          <h1 style={{ fontSize:22, fontWeight:700, color: tk.text, letterSpacing:-.2 }}>Auswertung</h1>
+          <span style={{ fontSize:13, color: tk.text2 }}>April 2026</span>
+        </header>
+        <EmptyState tk={tk}/>
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ maxWidth:920, margin:'0 auto', display:'flex', flexDirection:'column', gap:18, animation:'fadeIn .2s ease' }}>
+
+      {/* Header */}
+      <header style={{ display:'flex', alignItems:'center', gap:12, flexWrap:'wrap' }}>
+        <h1 style={{ fontSize:22, fontWeight:700, color: tk.text, letterSpacing:-.2 }}>Auswertung</h1>
+        <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+          <button style={{ width:28, height:28, borderRadius:8, border:`1px solid ${tk.border}`, background: tk.card, backdropFilter: tk.blur, color: tk.text2, display:'grid', placeItems:'center', cursor:'pointer' }}><Icon.ChevLeft size={14}/></button>
+          <span style={{ fontSize:14, fontWeight:600, color: tk.text2, minWidth:120, textAlign:'center', fontFamily: tk.font }}>April 2026</span>
+          <button style={{ width:28, height:28, borderRadius:8, border:`1px solid ${tk.border}`, background: tk.card, backdropFilter: tk.blur, color: tk.text2, display:'grid', placeItems:'center', cursor:'pointer' }}><Icon.ChevRight size={14}/></button>
+        </div>
+        <div style={{ marginLeft:'auto', fontSize:11, color: tk.text3, fontFamily: tk.mono }}>
+          Tag {m.daysElapsed}/{m.daysInMonth} · vergleicht mit März 2026
+        </div>
+      </header>
+
+      {/* Section 1 — Monatskarte */}
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(4, 1fr)', gap:12 }}>
+        <StatCard tk={tk} label="Stunden" value={fmtH(m.hours)} accent={tk.text}
+          foot={<DeltaPill tk={tk} value={dHours} label="vs. Vormonat"/>}/>
+        <StatCard tk={tk} label="Umsatz" value={fmtEUR(m.revenue)} accent={tk.green}
+          foot={<DeltaPill tk={tk} value={dRevenue} label="vs. Vormonat"/>}/>
+        <StatCard tk={tk}
+          label="Hochrechnung"
+          value={fmtEUR(m.forecastRevenue)}
+          accent={tk.accent}
+          badge={<span style={{ color: tk.accent, opacity:.85 }}><Icon.Sparkles/></span>}
+          foot={<span style={{ color: tk.text3 }}>~ {fmtH(m.forecast)} Ende April · linear extrapoliert</span>}
+        />
+        <StatCard tk={tk} label="Billable" value={(m.billable*100).toFixed(0)+' %'} accent={tk.text}
+          foot={<DeltaPill tk={tk} value={dBill} label="pp"/>}/>
+      </div>
+
+      {/* Section 2 — Trendchart */}
+      <GlassCard tk={tk} style={{ padding:'18px 22px', display:'flex', flexDirection:'column', gap:14 }}>
+        <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+          <div style={{ display:'flex', flexDirection:'column' }}>
+            <span style={{ fontSize:14, fontWeight:700, color: tk.text }}>Trend</span>
+            <span style={{ fontSize:11, color: tk.text3 }}>
+              {tab==='week' ? 'Letzte 12 Wochen · gestapelt nach abrechenbar / nicht abrechenbar' : 'Letzte 12 Monate · Stunden + Umsatzlinie'}
+            </span>
+          </div>
+          {/* Segmented control */}
+          <div style={{ marginLeft:'auto', display:'inline-flex', padding:3, background: tk.inputBg, border:`1px solid ${tk.border}`, borderRadius:24 }}>
+            {[['week','Wochen'],['month','Monate']].map(([v,l]) => (
+              <button key={v} onClick={()=>setTab(v)} style={{
+                padding:'5px 14px', borderRadius:20, border:'none', cursor:'pointer',
+                background: tab===v ? tk.accent : 'transparent',
+                color: tab===v ? '#fff' : tk.text2,
+                fontSize:12, fontWeight: tab===v?600:500, fontFamily: tk.font, transition:'all .15s'
+              }}>{l}</button>
+            ))}
+          </div>
+        </div>
+        <TrendChart tk={tk} mode={tab}
+          data={tab==='week' ? ANALYTICS_MOCK.weeks : ANALYTICS_MOCK.months}
+          target={tab==='week' ? 30 : null}
+        />
+        {/* Legend */}
+        <div style={{ display:'flex', gap:18, fontSize:11, color: tk.text2, flexWrap:'wrap' }}>
+          {tab==='week' ? (
+            <>
+              <span style={{ display:'inline-flex', alignItems:'center', gap:6 }}>
+                <span style={{ width:10, height:10, borderRadius:2, background:`linear-gradient(180deg,${tk.accent},${tk.accent}88)` }}/> Abrechenbar
+              </span>
+              <span style={{ display:'inline-flex', alignItems:'center', gap:6 }}>
+                <span style={{ width:10, height:10, borderRadius:2, background:`linear-gradient(180deg,${tk.text3}88,${tk.text3}44)` }}/> Nicht abrechenbar
+              </span>
+              <span style={{ display:'inline-flex', alignItems:'center', gap:6, color: tk.accent, opacity:.85 }}>
+                <span style={{ width:14, height:0, borderTop:`1.5px dashed ${tk.accent}` }}/> Wochenziel 30 h
+              </span>
+            </>
+          ) : (
+            <>
+              <span style={{ display:'inline-flex', alignItems:'center', gap:6 }}>
+                <span style={{ width:10, height:10, borderRadius:2, background:`linear-gradient(180deg,${tk.accent},${tk.accent}88)` }}/> Stunden
+              </span>
+              <span style={{ display:'inline-flex', alignItems:'center', gap:6, color: tk.green }}>
+                <span style={{ width:14, height:2, background:tk.green, borderRadius:1 }}/> Umsatz (rechte Achse, in 1.000 €)
+              </span>
+            </>
+          )}
+        </div>
+      </GlassCard>
+
+      {/* Section 3 — Verteilung */}
+      <div style={{ display:'grid', gridTemplateColumns: opts.threePanel ? 'repeat(3, 1fr)' : '1.4fr 1fr', gap:12 }}>
+        <GlassCard tk={tk} style={{ padding:'18px 22px', display:'flex', flexDirection:'column', gap:14 }}>
+          <div style={{ display:'flex', alignItems:'baseline', justifyContent:'space-between', gap:8 }}>
+            <div style={{ fontSize:14, fontWeight:700, color: tk.text }}>Stunden nach Kunde</div>
+            <span style={{ fontSize:11, color: tk.text3 }}>laufender Monat</span>
+          </div>
+          <ClientBars tk={tk} items={ANALYTICS_MOCK.byClient}/>
+        </GlassCard>
+
+        <GlassCard tk={tk} style={{ padding:'18px 22px', display:'flex', flexDirection:'column', gap:14 }}>
+          <div style={{ display:'flex', alignItems:'baseline', justifyContent:'space-between', gap:8 }}>
+            <div style={{ fontSize:14, fontWeight:700, color: tk.text }}>Wochentag-Schnitt</div>
+            <span style={{ fontSize:11, color: tk.text3 }}>Ø h/Tag · 90 d</span>
+          </div>
+          <WeekdayBars tk={tk} data={ANALYTICS_MOCK.weekday}/>
+          <div style={{ fontSize:11, color: tk.text3 }}>
+            Bestes: <span style={{ color: tk.text2, fontWeight:600 }}>Di · 7,2 h</span> · Wochenende minimal
+          </div>
+        </GlassCard>
+
+        {opts.threePanel && (
+          <GlassCard tk={tk} style={{ padding:'18px 22px', display:'flex', flexDirection:'column', gap:14 }}>
+            <div style={{ display:'flex', alignItems:'baseline', justifyContent:'space-between', gap:8 }}>
+              <div style={{ fontSize:14, fontWeight:700, color: tk.text }}>Stunden nach Tag</div>
+              <span style={{ fontSize:11, color: tk.text3 }}>nur wenn Tags vorhanden</span>
+            </div>
+            <ClientBars tk={tk} items={ANALYTICS_MOCK.byTag}/>
+          </GlassCard>
+        )}
+      </div>
+
+      {/* Optional Pace */}
+      {opts.pace && (
+        <PaceBlock tk={tk} todayH={4.5} todayGoal={6} weekH={22.5} weekGoal={30}/>
+      )}
+
+      {/* Footer note */}
+      <div style={{ fontSize:11, color: tk.text3, textAlign:'center', padding:'4px 0 8px' }}>
+        Reload-on-focus · keine Echtzeit-Updates während Timer läuft · alle Werte aus <span style={{ fontFamily: tk.mono }}>analytics:summary</span>
+      </div>
+    </div>
+  )
+}
+
+/* ─────────────────────────────────────────────────────
+   NAV
+───────────────────────────────────────────────────── */
+const NAV_ITEMS = [
+  { id:'heute',         label:'Heute' },
+  { id:'timer',         label:'Timer' },
+  { id:'kalender',      label:'Kalender' },
+  { id:'kunden',        label:'Kunden' },
+  { id:'auswertung',    label:'Auswertung', badge:'NEW' },
+  { id:'einstellungen', label:'Einstellungen' },
+]
+
+function NavBar({ tk, view, setView, dark, setDark }) {
+  return (
+    <nav style={{
+      display:'flex', alignItems:'center', gap:4, padding:'8px 14px',
+      background: tk.navBg, backdropFilter: tk.blur, WebkitBackdropFilter: tk.blur,
+      borderBottom:`1px solid ${tk.border}`, flexShrink:0
+    }}>
+      {/* Logo mark */}
+      <div style={{ width:26, height:26, borderRadius:8, background: tk.accent, display:'grid', placeItems:'center', marginRight:8, boxShadow:`0 0 16px ${tk.accentGlow}` }}>
+        <Icon.Clock size={13} />
+      </div>
+
+      {NAV_ITEMS.map(item=>{
+        const active = view === item.id
+        return (
+          <button key={item.id} onClick={()=>setView(item.id)} style={{
+            padding:'6px 14px', borderRadius:24, border:'none', cursor:'pointer',
+            background: active ? tk.accent : 'transparent',
+            color: active ? '#fff' : tk.text2,
+            fontSize:13, fontWeight: active?600:400, fontFamily: tk.font,
+            transition:'all .15s', display:'inline-flex', alignItems:'center', gap:6
+          }}>
+            {item.label}
+            {item.badge && (
+              <span style={{
+                fontSize:9, fontWeight:700, letterSpacing:.6, padding:'1.5px 5px',
+                borderRadius:4, background: active ? 'rgba(255,255,255,.22)' : tk.accentBg,
+                color: active ? '#fff' : tk.accent
+              }}>{item.badge}</span>
+            )}
+          </button>
+        )
+      })}
+
+      <div style={{ marginLeft:'auto', display:'flex', alignItems:'center', gap:10 }}>
+        {/* Running indicator */}
+        <div style={{ display:'flex', alignItems:'center', gap:7, padding:'5px 12px', borderRadius:24, background: tk.greenBg, border:`1px solid ${tk.greenBdr}` }}>
+          <Icon.Dot color={tk.green} pulse />
+          <span style={{ fontSize:11, fontWeight:600, color: tk.green }}>{cl(RUNNING.client_id).name}</span>
+          <span style={{ fontFamily: tk.mono, fontSize:12, color: tk.green, fontVariantNumeric:'tabular-nums', letterSpacing:.5 }}>01:23:47</span>
+        </div>
+
+        {/* Dark/Light toggle */}
+        <button onClick={()=>setDark(!dark)} style={{
+          width:34, height:34, borderRadius:10, border:`1px solid ${tk.border}`,
+          background: tk.card, backdropFilter: tk.blur, color: tk.text2,
+          display:'grid', placeItems:'center', cursor:'pointer', transition:'all .15s'
+        }}>
+          {dark ? <Icon.Sun size={15}/> : <Icon.Moon size={15}/>}
+        </button>
+      </div>
+    </nav>
+  )
+}
+
+/* ─────────────────────────────────────────────────────
+   APP ROOT
+───────────────────────────────────────────────────── */
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "dark": true,
+  "emptyState": false,
+  "threePanel": true,
+  "pace": true
+}/*EDITMODE-END*/
+
+function App() {
+  const [dark, setDark] = useState(TWEAK_DEFAULTS.dark)
+  const [view, setView] = useState('auswertung')
+  const [emptyState, setEmptyState] = useState(TWEAK_DEFAULTS.emptyState)
+  const [threePanel, setThreePanel] = useState(TWEAK_DEFAULTS.threePanel)
+  const [pace, setPace] = useState(TWEAK_DEFAULTS.pace)
+  const tk = useMemo(() => makeTokens(dark), [dark])
+
+  function persist(key, value) {
+    window.parent.postMessage({ type:'__edit_mode_set_keys', edits:{ [key]: value } }, '*')
+  }
+
+  // Tweaks protocol
+  useEffect(() => {
+    function onMsg(e) {
+      if (e.data?.type === '__activate_edit_mode') setShowTweaks(true)
+      if (e.data?.type === '__deactivate_edit_mode') setShowTweaks(false)
+    }
+    window.addEventListener('message', onMsg)
+    window.parent.postMessage({ type: '__edit_mode_available' }, '*')
+    return () => window.removeEventListener('message', onMsg)
+  }, [])
+  const [showTweaks, setShowTweaks] = useState(false)
+
+  function handleSetDark(v) { setDark(v); persist('dark', v) }
+  function handleSetEmpty(v) { setEmptyState(v); persist('emptyState', v) }
+  function handleSetThree(v) { setThreePanel(v); persist('threePanel', v) }
+  function handleSetPace(v)  { setPace(v); persist('pace', v) }
+
+  return (
+    <div style={{ width:'100%', height:'100%', position:'relative', background: tk.pageBg, fontFamily: tk.font, color: tk.text }}>
+      {/* Global ambient blobs */}
+      <div style={{ position:'fixed', top:-100, right:'20%', width:400, height:400, borderRadius:'50%', background: tk.accentBg, filter:'blur(80px)', pointerEvents:'none', zIndex:0 }} />
+      <div style={{ position:'fixed', bottom:-50, left:'10%', width:300, height:300, borderRadius:'50%', background: tk.greenBg, filter:'blur(80px)', pointerEvents:'none', zIndex:0 }} />
+
+      <div style={{ position:'relative', zIndex:1, width:'100%', height:'100%', display:'flex', flexDirection:'column' }}>
+        <NavBar tk={tk} view={view} setView={setView} dark={dark} setDark={handleSetDark} />
+        <main style={{ flex:1, overflowY:'auto', padding:'22px 28px' }}>
+          {view==='heute'         && <HeuteView tk={tk}/>}
+          {view==='timer'         && <TimerView tk={tk}/>}
+          {view==='kalender'      && <KalenderView tk={tk}/>}
+          {view==='kunden'        && <KundenView tk={tk}/>}
+          {view==='auswertung'    && <AuswertungView tk={tk} opts={{ empty: emptyState, threePanel, pace }}/>}
+          {view==='einstellungen' && <EinstellungenView tk={tk}/>}
+        </main>
+      </div>
+
+      {/* Tweaks */}
+      {showTweaks && (
+        <div style={{ position:'fixed', bottom:24, right:24, zIndex:10000, background: dark?'rgba(12,14,30,.97)':'rgba(255,255,255,.97)', backdropFilter:'blur(16px)', border:`1px solid ${tk.border}`, borderRadius:16, padding:22, minWidth:220, color: tk.text, fontFamily: tk.font, boxShadow: tk.shadow }}>
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
+            <span style={{ fontWeight:700, fontSize:14 }}>Tweaks</span>
+            <button onClick={()=>{ setShowTweaks(false); window.parent.postMessage({type:'__edit_mode_dismissed'},'*') }} style={{ background:'none', border:'none', color: tk.text3, fontSize:18, cursor:'pointer', lineHeight:1 }}>×</button>
+          </div>
+          <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
+            <div>
+              <div style={{ fontSize:11, fontWeight:600, letterSpacing:.8, color: tk.text3, textTransform:'uppercase', marginBottom:8 }}>Farbmodus</div>
+              <div style={{ display:'flex', gap:6 }}>
+                {[[true,'Dark'],[false,'Light']].map(([v,l])=>(
+                  <button key={l} onClick={()=>handleSetDark(v)} style={{
+                    flex:1, padding:'8px', borderRadius:8, border:`1px solid ${dark===v?tk.accent:tk.border}`,
+                    background: dark===v?tk.accentBg:'transparent', color: dark===v?tk.accent:tk.text2,
+                    fontSize:12, fontWeight:600, cursor:'pointer', fontFamily: tk.font
+                  }}>{l}</button>
+                ))}
+              </div>
+            </div>
+            {view==='auswertung' && (
+              <div>
+                <div style={{ fontSize:11, fontWeight:600, letterSpacing:.8, color: tk.text3, textTransform:'uppercase', marginBottom:8 }}>Auswertung — Optionen</div>
+                <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+                  {[
+                    ['emptyState', emptyState, handleSetEmpty, 'Leer-State zeigen'],
+                    ['threePanel', threePanel, handleSetThree, '3. Panel: nach Tag'],
+                    ['pace', pace, handleSetPace, 'Pace-Tracker einblenden'],
+                  ].map(([k, val, on, label]) => (
+                    <label key={k} style={{ display:'flex', alignItems:'center', gap:8, fontSize:12, color: tk.text2, cursor:'pointer' }}>
+                      <span onClick={()=>on(!val)} style={{
+                        width:32, height:18, borderRadius:9, background: val ? tk.accent : tk.card,
+                        border:`1px solid ${val?tk.accent:tk.border}`, position:'relative', transition:'all .2s'
+                      }}>
+                        <span style={{ position:'absolute', top:1, left: val?15:1, width:14, height:14, borderRadius:'50%', background:'#fff', transition:'left .2s', boxShadow:'0 1px 3px rgba(0,0,0,.3)' }}/>
+                      </span>
+                      <span onClick={()=>on(!val)}>{label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+            <div>
+              <div style={{ fontSize:11, fontWeight:600, letterSpacing:.8, color: tk.text3, textTransform:'uppercase', marginBottom:8 }}>View</div>
+              <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
+                {NAV_ITEMS.map(item=>(
+                  <button key={item.id} onClick={()=>setView(item.id)} style={{
+                    padding:'7px 12px', borderRadius:8, border:`1px solid ${view===item.id?tk.accent:tk.border}`,
+                    background: view===item.id?tk.accentBg:'transparent',
+                    color: view===item.id?tk.accent:tk.text2,
+                    fontSize:12, fontWeight:500, cursor:'pointer', textAlign:'left', fontFamily: tk.font
+                  }}>{item.label}</button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>)
+</script>
+</body>
+</html>
