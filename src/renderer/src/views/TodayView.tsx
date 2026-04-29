@@ -382,9 +382,9 @@ function QuickStartPill({
 
   function getFanPos(index: number): { x: number; y: number } {
     const N = fanItems.length
-    const R = 72
+    const R = Math.max(80, N * 16)
     if (N === 1) return { x: 0, y: -R }
-    const spread = Math.min(120, (N - 1) * 30)
+    const spread = Math.min(150, (N - 1) * 22)
     const angleDeg = -spread / 2 + index * (spread / (N - 1))
     const rad = angleDeg * (Math.PI / 180)
     return { x: R * Math.sin(rad), y: -R * Math.cos(rad) }
@@ -450,10 +450,12 @@ function QuickStartPill({
                 transform: 'translate(-50%, -50%)',
                 zIndex: 50,
                 whiteSpace: 'nowrap',
-                background: 'var(--card-bg)',
+                background: 'var(--modal-bg)',
+                backdropFilter: 'blur(20px)',
                 borderColor: 'var(--card-border)',
                 color: 'var(--text)',
-                animation: `qs-fan-in 150ms ease-out ${i * 25}ms both`
+                boxShadow: '0 4px 20px rgba(0,0,0,0.35)',
+                animation: `qs-fan-in 150ms ease-out ${i * 20}ms both`
               }}
             >
               <span
@@ -479,10 +481,12 @@ function QuickStartPill({
         className="flex flex-col items-start rounded-[14px] border px-3 py-1.5 text-sm backdrop-blur-xl transition-colors hover:border-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
         style={{
           background: 'var(--card-bg)',
-          borderColor: holdProgress > 0 ? color : 'var(--card-border)',
+          borderColor: fanOpen ? color : holdProgress > 0 ? color : 'var(--card-border)',
           color: 'var(--text)',
           transform: holdProgress > 0 ? `scale(${(1 - holdProgress * 0.04).toFixed(4)})` : undefined,
-          boxShadow: holdProgress > 0 ? `0 0 0 ${(holdProgress * 3).toFixed(1)}px ${color}50` : undefined,
+          boxShadow: fanOpen
+            ? `0 0 0 2px ${color}, 0 0 18px ${color}60`
+            : holdProgress > 0 ? `0 0 0 ${(holdProgress * 3).toFixed(1)}px ${color}50` : undefined,
           userSelect: 'none'
         }}
         title={
