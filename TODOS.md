@@ -6,6 +6,10 @@ Deferred items from plan reviews. Items here have explicit decisions — they ar
 
 - **#87 — UI centering across views** (Optional polish) — Basiszentrierung implementiert in v1.8.1 (`max-w-4xl mx-auto` auf SettingsView-Wrapper). Optional: pixelgenaue Werte via `max-w-[740px]` / `max-w-[600px]` statt Tailwind-Tokens für Today/Timer/Calendar/Clients. → v2.0 candidate.
 
+### Deferred from #79 /autoplan Final Gate (v1.9.5)
+
+- **T1 — UNC-Pfad-Support für Backup-Pfad** (Medium effort) — Wenn `backup_path` ein UNC-Pfad (z.B. `\\nas01\backups`) ist, soll eine explizite Fehlermeldung erscheinen wenn der Pfad nicht erreichbar ist, statt silent fail. `mkdirSync` auf UNC unter Windows benötigt gesondertes Handling. → v1.10 candidate.
+
 ### Deferred from #75 /autoplan Phase 1 (CEO Cherry-Picks)
 
 - **E1 — Auto-color-shift für Projekte** (Low effort, Low risk) — Projektfarbe automatisch aus Kundenfarbe ableiten (Helligkeitsverschiebung), statt manuelle Farbwahl im Project-Modal. Visual coherence pro Kunde. → v1.9.x oder v2.0.

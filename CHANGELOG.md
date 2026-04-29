@@ -2,6 +2,23 @@
 
 All notable changes to TimeTrack are documented here.
 
+## [1.9.5] — unreleased
+
+### Added
+
+- **Konfigurierbarer Backup-Pfad** — Neuer Einstellungs-Tab-Bereich „Backup-Pfad" in der Settings-Datei-Tab. Per Dialog wählbarer Ordner (z.B. OneDrive, NAS) wird als `backup_path` in der Settings-Tabelle gespeichert. Alle Backup-Operationen (erstellen, rotieren, auflisten) nutzen den konfigurierten Pfad; `createBackupSync` im Migrations-Runner nutzt weiterhin den Standard-Pfad (Henne-Ei-Problem beim ersten Start). ([#79](https://github.com/skoedr/time-tracking/issues/79))
+- **Backup-Restore-UI in Settings** — Dropdown mit allen vorhandenen Backups (Datum + Dateigröße), „Wiederherstellen…"-Button mit Bestätigungs-Dialog (`variant="danger"`) und automatischem App-Neustart nach Wiederherstellung. ([#79](https://github.com/skoedr/time-tracking/issues/79))
+- **Offline-Pfad-Warnung** — Gelbes Warn-Banner wenn der konfigurierte Backup-Pfad nicht erreichbar ist (z.B. NAS offline, USB nicht eingesteckt). Backups fallen in diesem Fall nicht automatisch auf den Standard-Pfad zurück — der Nutzer wird informiert. ([#79](https://github.com/skoedr/time-tracking/issues/79))
+- **Onboarding Step 4 — Backup-Wiederherstellung** — Wenn beim Erststart vorhandene Backups gefunden werden, erscheint ein optionaler vierter Onboarding-Schritt: Neuestes Backup anzeigen, zweistufige Bestätigung (erster Klick → Bestätigen, zweiter Klick → Wiederherstellen + Neustart), Skip-Option. ([#79](https://github.com/skoedr/time-tracking/issues/79))
+
+### Security
+
+- **`backup:restore` Path-Guard erweitert** — Der Pfad-Sicherheitscheck für `backup:restore` erlaubt jetzt sowohl den Standard-Backup-Ordner als auch den konfigurierten benutzerdefinierten Pfad. Der konfigurierte Pfad stammt aus der Settings-DB (nicht aus dem Request-Payload), sodass die Sicherheits-Invariante erhalten bleibt.
+
+### Changed
+
+- **`getDefaultBackupsDir()` als separate Funktion** — Extrahiert aus `getBackupsDir()` für sichere Verwendung im Migrations-Runner (`createBackupSync`) ohne DB-Zugriff.
+
 ## [1.9.0] — 2026-04-29
 
 ### Added

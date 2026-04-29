@@ -4,6 +4,7 @@ import { useUpdateStore } from '../store/updateStore'
 import { useT, useLocale } from '../contexts/I18nContext'
 import type { Locale } from '../../../shared/i18n'
 import { AboutDialog } from '../components/AboutDialog'
+import { ConfirmDialog } from '../components/ConfirmDialog'
 import { useTheme, type ThemeMode } from '../contexts/ThemeContext'
 import { Toggle } from '../components/Toggle'
 
@@ -51,6 +52,13 @@ export default function SettingsView(): React.JSX.Element {
   } | null>(null)
   const [version, setVersion] = useState<string>('')
   const [backups, setBackups] = useState<BackupInfo[]>([])
+  const [backupPathInfo, setBackupPathInfo] = useState<{
+    dir: string
+    isCustom: boolean
+    isReachable: boolean
+  } | null>(null)
+  const [selectedRestoreFile, setSelectedRestoreFile] = useState<string>('')
+  const [showRestoreConfirm, setShowRestoreConfirm] = useState(false)
   const [capturingHotkey, setCapturingHotkey] = useState<HotkeyKey | null>(null)
   const [hotkeyError, setHotkeyError] = useState<string | null>(null)
   const [statusMsg, setStatusMsg] = useState<string | null>(null)
@@ -58,16 +66,21 @@ export default function SettingsView(): React.JSX.Element {
   const [tab, setTab] = useState<SettingsTab>('general')
 
   async function loadAll(): Promise<void> {
-    const [s, p, v, b] = await Promise.all([
+    const [s, p, v, b, pi] = await Promise.all([
       window.api.settings.getAll(),
       window.api.paths.get(),
       window.api.app.getVersion(),
-      window.api.backups.list()
+      window.api.backups.list(),
+      window.api.backups.getPathInfo()
     ])
     if (s.ok) setSettings(s.data)
     if (p.ok) setPaths(p.data)
     if (v.ok) setVersion(v.data)
-    if (b.ok) setBackups(b.data)
+    if (b.ok) {
+      setBackups(b.data)
+      if (b.data.length > 0) setSelectedRestoreFile(b.data[0].fullPath)
+    }
+    if (pi.ok) setBackupPathInfo(pi.data)
   }
 
   useEffect(() => {
@@ -129,10 +142,54 @@ export default function SettingsView(): React.JSX.Element {
     if (res.ok) {
       setStatusMsg(t('settings.data.backupCreated'))
       const list = await window.api.backups.list()
-      if (list.ok) setBackups(list.data)
+      if (list.ok) {
+        setBackups(list.data)
+        if (list.data.length > 0 && !selectedRestoreFile) {
+          setSelectedRestoreFile(list.data[0].fullPath)
+        }
+      }
     } else {
       setStatusMsg(t('common.error', { error: res.error }))
     }
+  }
+
+  async function changeBackupPath(): Promise<void> {
+    setStatusMsg(t('settings.data.backupPathChanging'))
+    const res = await window.api.backups.setPath()
+    if (!res.ok) {
+      setStatusMsg(t('common.error', { error: res.error }))
+      return
+    }
+    if (res.data === '') {
+      // User cancelled the folder dialog
+      setStatusMsg(null)
+      return
+    }
+    setStatusMsg(t('settings.data.backupPathChanged'))
+    await loadAll()
+  }
+
+  async function resetBackupPath(): Promise<void> {
+    const res = await window.api.backups.resetPath()
+    if (res.ok) {
+      setStatusMsg(t('settings.data.backupPathReset'))
+      await loadAll()
+    } else {
+      setStatusMsg(t('common.error', { error: res.error }))
+    }
+  }
+
+  async function restoreFromBackup(): Promise<void> {
+    if (!selectedRestoreFile) return
+    setShowRestoreConfirm(false)
+    setStatusMsg(t('settings.data.restoring'))
+    const res = await window.api.backups.restore(selectedRestoreFile)
+    if (!res.ok) {
+      // db.close() already ran in the main process — subsequent IPC calls would
+      // hit a closed DB. Relaunch unconditionally so the app recovers cleanly.
+      setStatusMsg(t('common.error', { error: res.error }))
+    }
+    await window.api.app.relaunch()
   }
 
   async function exportJson(): Promise<void> {
@@ -515,6 +572,41 @@ export default function SettingsView(): React.JSX.Element {
                   </button>
                 </div>
               </Row>
+
+              {/* T2: Offline-Warnung */}
+              {backupPathInfo?.isCustom && !backupPathInfo.isReachable && (
+                <div
+                  className="rounded-md px-3 py-2 text-sm"
+                  style={{ background: 'rgba(234,179,8,0.15)', color: 'var(--text)' }}
+                >
+                  ⚠️ {t('settings.data.backupPathUnreachable')}
+                </div>
+              )}
+
+              <Row label={t('settings.data.backupPath')} hint={t('settings.data.backupPathHint')} stacked>
+                <div className="flex items-center gap-2">
+                  <code className="flex-1 truncate rounded px-3 py-1.5 text-xs" style={{ background: 'var(--card-bg)', color: 'var(--text2)' }}>
+                    {backupPathInfo?.dir ?? paths.backups}
+                  </code>
+                  <button
+                    type="button"
+                    onClick={() => void changeBackupPath()}
+                    className={btnSecondaryClass}
+                  >
+                    {t('settings.data.changeBackupPath')}
+                  </button>
+                  {backupPathInfo?.isCustom && (
+                    <button
+                      type="button"
+                      onClick={() => void resetBackupPath()}
+                      className={btnSecondaryClass}
+                    >
+                      {t('settings.data.resetBackupPath')}
+                    </button>
+                  )}
+                </div>
+              </Row>
+
               <Row label={t('settings.data.backupsFolder')} stacked>
                 <div className="flex items-center gap-2">
                   <code className="flex-1 truncate rounded px-3 py-1.5 text-xs" style={{ background: 'var(--card-bg)', color: 'var(--text2)' }}>
@@ -533,7 +625,7 @@ export default function SettingsView(): React.JSX.Element {
                 label={t('settings.data.lastBackup')}
                 hint={
                   latestBackup
-                    ? `${new Date(latestBackup.createdAt).toLocaleString('de-DE')} (${latestBackup.reason})${backups.length > 1 ? ` \u00b7 ${backups.length} Backups` : ''}`
+                    ? `${new Date(latestBackup.createdAt).toLocaleString('de-DE')} (${latestBackup.reason})${backups.length > 1 ? ` · ${backups.length} Backups` : ''}`
                     : t('settings.data.noBackup')
                 }
               >
@@ -541,9 +633,52 @@ export default function SettingsView(): React.JSX.Element {
                   {t('settings.data.createBackup')}
                 </button>
               </Row>
+
+              <Row label={t('settings.data.restoreBackup')} hint={t('settings.data.restoreBackupHint')} stacked>
+                {backups.length === 0 ? (
+                  <p className="text-sm" style={{ color: 'var(--text3)' }}>
+                    {t('settings.data.noBackupToRestore')}
+                  </p>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <select
+                      aria-label={t('settings.data.restoreBackup')}
+                      value={selectedRestoreFile}
+                      onChange={(e) => setSelectedRestoreFile(e.target.value)}
+                      className="flex-1 rounded-lg border px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                      style={{ background: 'var(--input-bg)', borderColor: 'var(--card-border)', color: 'var(--text)' }}
+                    >
+                      {backups.map((b) => (
+                        <option key={b.fullPath} value={b.fullPath}>
+                          {new Date(b.createdAt).toLocaleString('de-DE')} · {b.reason} · {(b.sizeBytes / 1024).toFixed(0)} KB
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      onClick={() => setShowRestoreConfirm(true)}
+                      className={btnSecondaryClass}
+                      disabled={!selectedRestoreFile}
+                    >
+                      {t('settings.data.restoreBtn')}
+                    </button>
+                  </div>
+                )}
+              </Row>
+
+              <ConfirmDialog
+                open={showRestoreConfirm}
+                title={t('settings.data.restoreConfirmTitle')}
+                message={t('settings.data.restoreConfirmBody')}
+                confirmLabel={t('settings.data.restoreConfirmOk')}
+                variant="danger"
+                onConfirm={() => void restoreFromBackup()}
+                onCancel={() => setShowRestoreConfirm(false)}
+              />
+
               <Row
                 label={t('settings.data.jsonExport')}
-                hint={`${t('settings.data.jsonExportDesc')} \u2014 ${t('settings.data.jsonExportHint')}`}
+                hint={`${t('settings.data.jsonExportDesc')} — ${t('settings.data.jsonExportHint')}`}
               >
                 <button type="button" onClick={exportJson} className={btnSecondaryClass}>
                   {t('settings.data.jsonExportBtn')}

@@ -1,14 +1,15 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useT, useLocale } from '../contexts/I18nContext'
 import type { TFunction } from '../contexts/I18nContext'
 import type { Locale } from '../../../shared/i18n'
+import type { BackupInfo } from '../../../shared/types'
 
 interface Props {
   open: boolean
   onFinish: () => void
 }
 
-const TOTAL_STEPS = 3
+const BASE_STEPS = 3
 
 // Default colors for new clients — same palette as ClientsView.
 const PRESET_COLORS = [
@@ -17,11 +18,12 @@ const PRESET_COLORS = [
 ]
 
 /**
- * Three-step onboarding wizard (v1.5 PR E, issue #32).
+ * Onboarding wizard (v1.5 PR E, issue #32 / v1.9.5 #79).
  *
  * Step 1 — Welcome + language picker (live, uses I18nProvider)
  * Step 2 — Create first client (skippable)
  * Step 3 — Global hotkey hint
+ * Step 4 — (optional) Restore from backup, shown only when backups exist
  *
  * All strings go through `t()` so DE/EN switching in step 1 immediately
  * reflects in subsequent steps.
@@ -34,6 +36,17 @@ export function OnboardingWizard({ open, onFinish }: Props): React.JSX.Element |
   const { locale, setLocale } = useLocale()
 
   const [step, setStep] = useState(1)
+  const [availableBackups, setAvailableBackups] = useState<BackupInfo[]>([])
+  const [restoreConfirmed, setRestoreConfirmed] = useState(false)
+
+  const TOTAL_STEPS = availableBackups.length > 0 ? BASE_STEPS + 1 : BASE_STEPS
+
+  useEffect(() => {
+    if (!open) return
+    window.api.backups.list().then((res) => {
+      if (res.ok && res.data.length > 0) setAvailableBackups(res.data)
+    })
+  }, [open])
 
   // Step 2 form state
   const [clientName, setClientName] = useState('')
@@ -133,6 +146,7 @@ export function OnboardingWizard({ open, onFinish }: Props): React.JSX.Element |
 
             <WizardFooter
               step={step}
+              totalSteps={TOTAL_STEPS}
               onNext={next}
               onFinish={onFinish}
               t={t}
@@ -208,6 +222,7 @@ export function OnboardingWizard({ open, onFinish }: Props): React.JSX.Element |
 
             <WizardFooter
               step={step}
+              totalSteps={TOTAL_STEPS}
               onNext={() => void createClientAndNext()}
               onFinish={onFinish}
               nextLabel={clientName.trim() ? t('onboarding.client.create') : undefined}
@@ -239,10 +254,69 @@ export function OnboardingWizard({ open, onFinish }: Props): React.JSX.Element |
 
             <WizardFooter
               step={step}
-              onNext={onFinish}
+              totalSteps={TOTAL_STEPS}
+              onNext={next}
               onFinish={onFinish}
               t={t}
             />
+          </>
+        )}
+        {/* ── Step 4: Restore ── */}
+        {step === 4 && availableBackups.length > 0 && (
+          <>
+            <div className="flex flex-col gap-2">
+              <h2 className="text-xl font-bold" style={{ color: 'var(--text)' }}>{t('onboarding.restore.title')}</h2>
+              <p className="text-sm" style={{ color: 'var(--text2)' }}>{t('onboarding.restore.body')}</p>
+            </div>
+
+            <div className="flex flex-col gap-3">
+              <div className="rounded-lg border p-3 text-sm" style={{ borderColor: 'var(--card-border)', background: 'var(--input-bg)' }}>
+                <span className="font-medium" style={{ color: 'var(--text2)' }}>
+                  {t('onboarding.restore.latestLabel')}
+                </span>{' '}
+                <span style={{ color: 'var(--text)' }}>
+                  {new Date(availableBackups[0].createdAt).toLocaleString('de-DE')}
+                  {' '}·{' '}
+                  {(availableBackups[0].sizeBytes / 1024).toFixed(0)} KB
+                </span>
+              </div>
+
+              {!restoreConfirmed ? (
+                <button
+                  type="button"
+                  onClick={() => setRestoreConfirmed(true)}
+                  className="rounded-lg border px-4 py-2 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                  style={{ borderColor: 'var(--card-border)', color: 'var(--text)' }}
+                >
+                  {t('onboarding.restore.restoreBtn')}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const res = await window.api.backups.restore(availableBackups[0].fullPath)
+                    // Relaunch regardless: if restore failed, db.close() already ran in the
+                    // main process so subsequent IPC calls would hit a closed DB anyway.
+                    await window.api.app.relaunch()
+                    if (!res.ok) console.error('[onboarding] Restore failed:', res.error)
+                  }}
+                  className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-300 transition-colors"
+                >
+                  {t('onboarding.restore.restoreBtn')}
+                </button>
+              )}
+            </div>
+
+            <div className="flex justify-between pt-2">
+              <button
+                type="button"
+                onClick={onFinish}
+                className="text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 rounded transition-opacity hover:opacity-80"
+                style={{ color: 'var(--text3)' }}
+              >
+                {t('onboarding.restore.skip')}
+              </button>
+            </div>
           </>
         )}
       </div>
@@ -254,6 +328,7 @@ export function OnboardingWizard({ open, onFinish }: Props): React.JSX.Element |
 
 interface FooterProps {
   step: number
+  totalSteps: number
   onNext: () => void
   onFinish: () => void
   nextLabel?: string
@@ -261,8 +336,8 @@ interface FooterProps {
   t: TFunction
 }
 
-function WizardFooter({ step, onNext, nextLabel, disabled, t }: FooterProps): React.JSX.Element {
-  const isLast = step === TOTAL_STEPS
+function WizardFooter({ step, totalSteps, onNext, nextLabel, disabled, t }: FooterProps): React.JSX.Element {
+  const isLast = step === totalSteps
   const label = isLast ? t('onboarding.finish') : (nextLabel ?? t('onboarding.next'))
 
   return (

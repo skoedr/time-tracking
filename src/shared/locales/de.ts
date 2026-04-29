@@ -84,6 +84,13 @@ export const de = {
     'Das Mini-Widget bleibt immer im Bild und zeigt den laufenden Timer. Einblenden mit {hotkey}.',
   'onboarding.hotkey.hint': 'Beide Hotkeys sind in Einstellungen änderbar.',
 
+  // Step 4 — Backup wiederherstellen
+  'onboarding.restore.title': 'Daten wiederherstellen?',
+  'onboarding.restore.body': 'Es wurde ein Backup gefunden. Möchtest du deine früheren Daten jetzt wiederherstellen?',
+  'onboarding.restore.latestLabel': 'Neuestes Backup:',
+  'onboarding.restore.restoreBtn': 'Wiederherstellen',
+  'onboarding.restore.skip': 'Ohne Wiederherstellung starten',
+
   // Settings — Re-Trigger
   'settings.onboarding.retrigger': 'Onboarding erneut anzeigen',
 
@@ -414,6 +421,22 @@ export const de = {
   'settings.data.openInExplorer': 'Im Explorer öffnen',
   'settings.data.backupsFolder': 'Backups-Ordner',
   'settings.data.open': 'Öffnen',
+  'settings.data.backupPath': 'Backup-Pfad',
+  'settings.data.backupPathHint': 'Speicherort für neue Backups (z. B. OneDrive-Ordner)',
+  'settings.data.changeBackupPath': 'Pfad ändern …',
+  'settings.data.resetBackupPath': 'Zurücksetzen',
+  'settings.data.backupPathChanging': 'Pfad wird gewählt …',
+  'settings.data.backupPathChanged': 'Backup-Pfad gespeichert.',
+  'settings.data.backupPathReset': 'Backup-Pfad auf Standard zurückgesetzt.',
+  'settings.data.backupPathUnreachable': 'Backup-Pfad nicht erreichbar — neue Backups werden im Standardpfad gespeichert.',
+  'settings.data.restoreBackup': 'Aus Backup wiederherstellen',
+  'settings.data.restoreBackupHint': 'Die App startet nach der Wiederherstellung automatisch neu.',
+  'settings.data.restoreBtn': 'Wiederherstellen …',
+  'settings.data.restoreConfirmTitle': 'Backup wiederherstellen?',
+  'settings.data.restoreConfirmBody': 'Alle aktuellen Daten werden durch das gewählte Backup ersetzt. Eine Sicherungskopie des aktuellen Stands wird vorher angelegt.',
+  'settings.data.restoreConfirmOk': 'Jetzt wiederherstellen',
+  'settings.data.restoring': 'Wiederherstellung läuft …',
+  'settings.data.noBackupToRestore': 'Keine Backups vorhanden',
   'settings.data.lastBackup': 'Letztes Backup',
   'settings.data.noBackup': 'Noch keins vorhanden',
   'settings.data.createBackup': 'Backup jetzt erstellen',

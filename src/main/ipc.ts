@@ -1,13 +1,13 @@
 import { ipcMain, shell } from 'electron'
 import { app } from 'electron'
 import { dialog } from 'electron'
-import { existsSync, statSync, writeFileSync, readFileSync } from 'fs'
-import { dirname, join, parse, resolve, sep } from 'path'
+import { existsSync, statSync, writeFileSync, readFileSync, mkdirSync, readdirSync } from 'fs'
+import { dirname, join, normalize, parse, resolve, sep } from 'path'
 import { mergePdfs } from './pdfMerge'
 import log from 'electron-log/main'
 import { randomUUID } from 'crypto'
 import { getDb, getDbPath } from './db'
-import { getBackupsDir } from './backup'
+import { getBackupsDir, getDefaultBackupsDir, readBackupPathSetting } from './backup'
 import { createBackup, listBackups, restoreBackup as restoreBackupFile } from './backup'
 import { splitAtMidnight } from '../shared/midnightSplit'
 import { buildJsonExportPayload } from './jsonExport'
@@ -623,9 +623,14 @@ export function registerIpcHandlers(hooks: IpcHooks): void {
   })
 
   // ── Backups ───────────────────────────────────
+  /** Reads backup_path setting from DB (empty string = use default dir). */
+  function getBackupPathSetting(): string {
+    return readBackupPathSetting(db) ?? ''
+  }
+
   ipcMain.handle('backup:list', (): IpcResult<BackupInfo[]> => {
     try {
-      return ok(listBackups())
+      return ok(listBackups(getBackupPathSetting() || undefined))
     } catch (e) {
       return fail(e)
     }
@@ -633,7 +638,7 @@ export function registerIpcHandlers(hooks: IpcHooks): void {
 
   ipcMain.handle('backup:create', async (): Promise<IpcResult<string>> => {
     try {
-      const path = await createBackup(db, 'manual')
+      const path = await createBackup(db, 'manual', undefined, getBackupPathSetting() || undefined)
       return ok(path)
     } catch (e) {
       return fail(e)
@@ -644,19 +649,72 @@ export function registerIpcHandlers(hooks: IpcHooks): void {
     'backup:restore',
     (_e, filePath: string): IpcResult<{ safetyBackupPath: string }> => {
       try {
-        // Guard: reject paths that escape the backups directory
-        const backupsDir = getBackupsDir()
+        // Guard: allow paths from the default dir OR the user-configured dir.
+        // Use resolve() on both sides so casing/relative-path differences don't
+        // cause false rejections on Windows.
+        const defaultDir = resolve(getDefaultBackupsDir())
+        const configuredPath = getBackupPathSetting()
+        const configuredDir = configuredPath ? resolve(configuredPath) : defaultDir
         const resolved = resolve(filePath)
-        if (!resolved.startsWith(backupsDir + sep)) {
+        if (
+          !resolved.startsWith(defaultDir + sep) &&
+          !resolved.startsWith(configuredDir + sep)
+        ) {
           return fail('Ungültiger Backup-Pfad')
         }
-        // Close the live DB so the file can be replaced. App must restart
-        // afterwards; the renderer is expected to call app.relaunch via a
-        // separate IPC or a manual user action.
         const dbPath = getDbPath()
         db.close()
         const result = restoreBackupFile(filePath, dbPath)
         return ok(result)
+      } catch (e) {
+        return fail(e)
+      }
+    }
+  )
+
+  ipcMain.handle('backup:set-path', async (): Promise<IpcResult<string>> => {
+    try {
+      const { canceled, filePaths } = await dialog.showOpenDialog({
+        properties: ['openDirectory', 'createDirectory'],
+        title: 'Backup-Pfad wählen'
+      })
+      if (canceled || filePaths.length === 0) return ok('')
+      const dir = filePaths[0]
+      db.prepare("UPDATE settings SET value = ? WHERE key = 'backup_path'").run(dir)
+      return ok(dir)
+    } catch (e) {
+      return fail(e)
+    }
+  })
+
+  ipcMain.handle('backup:reset-path', (): IpcResult<void> => {
+    try {
+      db.prepare("UPDATE settings SET value = '' WHERE key = 'backup_path'").run()
+      return ok(undefined)
+    } catch (e) {
+      return fail(e)
+    }
+  })
+
+  ipcMain.handle(
+    'backup:get-path-info',
+    (): IpcResult<{ dir: string; isCustom: boolean; isReachable: boolean }> => {
+      try {
+        const configuredPath = getBackupPathSetting()
+        const defaultDir = getDefaultBackupsDir()
+        const isCustom = !!configuredPath
+        if (!isCustom) {
+          return ok({ dir: defaultDir, isCustom: false, isReachable: true })
+        }
+        const dir = normalize(configuredPath)
+        let isReachable = true
+        try {
+          mkdirSync(dir, { recursive: true })
+          readdirSync(dir)
+        } catch {
+          isReachable = false
+        }
+        return ok({ dir, isCustom: true, isReachable })
       } catch (e) {
         return fail(e)
       }
@@ -694,9 +752,15 @@ export function registerIpcHandlers(hooks: IpcHooks): void {
       // electron-log returns a File transport whose `getFile()` resolves
       // the on-disk log path lazily; the directory is its parent.
       const logFile = log.transports.file.getFile().path
+      let backupsDir: string
+      try {
+        backupsDir = getBackupsDir(getBackupPathSetting() || undefined)
+      } catch {
+        backupsDir = getDefaultBackupsDir()
+      }
       return ok({
         db: getDbPath(),
-        backups: getBackupsDir(),
+        backups: backupsDir,
         logs: dirname(logFile),
         logFile
       })
