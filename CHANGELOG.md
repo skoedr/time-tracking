@@ -2,6 +2,12 @@
 
 All notable changes to TimeTrack are documented here.
 
+## [1.10.0] — unreleased
+
+### Changed
+
+- **Quick Start radial fan — Zifferblatt-Layout** — Beim Press-and-Hold öffnet sich jetzt ein Zifferblatt-Ring um die Pill: Projekte verteilen sich symmetrisch auf der oberen Hälfte (12 Uhr für 1 Projekt; 10/2 Uhr für 2; 9/12/3 Uhr für 3; bis ±90° end-inclusive für N≥3, bis zu 11 Projekten). „Kein Projekt" sitzt fix 60 px unter der Pill (6-Uhr-Richtung, gestrichelter Border) — entkoppelt vom Projekt-Radius, damit es nicht in die Recents-Liste rutscht. Konstanter Radius 180 px für alle N (≥1) — gleichmäßiges Spacing unabhängig von der Projektzahl. Items „schießen" aus dem Pill-Zentrum auf ihre Ring-Position (cubic-bezier overshoot, 240 ms), Stagger nach `|angle|` (12 Uhr zuerst, Ränder zuletzt). Ein dünner SVG-Halo-Bogen folgt den äußersten Items (120° für N=2, 180° für N≥3). Modal-Style Backdrop mit `backdrop-filter: blur(6px)` + leichter Abdunklung legt sich beim Öffnen über die Seite. Hover auf einem Item zeigt eine farbige Speiche mit Verlaufs-Gradient (transparent zur Pill, opak zum Item). Die aktive Pill pulsiert dezent (`box-shadow`, 2.4 s). `prefers-reduced-motion` ersetzt alle Bewegungen durch reine Opacity-Fades. ([#96](https://github.com/skoedr/time-tracking/issues/96))
+
 ## [1.9.6] — unreleased
 
 ### Added

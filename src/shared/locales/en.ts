@@ -158,6 +158,8 @@ export const en: Record<TranslationKey, string> = {
   'today.quickstart.label': 'Quick-Start',
   'today.quickstart.startFor': 'Start timer for {name}',
   'today.quickstart.clientInactive': 'Client inactive',
+  'today.quickstart.noProject': 'No Project',
+  'today.quickstart.holdHint': 'Hold to choose project',
   'today.recent.empty': 'No entries today',
   'today.recent.emptyHint': 'Start a timer or add an entry manually.',
   'today.table.time': 'Time',
