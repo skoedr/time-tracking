@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useTimer } from '../hooks/useTimer'
 import { useT } from '../contexts/I18nContext'
 import { useUiPrefsStore } from '../store/uiPrefsStore'
+import { useTimerStore } from '../store/timerStore'
 import * as Icons from './Icons'
 import type { Project } from '../../../shared/types'
 
@@ -38,7 +39,10 @@ export function StartTimerModal({ open, onClose }: StartTimerModalProps): React.
       if (res.ok) {
         const active = res.data.filter((p) => p.active === 1)
         setProjects(active)
-        if (active.length === 1) {
+        const currentId = useTimerStore.getState().selectedProjectId
+        if (currentId !== null && active.some((p) => p.id === currentId)) {
+          // keep valid pre-selection — don't reset
+        } else if (active.length === 1) {
           setSelectedProjectId(active[0].id)
         } else {
           setSelectedProjectId(null)
