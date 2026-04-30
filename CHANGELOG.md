@@ -2,13 +2,17 @@
 
 All notable changes to TimeTrack are documented here.
 
-## [1.10.0] — unreleased
+## [1.10.0] — 2026-04-30
 
 ### Added
 
 - **Auswertungs-Tab (Analytics Dashboard)** — Neuer „Auswertung"-Tab mit vollständiger Monatsübersicht: drei Stat-Cards (Stunden, Umsatz, Abrechenbar %) mit DeltaPills vs. Vormonat, TrendChart mit Toggle Wochen/Monate (12 Wochen gestapelt nach abrechenbar/nicht-abrechenbar, 12 Monate Stunden + Umsatzlinie), ClientBars (Top 4 Kunden + „Sonstige") und WeekdayBars (Wochentag-Durchschnitt, letzte 90 Tage). Monatsnavigation (← →) mit Anker-basierter Fensterberechnung — historische Monate zeigen korrekte Trailing-Windows. EmptyState wenn noch keine Daten vorhanden. Umsatz-Karte zeigt „Kein Satz konfiguriert" wenn kein Stundensatz hinterlegt. IPC-Handler `analytics:summary` mit 5 SQL-Queries in einer `db.transaction()`, 12 Unit-Tests (COALESCE, Billable-Ratio, Januar/Dezember-Grenze, Schaltjahr, gelöschte Einträge). ([#93](https://github.com/skoedr/time-tracking/issues/93))
 - **Timer-Modal statt Timer-Tab** — Der separate Timer-Tab wurde entfernt. Stattdessen öffnet ein ▶-Button in der Navigationsleiste (sichtbar wenn kein Timer läuft) ein leichtes Modal (`StartTimerModal`) mit Kunden-/Projektwahl und Beschreibungsfeld. Läuft ein Timer, zeigt die Navigationsleiste die laufende Pill mit einem ▪-Stopp-Button direkt rechts. Kein Tab-Wechsel mehr nötig — Timer starten und stoppen erfolgt kontextfrei aus jeder Ansicht. ([#98](https://github.com/skoedr/time-tracking/issues/98))
 - **Quick-Start-Limit auf 5 erhöht** — Das Zifferblatt zeigt jetzt bis zu 5 Kunden statt 3 (Top-Clients der letzten 30 Tage). ([#98](https://github.com/skoedr/time-tracking/issues/98))
+
+### Fixed
+
+- **QuickStart-Label über Pills** — Das „Schnellstart"-Label stand inline neben den Pills (`flex-wrap`). Jetzt steht es in einer eigenen Zeile darüber (`flex-col`). Pills ohne letztes Projekt hatten außerdem eine kleinere Höhe als Pills mit Projekt-Subtitle — behoben durch ein immer-gerendertes Subtitle-Element (`visibility: hidden` + `&nbsp;`-Platzhalter). ([#100](https://github.com/skoedr/time-tracking/pull/100))
 
 ### Changed
 
