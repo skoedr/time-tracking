@@ -77,8 +77,10 @@ function normaliseRateCent(value: unknown): number {
  * Coerce optional `budget_minutes` from the renderer into a positive integer
  * or null. `undefined`, `null`, `0`, or negative values all become null
  * ("no budget set"). Non-integer values are rounded.
+ *
+ * Exported for unit testing.
  */
-function normaliseBudgetMinutes(value: unknown): number | null {
+export function normaliseBudgetMinutes(value: unknown): number | null {
   if (value === undefined || value === null) return null
   const n = Number(value)
   if (!Number.isFinite(n) || n <= 0) return null

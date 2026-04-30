@@ -12,6 +12,7 @@ import { tmpdir } from 'os'
 import { join } from 'path'
 import type Database from 'better-sqlite3'
 import { migrations } from './migrations'
+import { normaliseBudgetMinutes } from './ipc'
 
 const MAX_DESCRIPTION_LEN = 500
 const MAX_DURATION_SECONDS = 24 * 3600
@@ -907,4 +908,144 @@ describe('dashboard:summary — duration precision', () => {
       expect(row.seconds).toBe(3600)
     }
   )
+})
+
+// ── normaliseBudgetMinutes (v1.11 #94) ──────────────────────────────────────
+
+describe('normaliseBudgetMinutes', () => {
+  it('returns null for undefined', () => {
+    expect(normaliseBudgetMinutes(undefined)).toBeNull()
+  })
+
+  it('returns null for null', () => {
+    expect(normaliseBudgetMinutes(null)).toBeNull()
+  })
+
+  it('returns null for zero', () => {
+    expect(normaliseBudgetMinutes(0)).toBeNull()
+  })
+
+  it('returns null for negative values', () => {
+    expect(normaliseBudgetMinutes(-60)).toBeNull()
+  })
+
+  it('returns null for NaN/Infinity', () => {
+    expect(normaliseBudgetMinutes(NaN)).toBeNull()
+    expect(normaliseBudgetMinutes(Infinity)).toBeNull()
+  })
+
+  it('returns rounded positive integer', () => {
+    expect(normaliseBudgetMinutes(120)).toBe(120)
+    expect(normaliseBudgetMinutes(90.6)).toBe(91)
+    expect(normaliseBudgetMinutes('60')).toBe(60)
+  })
+})
+
+// ── projects status/active sync (v1.11 #94) — direct SQL surface ────────────
+
+describe('projects status/active sync', () => {
+  let tmpDir2: string
+  let db2: Database.Database
+
+  beforeEach((ctx) => {
+    if (!DatabaseImpl) {
+      ctx.skip()
+      return
+    }
+    tmpDir2 = mkdtempSync(join(tmpdir(), 'tt-status-'))
+    db2 = new DatabaseImpl(join(tmpDir2, 'test.sqlite'))
+    db2.pragma('foreign_keys = ON')
+    db2.exec(
+      `CREATE TABLE schema_version (
+           version INTEGER PRIMARY KEY,
+           name TEXT NOT NULL,
+           applied_at TEXT NOT NULL DEFAULT (datetime('now'))
+         )`
+    )
+    for (const m of migrations) {
+      const tx = db2.transaction(() => {
+        db2.exec(m.up)
+        db2
+          .prepare('INSERT INTO schema_version (version, name) VALUES (?, ?)')
+          .run(m.version, m.name)
+      })
+      tx()
+    }
+    db2.prepare(`INSERT INTO clients (id, name) VALUES (1, 'Test')`).run()
+    db2
+      .prepare(`INSERT INTO projects (id, client_id, name, status) VALUES (1, 1, 'App', 'active')`)
+      .run()
+  })
+
+  afterEach(() => {
+    if (!db2) return
+    db2.close()
+    rmSync(tmpDir2, { recursive: true, force: true })
+  })
+
+  it('projects:archive — sets status=archived and active=0', () => {
+    // Replicate ipc.ts projects:archive SQL exactly
+    db2.prepare('UPDATE projects SET active = 0, status = ? WHERE id = ?').run('archived', 1)
+    const row = db2.prepare('SELECT active, status FROM projects WHERE id = 1').get() as {
+      active: number
+      status: string
+    }
+    expect(row.active).toBe(0)
+    expect(row.status).toBe('archived')
+  })
+
+  it('projects:update — status=paused keeps active=0', () => {
+    const status = 'paused'
+    const activeFlag = status === 'active' ? 1 : 0
+    db2
+      .prepare('UPDATE projects SET active = ?, status = ? WHERE id = ?')
+      .run(activeFlag, status, 1)
+    const row = db2.prepare('SELECT active, status FROM projects WHERE id = 1').get() as {
+      active: number
+      status: string
+    }
+    expect(row.active).toBe(0)
+    expect(row.status).toBe('paused')
+  })
+
+  it('projects:update — status=active sets active=1', () => {
+    // First archive it
+    db2.prepare('UPDATE projects SET active = 0, status = ? WHERE id = ?').run('archived', 1)
+    // Then reactivate
+    const status = 'active'
+    const activeFlag = status === 'active' ? 1 : 0
+    db2
+      .prepare('UPDATE projects SET active = ?, status = ? WHERE id = ?')
+      .run(activeFlag, status, 1)
+    const row = db2.prepare('SELECT active, status FROM projects WHERE id = 1').get() as {
+      active: number
+      status: string
+    }
+    expect(row.active).toBe(1)
+    expect(row.status).toBe('active')
+  })
+
+  it('clients:create — new billing/contact columns are stored and nullable', () => {
+    db2
+      .prepare(
+        `INSERT INTO clients
+             (name, color, rate_cent,
+              billing_address_line1, billing_address_line2,
+              billing_address_line3, billing_address_line4,
+              vat_id, contact_person, contact_email)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      )
+      .run(
+        'Neuer Kunde', '#abc', 0,
+        'Musterstraße 1', null, null, null,
+        'DE123456789', 'Max Muster', 'max@example.com'
+      )
+    const row = db2
+      .prepare(`SELECT * FROM clients WHERE name = 'Neuer Kunde'`)
+      .get() as Record<string, unknown>
+    expect(row.billing_address_line1).toBe('Musterstraße 1')
+    expect(row.billing_address_line2).toBeNull()
+    expect(row.vat_id).toBe('DE123456789')
+    expect(row.contact_email).toBe('max@example.com')
+  })
 })

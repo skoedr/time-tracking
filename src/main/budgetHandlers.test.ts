@@ -98,4 +98,20 @@ describe.skipIf(!available)('buildBudgetStatus', () => {
     const result = buildBudgetStatus(db, 9999)
     expect(result).toEqual({ ok: true, data: { budgetMinutes: null, usedMinutes: 0 } })
   })
+
+  it('excludes soft-deleted entries (deleted_at IS NOT NULL)', () => {
+    db.prepare(`INSERT INTO projects (id, client_id, name, budget_minutes) VALUES (1, 1, 'App', 600)`).run()
+    // completed + deleted entry — should not count
+    db.prepare(
+      `INSERT INTO entries (client_id, project_id, started_at, stopped_at, rounded_min, deleted_at)
+       VALUES (1, 1, '2026-05-01T08:00:00Z', '2026-05-01T09:00:00Z', 60, '2026-05-02T00:00:00Z')`
+    ).run()
+    // live completed entry — counts
+    db.prepare(
+      `INSERT INTO entries (client_id, project_id, started_at, stopped_at, rounded_min)
+       VALUES (1, 1, '2026-05-03T08:00:00Z', '2026-05-03T09:00:00Z', 30)`
+    ).run()
+    const result = buildBudgetStatus(db, 1)
+    expect(result).toEqual({ ok: true, data: { budgetMinutes: 600, usedMinutes: 30 } })
+  })
 })
