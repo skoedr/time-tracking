@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react'
 import TodayView from './views/TodayView'
-import TimerView from './views/TimerView'
 import CalendarView from './views/CalendarView'
 import ClientsView from './views/ClientsView'
 import SettingsView from './views/SettingsView'
 import { IdleModal } from './components/IdleModal'
 import { QuickNoteModal } from './components/QuickNoteModal'
+import { StartTimerModal } from './components/StartTimerModal'
 import { ToastTray } from './components/Toast'
 import { UpdateBanner } from './components/UpdateBanner'
 import { OnboardingWizard } from './components/OnboardingWizard'
@@ -13,13 +13,14 @@ import { useTimer } from './hooks/useTimer'
 import { useT } from './contexts/I18nContext'
 import { useProjectsStore } from './store/projectsStore'
 
-type View = 'today' | 'timer' | 'calendar' | 'clients' | 'settings'
+type View = 'today' | 'calendar' | 'clients' | 'settings'
 
 function App(): React.JSX.Element {
   const t = useT()
   const [view, setView] = useState<View>('today')
   const [showOnboarding, setShowOnboarding] = useState(false)
-  const { idleEvent, idleKeep, idleStopAtIdle, idleMarkPause, quickNoteEntry, setQuickNoteEntry, runningEntry, clients } =
+  const [showTimerModal, setShowTimerModal] = useState(false)
+  const { idleEvent, idleKeep, idleStopAtIdle, idleMarkPause, quickNoteEntry, setQuickNoteEntry, runningEntry, clients, stop } =
     useTimer()
   const projectsVersion = useProjectsStore((s) => s.version)
   const [runningProjectColor, setRunningProjectColor] = useState<string | undefined>(undefined)
@@ -95,7 +96,7 @@ function App(): React.JSX.Element {
           borderColor: 'var(--card-border)'
         }}
       >
-        {(['today', 'timer', 'calendar', 'clients', 'settings'] as View[]).map((v) => (
+        {(['today', 'calendar', 'clients', 'settings'] as View[]).map((v) => (
           <button
             key={v}
             onClick={() => setView(v)}
@@ -108,6 +109,20 @@ function App(): React.JSX.Element {
           </button>
         ))}
 
+        {/* Play button — only when no timer is running */}
+        {!runningEntry && (
+          <button
+            type="button"
+            onClick={() => setShowTimerModal(true)}
+            className="ml-auto flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+            style={{ borderColor: 'var(--card-border)', color: 'var(--text2)' }}
+            aria-label={t('timer.modal.title')}
+          >
+            <PlayIcon />
+            {t('timer.modal.start')}
+          </button>
+        )}
+
         {/* Running timer pill */}
         {runningEntry && (() => {
           const client = clients.find((c) => c.id === runningEntry.client_id)
@@ -117,6 +132,7 @@ function App(): React.JSX.Element {
               clientName={client?.name}
               clientColor={client?.color}
               projectColor={runningProjectColor}
+              onStop={() => void stop()}
             />
           )
         })()}
@@ -126,7 +142,6 @@ function App(): React.JSX.Element {
       <main className="relative z-10 flex-1 overflow-y-auto p-6 flex flex-col">
         <div key={view} className="view-enter flex-1 flex flex-col">
           {view === 'today' && <TodayView />}
-          {view === 'timer' && <TimerView />}
           {view === 'calendar' && <CalendarView />}
           {view === 'clients' && <ClientsView />}
           {view === 'settings' && <SettingsView />}
@@ -149,6 +164,8 @@ function App(): React.JSX.Element {
       <ToastTray />
 
       <OnboardingWizard open={showOnboarding} onFinish={() => void finishOnboarding()} />
+
+      <StartTimerModal open={showTimerModal} onClose={() => setShowTimerModal(false)} />
     </div>
   )
 }
@@ -156,16 +173,34 @@ function App(): React.JSX.Element {
 export default App
 
 // ── Running timer pill (nav bar, right side) ────────────────────────────────
+function PlayIcon(): React.JSX.Element {
+  return (
+    <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
+      <path d="M3 2.5l6 3.5-6 3.5V2.5z" />
+    </svg>
+  )
+}
+
+function StopIcon(): React.JSX.Element {
+  return (
+    <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor">
+      <rect x="1" y="1" width="8" height="8" rx="1.5" />
+    </svg>
+  )
+}
+
 function RunningPill({
   startedAt,
   clientName,
   clientColor,
-  projectColor
+  projectColor,
+  onStop
 }: {
   startedAt: string
   clientName?: string
   clientColor?: string
   projectColor?: string
+  onStop: () => void
 }): React.JSX.Element {
   const [, setTick] = useState(0)
   useEffect(() => {
@@ -181,7 +216,7 @@ function RunningPill({
 
   return (
     <div
-      className="ml-auto flex items-center gap-2 rounded-full border px-3 py-1 text-xs"
+      className="ml-auto flex items-center gap-2 rounded-full border pl-3 pr-1 py-1 text-xs"
       style={{ background: 'var(--green-bg)', borderColor: 'var(--green)', color: 'var(--green)' }}
     >
       <span
@@ -190,6 +225,15 @@ function RunningPill({
       />
       {clientName && <span className="font-medium" style={{ color: 'var(--text)' }}>{clientName}</span>}
       <span className="tabular-nums" style={{ fontFamily: "'JetBrains Mono', monospace" }}>{label}</span>
+      <button
+        type="button"
+        onClick={onStop}
+        className="ml-1 flex items-center justify-center rounded-full p-1.5 transition-colors hover:bg-red-500/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400"
+        style={{ color: 'var(--danger)' }}
+        aria-label="Timer stoppen"
+      >
+        <StopIcon />
+      </button>
     </div>
   )
 }

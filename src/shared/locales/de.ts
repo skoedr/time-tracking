@@ -12,7 +12,6 @@
 export const de = {
   // ── Navigation tabs ───────────────────────────────────────────────────
   'nav.today': 'Heute',
-  'nav.timer': 'Timer',
   'nav.calendar': 'Kalender',
   'nav.clients': 'Kunden',
   'nav.settings': 'Einstellungen',
@@ -141,7 +140,9 @@ export const de = {
   'common.stopRunningFirst': 'Laufenden Timer zuerst stoppen',
   'common.error': 'Fehler: {error}',
 
-  // ── TimerView ────────────────────────────────────────────────────────────
+  // ── StartTimerModal ──────────────────────────────────────────────────────
+  'timer.modal.title': 'Timer starten',
+  'timer.modal.start': 'Timer starten',
   'timer.client.label': 'Kunde',
   'timer.client.placeholder': '— Kunden auswählen —',
   'timer.client.noClientsHint': 'Noch keine Kunden angelegt. Gehe zu',
@@ -149,8 +150,6 @@ export const de = {
   'timer.client.noClientsSuffix': ', um welche hinzuzufügen.',
   'timer.description.label': 'Beschreibung',
   'timer.description.placeholder': 'Woran arbeitest du?',
-  'timer.running.hint': 'Timer läuft',
-  'timer.running.stopHint': 'zum Stoppen',
 
   // ── TodayView ────────────────────────────────────────────────────────────
   'today.error.title': 'Daten konnten nicht geladen werden.',
