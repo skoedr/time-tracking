@@ -229,7 +229,7 @@ function RunningPill({
         type="button"
         onClick={onStop}
         className="ml-1 flex items-center justify-center rounded-full p-1.5 transition-colors hover:bg-red-500/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400"
-        style={{ color: '#ef4444' }}
+        style={{ color: 'var(--danger)' }}
         aria-label="Timer stoppen"
       >
         <StopIcon />
