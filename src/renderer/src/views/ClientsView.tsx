@@ -11,11 +11,59 @@ import type {
 import { formatRateInput, parseRateInput } from '../../../shared/rate'
 import { useClientsStore } from '../store/clientsStore'
 import { useProjectsStore } from '../store/projectsStore'
-import { useT } from '../contexts/I18nContext'
+import { useT, useLocale } from '../contexts/I18nContext'
 import type { TranslationKey } from '../../../shared/locales/de'
 import * as Icons from '../components/Icons'
 import { Dialog } from '../components/Dialog'
 import { ConfirmDialog } from '../components/ConfirmDialog'
+
+/** Lightens a hex color by the given amount (0-100) to create a visually
+ * related but distinct project color from the client color. */
+function shiftColor(hex: string, lightnessShift = 18): string {
+  if (!hex || !hex.startsWith('#') || hex.length !== 7) return hex
+  const r = parseInt(hex.slice(1, 3), 16) / 255
+  const g = parseInt(hex.slice(3, 5), 16) / 255
+  const b = parseInt(hex.slice(5, 7), 16) / 255
+  const max = Math.max(r, g, b), min = Math.min(r, g, b)
+  let h = 0, s = 0
+  const l = (max + min) / 2
+  if (max !== min) {
+    const d = max - min
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min)
+    switch (max) {
+      case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break
+      case g: h = ((b - r) / d + 2) / 6; break
+      default: h = ((r - g) / d + 4) / 6
+    }
+  }
+  const newL = Math.min(0.85, Math.max(0, l + lightnessShift / 100))
+  function hue2rgb(p: number, q: number, t: number) {
+    if (t < 0) t += 1; if (t > 1) t -= 1
+    if (t < 1 / 6) return p + (q - p) * 6 * t
+    if (t < 1 / 2) return q
+    if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6
+    return p
+  }
+  let nr, ng, nb
+  if (s === 0) { nr = ng = nb = newL } else {
+    const q = newL < 0.5 ? newL * (1 + s) : newL + s - newL * s
+    const p = 2 * newL - q
+    nr = hue2rgb(p, q, h + 1 / 3); ng = hue2rgb(p, q, h); nb = hue2rgb(p, q, h - 1 / 3)
+  }
+  const toHex = (x: number) => Math.round(x * 255).toString(16).padStart(2, '0')
+  return `#${toHex(nr)}${toHex(ng)}${toHex(nb)}`
+}
+
+/** Returns a human-readable relative date string (e.g. "vor 3 Tagen") using Intl.RelativeTimeFormat. */
+function formatRelativeDate(isoDate: string, locale: string): string {
+  const diff = new Date(isoDate).getTime() - Date.now()
+  const diffDays = Math.round(diff / (1000 * 60 * 60 * 24))
+  const rtf = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' })
+  if (Math.abs(diffDays) < 1) return rtf.format(0, 'day')
+  if (Math.abs(diffDays) < 30) return rtf.format(diffDays, 'day')
+  if (Math.abs(diffDays) < 365) return rtf.format(Math.round(diffDays / 30), 'month')
+  return rtf.format(Math.round(diffDays / 365), 'year')
+}
 
 const COLORS = [
   '#6366f1', // indigo
@@ -294,6 +342,7 @@ export default function ClientsView() {
       {showProjectForm && (
         <ProjectFormModal
           project={editingProject}
+          clientColor={clients.find((c) => c.id === projectFormClientId)?.color ?? ''}
           onSave={handleProjectSave}
           onClose={() => {
             setShowProjectForm(false)
@@ -565,11 +614,21 @@ function ProjectItem({
   onDelete: (p: ProjectWithCount) => void
 }) {
   const t = useT()
-  const dotColor = p.color || clientColor
+  const { locale } = useLocale()
+  const dotColor = p.color || (clientColor ? shiftColor(clientColor) : '')
   const rateLabel =
     p.rate_cent !== null
       ? formatRateInput(p.rate_cent) + ' €/h'
       : t('projects.inheritedRate')
+
+  const statsLabel = (() => {
+    const count = p.entry_count ?? 0
+    if (count === 0) return null
+    const countStr = t(count === 1 ? 'projects.stats.entry' : 'projects.stats.entries', { count })
+    if (!p.last_used_at) return countStr
+    const rel = formatRelativeDate(p.last_used_at, locale)
+    return `${countStr} · ${rel}`
+  })()
 
   return (
     <li className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 group"
@@ -577,10 +636,13 @@ function ProjectItem({
     >
       <span
         className="w-3 h-3 rounded-full shrink-0"
-        style={{ backgroundColor: dotColor, opacity: p.color ? 1 : 0.5 }}
+        style={{ backgroundColor: dotColor }}
       />
-      <span className="flex-1 text-sm font-medium" style={{ color: 'var(--text)' }}>
-        {p.name}
+      <span className="flex-1 min-w-0">
+        <span className="block text-sm font-medium" style={{ color: 'var(--text)' }}>{p.name}</span>
+        {statsLabel && (
+          <span className="block text-xs mt-0.5" style={{ color: 'var(--text3)' }}>{statsLabel}</span>
+        )}
       </span>
       <span className="text-xs" style={{ color: 'var(--text3)' }}>
         {rateLabel}
@@ -817,17 +879,22 @@ function ClientFormModal({
 
 function ProjectFormModal({
   project,
+  clientColor,
   onSave,
   onClose
 }: {
   project: Project | null
+  clientColor: string
   onSave: (data: { name: string; color: string; rate_cent: number | null }) => Promise<void>
   onClose: () => void
 }) {
   const t = useT()
-  // '' means "inherit client color"
+  // For new projects: auto-derive a shifted variant of the client color.
+  // For existing projects: use their stored color ('' = inherit).
   const [name, setName] = useState(project?.name ?? '')
-  const [color, setColor] = useState(project?.color ?? '')
+  const [color, setColor] = useState(() =>
+    project ? project.color : (clientColor ? shiftColor(clientColor) : '')
+  )
   const [rateInput, setRateInput] = useState(() =>
     project?.rate_cent !== null && project?.rate_cent !== undefined
       ? formatRateInput(project.rate_cent)

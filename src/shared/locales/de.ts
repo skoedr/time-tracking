@@ -265,6 +265,8 @@ export const de = {
   'projects.form.rateHint': 'Leer lassen, um den Kundensatz zu verwenden.',
   'projects.form.rateInvalid': 'Bitte eine Zahl eingeben (z.B. 85,00).',
   'projects.form.rateNegative': 'Stundensatz darf nicht negativ sein.',
+  'projects.stats.entry': '{count} Eintrag',
+  'projects.stats.entries': '{count} Einträge',
 
   // ── EntryEditForm ─────────────────────────────────────────────────────────
   'entry.date': 'Datum',
