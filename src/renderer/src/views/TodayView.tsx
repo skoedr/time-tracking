@@ -398,7 +398,7 @@ function QuickStartPill({
   )
   const hasProjects = clientProjects.length > 0
 
-  const ring = useMemo<{ items: RingItem[]; R: number; projectCount: number; arc: { start: number; end: number } | null; delays: Map<string, number> } | null>(() => {
+  const ring = useMemo<{ items: RingItem[]; R: number; projectCount: number; delays: Map<string, number> } | null>(() => {
     const N = clientProjects.length
     if (N === 0) return null
     // Constant ring radius — gives every fan the generous spacing of the

@@ -548,7 +548,7 @@ export function registerIpcHandlers(hooks: IpcHooks): void {
               GROUP BY c.id
               HAVING seconds > 0
               ORDER BY seconds DESC
-              LIMIT 3`
+              LIMIT 5`
           )
           .all() as Array<{
           client_id: number

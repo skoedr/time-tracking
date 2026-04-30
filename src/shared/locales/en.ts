@@ -12,7 +12,6 @@ import type { TranslationKey } from './de'
 export const en: Record<TranslationKey, string> = {
   // ── Navigation tabs ───────────────────────────────────────────────────
   'nav.today': 'Today',
-  'nav.timer': 'Timer',
   'nav.calendar': 'Calendar',
   'nav.clients': 'Clients',
   'nav.settings': 'Settings',
@@ -140,7 +139,9 @@ export const en: Record<TranslationKey, string> = {
   'common.stopRunningFirst': 'Stop the running timer first',
   'common.error': 'Error: {error}',
 
-  // ── TimerView ─────────────────────────────────────────────────────────────
+  // ── StartTimerModal ─────────────────────────────────────────────────────
+  'timer.modal.title': 'Start Timer',
+  'timer.modal.start': 'Start Timer',
   'timer.client.label': 'Client',
   'timer.client.placeholder': '— Select client —',
   'timer.client.noClientsHint': 'No clients yet. Go to',
@@ -148,8 +149,6 @@ export const en: Record<TranslationKey, string> = {
   'timer.client.noClientsSuffix': ', to add some.',
   'timer.description.label': 'Description',
   'timer.description.placeholder': 'What are you working on?',
-  'timer.running.hint': 'Timer running',
-  'timer.running.stopHint': 'to stop',
 
   // ── TodayView ─────────────────────────────────────────────────────────────
   'today.error.title': 'Data could not be loaded.',
