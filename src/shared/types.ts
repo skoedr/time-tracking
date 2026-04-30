@@ -247,3 +247,47 @@ export interface LicenseEntry {
   repository?: string
   licenseText?: string | null
 }
+
+// ── Analytics (v1.10 #93) ─────────────────────────────────────────────────
+
+export interface AnalyticsSummary {
+  month: {
+    /** Total seconds for the selected month. */
+    hours: number
+    /** Total seconds for the previous month. */
+    hoursPrev: number
+    /** Total revenue in cents for the selected month. */
+    revenue: number
+    /** Total revenue in cents for the previous month. */
+    revenuePrev: number
+    /** Billable ratio 0–1 (billable seconds / total seconds). */
+    billable: number
+    /** Previous month billable ratio. */
+    billablePrev: number
+    /** Days elapsed in the selected month (capped at daysInMonth). */
+    daysElapsed: number
+    /** Total days in the selected month. */
+    daysInMonth: number
+    /** True if at least one completed entry exists in the selected month. */
+    hasData: boolean
+    /** True if at least one client or project has rate_cent > 0. */
+    hasRateConfigured: boolean
+  }
+  /** 12 calendar weeks trailing to end of selected month. b/n in seconds. */
+  weeks: Array<{ lbl: string; b: number; n: number }>
+  /** 12 calendar months trailing to end of selected month. h in seconds, r in cents. */
+  months: Array<{ lbl: string; h: number; r: number }>
+  /** Hours by client for the selected month, sorted by hours desc. */
+  byClient: Array<{
+    client_id: number
+    name: string
+    color: string
+    /** seconds */
+    h: number
+    /** cents */
+    rev: number
+    rest?: boolean
+  }>
+  /** Average seconds per day by weekday (Mo–So), last 90 days global. */
+  weekday: Array<{ d: string; h: number }>
+}

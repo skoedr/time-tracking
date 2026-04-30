@@ -3,6 +3,7 @@ import TodayView from './views/TodayView'
 import CalendarView from './views/CalendarView'
 import ClientsView from './views/ClientsView'
 import SettingsView from './views/SettingsView'
+import AuswertungView from './views/AuswertungView'
 import { IdleModal } from './components/IdleModal'
 import { QuickNoteModal } from './components/QuickNoteModal'
 import { StartTimerModal } from './components/StartTimerModal'
@@ -13,7 +14,7 @@ import { useTimer } from './hooks/useTimer'
 import { useT } from './contexts/I18nContext'
 import { useProjectsStore } from './store/projectsStore'
 
-type View = 'today' | 'calendar' | 'clients' | 'settings'
+type View = 'today' | 'calendar' | 'clients' | 'analytics' | 'settings'
 
 function App(): React.JSX.Element {
   const t = useT()
@@ -96,7 +97,7 @@ function App(): React.JSX.Element {
           borderColor: 'var(--card-border)'
         }}
       >
-        {(['today', 'calendar', 'clients', 'settings'] as View[]).map((v) => (
+        {(['today', 'calendar', 'clients', 'analytics', 'settings'] as View[]).map((v) => (
           <button
             key={v}
             onClick={() => setView(v)}
@@ -144,6 +145,7 @@ function App(): React.JSX.Element {
           {view === 'today' && <TodayView />}
           {view === 'calendar' && <CalendarView />}
           {view === 'clients' && <ClientsView />}
+          {view === 'analytics' && <AuswertungView />}
           {view === 'settings' && <SettingsView />}
         </div>
       </main>

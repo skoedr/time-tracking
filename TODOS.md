@@ -6,7 +6,7 @@ Deferred items from plan reviews. Items here have explicit decisions — they ar
 
 - **#87 — UI centering across views** (Optional polish) — Basiszentrierung implementiert in v1.8.1 (`max-w-4xl mx-auto` auf SettingsView-Wrapper). Optional: pixelgenaue Werte via `max-w-[740px]` / `max-w-[600px]` statt Tailwind-Tokens für Today/Timer/Calendar/Clients. → v2.0 candidate.
 
-- **#93 — Auswertungs-Tab (Analytics Dashboard)** — Monatskarte, Trendchart (Wochen/Monate), Verteilung nach Kunde + Wochentag, Pace-Tracker. Design-Gespräch mit Claude Design ausstehend.
+- **#93 — Auswertungs-Tab (Analytics Dashboard)** — Implementierung in `feat/v1.10-analytics` geplant. Scope definiert via /plan-ceo-review + /plan-eng-review (2026-05-11). CEO-Plan: `~/.gstack/projects/time-tracking/ceo-plans/2026-05-11-v1.10-analytics.md`. **In v1.10 Scope:** Neuer Auswertungs-Tab, Monatsnavigation, Stat-Cards (Stunden/Umsatz/Billable%), DeltaPills, TrendChart (Wochen+Monate-Toggle), ClientBars, WeekdayBars, EmptyState. **Deferred aus v1.10:** Tags-Panel (#93-follow-up), Hochrechnung/Forecast-KPI (#93-follow-up), PaceBlock (benötigt Settings-Schema-Change → v1.11 candidate).
 
 - **#94 — Stammdaten-Erweiterung Kunden + Projekte** — Rechnungsadresse + USt-IdNr. für PDF-Stundennachweis-Empfängerblock; Projektnummer, Stundenkontingent, Abrechnungstyp, Projektstatus. Kein Rechnungsfeature — nur Stundennachweis.
 

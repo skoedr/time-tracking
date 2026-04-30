@@ -17,7 +17,8 @@ import type {
   BackupInfo,
   DashboardSummary,
   UpdateStatus,
-  LicenseEntry
+  LicenseEntry,
+  AnalyticsSummary
 } from '../shared/types'
 import type { CsvRequest } from '../main/csvExport'
 
@@ -210,6 +211,11 @@ const api = {
       ipcRenderer.invoke('projects:update', input),
     archive: (id: number): Promise<IpcResult<void>> => ipcRenderer.invoke('projects:archive', id),
     delete: (id: number): Promise<IpcResult<void>> => ipcRenderer.invoke('projects:delete', id)
+  },
+  // v1.10 #93 — Analytics
+  analytics: {
+    getSummary: (q: MonthQuery): Promise<IpcResult<AnalyticsSummary>> =>
+      ipcRenderer.invoke('analytics:summary', q)
   },
   // v1.5 PR B — auto-updater
   update: {

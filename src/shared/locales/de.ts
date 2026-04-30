@@ -511,6 +511,32 @@ export const de = {
 
   // ── CalendarView — Projekt-Filter (v1.9 #75 PR 3) ────────────────────────
   'calendar.filter.allProjects': 'Alle Projekte',
+
+  // ── Auswertung (v1.10 #93) ────────────────────────────────────────────────
+  'nav.analytics': 'Auswertung',
+  'analytics.title': 'Auswertung',
+  'analytics.month.hours': 'Stunden',
+  'analytics.month.revenue': 'Umsatz',
+  'analytics.month.billable': 'Abrechenbar',
+  'analytics.noRate': 'Kein Satz konfiguriert',
+  'analytics.chart.weeks': 'Wochen',
+  'analytics.chart.months': 'Monate',
+  'analytics.chart.billable': 'Abrechenbar',
+  'analytics.chart.nonBillable': 'Nicht abrechenbar',
+  'analytics.chart.hoursLabel': 'Stunden',
+  'analytics.chart.revenueLabel': 'Umsatz (rechte Achse, in 1.000 €)',
+  'analytics.clients.title': 'Stunden nach Kunde',
+  'analytics.clients.period': 'laufender Monat',
+  'analytics.clients.other': 'Sonstige',
+  'analytics.weekday.title': 'Wochentag-Schnitt',
+  'analytics.weekday.period': 'Ø h/Tag · 90 d',
+  'analytics.empty.title': 'Noch keine Einträge',
+  'analytics.empty.subtitle': 'Starte einen Timer oder trage Stunden nach.',
+  'analytics.empty.startTimer': 'Timer starten',
+  'analytics.empty.addEntry': 'Eintrag nachtragen',
+  'analytics.prevMonth': 'Vorheriger Monat',
+  'analytics.nextMonth': 'Nächster Monat',
+  'analytics.vsLastMonth': 'vs. Vormonat',
 } as const
 
 export type TranslationKey = keyof typeof de
