@@ -528,22 +528,33 @@ function QuickStartPill({
                 style={{ strokeDasharray: arcInfo.arcLen }}
               />
             )}
+            <defs>
+              {ring.items.map((item) => {
+                const strokeColor = item.isNoProject ? 'var(--text3)' : item.color
+                return (
+                  <linearGradient
+                    key={`grad-${item.key}`}
+                    id={`qs-beam-${item.key}`}
+                    gradientUnits="userSpaceOnUse"
+                    x1={0} y1={0}
+                    x2={item.pos.x} y2={item.pos.y}
+                  >
+                    <stop offset="0%"   stopColor={strokeColor} stopOpacity={0} />
+                    <stop offset="100%" stopColor={strokeColor} stopOpacity={1} />
+                  </linearGradient>
+                )
+              })}
+            </defs>
             {ring.items.map((item) => {
               const isHovered = hoveredKey === item.key
-              // Offset beam start ~36 px toward the item so the line begins
-              // just outside the pill body and isn't drawn over its text.
-              const len = Math.sqrt(item.pos.x ** 2 + item.pos.y ** 2) || 1
-              const PILL_EDGE = 36
-              const bx1 = ((item.pos.x / len) * PILL_EDGE).toFixed(2)
-              const by1 = ((item.pos.y / len) * PILL_EDGE).toFixed(2)
               return (
                 <line
                   key={item.key}
-                  x1={bx1}
-                  y1={by1}
+                  x1={0}
+                  y1={0}
                   x2={item.pos.x}
                   y2={item.pos.y}
-                  stroke={item.isNoProject ? 'var(--text3)' : item.color}
+                  stroke={`url(#qs-beam-${item.key})`}
                   strokeWidth={1}
                   strokeOpacity={isHovered ? 0.5 : 0}
                   style={{ transition: 'stroke-opacity 120ms ease' }}
