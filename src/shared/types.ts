@@ -100,9 +100,8 @@ export interface Project {
   budget_minutes?: number | null
   /**
    * Project lifecycle status. Supersedes the binary `active` flag.
-   * 'active' | 'paused' | 'archived'
    */
-  status?: string
+  status?: 'active' | 'paused' | 'archived'
   /**
    * Only present in `projects:getAll` responses.
    * Total minutes of completed (stopped) entries for this project, all-time.
@@ -124,7 +123,7 @@ export interface CreateProjectInput {
   start_date?: string | null
   end_date?: string | null
   budget_minutes?: number | null
-  status?: string
+  status?: 'active' | 'paused' | 'archived'
 }
 
 export interface UpdateProjectInput {
@@ -139,7 +138,7 @@ export interface UpdateProjectInput {
   start_date?: string | null
   end_date?: string | null
   budget_minutes?: number | null
-  status?: string
+  status?: 'active' | 'paused' | 'archived'
 }
 
 export interface Settings {
