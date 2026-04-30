@@ -663,9 +663,12 @@ describe('migration SQL execution', () => {
   it('migration 012 — UNIQUE partial index: two archived projects same name same client → allowed', () => {
     applyAll()
     db.prepare(`INSERT INTO clients (id, name) VALUES (1, 'Acme')`).run()
-    db.prepare(`INSERT INTO projects (client_id, name, active) VALUES (1, 'App', 0)`).run()
+    // After migration 013, status column exists with DEFAULT 'active'.
+    // Must set status='archived' to match active=0; otherwise the new
+    // idx_projects_unique_status_name (WHERE status='active') would fire.
+    db.prepare(`INSERT INTO projects (client_id, name, active, status) VALUES (1, 'App', 0, 'archived')`).run()
     expect(() => {
-      db.prepare(`INSERT INTO projects (client_id, name, active) VALUES (1, 'App', 0)`).run()
+      db.prepare(`INSERT INTO projects (client_id, name, active, status) VALUES (1, 'App', 0, 'archived')`).run()
     }).not.toThrow()
   })
 
