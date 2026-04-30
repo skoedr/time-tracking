@@ -2,6 +2,12 @@
 
 All notable changes to TimeTrack are documented here.
 
+## [1.10.1] — unreleased
+
+### Added
+
+- **Stammdaten-Erweiterung — DB + IPC (PR 1/3)** — Datenbankgrundlage für v1.11 (#94): Migration 013 ergänzt `clients` um 7 neue Felder (Rechnungsadresse 4-zeilig, USt-IdNr., Ansprechpartner, E-Mail) und `projects` um 5 neue Felder (externe Projektnummer, Start-/Enddatum, Budget in Minuten, Status `active`/`paused`/`archived`). Der neue `status`-Wert löst das binäre `active`-Flag schrittweise ab; beide Felder werden synchron geschrieben. Neuer IPC-Handler `projects:getBudgetStatus` liefert Ist-Minuten vs. Budget für das Timer-Start-Toast (PR 2/3). Alle Types in `src/shared/types.ts` um die neuen Felder erweitert, Preload-API-Surface ergänzt. 13 neue Tests (8 Migrations-, 5 Budget-Handler-Tests). ([#94](https://github.com/skoedr/time-tracking/issues/94))
+
 ## [1.10.0] — 2026-04-30
 
 ### Added
