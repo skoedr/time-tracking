@@ -7,6 +7,14 @@ export interface Client {
   active: number
   rate_cent: number
   created_at: string
+  // v1.11 #94 — Stammdaten-Erweiterung
+  billing_address_line1?: string | null
+  billing_address_line2?: string | null
+  billing_address_line3?: string | null
+  billing_address_line4?: string | null
+  vat_id?: string | null
+  contact_person?: string | null
+  contact_email?: string | null
 }
 
 export interface Entry {
@@ -78,6 +86,29 @@ export interface Project {
    * recent entry's started_at, or null when no entries exist.
    */
   last_used_at?: string | null
+  // v1.11 #94 — Stammdaten-Erweiterung
+  /** External project number / reference (e.g. customer PO number). */
+  external_project_number?: string | null
+  /** Project start date as ISO date string (e.g. '2026-01-01'). */
+  start_date?: string | null
+  /** Project end date as ISO date string (e.g. '2026-12-31'). */
+  end_date?: string | null
+  /**
+   * Total hour budget in minutes. Integer arithmetic, consistent with
+   * `rounded_min`. null = no budget set.
+   */
+  budget_minutes?: number | null
+  /**
+   * Project lifecycle status. Supersedes the binary `active` flag.
+   * 'active' | 'paused' | 'archived'
+   */
+  status?: string
+  /**
+   * Only present in `projects:getAll` responses.
+   * Total minutes of completed (stopped) entries for this project, all-time.
+   * null when no entries exist or budget_minutes is null.
+   */
+  used_minutes?: number | null
 }
 
 /** Project guaranteed to include entry_count (returned by projects:getAll). */
@@ -88,6 +119,12 @@ export interface CreateProjectInput {
   name: string
   color: string
   rate_cent?: number | null
+  // v1.11 #94
+  external_project_number?: string | null
+  start_date?: string | null
+  end_date?: string | null
+  budget_minutes?: number | null
+  status?: string
 }
 
 export interface UpdateProjectInput {
@@ -97,6 +134,12 @@ export interface UpdateProjectInput {
   color: string
   rate_cent?: number | null
   active: number
+  // v1.11 #94
+  external_project_number?: string | null
+  start_date?: string | null
+  end_date?: string | null
+  budget_minutes?: number | null
+  status?: string
 }
 
 export interface Settings {
@@ -140,6 +183,14 @@ export interface CreateClientInput {
    * column). Integer arithmetic prevents float drift on totals.
    */
   rate_cent?: number
+  // v1.11 #94
+  billing_address_line1?: string | null
+  billing_address_line2?: string | null
+  billing_address_line3?: string | null
+  billing_address_line4?: string | null
+  vat_id?: string | null
+  contact_person?: string | null
+  contact_email?: string | null
 }
 
 export interface UpdateClientInput {
@@ -148,6 +199,14 @@ export interface UpdateClientInput {
   color: string
   active: number
   rate_cent?: number
+  // v1.11 #94
+  billing_address_line1?: string | null
+  billing_address_line2?: string | null
+  billing_address_line3?: string | null
+  billing_address_line4?: string | null
+  vat_id?: string | null
+  contact_person?: string | null
+  contact_email?: string | null
 }
 
 export interface CreateEntryInput {
@@ -290,4 +349,13 @@ export interface AnalyticsSummary {
   }>
   /** Average seconds per day by weekday (Mo–So), last 90 days global. */
   weekday: Array<{ d: string; h: number }>
+}
+
+// ── Budget (v1.11 #94) ────────────────────────────────────────────────────
+
+export interface BudgetStatus {
+  /** Total budget in minutes, or null when no budget is set. */
+  budgetMinutes: number | null
+  /** Sum of rounded_min for all completed (stopped) entries, all-time. */
+  usedMinutes: number
 }

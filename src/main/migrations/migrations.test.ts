@@ -572,8 +572,19 @@ describe('migration SQL execution', () => {
     expect(col?.notnull).toBe(0)
   })
 
-  it('migration 012 — idx_projects_client_active index exists', () => {
-    applyAll()
+  it('migration 012 — idx_projects_client_active index exists (before migration 013 drops it)', () => {
+    // Apply only migrations 001-012. Migration 013 drops this index.
+    const pre = migrations.filter((m) => m.version <= 12)
+    for (const m of pre) {
+      const tx = db.transaction(() => {
+        db.exec(m.up)
+        db.prepare('INSERT INTO schema_version (version, name) VALUES (?, ?)').run(
+          m.version,
+          m.name
+        )
+      })
+      tx()
+    }
     const idx = db
       .prepare(
         "SELECT name FROM sqlite_master WHERE type='index' AND name='idx_projects_client_active'"
@@ -655,6 +666,131 @@ describe('migration SQL execution', () => {
     db.prepare(`INSERT INTO projects (client_id, name, active) VALUES (1, 'App', 0)`).run()
     expect(() => {
       db.prepare(`INSERT INTO projects (client_id, name, active) VALUES (1, 'App', 0)`).run()
+    }).not.toThrow()
+  })
+
+  // ── Migration 013 — v1.11-stammdaten ───────────────────────────────────
+
+  it('migration 013 — clients table has all 7 new columns', () => {
+    applyAll()
+    const cols = (
+      db.prepare('PRAGMA table_info(clients)').all() as Array<{ name: string }>
+    ).map((c) => c.name)
+    expect(cols).toContain('billing_address_line1')
+    expect(cols).toContain('billing_address_line2')
+    expect(cols).toContain('billing_address_line3')
+    expect(cols).toContain('billing_address_line4')
+    expect(cols).toContain('vat_id')
+    expect(cols).toContain('contact_person')
+    expect(cols).toContain('contact_email')
+  })
+
+  it('migration 013 — projects table has all new columns', () => {
+    applyAll()
+    const cols = (
+      db.prepare('PRAGMA table_info(projects)').all() as Array<{ name: string }>
+    ).map((c) => c.name)
+    expect(cols).toContain('external_project_number')
+    expect(cols).toContain('start_date')
+    expect(cols).toContain('end_date')
+    expect(cols).toContain('budget_minutes')
+    expect(cols).toContain('status')
+  })
+
+  it('migration 013 — status column has CHECK constraint (rejects invalid values)', () => {
+    applyAll()
+    db.prepare(`INSERT INTO clients (id, name) VALUES (1, 'Acme')`).run()
+    expect(() => {
+      db.prepare(`INSERT INTO projects (client_id, name, status) VALUES (1, 'App', 'invalid')`).run()
+    }).toThrow()
+  })
+
+  it('migration 013 — active=1 rows get status=active, active=0 rows get status=archived', () => {
+    // Apply 001-012 first, insert rows, then apply 013.
+    const pre = migrations.filter((m) => m.version < 13)
+    for (const m of pre) {
+      const tx = db.transaction(() => {
+        db.exec(m.up)
+        db.prepare('INSERT INTO schema_version (version, name) VALUES (?, ?)').run(
+          m.version,
+          m.name
+        )
+      })
+      tx()
+    }
+    db.prepare(`INSERT INTO clients (id, name) VALUES (1, 'Acme')`).run()
+    db.prepare(`INSERT INTO projects (id, client_id, name, active) VALUES (1, 1, 'Active Project', 1)`).run()
+    db.prepare(`INSERT INTO projects (id, client_id, name, active) VALUES (2, 1, 'Archived Project', 0)`).run()
+    // Now apply migration 013
+    const m013 = migrations.find((m) => m.version === 13)!
+    const tx = db.transaction(() => {
+      db.exec(m013.up)
+      db.prepare('INSERT INTO schema_version (version, name) VALUES (?, ?)').run(
+        m013.version,
+        m013.name
+      )
+    })
+    tx()
+    const rows = db.prepare('SELECT id, status FROM projects ORDER BY id').all() as Array<{ id: number; status: string }>
+    expect(rows[0].status).toBe('active')
+    expect(rows[1].status).toBe('archived')
+  })
+
+  it('migration 013 — old idx_projects_client_active index is dropped', () => {
+    applyAll()
+    const idx = db
+      .prepare(
+        "SELECT name FROM sqlite_master WHERE type='index' AND name='idx_projects_client_active'"
+      )
+      .get()
+    expect(idx).toBeUndefined()
+  })
+
+  it('migration 013 — new idx_projects_client_status index exists', () => {
+    applyAll()
+    const idx = db
+      .prepare(
+        "SELECT name FROM sqlite_master WHERE type='index' AND name='idx_projects_client_status'"
+      )
+      .get()
+    expect(idx).toBeDefined()
+  })
+
+  it('migration 013 — old idx_projects_unique_active_name index is dropped', () => {
+    applyAll()
+    const idx = db
+      .prepare(
+        "SELECT name FROM sqlite_master WHERE type='index' AND name='idx_projects_unique_active_name'"
+      )
+      .get()
+    expect(idx).toBeUndefined()
+  })
+
+  it('migration 013 — new idx_projects_unique_status_name index exists', () => {
+    applyAll()
+    const idx = db
+      .prepare(
+        "SELECT name FROM sqlite_master WHERE type='index' AND name='idx_projects_unique_status_name'"
+      )
+      .get()
+    expect(idx).toBeDefined()
+  })
+
+  it('migration 013 — two active projects with same name and client are rejected', () => {
+    applyAll()
+    db.prepare(`INSERT INTO clients (id, name) VALUES (1, 'Acme')`).run()
+    db.prepare(`INSERT INTO projects (client_id, name, status) VALUES (1, 'App', 'active')`).run()
+    expect(() => {
+      db.prepare(`INSERT INTO projects (client_id, name, status) VALUES (1, 'App', 'active')`).run()
+    }).toThrow()
+  })
+
+  it('migration 013 — two archived projects with same name and client are allowed', () => {
+    applyAll()
+    db.prepare(`INSERT INTO clients (id, name) VALUES (1, 'Acme')`).run()
+    db.prepare(`INSERT INTO projects (client_id, name, status) VALUES (1, 'App', 'archived')`).run()
+    expect(() => {
+      db.prepare(`INSERT INTO projects (client_id, name, status) VALUES (1, 'App', 'archived')`).run()
     }).not.toThrow()
   })
 })

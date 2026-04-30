@@ -17,7 +17,8 @@ import type {
   DashboardSummary,
   UpdateStatus,
   LicenseEntry,
-  AnalyticsSummary
+  AnalyticsSummary,
+  BudgetStatus
 } from '../shared/types'
 
 declare global {
@@ -155,6 +156,7 @@ declare global {
         update(input: UpdateProjectInput): Promise<IpcResult<Project>>
         archive(id: number): Promise<IpcResult<void>>
         delete(id: number): Promise<IpcResult<void>>
+        getBudgetStatus(projectId: number): Promise<IpcResult<BudgetStatus>>
       }
       analytics: {
         getSummary(q: MonthQuery): Promise<IpcResult<AnalyticsSummary>>

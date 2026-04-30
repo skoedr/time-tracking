@@ -18,6 +18,7 @@ import { handleCsvExport, type CsvRequest } from './csvExport'
 import { validatePdfPath, validateMergeExportRequest } from './pdfMergeValidation'
 import { mergeOnlyHandler, pdfInfoHandler } from './pdfMergeHandlers'
 import { registerAnalyticsHandlers } from './analyticsHandlers'
+import { registerBudgetHandlers } from './budgetHandlers'
 import type {
   Client,
   Entry,
@@ -72,6 +73,18 @@ function normaliseRateCent(value: unknown): number {
   return Math.round(n)
 }
 
+/**
+ * Coerce optional `budget_minutes` from the renderer into a positive integer
+ * or null. `undefined`, `null`, `0`, or negative values all become null
+ * ("no budget set"). Non-integer values are rounded.
+ */
+function normaliseBudgetMinutes(value: unknown): number | null {
+  if (value === undefined || value === null) return null
+  const n = Number(value)
+  if (!Number.isFinite(n) || n <= 0) return null
+  return Math.round(n)
+}
+
 export function registerIpcHandlers(hooks: IpcHooks): void {
   const db = getDb()
 
@@ -89,8 +102,23 @@ export function registerIpcHandlers(hooks: IpcHooks): void {
     try {
       const rate = normaliseRateCent(input.rate_cent)
       const info = db
-        .prepare(`INSERT INTO clients (name, color, rate_cent) VALUES (?, ?, ?)`)
-        .run(input.name.trim(), input.color, rate)
+        .prepare(
+          `INSERT INTO clients (name, color, rate_cent,
+             billing_address_line1, billing_address_line2,
+             billing_address_line3, billing_address_line4,
+             vat_id, contact_person, contact_email)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        )
+        .run(
+          input.name.trim(), input.color, rate,
+          input.billing_address_line1?.trim() ?? null,
+          input.billing_address_line2?.trim() ?? null,
+          input.billing_address_line3?.trim() ?? null,
+          input.billing_address_line4?.trim() ?? null,
+          input.vat_id?.trim() ?? null,
+          input.contact_person?.trim() ?? null,
+          input.contact_email?.trim() ?? null
+        )
       const row = db
         .prepare(`SELECT * FROM clients WHERE id = ?`)
         .get(info.lastInsertRowid) as Client
@@ -105,8 +133,23 @@ export function registerIpcHandlers(hooks: IpcHooks): void {
     try {
       const rate = normaliseRateCent(input.rate_cent)
       db.prepare(
-        `UPDATE clients SET name = ?, color = ?, active = ?, rate_cent = ? WHERE id = ?`
-      ).run(input.name.trim(), input.color, input.active, rate, input.id)
+        `UPDATE clients SET
+           name = ?, color = ?, active = ?, rate_cent = ?,
+           billing_address_line1 = ?, billing_address_line2 = ?,
+           billing_address_line3 = ?, billing_address_line4 = ?,
+           vat_id = ?, contact_person = ?, contact_email = ?
+         WHERE id = ?`
+      ).run(
+        input.name.trim(), input.color, input.active, rate,
+        input.billing_address_line1?.trim() ?? null,
+        input.billing_address_line2?.trim() ?? null,
+        input.billing_address_line3?.trim() ?? null,
+        input.billing_address_line4?.trim() ?? null,
+        input.vat_id?.trim() ?? null,
+        input.contact_person?.trim() ?? null,
+        input.contact_email?.trim() ?? null,
+        input.id
+      )
       const row = db.prepare(`SELECT * FROM clients WHERE id = ?`).get(input.id) as Client
       hooks.refreshTrayClients()
       return ok(row)
@@ -330,26 +373,39 @@ export function registerIpcHandlers(hooks: IpcHooks): void {
     }
   })
 
-  // ── Projects (v1.9 #75) ──────────────────────────────────────
+  // ── Projects (v1.9 #75 / v1.11 #94) ─────────────────────────
   ipcMain.handle(
     'projects:getAll',
     (_e, req?: { clientId?: number | null }): IpcResult<Project[]> => {
       try {
-        const base = `SELECT p.*, COALESCE(ec.cnt, 0) AS entry_count, ec.last_used_at FROM projects p
-          LEFT JOIN (SELECT project_id, COUNT(*) AS cnt, MAX(started_at) AS last_used_at FROM entries WHERE deleted_at IS NULL GROUP BY project_id) ec
-            ON ec.project_id = p.id`
+        const base = `SELECT p.*,
+            COALESCE(ec.cnt, 0) AS entry_count,
+            ec.last_used_at,
+            COALESCE(bud.used_minutes, 0) AS used_minutes
+          FROM projects p
+          LEFT JOIN (
+            SELECT project_id, COUNT(*) AS cnt, MAX(started_at) AS last_used_at
+            FROM entries WHERE deleted_at IS NULL GROUP BY project_id
+          ) ec ON ec.project_id = p.id
+          LEFT JOIN (
+            SELECT project_id, COALESCE(SUM(rounded_min), 0) AS used_minutes
+            FROM entries
+            WHERE deleted_at IS NULL AND stopped_at IS NOT NULL
+            GROUP BY project_id
+          ) bud ON bud.project_id = p.id`
+        const order = `ORDER BY CASE WHEN p.status = 'active' THEN 0 WHEN p.status = 'paused' THEN 1 ELSE 2 END, p.name`
         let query: string
         let params: unknown[]
         if (req !== undefined && req !== null && 'clientId' in req) {
           if (req.clientId === null) {
-            query = `${base} WHERE p.client_id IS NULL ORDER BY p.active DESC, p.name`
+            query = `${base} WHERE p.client_id IS NULL ${order}`
             params = []
           } else {
-            query = `${base} WHERE p.client_id = ? ORDER BY p.active DESC, p.name`
+            query = `${base} WHERE p.client_id = ? ${order}`
             params = [req.clientId]
           }
         } else {
-          query = `${base} ORDER BY p.active DESC, p.name`
+          query = `${base} ${order}`
           params = []
         }
         const rows = db.prepare(query).all(...params) as Project[]
@@ -364,15 +420,24 @@ export function registerIpcHandlers(hooks: IpcHooks): void {
     try {
       const err = validateProject(input, db)
       if (err) return fail(err)
+      const budget = normaliseBudgetMinutes(input.budget_minutes)
       const result = db
         .prepare(
-          `INSERT INTO projects (client_id, name, color, rate_cent) VALUES (?, ?, ?, ?) RETURNING *`
+          `INSERT INTO projects
+             (client_id, name, color, rate_cent,
+              external_project_number, start_date, end_date, budget_minutes, status)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING *`
         )
         .get(
           input.client_id ?? null,
           input.name.trim(),
           input.color ?? '',
-          input.rate_cent ?? null
+          input.rate_cent ?? null,
+          input.external_project_number?.trim() ?? null,
+          input.start_date ?? null,
+          input.end_date ?? null,
+          budget,
+          input.status ?? 'active'
         ) as Project
       return ok(result)
     } catch (e) {
@@ -400,16 +465,29 @@ export function registerIpcHandlers(hooks: IpcHooks): void {
           )
         }
       }
+      const budget = normaliseBudgetMinutes(input.budget_minutes)
+      const status = input.status ?? 'active'
+      // Keep `active` in sync with `status` for backward compatibility.
+      const activeFlag = status === 'active' ? 1 : 0
       const result = db
         .prepare(
-          `UPDATE projects SET client_id=?, name=?, color=?, rate_cent=?, active=? WHERE id=? RETURNING *`
+          `UPDATE projects SET
+             client_id=?, name=?, color=?, rate_cent=?, active=?,
+             external_project_number=?, start_date=?, end_date=?,
+             budget_minutes=?, status=?
+           WHERE id=? RETURNING *`
         )
         .get(
           input.client_id ?? null,
           input.name.trim(),
           input.color ?? '',
           input.rate_cent ?? null,
-          input.active,
+          activeFlag,
+          input.external_project_number?.trim() ?? null,
+          input.start_date ?? null,
+          input.end_date ?? null,
+          budget,
+          status,
           input.id
         ) as Project
       return ok(result)
@@ -420,7 +498,8 @@ export function registerIpcHandlers(hooks: IpcHooks): void {
 
   ipcMain.handle('projects:archive', (_e, id: number): IpcResult<void> => {
     try {
-      db.prepare('UPDATE projects SET active = 0 WHERE id = ?').run(id)
+      // Keep `active` in sync with `status` for backward compatibility.
+      db.prepare('UPDATE projects SET active = 0, status = ? WHERE id = ?').run('archived', id)
       return ok(undefined)
     } catch (e) {
       return fail(e)
@@ -1044,6 +1123,9 @@ export function registerIpcHandlers(hooks: IpcHooks): void {
 
   // ── Analytics (v1.10 #93) ─────────────────────────────────────────────
   registerAnalyticsHandlers(db)
+
+  // ── Budget (v1.11 #94) ────────────────────────────────────────────────
+  registerBudgetHandlers(db)
 }
 
 /**
