@@ -114,7 +114,7 @@ function App(): React.JSX.Element {
           <button
             type="button"
             onClick={() => setShowTimerModal(true)}
-            className="ml-2 flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+            className="ml-auto flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
             style={{ borderColor: 'var(--card-border)', color: 'var(--text2)' }}
             aria-label={t('timer.modal.title')}
           >
@@ -228,8 +228,8 @@ function RunningPill({
       <button
         type="button"
         onClick={onStop}
-        className="ml-1 flex items-center justify-center rounded-full p-1.5 transition-colors hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
-        style={{ color: 'var(--green)' }}
+        className="ml-1 flex items-center justify-center rounded-full p-1.5 transition-colors hover:bg-red-500/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400"
+        style={{ color: '#ef4444' }}
         aria-label="Timer stoppen"
       >
         <StopIcon />
