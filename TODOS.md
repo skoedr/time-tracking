@@ -8,7 +8,7 @@ Deferred items from plan reviews. Items here have explicit decisions — they ar
 
 - **#93 — Auswertungs-Tab (Analytics Dashboard)** — Implementierung in `feat/v1.10-analytics` geplant. Scope definiert via /plan-ceo-review + /plan-eng-review (2026-05-11). CEO-Plan: `~/.gstack/projects/time-tracking/ceo-plans/2026-05-11-v1.10-analytics.md`. **In v1.10 Scope:** Neuer Auswertungs-Tab, Monatsnavigation, Stat-Cards (Stunden/Umsatz/Billable%), DeltaPills, TrendChart (Wochen+Monate-Toggle), ClientBars, WeekdayBars, EmptyState. **Deferred aus v1.10:** Tags-Panel (#93-follow-up), Hochrechnung/Forecast-KPI (#93-follow-up), PaceBlock (benötigt Settings-Schema-Change → v1.11 candidate).
 
-- **#94 — Stammdaten-Erweiterung Kunden + Projekte** — Rechnungsadresse + USt-IdNr. für PDF-Stundennachweis-Empfängerblock; Projektnummer, Stundenkontingent, Abrechnungstyp, Projektstatus. Kein Rechnungsfeature — nur Stundennachweis.
+- **#94 — Stammdaten-Erweiterung Kunden + Projekte** — **In v1.11 Scope.** CEO-Plan: `~/.gstack/projects/time-tracking/ceo-plans/2026-04-30-v1.11-stammdaten.md`. Test-Plan: `~/.gstack/projects/time-tracking/robin-main-eng-review-test-plan-20260430-165752.md`. **Phase 1 — Stammdaten-Core:** Migration 013, Client-Felder (Adresse 1-4, VAT, Kontakt, E-Mail), Projekt-Felder (ext. Nr, Datum, Budget-Minuten, Status active/paused/archived), ClientFormModal + ProjectFormModal, PDF Empfängerblock (konditionell), Budget-Mini-Bar in QuickStart, Status-Badge auf Projekt-Card, Budget-Warn-Toast beim Timer-Start. **Phase 2 (eigener PR):** Analytics Burndown + billing_type-Migration (#93-follow-up). PR-Sequenz: PR1/3 DB+Types+IPC, PR2/3 UI+PDF, PR3/3 Budget-UX.
 
 ### Deferred from #79 /autoplan Final Gate (v1.9.5)
 
