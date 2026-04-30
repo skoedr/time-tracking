@@ -312,8 +312,9 @@ function QuickStartRow({
   const t = useT()
   if (topClients.length === 0) return null
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="flex flex-col gap-2">
       <span className="text-xs uppercase tracking-wide" style={{ color: 'var(--text3)' }}>{t('today.quickstart.label')}</span>
+      <div className="flex flex-wrap gap-2">
       {topClients.map((c) => (
         <QuickStartPill
           key={c.client_id}
@@ -327,6 +328,7 @@ function QuickStartRow({
           onStart={onStart}
         />
       ))}
+      </div>
     </div>
   )
 }
@@ -644,11 +646,9 @@ function QuickStartPill({
           )}
           <Icons.Play width={11} height={11} style={{ color: 'var(--text3)' }} />
         </div>
-        {lastProject && (
-          <div className="pl-4 text-xs leading-tight" style={{ color: 'var(--text3)', marginTop: 2 }}>
-            {lastProject.name}
-          </div>
-        )}
+        <div className="pl-4 text-xs leading-tight" style={{ color: 'var(--text3)', marginTop: 2, visibility: lastProject ? 'visible' : 'hidden' }}>
+          {lastProject?.name ?? '\u00A0'}
+        </div>
       </button>
     </div>
   )
