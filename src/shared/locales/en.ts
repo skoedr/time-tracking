@@ -520,6 +520,9 @@ export const en: Record<TranslationKey, string> = {
   'timer.project.label': 'Project',
   'timer.project.placeholder': '— No project —',
   'timer.project.effectiveRate': 'Effective rate: {rate} €/h (project overrides client)',
+  // v1.11 #94 — Budget warning
+  'timer.budget.warning': 'Warning: {percent} % of the budget already booked ({used} h / {total} h).',
+  'timer.budget.overBudget': 'Budget exceeded: {used} h of {total} h booked.',
 
   // ── EntryEditForm — Project (v1.9 #75 PR 3) ──────────────────────────────
   'entry.project': 'Project',

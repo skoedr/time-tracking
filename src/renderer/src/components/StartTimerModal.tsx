@@ -171,6 +171,34 @@ export function StartTimerModal({ open, onClose }: StartTimerModalProps): React.
           </div>
         )}
 
+        {/* Budget warning — shows when selected project is ≥80% consumed */}
+        {selectedProject?.budget_minutes != null && selectedProject.budget_minutes > 0 && (() => {
+          const usedMin = selectedProject.used_minutes ?? 0
+          const budgetMin = selectedProject.budget_minutes
+          const pct = Math.round((usedMin / budgetMin) * 100)
+          if (pct < 80) return null
+          const usedH = (usedMin / 60).toFixed(1)
+          const totalH = (budgetMin / 60).toFixed(1)
+          const over = usedMin > budgetMin
+          return (
+            <div
+              className="flex items-start gap-2 rounded-[10px] px-3 py-2.5 text-xs"
+              style={{
+                background: over ? 'rgba(239,68,68,0.12)' : 'rgba(245,158,11,0.12)',
+                color: over ? 'var(--danger)' : '#f59e0b'
+              }}
+            >
+              <span className="shrink-0 mt-0.5">⚠</span>
+              <span>
+                {over
+                  ? t('timer.budget.overBudget', { used: usedH, total: totalH })
+                  : t('timer.budget.warning', { percent: String(pct), used: usedH, total: totalH })
+                }
+              </span>
+            </div>
+          )
+        })()}
+
         {/* Description */}
         <div className="flex flex-col gap-1.5">
           <label className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text3)' }}>
