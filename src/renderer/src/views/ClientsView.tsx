@@ -672,20 +672,56 @@ function ProjectItem({
     return `${countStr} · ${rel}`
   })()
 
+  const hasBudget = (p.budget_minutes ?? 0) > 0
+  const usedMin = p.used_minutes ?? 0
+  const budgetMin = p.budget_minutes ?? 0
+  const budgetPct = hasBudget ? Math.min(100, Math.round((usedMin / budgetMin) * 100)) : 0
+  const overBudget = hasBudget && usedMin > budgetMin
+  const budgetWarn = hasBudget && budgetPct >= 80
+
   return (
     <li className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 group"
       style={{ background: 'var(--input-bg)' }}
     >
       <span
-        className="w-3 h-3 rounded-full shrink-0"
+        className="w-3 h-3 rounded-full shrink-0 self-start mt-1"
         style={{ backgroundColor: dotColor }}
       />
       <span className="flex-1 min-w-0">
-        <span className="block text-sm font-medium" style={{ color: 'var(--text)' }}>
+        <span className="flex items-center gap-1.5 flex-wrap">
+          <span className="text-sm font-medium" style={{ color: 'var(--text)' }}>
             {p.name}{showProjectNumber && p.external_project_number ? <span style={{ color: 'var(--text3)' }}> [{p.external_project_number}]</span> : null}
           </span>
+          {p.status === 'paused' && (
+            <span
+              className="text-xs px-1.5 py-0.5 rounded-full leading-none shrink-0"
+              style={{ background: 'rgba(245,158,11,0.15)', color: '#f59e0b' }}
+            >
+              {t('projects.form.statusPaused')}
+            </span>
+          )}
+        </span>
         {statsLabel && (
           <span className="block text-xs mt-0.5" style={{ color: 'var(--text3)' }}>{statsLabel}</span>
+        )}
+        {hasBudget && (
+          <span className="flex items-center gap-1.5 mt-1">
+            <span className="flex-1 h-1 rounded-full overflow-hidden" style={{ background: 'var(--card-border)' }}>
+              <span
+                className="h-full rounded-full block transition-all"
+                style={{
+                  width: `${budgetPct}%`,
+                  background: overBudget ? 'var(--danger)' : budgetWarn ? '#f59e0b' : 'var(--accent)'
+                }}
+              />
+            </span>
+            <span
+              className="text-xs shrink-0 tabular-nums"
+              style={{ color: overBudget ? 'var(--danger)' : budgetWarn ? '#f59e0b' : 'var(--text3)' }}
+            >
+              {(usedMin / 60).toFixed(1)}h / {(budgetMin / 60).toFixed(1)}h
+            </span>
+          </span>
         )}
       </span>
       <span className="flex flex-col items-end gap-0.5">

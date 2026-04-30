@@ -528,6 +528,9 @@ export const de = {
   'timer.project.label': 'Projekt',
   'timer.project.placeholder': '— Kein Projekt —',
   'timer.project.effectiveRate': 'Effektiver Satz: {rate} €/h (Projekt überschreibt Kunden)',
+  // v1.11 #94 — Budget-Warnung
+  'timer.budget.warning': 'Achtung: {percent} % des Budgets bereits verbucht ({used} h / {total} h).',
+  'timer.budget.overBudget': 'Budget überschritten: {used} h von {total} h verbucht.',
 
   // ── EntryEditForm — Projekt (v1.9 #75 PR 3) ───────────────────────────────
   'entry.project': 'Projekt',

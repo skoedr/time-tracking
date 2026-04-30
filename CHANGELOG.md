@@ -2,11 +2,35 @@
 
 All notable changes to TimeTrack are documented here.
 
-## [1.10.1] — unreleased
+## [1.11.0] — 2026-04-30
 
 ### Added
 
-- **Stammdaten-Erweiterung — DB + IPC (PR 1/3)** — Datenbankgrundlage für v1.11 (#94): Migration 013 ergänzt `clients` um 7 neue Felder (Rechnungsadresse 4-zeilig, USt-IdNr., Ansprechpartner, E-Mail) und `projects` um 5 neue Felder (externe Projektnummer, Start-/Enddatum, Budget in Minuten, Status `active`/`paused`/`archived`). Der neue `status`-Wert löst das binäre `active`-Flag schrittweise ab; beide Felder werden synchron geschrieben. Neuer IPC-Handler `projects:getBudgetStatus` liefert Ist-Minuten vs. Budget für das Timer-Start-Toast (PR 2/3). Alle Types in `src/shared/types.ts` um die neuen Felder erweitert, Preload-API-Surface ergänzt. 13 neue Tests (8 Migrations-, 5 Budget-Handler-Tests). ([#94](https://github.com/skoedr/time-tracking/issues/94))
+- **Stammdaten-Erweiterung Kunden + Projekte** — Vollständige Verwaltung erweiterter Kunden- und Projektdaten (#94). Drei aufeinander aufbauende PRs:
+
+  **Datenbank + IPC (PR 1/3):** Migration 013 ergänzt `clients` um 7 neue Felder (Rechnungsadresse 4-zeilig, USt-IdNr., Ansprechpartner, E-Mail) und `projects` um 5 neue Felder (externe Projektnummer, Start-/Enddatum, Budget in Minuten, Status `active`/`paused`/`archived`). Der `status`-Wert löst das binäre `active`-Flag schrittweise ab. Neuer IPC-Handler `projects:getBudgetStatus`. 13 neue Tests.
+
+  **UI-Formulare + PDF-Empfängerblock (PR 2/3):** `ClientFormModal` mit Rechnungsadresse, USt-IdNr., Ansprechpartner und Kontakt-E-Mail. `ProjectFormModal` mit Status-Toggle (Aktiv / Pausiert / Archiviert), externer Projektnummer, Datumsbereich und Budget in Dezimalstunden. PDF-Empfängerblock rendert Adresszeilen, USt-IdNr. (`USt-IdNr.`-Prefix) und Ansprechpartner (`z. Hd.`-Prefix) konditionell.
+
+  **Budget-UX (PR 3/3):** Horizontaler Budget-Mini-Balken auf jeder Projektkarte (Farb-Codierung: Akzent → Amber ab 80 % → Rot bei Überschreitung, numerisches Label `32.0 h / 40.0 h`). Amber-Status-Badge „Pausiert“ neben pausierten Projektnamen. Budget-Warn-Banner im Timer-Start-Modal wenn das gewählte Projekt ≥ 80 % verbraucht hat. ([#94](https://github.com/skoedr/time-tracking/issues/94))
+
+- **Externe Projektnummer im UI** — Optionale externe Projektnummer (z. B. Bestellnummer) wird in eckigen Klammern hinter dem Projektnamen angezeigt — in der laufenden Timer-Pill, in der Heute-Tabelle, im QuickStart-Modal und auf der Projektkarte. Kann in den Einstellungen (Allgemein › „Projektnummer anzeigen“) ein- und ausgeblendet werden. ([#94](https://github.com/skoedr/time-tracking/issues/94))
+
+- **Ansprechpartner + Enddatum auf Kunden-/Projektkarte** — Ist ein Ansprechpartner hinterlegt, erscheint er als zweite Zeile unter dem Kundennamen in der Kundenliste. Ist ein Enddatum gesetzt, wird es als „bis TT.MM.JJJJ“ neben dem Projektsatz angezeigt. ([#94](https://github.com/skoedr/time-tracking/issues/94))
+
+### Fixed
+
+- **Auswertung: Rundungsparitat mit PDF** — Die Auswertung berechnete bisher Rohdauern in Sekunden. Jetzt wird dieselbe Ceil-Rundungslogik wie im PDF angewendet (`pdf_round_minutes`-Setting): Stunden und Umsätze in der Auswertung stimmen nun exakt mit dem generierten PDF überein. ([#94](https://github.com/skoedr/time-tracking/issues/94))
+
+- **Timer-Modal: Vorausgewähltes Projekt beibehalten** — Beim Öffnen des Timer-Start-Modals mit einer Vorauswahl (letztes Projekt) wurde die Auswahl durch den asynchronen Projekt-Ladevorgang zurückgesetzt, bevor sie gerendert werden konnte. Die gültige Vorauswahl bleibt jetzt erhalten; die Budget-Warnung erscheint sofort wenn nötig. ([#94](https://github.com/skoedr/time-tracking/issues/94))
+
+### Changed
+
+- **Heute-Tabelle: 2-zeilige Kunden-/Projektanzeige** — Die Kunden-/Projektspalte zeigt jetzt Kundenname (fett) und Projektname (klein, gedimmt) in zwei Zeilen statt einzeilig. Die Spalte wurde auf `1.5fr` verbreitert. ([#94](https://github.com/skoedr/time-tracking/issues/94))
+
+- **Einstellungen: Timer-Rundungs-Settings entfernt** — Die toten Einstellungen „Intervall“ und „Methode“ im Timer-Abschnitt wurden aus UI und Types entfernt (die DB-Rows bleiben bestehen und werden bei der nächsten Migration bereinigt). Maßgebliche Rundung für PDF und Auswertung ist ausschließlich „Stunden runden auf“ im PDF-Abschnitt. ([#94](https://github.com/skoedr/time-tracking/issues/94))
+
+- **Hint-Text für PDF-Rundung aktualisiert** — Der Hinweistext unter „Stunden runden auf“ macht jetzt deutlich, dass die Einstellung für PDF *und* Auswertung gilt. ([#94](https://github.com/skoedr/time-tracking/issues/94))
 
 ## [1.10.0] — 2026-04-30
 
