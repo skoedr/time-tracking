@@ -142,8 +142,6 @@ export interface UpdateProjectInput {
 }
 
 export interface Settings {
-  rounding_mode: 'none' | 'ceil' | 'floor' | 'round'
-  rounding_minutes: '5' | '10' | '15' | '30'
   company_name: string
   backup_path: string
   // v1.1
@@ -172,6 +170,9 @@ export interface Settings {
   onboarding_completed: string
   // v1.8 #76 — Theme mode: 'light' | 'dark' | 'system'.
   theme_mode: string
+  // v1.11 #94 — Show external project number in square brackets.
+  // '0' (default) = hidden, '1' = shown.
+  show_project_number?: string
 }
 
 export interface CreateClientInput {

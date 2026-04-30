@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Client, DashboardSummary, Entry, Project } from '../../../shared/types'
 import { useEntriesStore } from '../store/entriesStore'
 import { useProjectsStore } from '../store/projectsStore'
+import { useUiPrefsStore } from '../store/uiPrefsStore'
 import { useToastStore } from '../store/toastStore'
 import { useTimer, formatDuration } from '../hooks/useTimer'
 import { Dialog } from '../components/Dialog'
@@ -215,6 +216,7 @@ function ActiveTimerPill({
   onStop: () => void
 }): React.JSX.Element {
   const t = useT()
+  const showProjectNumber = useUiPrefsStore((s) => s.showProjectNumber)
   // A `now` tick instead of derived `tickSeconds` so we don't call
   // setState synchronously when `runningEntry` changes (lint rule).
   const [, setNow] = useState(0)
@@ -251,6 +253,9 @@ function ActiveTimerPill({
         style={{ backgroundColor: runningProject?.color || (client?.color ?? '#10b981') }}
       />
       <span className="font-medium" style={{ color: 'var(--text)' }}>{client?.name ?? t('common.unknown')}</span>
+      {runningProject && (
+        <span style={{ color: 'var(--text3)' }}>· {runningProject.name}{showProjectNumber && runningProject.external_project_number ? ` [${runningProject.external_project_number}]` : ''}</span>
+      )}
       {runningEntry.description && (
         <span className="truncate" style={{ color: 'var(--text2)' }}>— {runningEntry.description}</span>
       )}
@@ -358,6 +363,7 @@ type RingItem = {
   key: string
   id: number | null
   name: string
+  externalNumber: string | null
   color: string
   pos: { x: number; y: number; angle: number }
   isNoProject: boolean
@@ -383,6 +389,7 @@ function QuickStartPill({
   onStart: (clientId: number, projectId: number | null) => void
 }): React.JSX.Element {
   const t = useT()
+  const showProjectNumber = useUiPrefsStore((s) => s.showProjectNumber)
   const [holdProgress, setHoldProgress] = useState(0)
   const [fanOpen, setFanOpen] = useState(false)
   const [hoveredKey, setHoveredKey] = useState<string | null>(null)
@@ -417,6 +424,7 @@ function QuickStartPill({
       key: `p${p.id}`,
       id: p.id,
       name: p.name,
+      externalNumber: p.external_project_number ?? null,
       color: p.color || color,
       pos: positions[i],
       isNoProject: false
@@ -425,6 +433,7 @@ function QuickStartPill({
       key: 'none',
       id: null,
       name: t('today.quickstart.noProject'),
+      externalNumber: null,
       color: 'var(--text3)',
       pos: { x: 0, y: NO_PROJECT_OFFSET, angle: 180 },
       isNoProject: true
@@ -596,7 +605,7 @@ function QuickStartPill({
                     style={{ backgroundColor: item.color }}
                   />
                 )}
-                {item.name}
+                {item.name}{!item.isNoProject && showProjectNumber && item.externalNumber ? ` [${item.externalNumber}]` : ''}
               </button>
             )
           })}
@@ -647,7 +656,7 @@ function QuickStartPill({
           <Icons.Play width={11} height={11} style={{ color: 'var(--text3)' }} />
         </div>
         <div className="pl-4 text-xs leading-tight" style={{ color: 'var(--text3)', marginTop: 2, visibility: lastProject ? 'visible' : 'hidden' }}>
-          {lastProject?.name ?? '\u00A0'}
+          {lastProject ? `${lastProject.name}${showProjectNumber && lastProject.external_project_number ? ` [${lastProject.external_project_number}]` : ''}` : '\u00A0'}
         </div>
       </button>
     </div>
@@ -668,6 +677,7 @@ function RecentList({
   onDelete: (e: Entry) => void
 }): React.JSX.Element {
   const t = useT()
+  const showProjectNumber = useUiPrefsStore((s) => s.showProjectNumber)
   if (entries.length === 0) {
     return (
       <div
@@ -689,7 +699,7 @@ function RecentList({
       {/* Header */}
       <div
         className="grid px-3 py-2 text-xs font-medium uppercase tracking-wide"
-        style={{ gridTemplateColumns: '110px 1fr 1fr 70px 72px', background: 'var(--nav-bg)', color: 'var(--text2)' }}
+        style={{ gridTemplateColumns: '110px 1.5fr 1fr 70px 72px', background: 'var(--nav-bg)', color: 'var(--text2)' }}
       >
         <span>{t('today.table.time')}</span>
         <span>{t('today.table.client')}</span>
@@ -705,17 +715,19 @@ function RecentList({
           <div
             key={e.id}
             className="grid items-center px-3 py-2.5 border-t transition-colors hover:bg-white/5"
-            style={{ gridTemplateColumns: '110px 1fr 1fr 70px 72px', borderColor: 'var(--card-border)' }}
+            style={{ gridTemplateColumns: '110px 1.5fr 1fr 70px 72px', borderColor: 'var(--card-border)' }}
           >
             <span className="text-xs tabular-nums" style={{ color: 'var(--text2)', fontFamily: "'JetBrains Mono', monospace" }}>
               {formatTimeRange(e)}
             </span>
-            <span className="inline-flex items-center gap-2 overflow-hidden" style={{ color: 'var(--text)' }}>
-              <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: project?.color || (client?.color ?? '#64748b') }} />
-              <span className="truncate">
-                {client?.name ?? t('common.unknown')}
+            <span className="flex items-center gap-2 overflow-hidden" style={{ color: 'var(--text)' }}>
+              <span className="h-2 w-2 shrink-0 rounded-full self-start mt-1.5" style={{ backgroundColor: project?.color || (client?.color ?? '#64748b') }} />
+              <span className="flex flex-col min-w-0">
+                <span className="truncate font-medium">{client?.name ?? t('common.unknown')}</span>
                 {project && (
-                  <span style={{ color: 'var(--text3)' }}> · {project.name}</span>
+                  <span className="truncate text-xs" style={{ color: 'var(--text3)' }}>
+                    {project.name}{showProjectNumber && project.external_project_number ? ` [${project.external_project_number}]` : ''}
+                  </span>
                 )}
               </span>
             </span>

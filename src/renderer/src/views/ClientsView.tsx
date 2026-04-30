@@ -12,6 +12,7 @@ import { formatRateInput, parseRateInput } from '../../../shared/rate'
 import { useClientsStore } from '../store/clientsStore'
 import { useProjectsStore } from '../store/projectsStore'
 import { useT, useLocale } from '../contexts/I18nContext'
+import { useUiPrefsStore } from '../store/uiPrefsStore'
 import type { TranslationKey } from '../../../shared/locales/de'
 import * as Icons from '../components/Icons'
 import { Dialog } from '../components/Dialog'
@@ -261,7 +262,7 @@ export default function ClientsView() {
   const inactiveClients = clients.filter((c) => !c.active)
 
   return (
-    <div className="max-w-xl mx-auto">
+    <div className="mx-auto w-full max-w-3xl">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-xl font-semibold" style={{ color: 'var(--text)' }}>{t('clients.title')}</h1>
         <button
@@ -480,8 +481,9 @@ function ClientItem({
   dimmed?: boolean
 }) {
   const t = useT()
-  const activeProjects = projects?.filter((p) => p.active) ?? []
-  const archivedProjects = projects?.filter((p) => !p.active) ?? []
+  const activeProjects = projects?.filter((p) => p.status === 'active' || (!p.status && p.active)) ?? []
+  const pausedProjects = projects?.filter((p) => p.status === 'paused') ?? []
+  const archivedProjects = projects?.filter((p) => p.status === 'archived' || (!p.status && !p.active)) ?? []
   const allProjects = projects ?? []
 
   return (
@@ -490,7 +492,7 @@ function ClientItem({
       style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)' }}
     >
       {/* Client row */}
-      <div className="flex items-center gap-3 px-4 py-3">
+      <div className="flex items-center gap-3 px-4 py-3" style={c.contact_person ? { alignItems: 'flex-start' } : {}}>
         {/* Chevron toggle */}
         <button
           onClick={() => onToggleExpand(c.id)}
@@ -514,11 +516,14 @@ function ClientItem({
         </button>
 
         <span
-          className={`w-4 h-4 rounded-full shrink-0 ${dimmed ? 'opacity-40' : ''}`}
+          className={`w-4 h-4 rounded-full shrink-0 self-start mt-1 ${dimmed ? 'opacity-40' : ''}`}
           style={{ backgroundColor: c.color }}
         />
-        <span className={`flex-1 font-medium ${dimmed ? 'opacity-50' : ''}`} style={{ color: 'var(--text)' }}>
-          {c.name}
+        <span className={`flex-1 min-w-0 ${dimmed ? 'opacity-50' : ''}`}>
+          <span className="block font-medium" style={{ color: 'var(--text)' }}>{c.name}</span>
+          {c.contact_person && (
+            <span className="block text-xs" style={{ color: 'var(--text3)' }}>{c.contact_person}</span>
+          )}
         </span>
         {/* project count badge */}
         {allProjects.length > 0 && !expanded && (
@@ -570,7 +575,7 @@ function ClientItem({
           style={{ borderColor: 'var(--card-border)' }}
         >
           {/* Active projects */}
-          {activeProjects.length === 0 && archivedProjects.length === 0 && (
+          {activeProjects.length === 0 && pausedProjects.length === 0 && archivedProjects.length === 0 && (
             <p className="text-xs py-1" style={{ color: 'var(--text3)' }}>
               {t('projects.empty')}
             </p>
@@ -588,6 +593,26 @@ function ClientItem({
                 />
               ))}
             </ul>
+          )}
+          {/* Paused projects */}
+          {pausedProjects.length > 0 && (
+            <div className="mb-2">
+              <p className="text-xs font-medium uppercase tracking-wide mb-1.5" style={{ color: 'var(--text3)' }}>
+                {t('projects.pausedSection', { count: String(pausedProjects.length) })}
+              </p>
+              <ul className="flex flex-col gap-1.5">
+                {pausedProjects.map((p) => (
+                  <ProjectItem
+                    key={p.id}
+                    project={p}
+                    clientColor={c.color}
+                    onEdit={onEditProject}
+                    onArchive={onArchiveProject}
+                    onDelete={onDeleteProject}
+                  />
+                ))}
+              </ul>
+            </div>
           )}
           {/* Archived projects */}
           {archivedProjects.length > 0 && (
@@ -631,6 +656,7 @@ function ProjectItem({
 }) {
   const t = useT()
   const { locale } = useLocale()
+  const showProjectNumber = useUiPrefsStore((s) => s.showProjectNumber)
   const dotColor = p.color || (clientColor ? shiftColor(clientColor) : '')
   const rateLabel =
     p.rate_cent !== null
@@ -655,13 +681,20 @@ function ProjectItem({
         style={{ backgroundColor: dotColor }}
       />
       <span className="flex-1 min-w-0">
-        <span className="block text-sm font-medium" style={{ color: 'var(--text)' }}>{p.name}</span>
+        <span className="block text-sm font-medium" style={{ color: 'var(--text)' }}>
+            {p.name}{showProjectNumber && p.external_project_number ? <span style={{ color: 'var(--text3)' }}> [{p.external_project_number}]</span> : null}
+          </span>
         {statsLabel && (
           <span className="block text-xs mt-0.5" style={{ color: 'var(--text3)' }}>{statsLabel}</span>
         )}
       </span>
-      <span className="text-xs" style={{ color: 'var(--text3)' }}>
-        {rateLabel}
+      <span className="flex flex-col items-end gap-0.5">
+        <span className="text-xs" style={{ color: 'var(--text3)' }}>{rateLabel}</span>
+        {p.end_date && (
+          <span className="text-xs" style={{ color: 'var(--text3)' }}>
+            bis {new Date(p.end_date).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+          </span>
+        )}
       </span>
       <button
         onClick={() => onArchive(p)}
@@ -779,6 +812,12 @@ function ClientFormModal({
   const [vatId, setVatId] = useState(client?.vat_id ?? '')
   const [contactPerson, setContactPerson] = useState(client?.contact_person ?? '')
   const [contactEmail, setContactEmail] = useState(client?.contact_email ?? '')
+  const hasExistingDetails = !!(
+    client?.billing_address_line1 || client?.billing_address_line2 ||
+    client?.billing_address_line3 || client?.billing_address_line4 ||
+    client?.vat_id || client?.contact_person || client?.contact_email
+  )
+  const [showDetails, setShowDetails] = useState(hasExistingDetails)
 
   function nullIfEmpty(v: string): string | null {
     return v.trim() === '' ? null : v.trim()
@@ -903,14 +942,32 @@ function ClientFormModal({
             )}
           </div>
 
-          {/* Divider */}
-          <hr style={{ borderColor: 'var(--card-border)' }} />
+          {/* Collapsible details toggle */}
+          <button
+            type="button"
+            onClick={() => setShowDetails((v) => !v)}
+            className="flex items-center gap-2 w-full text-left"
+            style={{ color: 'var(--text3)' }}
+          >
+            <hr className="flex-1" style={{ borderColor: 'var(--card-border)' }} />
+            <span className="text-xs font-medium uppercase tracking-wide whitespace-nowrap">
+              {t('clients.form.billingAddressLabel')}
+            </span>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 16 16"
+              fill="currentColor"
+              className="w-3.5 h-3.5 shrink-0 transition-transform"
+              style={{ transform: showDetails ? 'rotate(180deg)' : 'rotate(0deg)' }}
+            >
+              <path fillRule="evenodd" d="M4.22 6.22a.75.75 0 0 1 1.06 0L8 8.94l2.72-2.72a.75.75 0 1 1 1.06 1.06l-3.25 3.25a.75.75 0 0 1-1.06 0L4.22 7.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
+            </svg>
+            <hr className="flex-1" style={{ borderColor: 'var(--card-border)' }} />
+          </button>
 
+          {showDetails && (<>
           {/* Billing address */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-medium uppercase tracking-wide" style={{ color: 'var(--text2)' }}>
-              {t('clients.form.billingAddressLabel')}
-            </label>
             {[
               { value: billingLine1, set: setBillingLine1, placeholder: t('clients.form.billingLine1Placeholder') },
               { value: billingLine2, set: setBillingLine2, placeholder: t('clients.form.billingLine2Placeholder') },
@@ -947,36 +1004,35 @@ function ClientFormModal({
           </div>
 
           {/* Contact */}
-          <div className="flex gap-3">
-            <div className="flex flex-col gap-1.5 flex-1">
-              <label className="text-xs font-medium uppercase tracking-wide" style={{ color: 'var(--text2)' }}>
-                {t('clients.form.contactPersonLabel')}
-              </label>
-              <input
-                type="text"
-                value={contactPerson ?? ''}
-                onChange={(e) => setContactPerson(e.target.value)}
-                placeholder={t('clients.form.contactPersonPlaceholder')}
-                className="rounded-lg px-3 py-2.5 border backdrop-blur-xl focus:outline-none
-                  focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                style={{ background: 'var(--input-bg)', borderColor: 'var(--card-border)', color: 'var(--text)' }}
-              />
-            </div>
-            <div className="flex flex-col gap-1.5 flex-1">
-              <label className="text-xs font-medium uppercase tracking-wide" style={{ color: 'var(--text2)' }}>
-                {t('clients.form.contactEmailLabel')}
-              </label>
-              <input
-                type="email"
-                value={contactEmail ?? ''}
-                onChange={(e) => setContactEmail(e.target.value)}
-                placeholder={t('clients.form.contactEmailPlaceholder')}
-                className="rounded-lg px-3 py-2.5 border backdrop-blur-xl focus:outline-none
-                  focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                style={{ background: 'var(--input-bg)', borderColor: 'var(--card-border)', color: 'var(--text)' }}
-              />
-            </div>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-medium uppercase tracking-wide" style={{ color: 'var(--text2)' }}>
+              {t('clients.form.contactPersonLabel')}
+            </label>
+            <input
+              type="text"
+              value={contactPerson ?? ''}
+              onChange={(e) => setContactPerson(e.target.value)}
+              placeholder={t('clients.form.contactPersonPlaceholder')}
+              className="rounded-lg px-3 py-2.5 border backdrop-blur-xl focus:outline-none
+                focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              style={{ background: 'var(--input-bg)', borderColor: 'var(--card-border)', color: 'var(--text)' }}
+            />
           </div>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-medium uppercase tracking-wide" style={{ color: 'var(--text2)' }}>
+              {t('clients.form.contactEmailLabel')}
+            </label>
+            <input
+              type="email"
+              value={contactEmail ?? ''}
+              onChange={(e) => setContactEmail(e.target.value)}
+              placeholder={t('clients.form.contactEmailPlaceholder')}
+              className="rounded-lg px-3 py-2.5 border backdrop-blur-xl focus:outline-none
+                focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              style={{ background: 'var(--input-bg)', borderColor: 'var(--card-border)', color: 'var(--text)' }}
+            />
+          </div>
+          </>)}
 
           {/* Buttons */}
           <div className="flex gap-3 pt-1">
