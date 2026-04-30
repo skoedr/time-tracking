@@ -31,6 +31,8 @@ Deferred items from plan reviews. Items here have explicit decisions — they ar
 
 - **Handler extraction: pdf:merge-export** — `pdf:merge-export` in `ipc.ts` noch im alten Inline-Stil; in `pdfMergeHandlers.ts`-Muster überführen für testbarere Struktur. Kein User-Value, aber sauberer.
 
+- **DB-Cleanup: tote Rounding-Settings** — `rounding_mode` und `rounding_minutes` wurden aus UI + Types entfernt (v1.11, 2026-04-30), stehen aber noch als Rows in der `settings`-Tabelle (gesät von Migration 001). Bei der nächsten Migration ein `DELETE FROM settings WHERE key IN ('rounding_mode', 'rounding_minutes')` als Cleanup-Statement ergänzen.
+
 ## Resolved in v1.9.0
 
 - ~~**#75 — Projekte pro Kunde**~~ — Abgeschlossen (v1.9.0, 2026-05-02): Migration 012, `projects`-Tabelle, vollständige CRUD-UI in ClientsView, projektbewusste Timer/Today/Calendar/EntryEditForm, projektgefilterter PDF- + CSV-Export. **Completed:** v1.9.0

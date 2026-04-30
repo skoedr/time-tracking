@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useTimer } from '../hooks/useTimer'
 import { useT } from '../contexts/I18nContext'
+import { useUiPrefsStore } from '../store/uiPrefsStore'
 import * as Icons from './Icons'
 import type { Project } from '../../../shared/types'
 
@@ -11,6 +12,7 @@ interface StartTimerModalProps {
 
 export function StartTimerModal({ open, onClose }: StartTimerModalProps): React.JSX.Element | null {
   const t = useT()
+  const showProjectNumber = useUiPrefsStore((s) => s.showProjectNumber)
   const {
     clients,
     selectedClientId,
@@ -150,9 +152,10 @@ export function StartTimerModal({ open, onClose }: StartTimerModalProps): React.
                 style={{ background: 'var(--input-bg)', borderColor: 'var(--card-border)', color: 'var(--text)' }}
               >
                 <option value="">{t('timer.project.placeholder')}</option>
-                {projects.map((p) => (
-                  <option key={p.id} value={p.id}>{p.name}</option>
-                ))}
+                {projects.map((p) => {
+                  const label = showProjectNumber && p.external_project_number ? `${p.name} [${p.external_project_number}]` : p.name
+                  return <option key={p.id} value={p.id}>{label}</option>
+                })}
               </select>
               <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text3)' }}>
                 <Icons.ChevronDown />

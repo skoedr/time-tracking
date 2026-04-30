@@ -7,6 +7,7 @@ import { AboutDialog } from '../components/AboutDialog'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { useTheme, type ThemeMode } from '../contexts/ThemeContext'
 import { Toggle } from '../components/Toggle'
+import { useUiPrefsStore } from '../store/uiPrefsStore'
 
 const DEFAULT_HOTKEY = 'Alt+Shift+S'
 const DEFAULT_MINI_HOTKEY = 'Alt+Shift+M'
@@ -315,6 +316,15 @@ export default function SettingsView(): React.JSX.Element {
                 onChange={(v) => update('auto_start', v ? '1' : '0')}
               />
             </Row>
+            <Row label={t('settings.general.showProjectNumber')} hint={t('settings.general.showProjectNumberHint')}>
+              <Toggle
+                checked={settings.show_project_number === '1'}
+                onChange={(v) => {
+                  void update('show_project_number', v ? '1' : '0')
+                  useUiPrefsStore.getState().setShowProjectNumber(v)
+                }}
+              />
+            </Row>
             <Row label={t('settings.general.company')}>
               <input
                 type="text"
@@ -378,30 +388,6 @@ export default function SettingsView(): React.JSX.Element {
                 {hotkeyError && capturingHotkey === 'hotkey_toggle' && (
                   <p className="mt-1 text-xs text-red-400">{hotkeyError}</p>
                 )}
-              </Row>
-              <Row label={t('settings.timer.rounding')} hint={t('settings.timer.roundingHint')}>
-                <SegmentedPicker
-                  options={[
-                    { value: '5' as Settings['rounding_minutes'], label: '5 min' },
-                    { value: '10' as Settings['rounding_minutes'], label: '10 min' },
-                    { value: '15' as Settings['rounding_minutes'], label: '15 min' },
-                    { value: '30' as Settings['rounding_minutes'], label: '30 min' }
-                  ]}
-                  value={settings.rounding_minutes}
-                  onChange={(v) => update('rounding_minutes', v)}
-                />
-              </Row>
-              <Row label={t('settings.timer.roundingMethod')}>
-                <SegmentedPicker
-                  options={[
-                    { value: 'none' as Settings['rounding_mode'], label: t('settings.timer.roundingNone') },
-                    { value: 'ceil' as Settings['rounding_mode'], label: t('settings.timer.roundingCeil') },
-                    { value: 'round' as Settings['rounding_mode'], label: t('settings.timer.roundingRound') },
-                    { value: 'floor' as Settings['rounding_mode'], label: t('settings.timer.roundingFloor') }
-                  ]}
-                  value={settings.rounding_mode}
-                  onChange={(v) => update('rounding_mode', v)}
-                />
               </Row>
             </Section>
 

@@ -64,7 +64,10 @@ export interface PdfGroup {
 }
 
 export interface PdfPayload {
-  client: Pick<Client, 'id' | 'name' | 'rate_cent'>
+  client: Pick<Client, 'id' | 'name' | 'rate_cent'
+    | 'billing_address_line1' | 'billing_address_line2'
+    | 'billing_address_line3' | 'billing_address_line4'
+    | 'vat_id' | 'contact_person' | 'contact_email'>
   /** Sender block: pulled from settings.company_name + pdf_sender_address. */
   sender: { name: string; address: string; taxId: string }
   /** ISO range echoed back for the header. */
@@ -165,8 +168,15 @@ export function buildPdfPayload(
   generatedAtIso: string = new Date().toISOString()
 ): PdfPayload {
   const client = db
-    .prepare(`SELECT id, name, rate_cent FROM clients WHERE id = ?`)
-    .get(req.clientId) as Pick<Client, 'id' | 'name' | 'rate_cent'> | undefined
+    .prepare(`SELECT id, name, rate_cent,
+        billing_address_line1, billing_address_line2,
+        billing_address_line3, billing_address_line4,
+        vat_id, contact_person, contact_email
+      FROM clients WHERE id = ?`)
+    .get(req.clientId) as Pick<Client, 'id' | 'name' | 'rate_cent'
+      | 'billing_address_line1' | 'billing_address_line2'
+      | 'billing_address_line3' | 'billing_address_line4'
+      | 'vat_id' | 'contact_person' | 'contact_email'> | undefined
   if (!client) {
     throw new Error(`Kunde mit id=${req.clientId} nicht gefunden`)
   }
@@ -576,6 +586,12 @@ export function buildPdfHtml(p: PdfPayload): string {
       <div class="recipient">
         <div class="label">Kunde</div>
         <div class="name">${esc(p.client.name)}</div>
+        ${[p.client.billing_address_line1, p.client.billing_address_line2, p.client.billing_address_line3, p.client.billing_address_line4]
+          .filter(Boolean)
+          .map((l) => `<div>${esc(l as string)}</div>`)
+          .join('\n        ')}
+        ${p.client.vat_id ? `<div style="margin-top:2px;font-size:9pt;color:#475569;">USt-IdNr. ${esc(p.client.vat_id)}</div>` : ''}
+        ${p.client.contact_person ? `<div style="margin-top:2px;font-size:9pt;color:#475569;">z.Hd. ${esc(p.client.contact_person)}</div>` : ''}
         ${p.projectName ? `<div class="project-label">Projekt: ${esc(p.projectName)}</div>` : ''}
       </div>
       <div class="range">

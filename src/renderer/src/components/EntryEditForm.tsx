@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import type { Client, Entry, Project } from '../../../shared/types'
 import { formatTimeHHMM, parseTimeToDate } from '../../../shared/date'
 import { useEntriesStore } from '../store/entriesStore'
+import { useUiPrefsStore } from '../store/uiPrefsStore'
 import { useT } from '../contexts/I18nContext'
 import { TagInput } from './TagInput'
 import { Toggle } from './Toggle'
@@ -48,6 +49,7 @@ export function EntryEditForm({
   onCancel
 }: Props): React.ReactElement {
   const t = useT()
+  const showProjectNumber = useUiPrefsStore((s) => s.showProjectNumber)
   const initialStart = entry ? new Date(entry.started_at) : (defaultDate ?? new Date())
   const initialStop = entry?.stopped_at
     ? new Date(entry.stopped_at)
@@ -231,11 +233,12 @@ export function EntryEditForm({
             disabled={isSaving}
           >
             <option value="">{t('entry.project.placeholder')}</option>
-            {projects.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
+            {projects.map((p) => {
+              const label = showProjectNumber && p.external_project_number ? `${p.name} [${p.external_project_number}]` : p.name
+              return (
+                <option key={p.id} value={p.id}>{label}</option>
+              )
+            })}
           </select>
         </label>
       )}

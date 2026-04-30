@@ -13,6 +13,7 @@ import { OnboardingWizard } from './components/OnboardingWizard'
 import { useTimer } from './hooks/useTimer'
 import { useT } from './contexts/I18nContext'
 import { useProjectsStore } from './store/projectsStore'
+import { useUiPrefsStore } from './store/uiPrefsStore'
 
 type View = 'today' | 'calendar' | 'clients' | 'analytics' | 'settings'
 
@@ -46,6 +47,7 @@ function App(): React.JSX.Element {
         setShowOnboarding(true)
       }
     })
+    void useUiPrefsStore.getState().load()
   }, [])
 
   async function finishOnboarding(): Promise<void> {

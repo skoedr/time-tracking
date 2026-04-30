@@ -47,6 +47,19 @@ export function buildAnalyticsSummary(
       const selMonthKey = `${year}-${pad(month)}`
       const prevMonthKey = `${prevYear}-${pad(prevMonth)}`
 
+      // Read rounding step from settings (same rule as the PDF pipeline)
+      const roundSetting = db
+        .prepare(`SELECT value FROM settings WHERE key = 'pdf_round_minutes'`)
+        .get() as { value: string } | undefined
+      const roundStep = parseInt(roundSetting?.value ?? '0', 10) || 0
+
+      // SQL helper: per-entry seconds, optionally rounded up to `roundStep` minutes.
+      // Uses SQLite integer arithmetic for ceiling: (n + d - 1) / d * d
+      const RAW_SEC = `(CAST(strftime('%s', e.stopped_at) AS INTEGER) - CAST(strftime('%s', e.started_at) AS INTEGER))`
+      const ENTRY_SEC = roundStep > 0
+        ? `(((${RAW_SEC} + 59) / 60 + ${roundStep} - 1) / ${roundStep} * ${roundStep} * 60)`
+        : RAW_SEC
+
       // ── 1. Month stats ─────────────────────────────────────────────
       type MonthRow = {
         total_sec: number
@@ -57,19 +70,16 @@ export function buildAnalyticsSummary(
       const monthSql = `
         SELECT
           COALESCE(SUM(
-            CAST(strftime('%s', e.stopped_at) AS INTEGER)
-            - CAST(strftime('%s', e.started_at) AS INTEGER)
+            ${ENTRY_SEC}
           ), 0) AS total_sec,
           COALESCE(SUM(
             CASE WHEN e.billable = 1 THEN
-              CAST(strftime('%s', e.stopped_at) AS INTEGER)
-              - CAST(strftime('%s', e.started_at) AS INTEGER)
+              ${ENTRY_SEC}
             ELSE 0 END
           ), 0) AS billable_sec,
           COALESCE(SUM(
             COALESCE(p.rate_cent, c.rate_cent, 0)
-            * (CAST(strftime('%s', e.stopped_at) AS INTEGER)
-               - CAST(strftime('%s', e.started_at) AS INTEGER))
+            * ${ENTRY_SEC}
             / 3600.0
           ), 0) AS revenue_cent
         FROM entries e
@@ -120,13 +130,11 @@ export function buildAnalyticsSummary(
           c.name,
           c.color,
           COALESCE(SUM(
-            CAST(strftime('%s', e.stopped_at) AS INTEGER)
-            - CAST(strftime('%s', e.started_at) AS INTEGER)
+            ${ENTRY_SEC}
           ), 0) AS h,
           COALESCE(SUM(
             COALESCE(p.rate_cent, c.rate_cent, 0)
-            * (CAST(strftime('%s', e.stopped_at) AS INTEGER)
-               - CAST(strftime('%s', e.started_at) AS INTEGER))
+            * ${ENTRY_SEC}
             / 3600.0
           ), 0) AS rev
         FROM entries e
@@ -154,14 +162,12 @@ export function buildAnalyticsSummary(
           DATE(e.started_at, 'localtime', '-' || ((CAST(strftime('%w', e.started_at, 'localtime') AS INTEGER) + 6) % 7) || ' days') AS week_start,
           COALESCE(SUM(
             CASE WHEN e.billable = 1 THEN
-              CAST(strftime('%s', e.stopped_at) AS INTEGER)
-              - CAST(strftime('%s', e.started_at) AS INTEGER)
+              ${ENTRY_SEC}
             ELSE 0 END
           ), 0) AS b,
           COALESCE(SUM(
             CASE WHEN e.billable = 0 THEN
-              CAST(strftime('%s', e.stopped_at) AS INTEGER)
-              - CAST(strftime('%s', e.started_at) AS INTEGER)
+              ${ENTRY_SEC}
             ELSE 0 END
           ), 0) AS n
         FROM entries e
@@ -205,13 +211,11 @@ export function buildAnalyticsSummary(
         SELECT
           strftime('%Y-%m', e.started_at, 'localtime') AS month_key,
           COALESCE(SUM(
-            CAST(strftime('%s', e.stopped_at) AS INTEGER)
-            - CAST(strftime('%s', e.started_at) AS INTEGER)
+            ${ENTRY_SEC}
           ), 0) AS h,
           COALESCE(SUM(
             COALESCE(p.rate_cent, c.rate_cent, 0)
-            * (CAST(strftime('%s', e.stopped_at) AS INTEGER)
-               - CAST(strftime('%s', e.started_at) AS INTEGER))
+            * ${ENTRY_SEC}
             / 3600.0
           ), 0) AS r
         FROM entries e
@@ -248,8 +252,7 @@ export function buildAnalyticsSummary(
         SELECT
           CAST(strftime('%w', e.started_at, 'localtime') AS INTEGER) AS dow,
           AVG(
-            CAST(strftime('%s', e.stopped_at) AS INTEGER)
-            - CAST(strftime('%s', e.started_at) AS INTEGER)
+            ${ENTRY_SEC}
           ) AS avg_sec
         FROM entries e
         WHERE e.deleted_at IS NULL

@@ -100,9 +100,8 @@ export interface Project {
   budget_minutes?: number | null
   /**
    * Project lifecycle status. Supersedes the binary `active` flag.
-   * 'active' | 'paused' | 'archived'
    */
-  status?: string
+  status?: 'active' | 'paused' | 'archived'
   /**
    * Only present in `projects:getAll` responses.
    * Total minutes of completed (stopped) entries for this project, all-time.
@@ -124,7 +123,7 @@ export interface CreateProjectInput {
   start_date?: string | null
   end_date?: string | null
   budget_minutes?: number | null
-  status?: string
+  status?: 'active' | 'paused' | 'archived'
 }
 
 export interface UpdateProjectInput {
@@ -139,12 +138,10 @@ export interface UpdateProjectInput {
   start_date?: string | null
   end_date?: string | null
   budget_minutes?: number | null
-  status?: string
+  status?: 'active' | 'paused' | 'archived'
 }
 
 export interface Settings {
-  rounding_mode: 'none' | 'ceil' | 'floor' | 'round'
-  rounding_minutes: '5' | '10' | '15' | '30'
   company_name: string
   backup_path: string
   // v1.1
@@ -173,6 +170,9 @@ export interface Settings {
   onboarding_completed: string
   // v1.8 #76 — Theme mode: 'light' | 'dark' | 'system'.
   theme_mode: string
+  // v1.11 #94 — Show external project number in square brackets.
+  // '0' (default) = hidden, '1' = shown.
+  show_project_number?: string
 }
 
 export interface CreateClientInput {
