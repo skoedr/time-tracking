@@ -17,6 +17,7 @@ import { readLogoAsDataUrl, removeLogo, saveLogo } from './logo'
 import { handleCsvExport, type CsvRequest } from './csvExport'
 import { validatePdfPath, validateMergeExportRequest } from './pdfMergeValidation'
 import { mergeOnlyHandler, pdfInfoHandler } from './pdfMergeHandlers'
+import { registerAnalyticsHandlers } from './analyticsHandlers'
 import type {
   Client,
   Entry,
@@ -1040,6 +1041,9 @@ export function registerIpcHandlers(hooks: IpcHooks): void {
       return fail(e)
     }
   })
+
+  // ── Analytics (v1.10 #93) ─────────────────────────────────────────────
+  registerAnalyticsHandlers(db)
 }
 
 /**

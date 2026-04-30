@@ -503,4 +503,30 @@ export const en: Record<TranslationKey, string> = {
 
   // ── CalendarView — Project filter (v1.9 #75 PR 3) ────────────────────────
   'calendar.filter.allProjects': 'All projects',
+
+  // ── Analytics (v1.10 #93) ─────────────────────────────────────────────────
+  'nav.analytics': 'Analytics',
+  'analytics.title': 'Analytics',
+  'analytics.month.hours': 'Hours',
+  'analytics.month.revenue': 'Revenue',
+  'analytics.month.billable': 'Billable',
+  'analytics.noRate': 'No rate configured',
+  'analytics.chart.weeks': 'Weeks',
+  'analytics.chart.months': 'Months',
+  'analytics.chart.billable': 'Billable',
+  'analytics.chart.nonBillable': 'Non-billable',
+  'analytics.chart.hoursLabel': 'Hours',
+  'analytics.chart.revenueLabel': 'Revenue (right axis, in 1,000 €)',
+  'analytics.clients.title': 'Hours by client',
+  'analytics.clients.period': 'current month',
+  'analytics.clients.other': 'Other',
+  'analytics.weekday.title': 'Weekday average',
+  'analytics.weekday.period': 'avg h/day · 90 d',
+  'analytics.empty.title': 'No entries yet',
+  'analytics.empty.subtitle': 'Start a timer or add hours manually.',
+  'analytics.empty.startTimer': 'Start timer',
+  'analytics.empty.addEntry': 'Add entry',
+  'analytics.prevMonth': 'Previous month',
+  'analytics.nextMonth': 'Next month',
+  'analytics.vsLastMonth': 'vs. last month',
 } as const satisfies Record<TranslationKey, string>
