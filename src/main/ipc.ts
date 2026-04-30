@@ -334,8 +334,8 @@ export function registerIpcHandlers(hooks: IpcHooks): void {
     'projects:getAll',
     (_e, req?: { clientId?: number | null }): IpcResult<Project[]> => {
       try {
-        const base = `SELECT p.*, COALESCE(ec.cnt, 0) AS entry_count FROM projects p
-          LEFT JOIN (SELECT project_id, COUNT(*) AS cnt FROM entries WHERE deleted_at IS NULL GROUP BY project_id) ec
+        const base = `SELECT p.*, COALESCE(ec.cnt, 0) AS entry_count, ec.last_used_at FROM projects p
+          LEFT JOIN (SELECT project_id, COUNT(*) AS cnt, MAX(started_at) AS last_used_at FROM entries WHERE deleted_at IS NULL GROUP BY project_id) ec
             ON ec.project_id = p.id`
         let query: string
         let params: unknown[]

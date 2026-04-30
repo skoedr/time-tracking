@@ -266,6 +266,8 @@ export const en: Record<TranslationKey, string> = {
   'projects.form.rateHint': 'Leave empty to use the client rate.',
   'projects.form.rateInvalid': 'Please enter a number (e.g. 85.00).',
   'projects.form.rateNegative': 'Hourly rate must not be negative.',
+  'projects.stats.entry': '{count} entry',
+  'projects.stats.entries': '{count} entries',
 
   // ── EntryEditForm ──────────────────────────────────────────────────────────
   'entry.date': 'Date',
