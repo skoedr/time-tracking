@@ -995,7 +995,7 @@ describe('projects status/active sync', () => {
   })
 
   it('projects:update — status=paused keeps active=0', () => {
-    const status = 'paused'
+    const status: string = 'paused'
     const activeFlag = status === 'active' ? 1 : 0
     db2
       .prepare('UPDATE projects SET active = ?, status = ? WHERE id = ?')
