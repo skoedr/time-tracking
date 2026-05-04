@@ -9,11 +9,12 @@ import { useTheme, type ThemeMode } from '../contexts/ThemeContext'
 import { useRounding } from '../contexts/RoundingContext'
 import { Toggle } from '../components/Toggle'
 import { useUiPrefsStore } from '../store/uiPrefsStore'
+import TagManagementView from './TagManagementView'
 
 const DEFAULT_HOTKEY = 'Alt+Shift+S'
 const DEFAULT_MINI_HOTKEY = 'Alt+Shift+M'
 
-type SettingsTab = 'general' | 'timer' | 'export' | 'data' | 'about'
+type SettingsTab = 'general' | 'timer' | 'export' | 'data' | 'tags' | 'about'
 
 /** Settings keys that hold a global accelerator string. */
 type HotkeyKey = 'hotkey_toggle' | 'mini_hotkey'
@@ -242,6 +243,7 @@ export default function SettingsView(): React.JSX.Element {
     { id: 'timer', label: t('settings.nav.timer') },
     { id: 'export', label: t('settings.nav.export') },
     { id: 'data', label: t('settings.nav.data') },
+    { id: 'tags', label: t('settings.nav.tags') },
     { id: 'about', label: t('settings.nav.about') }
   ]
 
@@ -726,6 +728,9 @@ export default function SettingsView(): React.JSX.Element {
             </Section>
           </>
         )}
+
+        {/* Tags */}
+        {tab === 'tags' && <TagManagementView />}
 
         <AboutDialog open={showAbout} onClose={() => setShowAbout(false)} version={version} />
       </div>

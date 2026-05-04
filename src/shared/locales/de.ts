@@ -566,6 +566,33 @@ export const de = {
   'analytics.prevMonth': 'Vorheriger Monat',
   'analytics.nextMonth': 'Nächster Monat',
   'analytics.vsLastMonth': 'vs. Vormonat',
+
+  // ── Settings — Tags (v1.12 #107) ──────────────────────────────────────────
+  'settings.nav.tags': 'Tags',
+  'settings.tags.title': 'Tag-Verwaltung',
+  'settings.tags.empty': 'Keine Tags vorhanden. Erstelle deinen ersten Tag.',
+  'settings.tags.newPlaceholder': 'Neuer Tag-Name…',
+  'settings.tags.add': 'Hinzufügen',
+  'settings.tags.rename': 'Umbenennen',
+  'settings.tags.renamePlaceholder': 'Neuer Name…',
+  'settings.tags.renameConfirm': 'Bestätigen',
+  'settings.tags.renameCancel': 'Abbrechen',
+  'settings.tags.mergeLabel': 'Zusammenführen mit →',
+  'settings.tags.mergeSelect': '— Ziel-Tag wählen —',
+  'settings.tags.mergeConfirmTitle': 'Tags zusammenführen',
+  'settings.tags.mergeConfirmBody': '{count} Eintrag/Einträge von \'{source}\' werden in \'{target}\' umgeschrieben. Diese Aktion kann nicht rückgängig gemacht werden.',
+  'settings.tags.mergeConfirmOk': 'Zusammenführen',
+  'settings.tags.delete': 'Löschen',
+  'settings.tags.deleteTitle': 'Tag löschen',
+  'settings.tags.deleteCannotTitle': 'Löschen nicht möglich',
+  'settings.tags.deleteCannotHint': 'Noch {count} Eintrag/Einträge verwenden diesen Tag.',
+  'settings.tags.entries': '{count} Einträge',
+  'settings.tags.entry': '1 Eintrag',
+  'settings.tags.noEntries': '0 Einträge',
+
+  // ── TagInput — closed system (v1.12 #107) ──────────────────────────────────
+  'tags.createOption': "+ '{tag}' erstellen",
+  'tags.manageLink': 'Tags verwalten →',
 } as const
 
 export type TranslationKey = keyof typeof de

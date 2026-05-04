@@ -162,7 +162,15 @@ const api = {
       ipcRenderer.invoke('export:json')
   },
   tags: {
-    recent: (): Promise<IpcResult<string[]>> => ipcRenderer.invoke('tags:recent')
+    recent: (): Promise<IpcResult<string[]>> => ipcRenderer.invoke('tags:recent'),
+    getAllWithCount: (): Promise<IpcResult<Array<{ name: string; count: number }>>> =>
+      ipcRenderer.invoke('tags:get-all-with-count'),
+    create: (name: string): Promise<IpcResult<void>> => ipcRenderer.invoke('tags:create', name),
+    rename: (oldName: string, newName: string): Promise<IpcResult<void>> =>
+      ipcRenderer.invoke('tags:rename', oldName, newName),
+    merge: (source: string, target: string): Promise<IpcResult<void>> =>
+      ipcRenderer.invoke('tags:merge', source, target),
+    delete: (name: string): Promise<IpcResult<void>> => ipcRenderer.invoke('tags:delete', name)
   },
   pdf: {
     export: (req: {

@@ -558,4 +558,31 @@ export const en: Record<TranslationKey, string> = {
   'analytics.prevMonth': 'Previous month',
   'analytics.nextMonth': 'Next month',
   'analytics.vsLastMonth': 'vs. last month',
+
+  // ── Settings — Tags (v1.12 #107) ──────────────────────────────────────────
+  'settings.nav.tags': 'Tags',
+  'settings.tags.title': 'Tag Management',
+  'settings.tags.empty': 'No tags yet. Create your first tag.',
+  'settings.tags.newPlaceholder': 'New tag name…',
+  'settings.tags.add': 'Add',
+  'settings.tags.rename': 'Rename',
+  'settings.tags.renamePlaceholder': 'New name…',
+  'settings.tags.renameConfirm': 'Confirm',
+  'settings.tags.renameCancel': 'Cancel',
+  'settings.tags.mergeLabel': 'Merge into →',
+  'settings.tags.mergeSelect': '— Select target tag —',
+  'settings.tags.mergeConfirmTitle': 'Merge tags',
+  'settings.tags.mergeConfirmBody': "{count} entries from '{source}' will be rewritten to '{target}'. This action cannot be undone.",
+  'settings.tags.mergeConfirmOk': 'Merge',
+  'settings.tags.delete': 'Delete',
+  'settings.tags.deleteTitle': 'Delete tag',
+  'settings.tags.deleteCannotTitle': 'Cannot delete',
+  'settings.tags.deleteCannotHint': 'Still {count} entries use this tag.',
+  'settings.tags.entries': '{count} entries',
+  'settings.tags.entry': '1 entry',
+  'settings.tags.noEntries': '0 entries',
+
+  // ── TagInput — closed system (v1.12 #107) ─────────────────────────────────
+  'tags.createOption': "+ Create '{tag}'",
+  'tags.manageLink': 'Manage tags →',
 } as const satisfies Record<TranslationKey, string>

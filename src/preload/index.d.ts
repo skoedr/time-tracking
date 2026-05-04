@@ -108,6 +108,11 @@ declare global {
       }
       tags: {
         recent(): Promise<IpcResult<string[]>>
+        getAllWithCount(): Promise<IpcResult<Array<{ name: string; count: number }>>>
+        create(name: string): Promise<IpcResult<void>>
+        rename(oldName: string, newName: string): Promise<IpcResult<void>>
+        merge(source: string, target: string): Promise<IpcResult<void>>
+        delete(name: string): Promise<IpcResult<void>>
       }
       pdf: {
         export(req: {

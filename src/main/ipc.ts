@@ -17,6 +17,7 @@ import { handleCsvExport, type CsvRequest } from './csvExport'
 import { mergeExportHandler, mergeOnlyHandler, pdfInfoHandler } from './pdfMergeHandlers'
 import { registerAnalyticsHandlers } from './analyticsHandlers'
 import { registerBudgetHandlers } from './budgetHandlers'
+import { registerTagHandlers } from './tagHandlers'
 import type {
   Client,
   Entry,
@@ -1045,6 +1046,9 @@ export function registerIpcHandlers(hooks: IpcHooks): void {
 
   // ── Budget (v1.11 #94) ────────────────────────────────────────────────
   registerBudgetHandlers(db)
+
+  // ── Tags (v1.12 #107) ────────────────────────────────────────────────
+  registerTagHandlers(db)
 }
 
 /**
