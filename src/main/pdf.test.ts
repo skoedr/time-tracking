@@ -235,6 +235,44 @@ describe('buildPdfPayload', () => {
     expect(p.sender.taxId).toBe('DE12345')
     expect(p.accentColor).toBe('#ff0000')
   })
+
+  // v1.12 #105 — project contact person overrides client contact person
+  it('uses project.contact_person when set (overrides client)', () => {
+    db.prepare(
+      `INSERT INTO projects (id, client_id, name, color, status, contact_person)
+       VALUES (10, 1, 'Alpha', '#6366f1', 'active', 'Projekt-AP')`
+    ).run()
+    db.prepare(
+      `UPDATE clients SET contact_person = 'Kunden-AP' WHERE id = 1`
+    ).run()
+    const p = buildPdfPayload(
+      db,
+      { clientId: 1, fromIso: '2026-04-01', toIso: '2026-04-30', projectId: 10 },
+      ''
+    )
+    expect(p.effectiveContactPerson).toBe('Projekt-AP')
+  })
+
+  it('falls back to client.contact_person when project has none', () => {
+    db.prepare(
+      `INSERT INTO projects (id, client_id, name, color, status) VALUES (11, 1, 'Beta', '#6366f1', 'active')`
+    ).run()
+    db.prepare(
+      `UPDATE clients SET contact_person = 'Kunden-AP' WHERE id = 1`
+    ).run()
+    const p = buildPdfPayload(
+      db,
+      { clientId: 1, fromIso: '2026-04-01', toIso: '2026-04-30', projectId: 11 },
+      ''
+    )
+    expect(p.effectiveContactPerson).toBe('Kunden-AP')
+  })
+
+  it('uses client.contact_person when no project filter is set', () => {
+    db.prepare(`UPDATE clients SET contact_person = 'Kunden-AP' WHERE id = 1`).run()
+    const p = buildPdfPayload(db, { clientId: 1, fromIso: '2026-04-01', toIso: '2026-04-30' }, '')
+    expect(p.effectiveContactPerson).toBe('Kunden-AP')
+  })
 })
 
 describe('buildPdfHtml', () => {
@@ -380,5 +418,21 @@ describe('buildPdfHtml', () => {
 
     const htmlAbsent = buildPdfHtml(makePayload())
     expect(htmlAbsent).not.toContain('class="entry-ref"')
+  })
+
+  // v1.12 #105 — effectiveContactPerson in recipient block
+  it('renders z.Hd. line when effectiveContactPerson is set', () => {
+    const html = buildPdfHtml(makePayload({ effectiveContactPerson: 'Max Mustermann' }))
+    expect(html).toContain('z.Hd. Max Mustermann')
+  })
+
+  it('omits z.Hd. line when effectiveContactPerson is absent', () => {
+    const html = buildPdfHtml(makePayload())
+    expect(html).not.toContain('z.Hd.')
+  })
+
+  it('omits z.Hd. line when effectiveContactPerson is null', () => {
+    const html = buildPdfHtml(makePayload({ effectiveContactPerson: null }))
+    expect(html).not.toContain('z.Hd.')
   })
 })

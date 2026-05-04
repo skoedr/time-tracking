@@ -425,8 +425,9 @@ export function registerIpcHandlers(hooks: IpcHooks): void {
         .prepare(
           `INSERT INTO projects
              (client_id, name, color, rate_cent,
-              external_project_number, start_date, end_date, budget_minutes, status)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING *`
+              external_project_number, start_date, end_date, budget_minutes, status,
+              contact_person)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING *`
         )
         .get(
           input.client_id ?? null,
@@ -437,7 +438,8 @@ export function registerIpcHandlers(hooks: IpcHooks): void {
           input.start_date ?? null,
           input.end_date ?? null,
           budget,
-          input.status ?? 'active'
+          input.status ?? 'active',
+          input.contact_person?.trim() || null
         ) as Project
       return ok(result)
     } catch (e) {
@@ -474,7 +476,7 @@ export function registerIpcHandlers(hooks: IpcHooks): void {
           `UPDATE projects SET
              client_id=?, name=?, color=?, rate_cent=?, active=?,
              external_project_number=?, start_date=?, end_date=?,
-             budget_minutes=?, status=?
+             budget_minutes=?, status=?, contact_person=?
            WHERE id=? RETURNING *`
         )
         .get(
@@ -488,6 +490,7 @@ export function registerIpcHandlers(hooks: IpcHooks): void {
           input.end_date ?? null,
           budget,
           status,
+          input.contact_person?.trim() || null,
           input.id
         ) as Project
       return ok(result)

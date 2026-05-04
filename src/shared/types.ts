@@ -108,6 +108,13 @@ export interface Project {
    * null when no entries exist or budget_minutes is null.
    */
   used_minutes?: number | null
+  // v1.12 #105 — Project-level contact person
+  /**
+   * Project-specific contact person. When set, takes precedence over
+   * `clients.contact_person` in the PDF recipient block.
+   * null = fall back to the client's contact_person.
+   */
+  contact_person?: string | null
 }
 
 /** Project guaranteed to include entry_count (returned by projects:getAll). */
@@ -124,6 +131,8 @@ export interface CreateProjectInput {
   end_date?: string | null
   budget_minutes?: number | null
   status?: 'active' | 'paused' | 'archived'
+  // v1.12 #105
+  contact_person?: string | null
 }
 
 export interface UpdateProjectInput {
@@ -139,6 +148,8 @@ export interface UpdateProjectInput {
   end_date?: string | null
   budget_minutes?: number | null
   status?: 'active' | 'paused' | 'archived'
+  // v1.12 #105
+  contact_person?: string | null
 }
 
 export interface Settings {

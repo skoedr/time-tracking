@@ -291,6 +291,8 @@ export const de = {
   'projects.form.statusActive': 'Aktiv',
   'projects.form.statusPaused': 'Pausiert',
   'projects.form.statusArchived': 'Archiviert',
+  'projects.form.contactPersonLabel': 'Ansprechpartner',
+  'projects.form.contactPersonPlaceholder': 'Max Mustermann (überschreibt Kunden-AP)',
   // PDF
   'pdf.recipient.vatId': 'USt-IdNr.',
   'pdf.recipient.attn': 'z.Hd.',

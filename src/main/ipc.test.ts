@@ -848,6 +848,26 @@ describe('projects — SQL contract tests', () => {
     }
     expect(row.project_id).toBe(pid)
   })
+
+  // v1.12 #105 — projects.contact_person persists correctly
+  it('projects:update — persists contact_person', () => {
+    const pid = createProject(1, 'App')
+    db.prepare(
+      `UPDATE projects SET contact_person = 'Max Mustermann' WHERE id = ?`
+    ).run(pid)
+    const row = db.prepare('SELECT contact_person FROM projects WHERE id = ?').get(pid) as {
+      contact_person: string | null
+    }
+    expect(row.contact_person).toBe('Max Mustermann')
+  })
+
+  it('projects:update — contact_person defaults to NULL', () => {
+    const pid = createProject(1, 'App')
+    const row = db.prepare('SELECT contact_person FROM projects WHERE id = ?').get(pid) as {
+      contact_person: string | null
+    }
+    expect(row.contact_person).toBeNull()
+  })
 })
 //
 // Root cause of the bug: julianday() arithmetic in SQLite uses IEEE-754

@@ -103,6 +103,12 @@ export interface PdfPayload {
    * is filtered to a single project. Undefined = all projects (no label shown).
    */
   projectName?: string
+  /**
+   * v1.12 #105: effective contact person for the recipient block.
+   * Priority: project.contact_person ?? client.contact_person.
+   * Undefined / null = no "z.Hd." line rendered.
+   */
+  effectiveContactPerson?: string | null
 }
 
 const DATE_FMT = new Intl.DateTimeFormat('de-DE', {
@@ -283,13 +289,22 @@ export function buildPdfPayload(
   }
 
   // v1.9 #75: load project name when filtered to a specific project
+  // v1.12 #105: also load project.contact_person for the recipient fallback
   let projectName: string | undefined
+  let projectContactPerson: string | null | undefined
   if (req.projectId != null) {
     const proj = db
-      .prepare(`SELECT name FROM projects WHERE id = ?`)
-      .get(req.projectId) as { name: string } | undefined
+      .prepare(`SELECT name, contact_person FROM projects WHERE id = ?`)
+      .get(req.projectId) as { name: string; contact_person: string | null } | undefined
     projectName = proj?.name
+    projectContactPerson = proj?.contact_person ?? null
   }
+
+  // v1.12 #105: project contact person overrides client contact person
+  const effectiveContactPerson =
+    req.projectId != null
+      ? (projectContactPerson ?? client.contact_person)
+      : client.contact_person
 
   return {
     client,
@@ -309,7 +324,8 @@ export function buildPdfPayload(
     includeSignatures: req.includeSignatures === true,
     generatedAtIso,
     groups,
-    projectName
+    projectName,
+    effectiveContactPerson
   }
 }
 
@@ -591,7 +607,7 @@ export function buildPdfHtml(p: PdfPayload): string {
           .map((l) => `<div>${esc(l as string)}</div>`)
           .join('\n        ')}
         ${p.client.vat_id ? `<div style="margin-top:2px;font-size:9pt;color:#475569;">USt-IdNr. ${esc(p.client.vat_id)}</div>` : ''}
-        ${p.client.contact_person ? `<div style="margin-top:2px;font-size:9pt;color:#475569;">z.Hd. ${esc(p.client.contact_person)}</div>` : ''}
+        ${p.effectiveContactPerson ? `<div style="margin-top:2px;font-size:9pt;color:#475569;">z.Hd. ${esc(p.effectiveContactPerson)}</div>` : ''}
         ${p.projectName ? `<div class="project-label">Projekt: ${esc(p.projectName)}</div>` : ''}
       </div>
       <div class="range">
