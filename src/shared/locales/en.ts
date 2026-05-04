@@ -290,6 +290,8 @@ export const en: Record<TranslationKey, string> = {
   'projects.form.statusActive': 'Active',
   'projects.form.statusPaused': 'Paused',
   'projects.form.statusArchived': 'Archived',
+  'projects.form.contactPersonLabel': 'Contact person',
+  'projects.form.contactPersonPlaceholder': 'Jane Doe (overrides client contact)',
   // PDF
   'pdf.recipient.vatId': 'VAT ID',
   'pdf.recipient.attn': 'Attn.',

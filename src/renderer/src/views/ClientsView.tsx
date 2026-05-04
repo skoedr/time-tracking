@@ -218,6 +218,7 @@ export default function ClientsView() {
     end_date: string | null
     budget_minutes: number | null
     status: 'active' | 'paused' | 'archived'
+    contact_person: string | null
   }) {
     if (!projectFormClientId && projectFormClientId !== 0) return
     if (editingProject) {
@@ -1111,6 +1112,7 @@ function ProjectFormModal({
     end_date: string | null
     budget_minutes: number | null
     status: 'active' | 'paused' | 'archived'
+    contact_person: string | null
   }) => Promise<void>
   onClose: () => void
 }) {
@@ -1139,6 +1141,8 @@ function ProjectFormModal({
     const hours = project.budget_minutes / 60
     return hours % 1 === 0 ? String(hours) : hours.toFixed(2)
   })
+  // v1.12 #105
+  const [contactPerson, setContactPerson] = useState(project?.contact_person ?? '')
 
   function nullIfEmpty(v: string): string | null {
     return v.trim() === '' ? null : v.trim()
@@ -1183,6 +1187,7 @@ function ProjectFormModal({
       end_date: nullIfEmpty(endDate),
       budget_minutes,
       status,
+      contact_person: nullIfEmpty(contactPerson),
     })
     setIsSaving(false)
   }
@@ -1336,6 +1341,22 @@ function ProjectFormModal({
             value={externalNumber}
             onChange={(e) => setExternalNumber(e.target.value)}
             placeholder={t('projects.form.externalNumberPlaceholder')}
+            className="rounded-lg px-3 py-2.5 border backdrop-blur-xl focus:outline-none
+              focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            style={{ background: 'var(--input-bg)', borderColor: 'var(--card-border)', color: 'var(--text)' }}
+          />
+        </div>
+
+        {/* Contact person */}
+        <div className="flex flex-col gap-1.5">
+          <label className="text-xs font-medium uppercase tracking-wide" style={{ color: 'var(--text2)' }}>
+            {t('projects.form.contactPersonLabel')}
+          </label>
+          <input
+            type="text"
+            value={contactPerson}
+            onChange={(e) => setContactPerson(e.target.value)}
+            placeholder={t('projects.form.contactPersonPlaceholder')}
             className="rounded-lg px-3 py-2.5 border backdrop-blur-xl focus:outline-none
               focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
             style={{ background: 'var(--input-bg)', borderColor: 'var(--card-border)', color: 'var(--text)' }}
