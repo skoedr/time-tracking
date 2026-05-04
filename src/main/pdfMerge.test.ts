@@ -4,11 +4,10 @@ import {
   PDFDocument,
   PDFHexString,
   PDFName,
-  PDFRawStream,
   PDFRef
 } from 'pdf-lib'
 import { describe, expect, it } from 'vitest'
-import { EmbeddedFileEntry, copyOutputIntents, copyXmpMetadata, extractEmbeddedFiles, mergePdfs, reembedFiles } from './pdfMerge'
+import { copyOutputIntents, copyXmpMetadata, extractEmbeddedFiles, mergePdfs, reembedFiles } from './pdfMerge'
 
 async function makePdf(pageCount: number): Promise<Buffer> {
   const doc = await PDFDocument.create()
@@ -227,7 +226,6 @@ describe('reembedFiles', () => {
     reembedFiles(target, entries)
 
     // Verify /Names/EmbeddedFiles structure
-    const ctx = target.context
     const namesDict = target.catalog.lookup(PDFName.of('Names'), PDFDict)
     expect(namesDict).toBeDefined()
     const embeddedFilesDict = namesDict!.lookup(PDFName.of('EmbeddedFiles'), PDFDict)
@@ -264,7 +262,6 @@ describe('reembedFiles', () => {
     const target = await PDFDocument.create()
     target.addPage()
     reembedFiles(target, [])
-    // catalog.get returns undefined (no throw) when key is absent
     expect(target.catalog.get(PDFName.of('Names'))).toBeUndefined()
   })
 })

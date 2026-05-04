@@ -11,6 +11,17 @@ import {
 
 export type MergeOrder = 'append' | 'prepend'
 
+/**
+ * Create a PDFRawStream bypassing the private constructor declaration.
+ * The constructor is private only in type declarations, not at runtime.
+ * This is the only way to copy raw (already-compressed) stream bytes
+ * between PDF contexts without re-encoding.
+ */
+function makePDFRawStream(dict: PDFDict, contents: Uint8Array): PDFRawStream {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return new (PDFRawStream as any)(dict, contents) as PDFRawStream
+}
+
 export interface EmbeddedFileEntry {
   /** Filename as a hex string (e.g. "factur-x.xml" encoded as PDFHexString) */
   name: PDFHexString
@@ -114,7 +125,8 @@ export function extractEmbeddedFiles(doc: PDFDocument): EmbeddedFileEntry[] {
         const streamRefVal = efDict.get(PDFName.of('F'))
         if (!(streamRefVal instanceof PDFRef)) continue
 
-        const stream = ctx.lookup(streamRefVal, PDFRawStream)
+        // ctx.lookup has no PDFRawStream overload in type declarations — cast required
+        const stream = ctx.lookup(streamRefVal) as PDFRawStream
         if (!stream) continue
 
         const afRelVal = fileSpec.get(PDFName.of('AFRelationship'))
@@ -160,7 +172,7 @@ export function reembedFiles(target: PDFDocument, entries: EmbeddedFileEntry[]):
 
   for (const entry of entries) {
     // Copy raw compressed bytes into target context without re-encoding
-    const newStream = new PDFRawStream(entry.streamDict, entry.streamContents)
+    const newStream = makePDFRawStream(entry.streamDict, entry.streamContents)
     const streamRef = ctx.register(newStream)
 
     const efDict = ctx.obj({ F: streamRef, UF: streamRef }) as PDFDict
@@ -222,13 +234,14 @@ export function copyXmpMetadata(source: PDFDocument, target: PDFDocument): void 
   const sourceCtx = source.context
   let stream: PDFRawStream | undefined
   if (metaVal instanceof PDFRef) {
-    stream = sourceCtx.lookup(metaVal, PDFRawStream)
+    // ctx.lookup has no PDFRawStream overload in type declarations — cast required
+    stream = sourceCtx.lookup(metaVal) as PDFRawStream
   } else if (metaVal instanceof PDFRawStream) {
     stream = metaVal
   }
   if (!stream) return
 
-  const newStream = new PDFRawStream(stream.dict, stream.contents)
+  const newStream = makePDFRawStream(stream.dict, stream.contents)
   const newRef = target.context.register(newStream)
   target.catalog.set(PDFName.of('Metadata'), newRef)
 }
@@ -273,9 +286,10 @@ export function copyOutputIntents(source: PDFDocument, target: PDFDocument): voi
       const profileVal = intentDict.get(PDFName.of('DestOutputProfile'))
       let newProfileRef: PDFRef | undefined
       if (profileVal instanceof PDFRef) {
-        const profileStream = sourceCtx.lookup(profileVal, PDFRawStream)
+        // ctx.lookup has no PDFRawStream overload in type declarations — cast required
+        const profileStream = sourceCtx.lookup(profileVal) as PDFRawStream
         if (profileStream) {
-          const newProfile = new PDFRawStream(profileStream.dict, profileStream.contents)
+          const newProfile = makePDFRawStream(profileStream.dict, profileStream.contents)
           newProfileRef = targetCtx.register(newProfile)
         }
       }
