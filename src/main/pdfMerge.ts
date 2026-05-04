@@ -234,6 +234,78 @@ export function copyXmpMetadata(source: PDFDocument, target: PDFDocument): void 
 }
 
 /**
+ * Copy the /OutputIntents array from the source PDF into the target.
+ * Required for PDF/A-3 conformance: defines the ICC colour profile (e.g.
+ * sRGB IEC61966-2.1) used by the document. Without it, PDF/A validators
+ * reject DeviceRGB colour spaces as non-conformant.
+ * No-op when source has no /OutputIntents.
+ */
+export function copyOutputIntents(source: PDFDocument, target: PDFDocument): void {
+  const intentsVal = source.catalog.get(PDFName.of('OutputIntents'))
+  if (!intentsVal) return
+
+  const sourceCtx = source.context
+  const targetCtx = target.context
+
+  // Resolve the array from source
+  let srcArray: PDFArray | undefined
+  if (intentsVal instanceof PDFRef) {
+    srcArray = sourceCtx.lookup(intentsVal, PDFArray)
+  } else if (intentsVal instanceof PDFArray) {
+    srcArray = intentsVal
+  }
+  if (!srcArray) return
+
+  // Deep-copy each OutputIntent dict and its DestOutputProfile stream
+  const newRefs: PDFRef[] = []
+  for (let i = 0; i < srcArray.size(); i++) {
+    try {
+      const item = srcArray.get(i)
+      const intentDict =
+        item instanceof PDFRef
+          ? sourceCtx.lookup(item, PDFDict)
+          : item instanceof PDFDict
+            ? item
+            : undefined
+      if (!intentDict) continue
+
+      // Copy the ICC profile stream if present
+      const profileVal = intentDict.get(PDFName.of('DestOutputProfile'))
+      let newProfileRef: PDFRef | undefined
+      if (profileVal instanceof PDFRef) {
+        const profileStream = sourceCtx.lookup(profileVal, PDFRawStream)
+        if (profileStream) {
+          const newProfile = new PDFRawStream(profileStream.dict, profileStream.contents)
+          newProfileRef = targetCtx.register(newProfile)
+        }
+      }
+
+      // Rebuild the intent dict in target context, key by key
+      const newDict = targetCtx.obj({}) as PDFDict
+      intentDict.entries().forEach(([key, val]) => {
+        if (key.toString() === '/DestOutputProfile') {
+          if (newProfileRef) newDict.set(key, newProfileRef)
+        } else if (val instanceof PDFRef || val instanceof PDFDict || val instanceof PDFArray) {
+          // Skip complex indirect objects — only copy scalar values
+        } else {
+          newDict.set(key, val)
+        }
+      })
+      newRefs.push(targetCtx.register(newDict))
+    } catch {
+      // Skip malformed OutputIntent entries gracefully
+    }
+  }
+
+  if (newRefs.length > 0) {
+    target.catalog.set(
+      PDFName.of('OutputIntents'),
+      targetCtx.obj(newRefs as Parameters<typeof targetCtx.obj>[0])
+    )
+  }
+}
+
+/**
  * Merge two PDF buffers. Stundennachweis is appended to (or prepended before)
  * the invoice. Returns a new buffer — both inputs are unchanged.
  *
@@ -270,6 +342,7 @@ export async function mergePdfs(
 
   reembedFiles(merged, embeddedFiles)
   copyXmpMetadata(invDoc, merged)
+  copyOutputIntents(invDoc, merged)
 
   return Buffer.from(await merged.save())
 }

@@ -8,7 +8,7 @@ import {
   PDFRef
 } from 'pdf-lib'
 import { describe, expect, it } from 'vitest'
-import { EmbeddedFileEntry, copyXmpMetadata, extractEmbeddedFiles, mergePdfs, reembedFiles } from './pdfMerge'
+import { EmbeddedFileEntry, copyOutputIntents, copyXmpMetadata, extractEmbeddedFiles, mergePdfs, reembedFiles } from './pdfMerge'
 
 async function makePdf(pageCount: number): Promise<Buffer> {
   const doc = await PDFDocument.create()
@@ -309,5 +309,58 @@ describe('copyXmpMetadata', () => {
     const merged = await mergePdfs(sn, inv)
     const mergedDoc = await PDFDocument.load(merged)
     expect(mergedDoc.catalog.get(PDFName.of('Metadata'))).toBeDefined()
+  })
+})
+
+// ---------------------------------------------------------------------------
+
+describe('copyOutputIntents', () => {
+  async function makePdfWithOutputIntent(): Promise<Buffer> {
+    const doc = await PDFDocument.create()
+    doc.addPage()
+    const ctx = doc.context
+    // Minimal ICC profile bytes (just enough to be a valid stream)
+    const iccBytes = Buffer.from('fake-icc-profile-data')
+    const iccStream = ctx.flateStream(iccBytes)
+    const iccRef = ctx.register(iccStream)
+    const intentDict = ctx.obj({
+      Type: PDFName.of('OutputIntent'),
+      S: PDFName.of('GTS_PDFA1'),
+      OutputConditionIdentifier: 'sRGB IEC61966-2.1',
+      DestOutputProfile: iccRef
+    }) as PDFDict
+    doc.catalog.set(PDFName.of('OutputIntents'), ctx.obj([ctx.register(intentDict)]))
+    return Buffer.from(await doc.save())
+  }
+
+  it('copies /OutputIntents including ICC profile stream to target', async () => {
+    const source = await PDFDocument.load(await makePdfWithOutputIntent())
+    const target = await PDFDocument.create()
+    target.addPage()
+
+    copyOutputIntents(source, target)
+
+    expect(target.catalog.get(PDFName.of('OutputIntents'))).toBeDefined()
+  })
+
+  it('is a no-op when source has no /OutputIntents', async () => {
+    const source = await PDFDocument.create()
+    source.addPage()
+    const target = await PDFDocument.create()
+    target.addPage()
+
+    copyOutputIntents(source, target)
+
+    expect(target.catalog.get(PDFName.of('OutputIntents'))).toBeUndefined()
+  })
+
+  it('mergePdfs copies /OutputIntents from invoice to merged PDF', async () => {
+    const sn = await makePdf(1)
+    const invDoc = await PDFDocument.load(await makePdfWithOutputIntent())
+    const inv = Buffer.from(await invDoc.save())
+
+    const merged = await mergePdfs(sn, inv)
+    const mergedDoc = await PDFDocument.load(merged)
+    expect(mergedDoc.catalog.get(PDFName.of('OutputIntents'))).toBeDefined()
   })
 })

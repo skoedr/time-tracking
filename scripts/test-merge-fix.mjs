@@ -117,6 +117,39 @@ function copyXmpMetadata(source, target) {
   target.catalog.set(PDFName.of('Metadata'), newRef)
 }
 
+function copyOutputIntents(source, target) {
+  const intentsVal = source.catalog.get(PDFName.of('OutputIntents'))
+  if (!intentsVal) return
+  const sourceCtx = source.context
+  const targetCtx = target.context
+  let srcArray = intentsVal instanceof PDFRef ? sourceCtx.lookup(intentsVal, PDFArray) : intentsVal instanceof PDFArray ? intentsVal : undefined
+  if (!srcArray) return
+  const newRefs = []
+  for (let i = 0; i < srcArray.size(); i++) {
+    try {
+      const item = srcArray.get(i)
+      const intentDict = item instanceof PDFRef ? sourceCtx.lookup(item, PDFDict) : item instanceof PDFDict ? item : undefined
+      if (!intentDict) continue
+      const profileVal = intentDict.get(PDFName.of('DestOutputProfile'))
+      let newProfileRef
+      if (profileVal instanceof PDFRef) {
+        const profileStream = sourceCtx.lookup(profileVal, PDFRawStream)
+        if (profileStream) {
+          newProfileRef = targetCtx.register(new PDFRawStream(profileStream.dict, profileStream.contents))
+        }
+      }
+      const newDict = targetCtx.obj({})
+      intentDict.entries().forEach(([key, val]) => {
+        if (key.toString() === '/DestOutputProfile') { if (newProfileRef) newDict.set(key, newProfileRef) }
+        else if (val instanceof PDFRef || val instanceof PDFDict || val instanceof PDFArray) { /* skip complex */ }
+        else newDict.set(key, val)
+      })
+      newRefs.push(targetCtx.register(newDict))
+    } catch {}
+  }
+  if (newRefs.length > 0) target.catalog.set(PDFName.of('OutputIntents'), targetCtx.obj(newRefs))
+}
+
 // --- main ---
 
 console.log('Reading files...')
@@ -139,6 +172,8 @@ console.log('Re-embedding files...')
 reembedFiles(merged, entries)
 console.log('Copying XMP metadata...')
 copyXmpMetadata(invDoc, merged)
+console.log('Copying OutputIntents...')
+copyOutputIntents(invDoc, merged)
 
 console.log('Saving...')
 const outBuf = Buffer.from(await merged.save())
