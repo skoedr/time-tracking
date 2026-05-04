@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useT } from '../contexts/I18nContext'
 import { ConfirmDialog } from '../components/ConfirmDialog'
+import * as Icons from '../components/Icons'
 import { useToastStore } from '../store/toastStore'
 
 interface TagRow {
@@ -233,9 +234,12 @@ export default function TagManagementView(): React.JSX.Element {
                 <button
                   type="button"
                   onClick={() => startRename(tag.name)}
-                  className={btnClass}
+                  className="rounded p-1 hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition-colors"
+                  style={{ color: 'var(--text2)' }}
+                  aria-label={t('settings.tags.rename')}
+                  title={t('settings.tags.rename')}
                 >
-                  {t('settings.tags.rename')}
+                  <Icons.Edit />
                 </button>
               )}
             </div>
@@ -270,10 +274,11 @@ export default function TagManagementView(): React.JSX.Element {
                     ? t('settings.tags.deleteCannotHint', { count: String(tag.count) })
                     : t('settings.tags.deleteTitle')
                 }
-                className={`${btnClass} shrink-0`}
-                style={tag.count === 0 ? { color: 'var(--danger)', borderColor: 'var(--danger)' } : undefined}
+                className="rounded p-1 hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-red-400 disabled:cursor-not-allowed disabled:opacity-30 transition-colors shrink-0"
+                style={{ color: 'var(--danger)' }}
+                aria-label={t('settings.tags.delete')}
               >
-                {t('settings.tags.delete')}
+                <Icons.Trash />
               </button>
             )}
           </div>

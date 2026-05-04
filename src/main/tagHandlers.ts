@@ -113,7 +113,7 @@ export function renameTag(
       `UPDATE entries
        SET tags = REPLACE(tags, ',' || ? || ',', ',' || ? || ',')
        WHERE tags LIKE '%,' || ? || ',%'`
-    ).run(trimmedNew, trimmedOld, trimmedOld)
+    ).run(trimmedOld, trimmedNew, trimmedOld)
 
     log.info(`[tags] renamed '${trimmedOld}' → '${trimmedNew}'`)
   })
@@ -149,7 +149,7 @@ export function mergeTag(
       `UPDATE entries
        SET tags = REPLACE(tags, ',' || ? || ',', ',' || ? || ',')
        WHERE tags LIKE '%,' || ? || ',%'`
-    ).run(trimmedTarget, trimmedSource, trimmedSource)
+    ).run(trimmedSource, trimmedTarget, trimmedSource)
 
     db.prepare('DELETE FROM tags WHERE name = ?').run(trimmedSource)
 
