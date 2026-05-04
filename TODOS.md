@@ -35,9 +35,9 @@ Deferred items from plan reviews. Items here have explicit decisions — they ar
 
 ### v1.12 Issues (aktiv geplant)
 
-- **#105 — Projektspezifischer Ansprechpartner** — `projects.contact_person`, Fallback auf Kunden-AP. Migration 015. Plan: `.github/plan-v1.12.md`.
-- **#106 — Rundung in der UI** — Kalender, TodayView und Auswertung zeigen gerundete Werte wenn Rundung aktiv. Reine Darstellungsschicht.
-- **#107 — Zentrales Tag-Management** — Settings-Untermenü, geschlossenes Tag-System.
+~~- **#105 — Projektspezifischer Ansprechpartner**~~ → Abgeschlossen (v1.12.0, 2026-05-04)
+~~- **#106 — Rundung in der UI**~~ → Abgeschlossen (v1.12.0, 2026-05-04)
+~~- **#107 — Zentrales Tag-Management**~~ → Abgeschlossen (v1.12.0, 2026-05-04)
 
 ### v1.13 Kandidaten (deferred aus v1.12)
 

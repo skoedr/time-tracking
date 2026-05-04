@@ -2,6 +2,12 @@
 
 All notable changes to TimeTrack are documented here.
 
+## [1.12.5] — 2026-05-04
+
+### Fixed
+
+- **PDF-Merge: factur-X / ZUGFeRD XML-Anhang geht nicht mehr verloren** — Beim Zusammenführen von Stundennachweis und Rechnung (PDF) gingen bisher die E-Rechnungs-Metadaten des Rechnungs-PDFs verloren: eingebettete XML-Datei (`/EmbeddedFiles`), XMP-Metadaten-Stream (`/Metadata`) und ICC-Farbprofil (`/OutputIntents`). Das zusammengeführte PDF bestand dadurch die factur-X / ZUGFeRD Validierung nicht. Alle drei werden jetzt korrekt in das Zieldokument kopiert — Mustang-Validierung bestätigt `XML:valid`. ([#115](https://github.com/skoedr/time-tracking/issues/115))
+
 ## [1.12.0] — 2026-05-04
 
 ### Added
