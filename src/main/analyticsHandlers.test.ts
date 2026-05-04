@@ -322,4 +322,60 @@ describe('buildAnalyticsSummary', () => {
     expect(res.data.weekday).toHaveLength(7)
     expect(res.data.weekday.map((d) => d.d)).toEqual(['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'])
   })
+
+  // ── 13. Non-billable hours excluded from revenue (#104) ─────────────────
+
+  it('excludes non-billable entries from revenue calculation', () => {
+    // 2 hours billable at 100 €/h → 200 € = 20000 cents
+    addEntry(db, {
+      client_id: 1,
+      started_at: '2025-10-01T08:00:00.000Z',
+      stopped_at: '2025-10-01T10:00:00.000Z',
+      billable: 1,
+    })
+    // 3 hours non-billable — must NOT contribute to revenue
+    addEntry(db, {
+      client_id: 1,
+      started_at: '2025-10-01T11:00:00.000Z',
+      stopped_at: '2025-10-01T14:00:00.000Z',
+      billable: 0,
+    })
+
+    const res = buildAnalyticsSummary(db, { year: 2025, month: 10 })
+    expect(res.ok).toBe(true)
+    if (!res.ok) return
+
+    // total hours include both billable + non-billable
+    expect(res.data.month.hours).toBe(18000) // 5 h in seconds
+    // revenue must only count the 2 billable hours: 2 * 85 €/h = 170 € = 17000 cents
+    expect(res.data.month.revenue).toBe(17000)
+  })
+
+  // ── 14. Per-client revenue excludes non-billable entries (#104) ──────────
+
+  it('excludes non-billable entries from per-client revenue breakdown', () => {
+    // 1 hour billable for Acme (85 €/h) → 8500 cents
+    addEntry(db, {
+      client_id: 1,
+      started_at: '2025-11-01T08:00:00.000Z',
+      stopped_at: '2025-11-01T09:00:00.000Z',
+      billable: 1,
+    })
+    // 2 hours non-billable for Acme — must NOT add to rev
+    addEntry(db, {
+      client_id: 1,
+      started_at: '2025-11-01T10:00:00.000Z',
+      stopped_at: '2025-11-01T12:00:00.000Z',
+      billable: 0,
+    })
+
+    const res = buildAnalyticsSummary(db, { year: 2025, month: 11 })
+    expect(res.ok).toBe(true)
+    if (!res.ok) return
+
+    const acme = res.data.byClient.find((c) => c.client_id === 1)
+    expect(acme).toBeDefined()
+    // only 1 billable hour: 85 €/h → 8500 cents
+    expect(acme!.rev).toBe(8500)
+  })
 })

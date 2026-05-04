@@ -88,7 +88,11 @@ export function QuickNoteModal({ entry, onDone }: Props) {
           ref={inputRef}
           type="text"
           value={text}
-          onChange={(e) => setText(e.target.value)}
+          onChange={(e) => {
+            setText(e.target.value)
+            // Reset deadline so the modal doesn't close while the user is typing
+            deadlineRef.current = Date.now() + TIMEOUT_S * 1000
+          }}
           onKeyDown={handleKeyDown}
           placeholder={t('quicknote.placeholder')}
           className="mb-4 w-full rounded-lg px-3 py-2.5 text-sm border outline-none
