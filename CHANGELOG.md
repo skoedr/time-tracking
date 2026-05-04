@@ -2,6 +2,14 @@
 
 All notable changes to TimeTrack are documented here.
 
+## [1.11.1] — 2026-05-04
+
+### Fixed
+
+- **QuickNote-Modal: Auto-Close beim Tippen unterbrochen** — Der 30-Sekunden-Countdown lief bisher ungehindert durch, auch wenn der Nutzer bereits tippt. Das Modal schloss sich und verwarf den eingegebenen Text. Der Countdown wird jetzt bei jeder Texteingabe zurückgesetzt — das Modal schließt sich erst, wenn der Nutzer 30 Sekunden lang inaktiv ist oder explizit speichert/abbricht. ([#109](https://github.com/skoedr/time-tracking/issues/109))
+
+- **Auswertung: Nicht-abrechenbare Stunden im Umsatz** — In der Monatsübersicht und der Kunden-Aufschlüsselung wurde der Umsatz für alle Einträge berechnet, unabhängig vom `billable`-Flag. Nicht-abrechenbare Stunden zählen weiterhin zur Gesamtdauer, fließen aber jetzt korrekt nicht mehr in den Umsatz ein — konsistent mit PDF- und CSV-Export. 2 neue Regressionstests ergänzt. ([#104](https://github.com/skoedr/time-tracking/issues/104))
+
 ## [1.11.0] — 2026-04-30
 
 ### Added
