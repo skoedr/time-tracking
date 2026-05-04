@@ -2,6 +2,18 @@
 
 All notable changes to TimeTrack are documented here.
 
+## [1.12.0] — 2026-05-04
+
+### Added
+
+- **Zentrales Tag-Management** — Neue Einstellungs-Seite „Tags" zum Verwalten aller Tags: alphabetische Liste mit Eintragszähler, Inline-Umbenennen (Enter / Escape), Zusammenführen zweier Tags (Dropdown + Bestätigungsdialog mit Eintragszahl), Löschen (nur möglich wenn 0 Einträge). Neue `tags`-Mastertabelle (Migration 016) wird beim ersten Start aus bestehenden Einträgen befüllt. Tag-Eingabe wechselt auf geschlossenes System — Autocomplete aus der Masterliste, unbekannter Text erzeugt einen neuen Tag direkt via `+ erstellen`-Option. ([#107](https://github.com/skoedr/time-tracking/issues/107))
+
+- **Ansprechpartner auf Projektkarte** — Ist ein Ansprechpartner für ein Projekt hinterlegt, erscheint er als zweite Zeile unter dem Projektnamen in der Projektliste. ([#105](https://github.com/skoedr/time-tracking/issues/105))
+
+- **Projekt-Ansprechpartner-Feld** — Projekte erhalten ein neues optionales Feld `contact_person` (Migration 015). Das Feld wird im Projekt-Bearbeitungsformular angezeigt und ausgefüllt gespeichert. ([#105](https://github.com/skoedr/time-tracking/issues/105))
+
+- **Rundungs-Einstellung im UI verdrahtet** — Die Einstellung „Stunden runden auf" (PDF-Abschnitt) war bisher nur in der PDF-Generierung aktiv. Sie beeinflusst jetzt auch die angezeigte Dauer in der Heute-Ansicht, der Kalenderansicht und der Auswertung — alle Ansichten sind damit rundungsparitätisch mit dem Export. ([#106](https://github.com/skoedr/time-tracking/issues/106))
+
 ## [1.11.1] — 2026-05-04
 
 ### Fixed
