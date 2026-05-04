@@ -131,11 +131,27 @@ describe('migration SQL execution', () => {
       { key: 'pdf_round_minutes', value: '0' },
       { key: 'pdf_sender_address', value: '' },
       { key: 'pdf_tax_id', value: '' },
-      { key: 'rounding_minutes', value: '15' },
-      { key: 'rounding_mode', value: 'none' },
       // Migration 011 — Light/Dark/System theme (v1.8 #76)
       { key: 'theme_mode', value: 'system' }
+      // rounding_mode and rounding_minutes removed by Migration 014
     ])
+  })
+
+  it('migration 014 removes dead rounding settings', () => {
+    applyAll()
+    const rows = db
+      .prepare(`SELECT key FROM settings WHERE key IN ('rounding_mode', 'rounding_minutes')`)
+      .all()
+    expect(rows).toHaveLength(0)
+  })
+
+  it('migration 014 DELETE is idempotent when rows already absent', () => {
+    // Run all migrations — including 014 which deletes the rows.
+    applyAll()
+    // Running the 014 SQL again should not throw even though rows are gone.
+    expect(() =>
+      db.exec(`DELETE FROM settings WHERE key IN ('rounding_mode', 'rounding_minutes')`)
+    ).not.toThrow()
   })
 
   it('seed-only migrations are idempotent (001 + 002)', () => {

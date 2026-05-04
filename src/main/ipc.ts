@@ -1,9 +1,8 @@
 import { ipcMain, shell } from 'electron'
 import { app } from 'electron'
 import { dialog } from 'electron'
-import { existsSync, statSync, writeFileSync, readFileSync, mkdirSync, readdirSync } from 'fs'
-import { dirname, join, normalize, parse, resolve, sep } from 'path'
-import { mergePdfs } from './pdfMerge'
+import { writeFileSync, readFileSync, mkdirSync, readdirSync } from 'fs'
+import { dirname, join, normalize, resolve, sep } from 'path'
 import log from 'electron-log/main'
 import { randomUUID } from 'crypto'
 import { getDb, getDbPath } from './db'
@@ -15,8 +14,7 @@ import { buildPdfHtml, buildPdfPayload, type PdfRequest } from './pdf'
 import { renderPdfBuffer } from './pdfWindow'
 import { readLogoAsDataUrl, removeLogo, saveLogo } from './logo'
 import { handleCsvExport, type CsvRequest } from './csvExport'
-import { validatePdfPath, validateMergeExportRequest } from './pdfMergeValidation'
-import { mergeOnlyHandler, pdfInfoHandler } from './pdfMergeHandlers'
+import { mergeExportHandler, mergeOnlyHandler, pdfInfoHandler } from './pdfMergeHandlers'
 import { registerAnalyticsHandlers } from './analyticsHandlers'
 import { registerBudgetHandlers } from './budgetHandlers'
 import type {
@@ -953,92 +951,8 @@ export function registerIpcHandlers(hooks: IpcHooks): void {
   // modified — the merged result is written next to it as
   // <stem>_inkl_Stundennachweis.pdf. Falls back to a save dialog when the
   // target directory is not writable (e.g. a corporate archive folder).
-  ipcMain.handle(
-    'pdf:merge-export',
-    async (
-      _e,
-      req: PdfRequest & { invoicePath: string }
-    ): Promise<IpcResult<{ path: string }>> => {
-      try {
-        const reqErr = validateMergeExportRequest(req)
-        if (reqErr) return fail(reqErr)
-
-        const pathErr = validatePdfPath(req.invoicePath)
-        if (pathErr) return fail(pathErr)
-
-        const resolvedInvoice = resolve(req.invoicePath)
-
-        // Size check via stat before reading to avoid loading huge files.
-        const MAX_INVOICE_BYTES = 50 * 1024 * 1024 // 50 MB
-        if (statSync(resolvedInvoice).size > MAX_INVOICE_BYTES) {
-          return fail('Rechnungs-PDF zu groß (max. 50 MB)')
-        }
-
-        // Read invoice — guard against locked files (Lexware / Acrobat open).
-        let invoiceBuffer: Buffer
-        try {
-          invoiceBuffer = readFileSync(resolvedInvoice)
-        } catch (e: any) {
-          if (e.code === 'EBUSY' || e.code === 'EPERM') {
-            return fail(
-              `Datei ist durch ein anderes Programm gesperrt: ${parse(resolvedInvoice).base}`
-            )
-          }
-          return fail(e)
-        }
-
-        // Render Stundennachweis.
-        const settingsRows = db.prepare(`SELECT key, value FROM settings`).all() as Array<{
-          key: string
-          value: string
-        }>
-        const settings = Object.fromEntries(
-          settingsRows.map((r) => [r.key, r.value])
-        ) as unknown as Settings
-        const logoDataUrl = readLogoAsDataUrl(settings.pdf_logo_path ?? '')
-        const payload = buildPdfPayload(db, req, logoDataUrl)
-        const snBuffer = await renderPdfBuffer({ html: buildPdfHtml(payload) })
-
-        // Merge: invoice first (append), then Stundennachweis.
-        const merged = await mergePdfs(snBuffer, invoiceBuffer, 'append')
-        log.debug('[pdf:merge-export] merged', {
-          invoiceBytes: invoiceBuffer.length,
-          snBytes: snBuffer.length,
-          mergedBytes: merged.length
-        })
-
-        // Derive output path next to the invoice. If a file with that name
-        // already exists (re-export of the same period), append a timestamp
-        // suffix rather than silently overwriting a previously sent document.
-        const { dir, name } = parse(resolvedInvoice)
-        let outputPath = join(dir, `${name}_inkl_Stundennachweis.pdf`)
-        if (existsSync(outputPath)) {
-          const ts = new Date().toISOString().slice(0, 19).replace(/[:.]/g, '-')
-          outputPath = join(dir, `${name}_inkl_Stundennachweis_${ts}.pdf`)
-        }
-
-        try {
-          writeFileSync(outputPath, merged)
-          return ok({ path: outputPath })
-        } catch (writeErr: any) {
-          // Directory may be read-only — fall back to a user-chosen path.
-          if (writeErr.code === 'EPERM' || writeErr.code === 'EACCES') {
-            const fallback = await dialog.showSaveDialog({
-              title: 'Zusammengeführte PDF speichern',
-              defaultPath: `${name}_inkl_Stundennachweis.pdf`,
-              filters: [{ name: 'PDF', extensions: ['pdf'] }]
-            })
-            if (fallback.canceled || !fallback.filePath) return fail('Speichern abgebrochen')
-            writeFileSync(fallback.filePath, merged)
-            return ok({ path: fallback.filePath })
-          }
-          return fail(writeErr)
-        }
-      } catch (e) {
-        return fail(e)
-      }
-    }
-  )
+  // Core logic lives in pdfMergeHandlers.ts for testability.
+  ipcMain.handle('pdf:merge-export', (_e, req) => mergeExportHandler(db, req))
 
   // PDF merge-only: merges two existing PDFs (Stundennachweis + invoice) without
   // re-rendering. Core logic lives in pdfMergeHandlers.ts for testability.

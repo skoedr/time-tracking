@@ -77,8 +77,8 @@ describe('buildJsonExportPayload', () => {
     // Sorted by key (BehaviorContract: stable diff across exports).
     const sorted = [...keys].sort()
     expect(keys).toEqual(sorted)
-    // Spot-check a v1.2 + v1.3 key.
-    expect(keys).toContain('rounding_minutes')
+    // Spot-check a key present after all migrations (rounding_minutes removed by migration 014).
+    expect(keys).toContain('pdf_round_minutes')
     expect(keys).toContain('pdf_accent_color')
   })
 
