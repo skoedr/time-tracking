@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { deserializeTags, parseTagInput, serializeTags } from '../../../shared/tags'
 import { useT } from '../contexts/I18nContext'
 
@@ -7,6 +7,8 @@ interface Props {
   value: string
   onChange: (serialized: string) => void
   disabled?: boolean
+  /** Optional callback to navigate to the tag management settings tab. */
+  onManageTags?: () => void
 }
 
 /**
@@ -30,47 +32,80 @@ function chipColor(tag: string): string {
   return CHIP_COLORS[code % CHIP_COLORS.length]
 }
 
+// Sentinel value for the "create new tag" option in the dropdown
+const CREATE_SENTINEL = '__create__'
+
 /**
  * Tag chip list + text input with Tab/Enter/comma to add, Backspace to
- * remove, and autocomplete dropdown populated from `tags:recent` IPC.
+ * remove, and autocomplete dropdown populated from `tags:get-all-with-count`
+ * (master registry).
+ *
+ * Closed tag system: free text that doesn't match an existing tag shows a
+ * "+ 'foo' erstellen" option. Selecting it calls `tags:create` and adds
+ * the tag immediately.
  *
  * Stores tags as the serialized DB format (`,tag1,tag2,`) via `onChange`.
  */
-export function TagInput({ value, onChange, disabled = false }: Props): React.ReactElement {
+export function TagInput({ value, onChange, disabled = false, onManageTags }: Props): React.ReactElement {
   const t = useT()
   const tags = deserializeTags(value)
   const [inputValue, setInputValue] = useState('')
   const [suggestions, setSuggestions] = useState<string[]>([])
-  const [allRecent, setAllRecent] = useState<string[]>([])
+  const [allKnown, setAllKnown] = useState<string[]>([])
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const [highlightedIndex, setHighlightedIndex] = useState(-1)
   const inputRef = useRef<HTMLInputElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
 
-  // Load recent tags once on mount
-  useEffect(() => {
-    window.api.tags.recent().then((res) => {
-      if (res.ok) setAllRecent(res.data)
-    })
+  const reloadKnown = useCallback(async () => {
+    const res = await window.api.tags.getAllWithCount()
+    if (res.ok) setAllKnown(res.data.map((r) => r.name))
   }, [])
+
+  // Load master registry on mount
+  useEffect(() => {
+    void reloadKnown()
+  }, [reloadKnown])
 
   // Filter suggestions based on current input
   useEffect(() => {
     const q = inputValue.trim().toLowerCase().replace(/^#/, '')
+    let matches: string[]
     if (!q) {
-      setSuggestions(allRecent.filter((t) => !tags.includes(t)).slice(0, 8))
+      matches = allKnown.filter((t) => !tags.includes(t)).slice(0, 8)
     } else {
-      setSuggestions(
-        allRecent
-          .filter((t) => t.startsWith(q) && !tags.includes(t))
-          .slice(0, 8)
-      )
+      matches = allKnown
+        .filter((t) => t.startsWith(q) && !tags.includes(t))
+        .slice(0, 8)
+    }
+    // Append "create" sentinel if typed text is non-empty and not an exact match
+    if (q && !allKnown.includes(q) && !tags.includes(q)) {
+      setSuggestions([...matches, CREATE_SENTINEL])
+    } else {
+      setSuggestions(matches)
     }
     setHighlightedIndex(-1)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [inputValue, allRecent, value])
+  }, [inputValue, allKnown, value])
 
-  function commitInput(raw: string): void {
+  async function addTag(tag: string): Promise<void> {
+    if (!tag || tags.includes(tag) || tags.length >= 10) return
+    onChange(serializeTags([...tags, tag]))
+    setInputValue('')
+    setDropdownOpen(false)
+  }
+
+  async function commitInput(raw: string): Promise<void> {
+    if (raw === CREATE_SENTINEL) {
+      const name = inputValue.trim().toLowerCase().replace(/^#/, '')
+      if (!name) return
+      const res = await window.api.tags.create(name)
+      if (res.ok) {
+        await reloadKnown()
+        await addTag(name)
+      }
+      return
+    }
     const parsed = parseTagInput(raw)
     if (parsed.length === 0) {
       setInputValue('')
@@ -104,9 +139,15 @@ export function TagInput({ value, onChange, disabled = false }: Props): React.Re
     if ((e.key === 'Enter' || e.key === 'Tab' || e.key === ',') && inputValue.trim()) {
       e.preventDefault()
       if (highlightedIndex >= 0 && suggestions[highlightedIndex]) {
-        commitInput(suggestions[highlightedIndex])
+        void commitInput(suggestions[highlightedIndex])
       } else {
-        commitInput(inputValue)
+        // In closed mode, Enter on free text: create if not known
+        const q = inputValue.trim().toLowerCase().replace(/^#/, '')
+        if (q && allKnown.includes(q)) {
+          void commitInput(q)
+        } else if (q) {
+          void commitInput(CREATE_SENTINEL)
+        }
       }
       return
     }
@@ -195,19 +236,32 @@ export function TagInput({ value, onChange, disabled = false }: Props): React.Re
               aria-selected={i === highlightedIndex}
               onPointerDown={(e) => {
                 e.preventDefault()
-                commitInput(s)
+                void commitInput(s)
               }}
               className={`cursor-pointer px-3 py-1 text-xs ${
                 i === highlightedIndex
                   ? 'bg-indigo-600 text-white'
                   : 'hover:bg-white/10'
               }`}
-              style={i !== highlightedIndex ? { color: 'var(--text)' } : undefined}
+              style={i !== highlightedIndex ? { color: s === CREATE_SENTINEL ? 'var(--text2)' : 'var(--text)' } : undefined}
             >
-              #{s}
+              {s === CREATE_SENTINEL
+                ? t('tags.createOption', { tag: inputValue.trim().toLowerCase().replace(/^#/, '') })
+                : `#${s}`}
             </li>
           ))}
         </ul>
+      )}
+
+      {onManageTags && allKnown.length === 0 && !disabled && (
+        <button
+          type="button"
+          onClick={onManageTags}
+          className="mt-1 text-xs underline focus:outline-none"
+          style={{ color: 'var(--text3)' }}
+        >
+          {t('tags.manageLink')}
+        </button>
       )}
     </div>
   )
