@@ -300,6 +300,56 @@ im Vergleich zum letzten Monat lief — ohne Excel-Export.
 
 ---
 
+## v1.11 — Stammdaten-Erweiterung ✅ ausgeliefert (2026-04-30)
+
+📂 [Plan](.github/plan-v1.12.md) (CEO-Plan: `~/.gstack/projects/time-tracking/ceo-plans/2026-04-30-v1.11-stammdaten.md`)
+
+**Thema:** Vollständige Kunden- und Projektverwaltung — Rechnungsadresse, Budget,
+Status und Ansprechpartner. Das fehlende Bindeglied zwischen Zeiterfassung und
+professioneller Rechnungsstellung.
+
+- ✅ **Migration 013** — `clients` +7 Felder (Adresse, USt-IdNr., Ansprechpartner,
+  E-Mail), `projects` +5 Felder (ext. Nr., Datum, Budget, Status).
+- ✅ **ClientFormModal + ProjectFormModal** — Vollständige Stammdaten-Formulare.
+- ✅ **PDF-Empfängerblock** — Adresszeilen, USt-IdNr., Ansprechpartner konditionell.
+- ✅ **Budget-Mini-Bar** — Farbkodierter Fortschrittsbalken auf jeder Projektkarte.
+- ✅ **Status-Badge** — „Pausiert"-Badge auf pausierten Projekten.
+- ✅ **Budget-Warn-Banner** — Warnung im Timer-Start-Modal bei ≥ 80 % Budgetverbrauch.
+- ✅ **Auswertungs-Tab** — Analytics Dashboard mit Stat-Cards, DeltaPills, TrendChart,
+  ClientBars, WeekdayBars (#93).
+
+**Ship-Kriterium:** Du kannst Rechnungsadresse, USt-IdNr. und Ansprechpartner pro
+Kunde hinterlegen und das PDF zeigt einen vollständigen Empfängerblock.
+
+---
+
+## v1.12 — Konsistenz-Release
+
+📂 [Plan](.github/plan-v1.12.md)
+
+**Thema:** Drei Reibungspunkte, die bei jeder Rechnungsstellung auffallen:
+(1) App zeigt andere Werte als PDF, (2) kein projektspezifischer Ansprechpartner,
+(3) Tags wachsen unkontrolliert. v1.12 löst alle drei ohne neue Konzepte.
+
+- **Projektspezifischer Ansprechpartner** (#105) — `projects.contact_person`,
+  Fallback auf Kunden-AP. PDF-Empfängerblock nutzt Projekt-AP wenn gesetzt.
+  Migration 015. (S)
+- **Rundung in der UI** (#106) — Wenn Rundung aktiv: Kalender, TodayView und
+  Auswertung zeigen gerundete Werte (wie das PDF). DB-Daten bleiben exakt —
+  reine Darstellungsschicht. Optional: Timer-Vorschau „1:23 → 1:30". (M)
+- **Zentrales Tag-Management** (#107) — Neues Settings-Untermenü: Tags anlegen,
+  umbenennen, zusammenführen, löschen. Nutzungsanzahl pro Tag. Geschlossenes
+  Tag-System: Freitext-Eingabe am Eintrag abgelöst durch Dropdown. (L)
+
+**Bewusst NICHT in v1.12:** Widget-Overhaul (#108, → v1.13), Bulk-Tagging,
+Rundung am laufenden Timer, Widget mit gerundeten Werten.
+
+**Ship-Kriterium:** Du exportierst eine Rechnung. Kalender und PDF zeigen
+dieselben gerundeten Werte. Der projektspezifische Ansprechpartner erscheint im
+Adressblock. In zwei Minuten räumst du fünf veraltete Tags auf.
+
+---
+
 ## v2.0 — Outlook-Integration  🎯 echte Story-Stufe
 
 **Thema:** Das eine Feature, das TimeTrack vom „lokalen Toggl-Klon" zum

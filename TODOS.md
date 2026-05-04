@@ -27,11 +27,27 @@ Deferred items from plan reviews. Items here have explicit decisions — they ar
 - **Merge modal Nav-Trigger** — PdfMergeModal ist nur via CalendarView erreichbar. Zweiter Einstiegspunkt in Sidebar oder ExportModal. Design-Gespräch ausstehend.
 - **Competitive positioning** — README + App-Beschreibung auf LocalFirst / Datenschutz / Kein-Abo schärfen. Kein Code, nur Text. Gespräch ausstehend.
 
-### Nächster Hotfix (technisches Housekeeping)
+### Nächster Hotfix (technisches Housekeeping) → eigene PR vor v1.12
 
 - **Handler extraction: pdf:merge-export** — `pdf:merge-export` in `ipc.ts` noch im alten Inline-Stil; in `pdfMergeHandlers.ts`-Muster überführen für testbarere Struktur. Kein User-Value, aber sauberer.
 
-- **DB-Cleanup: tote Rounding-Settings** — `rounding_mode` und `rounding_minutes` wurden aus UI + Types entfernt (v1.11, 2026-04-30), stehen aber noch als Rows in der `settings`-Tabelle (gesät von Migration 001). Bei der nächsten Migration ein `DELETE FROM settings WHERE key IN ('rounding_mode', 'rounding_minutes')` als Cleanup-Statement ergänzen.
+- **DB-Cleanup: tote Rounding-Settings** — `rounding_mode` und `rounding_minutes` wurden aus UI + Types entfernt (v1.11, 2026-04-30), stehen aber noch als Rows in der `settings`-Tabelle (gesät von Migration 001). Migration 014 ergänzt `DELETE FROM settings WHERE key IN ('rounding_mode', 'rounding_minutes')` als Cleanup-Statement.
+
+### v1.12 Issues (aktiv geplant)
+
+- **#105 — Projektspezifischer Ansprechpartner** — `projects.contact_person`, Fallback auf Kunden-AP. Migration 015. Plan: `.github/plan-v1.12.md`.
+- **#106 — Rundung in der UI** — Kalender, TodayView und Auswertung zeigen gerundete Werte wenn Rundung aktiv. Reine Darstellungsschicht.
+- **#107 — Zentrales Tag-Management** — Settings-Untermenü, geschlossenes Tag-System.
+
+### v1.13 Kandidaten (deferred aus v1.12)
+
+- **#108 — Widget-Overhaul** (XL) — Arc Quick-Start Design für Mini-Widget adaptieren.
+- **Rundung am laufenden Timer** — gerundeter Wert in Echtzeit sichtbar neben exaktem.
+- **Bulk-Tag-Operationen** — mehrere Einträge gleichzeitig taggen.
+- **Widget zeigt gerundete Werte** — nach Widget-Overhaul.
+- **Stammdaten-Import aus CSV** — für Großkunden mit vielen Projekten.
+- **Tag Force-Delete** — Tag löschen auch wenn Einträge vorhanden (mit Warnung).
+- **Tag-Filter** — Klick auf Anzahl → gefilterte Eintrags-Liste.
 
 ## Resolved in v1.9.0
 
