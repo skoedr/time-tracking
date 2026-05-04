@@ -78,9 +78,11 @@ export function buildAnalyticsSummary(
             ELSE 0 END
           ), 0) AS billable_sec,
           COALESCE(SUM(
-            COALESCE(p.rate_cent, c.rate_cent, 0)
-            * ${ENTRY_SEC}
-            / 3600.0
+            CASE WHEN e.billable = 1 THEN
+              COALESCE(p.rate_cent, c.rate_cent, 0)
+              * ${ENTRY_SEC}
+              / 3600.0
+            ELSE 0 END
           ), 0) AS revenue_cent
         FROM entries e
         JOIN clients c ON c.id = e.client_id
@@ -133,9 +135,11 @@ export function buildAnalyticsSummary(
             ${ENTRY_SEC}
           ), 0) AS h,
           COALESCE(SUM(
-            COALESCE(p.rate_cent, c.rate_cent, 0)
-            * ${ENTRY_SEC}
-            / 3600.0
+            CASE WHEN e.billable = 1 THEN
+              COALESCE(p.rate_cent, c.rate_cent, 0)
+              * ${ENTRY_SEC}
+              / 3600.0
+            ELSE 0 END
           ), 0) AS rev
         FROM entries e
         JOIN clients c ON c.id = e.client_id
