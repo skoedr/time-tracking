@@ -44,6 +44,7 @@ Deferred items from plan reviews. Items here have explicit decisions — they ar
 - **#108 — Widget-Overhaul** (XL) — Arc Quick-Start Design für Mini-Widget adaptieren.
 - **Rundung am laufenden Timer** — gerundeter Wert in Echtzeit sichtbar neben exaktem.
 - **Bulk-Tag-Operationen** — mehrere Einträge gleichzeitig taggen.
+- **Tag-Aufschlüsselung in Analytics** — Top-5-Tags-Breakdown in Auswertungs-View. Deferred: erst wenn Tags im Live-Einsatz sind, lohnt sich der Analytics-Ausbau. (plan-ceo-review 2026-05-04, D7)
 - **Widget zeigt gerundete Werte** — nach Widget-Overhaul.
 - **Stammdaten-Import aus CSV** — für Großkunden mit vielen Projekten.
 - **Tag Force-Delete** — Tag löschen auch wenn Einträge vorhanden (mit Warnung).
