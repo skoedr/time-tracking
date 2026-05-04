@@ -1,9 +1,10 @@
 import { describe, it, expect, beforeAll } from 'vitest'
 import { resolve } from 'path'
 import { PDFDocument } from 'pdf-lib'
-import { mergeOnlyHandler, pdfInfoHandler } from './pdfMergeHandlers'
-import type { FsDeps, DialogDeps } from './pdfMergeHandlers'
+import { mergeExportHandler, mergeOnlyHandler, pdfInfoHandler } from './pdfMergeHandlers'
+import type { FsDeps, DialogDeps, MergeExportPdfDeps } from './pdfMergeHandlers'
 import type { IpcResult } from '../shared/types'
+import type Database from 'better-sqlite3'
 
 function unwrapErr<T>(res: IpcResult<T>): string {
   if (!res.ok) return res.error
@@ -290,5 +291,199 @@ describe('pdfInfoHandler', () => {
     const res = await pdfInfoHandler({ filePath: 'C:/three.pdf' }, fs)
     expect(res.ok).toBe(true)
     expect(unwrapData(res).pageCount).toBe(3)
+  })
+})
+
+// ── mergeExportHandler tests ──────────────────────────────────────────────────
+// Tests cover validation and FS error paths.
+// The PDF rendering step (buildPdfPayload, buildPdfHtml, renderPdfBuffer) is
+// injected via MergeExportPdfDeps so no Electron runtime is needed.
+
+/** Minimal mock DB — returns empty settings rows. */
+function mockDb(): Database.Database {
+  return {
+    prepare: () => ({ all: () => [] })
+  } as unknown as Database.Database
+}
+
+/** Mock PdfDeps that returns provided SN buffer without actually rendering. */
+function mockPdfDeps(snBuffer: Buffer, mergedBuffer: Buffer): MergeExportPdfDeps {
+  return {
+    readLogoAsDataUrl: () => '',
+    buildPdfPayload: () => ({}) as any,
+    buildPdfHtml: () => '<html/>',
+    renderPdfBuffer: async () => snBuffer,
+    mergePdfs: async () => mergedBuffer
+  }
+}
+
+const validReq = {
+  clientId: 1,
+  fromIso: '2026-01-01',
+  toIso: '2026-01-31',
+  invoicePath: 'C:/invoices/rechnung.pdf'
+}
+
+describe('mergeExportHandler — request validation', () => {
+  it('rejects null request', async () => {
+    const res = await mergeExportHandler(mockDb(), null, mockFs({}), noDialog)
+    expect(res.ok).toBe(false)
+    expect(unwrapErr(res)).toMatch(/PDF-Anfrage/)
+  })
+
+  it('rejects request with non-number clientId', async () => {
+    const res = await mergeExportHandler(
+      mockDb(),
+      { clientId: '1', fromIso: '2026-01-01', toIso: '2026-01-31', invoicePath: 'C:/a.pdf' },
+      mockFs({}),
+      noDialog
+    )
+    expect(res.ok).toBe(false)
+    expect(unwrapErr(res)).toMatch(/PDF-Anfrage/)
+  })
+
+  it('rejects missing invoicePath', async () => {
+    const res = await mergeExportHandler(
+      mockDb(),
+      { clientId: 1, fromIso: '2026-01-01', toIso: '2026-01-31', invoicePath: '' },
+      mockFs({}),
+      noDialog
+    )
+    expect(res.ok).toBe(false)
+    expect(unwrapErr(res)).toMatch(/Rechnungspfad/)
+  })
+
+  it('rejects non-pdf extension on invoicePath', async () => {
+    const res = await mergeExportHandler(
+      mockDb(),
+      { ...validReq, invoicePath: 'C:/invoices/rechnung.docx' },
+      mockFs({ 'C:/invoices/rechnung.docx': pdf1 }),
+      noDialog
+    )
+    expect(res.ok).toBe(false)
+    expect(unwrapErr(res)).toMatch(/keine PDF/)
+  })
+
+  it('rejects when invoice file not found', async () => {
+    const res = await mergeExportHandler(mockDb(), validReq, mockFs({}), noDialog)
+    expect(res.ok).toBe(false)
+    expect(unwrapErr(res)).toMatch(/nicht gefunden/)
+  })
+})
+
+describe('mergeExportHandler — file error paths', () => {
+  it('rejects invoice over 50 MB', async () => {
+    const bigFs: FsDeps = {
+      existsSync: () => true,
+      statSync: () => ({ size: 51 * 1024 * 1024 }),
+      readFileSync: () => pdf1,
+      writeFileSync: () => {}
+    }
+    const res = await mergeExportHandler(mockDb(), validReq, bigFs, noDialog)
+    expect(res.ok).toBe(false)
+    expect(unwrapErr(res)).toMatch(/zu groß/)
+  })
+
+  it('returns error for EBUSY locked invoice', async () => {
+    const res = await mergeExportHandler(
+      mockDb(),
+      validReq,
+      mockFs({ 'C:/invoices/rechnung.pdf': 'EBUSY' }),
+      noDialog
+    )
+    expect(res.ok).toBe(false)
+    expect(unwrapErr(res)).toMatch(/gesperrt/)
+  })
+
+  it('returns error for EPERM locked invoice', async () => {
+    const res = await mergeExportHandler(
+      mockDb(),
+      validReq,
+      mockFs({ 'C:/invoices/rechnung.pdf': 'EPERM' }),
+      noDialog
+    )
+    expect(res.ok).toBe(false)
+    expect(unwrapErr(res)).toMatch(/gesperrt/)
+  })
+})
+
+describe('mergeExportHandler — successful merge', () => {
+  it('writes merged PDF next to invoice and returns path', async () => {
+    let written: { path: string; data: Buffer } | null = null
+    const merged = await makeMinimalPdf(3)
+    const fsDeps: FsDeps = {
+      existsSync: (p) => p === resolve('C:/invoices/rechnung.pdf'),
+      statSync: () => ({ size: pdf2.length }),
+      readFileSync: (p) => {
+        if (p === resolve('C:/invoices/rechnung.pdf')) return pdf2
+        throw Object.assign(new Error('ENOENT'), { code: 'ENOENT' })
+      },
+      writeFileSync: (p, d) => {
+        written = { path: p, data: d }
+      }
+    }
+    const res = await mergeExportHandler(mockDb(), validReq, fsDeps, noDialog, mockPdfDeps(pdf1, merged))
+    expect(res.ok).toBe(true)
+    expect(unwrapData(res).path).toMatch(/rechnung_inkl_Stundennachweis\.pdf$/)
+    expect(written).not.toBeNull()
+    expect(written!.data).toEqual(merged)
+  })
+
+  it('appends timestamp suffix when output file already exists', async () => {
+    const merged = await makeMinimalPdf(2)
+    const existingOutput = resolve('C:/invoices/rechnung_inkl_Stundennachweis.pdf')
+    const writtenPaths: string[] = []
+    const fsDeps: FsDeps = {
+      existsSync: (p) =>
+        p === resolve('C:/invoices/rechnung.pdf') || p === existingOutput,
+      statSync: () => ({ size: pdf1.length }),
+      readFileSync: () => pdf1,
+      writeFileSync: (p) => { writtenPaths.push(p) }
+    }
+    const res = await mergeExportHandler(mockDb(), validReq, fsDeps, noDialog, mockPdfDeps(pdf1, merged))
+    expect(res.ok).toBe(true)
+    // Should NOT overwrite the existing output — timestamp suffix appended.
+    expect(writtenPaths[0]).not.toBe(existingOutput)
+    expect(writtenPaths[0]).toMatch(/rechnung_inkl_Stundennachweis_\d{4}-\d{2}-\d{2}/)
+  })
+
+  it('falls back to save dialog on EPERM write error', async () => {
+    const merged = await makeMinimalPdf(1)
+    const fallbackPath = resolve('C:/Desktop/merged.pdf')
+    let fallbackWritten: Buffer | null = null
+    let firstWrite = true
+    const fsDeps: FsDeps = {
+      existsSync: (p) => p === resolve('C:/invoices/rechnung.pdf'),
+      statSync: () => ({ size: pdf1.length }),
+      readFileSync: () => pdf1,
+      writeFileSync: (_p, d) => {
+        if (firstWrite) {
+          firstWrite = false
+          throw Object.assign(new Error('EPERM'), { code: 'EPERM' })
+        }
+        fallbackWritten = d
+      }
+    }
+    const dialogDeps: DialogDeps = {
+      showSaveDialog: async () => ({ canceled: false, filePath: fallbackPath } as any)
+    }
+    const res = await mergeExportHandler(mockDb(), validReq, fsDeps, dialogDeps, mockPdfDeps(pdf1, merged))
+    expect(res.ok).toBe(true)
+    expect(unwrapData(res).path).toBe(fallbackPath)
+  })
+
+  it('returns error when dialog is canceled after EPERM', async () => {
+    const merged = await makeMinimalPdf(1)
+    const fsDeps: FsDeps = {
+      existsSync: (p) => p === resolve('C:/invoices/rechnung.pdf'),
+      statSync: () => ({ size: pdf1.length }),
+      readFileSync: () => pdf1,
+      writeFileSync: () => {
+        throw Object.assign(new Error('EPERM'), { code: 'EPERM' })
+      }
+    }
+    const res = await mergeExportHandler(mockDb(), validReq, fsDeps, noDialog, mockPdfDeps(pdf1, merged))
+    expect(res.ok).toBe(false)
+    expect(unwrapErr(res)).toMatch(/abgebrochen/)
   })
 })
