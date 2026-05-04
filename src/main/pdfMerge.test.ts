@@ -1,6 +1,14 @@
-import { PDFDocument } from 'pdf-lib'
+import {
+  PDFArray,
+  PDFDict,
+  PDFDocument,
+  PDFHexString,
+  PDFName,
+  PDFRawStream,
+  PDFRef
+} from 'pdf-lib'
 import { describe, expect, it } from 'vitest'
-import { mergePdfs } from './pdfMerge'
+import { EmbeddedFileEntry, extractEmbeddedFiles, mergePdfs, reembedFiles } from './pdfMerge'
 
 async function makePdf(pageCount: number): Promise<Buffer> {
   const doc = await PDFDocument.create()
@@ -11,6 +19,80 @@ async function makePdf(pageCount: number): Promise<Buffer> {
 async function pageCount(buf: Buffer): Promise<number> {
   return (await PDFDocument.load(buf)).getPageCount()
 }
+
+/** Build a PDF with a single embedded XML attachment (flat /Names structure). */
+async function makePdfWithAttachment(
+  xmlContent: string,
+  fileName = 'factur-x.xml'
+): Promise<Buffer> {
+  const doc = await PDFDocument.create()
+  doc.addPage()
+  const ctx = doc.context
+
+  const xmlBytes = Buffer.from(xmlContent, 'utf8')
+  const stream = ctx.flateStream(xmlBytes)
+  const streamRef = ctx.register(stream)
+
+  const efDict = ctx.obj({ F: streamRef, UF: streamRef }) as PDFDict
+  const fileSpecDict = ctx.obj({
+    Type: PDFName.of('Filespec'),
+    F: PDFHexString.fromText(fileName),
+    UF: PDFHexString.fromText(fileName),
+    EF: efDict,
+    AFRelationship: PDFName.of('Data')
+  }) as PDFDict
+  const fileSpecRef = ctx.register(fileSpecDict)
+
+  const hexName = PDFHexString.fromText(fileName)
+  const embeddedFilesDict = ctx.obj({ Names: ctx.obj([hexName, fileSpecRef]) }) as PDFDict
+  const namesDict = ctx.obj({ EmbeddedFiles: embeddedFilesDict }) as PDFDict
+  doc.catalog.set(PDFName.of('Names'), namesDict)
+  doc.catalog.set(PDFName.of('AF'), ctx.obj([fileSpecRef]))
+
+  return Buffer.from(await doc.save())
+}
+
+/** Build a PDF with a B-tree /EmbeddedFiles structure (two leaf nodes under /Kids). */
+async function makePdfWithBTreeAttachment(
+  entries: Array<{ name: string; content: string }>
+): Promise<Buffer> {
+  const doc = await PDFDocument.create()
+  doc.addPage()
+  const ctx = doc.context
+
+  // Build two leaf nodes, each with one entry, to force a /Kids structure
+  const leafRefs: PDFRef[] = []
+  for (const { name, content } of entries) {
+    const xmlBytes = Buffer.from(content, 'utf8')
+    const stream = ctx.flateStream(xmlBytes)
+    const streamRef = ctx.register(stream)
+    const efDict = ctx.obj({ F: streamRef }) as PDFDict
+    const fileSpec = ctx.obj({
+      F: PDFHexString.fromText(name),
+      EF: efDict,
+      AFRelationship: PDFName.of('Data')
+    }) as PDFDict
+    const fileSpecRef = ctx.register(fileSpec)
+    const hexName = PDFHexString.fromText(name)
+    const leaf = ctx.obj({
+      Limits: ctx.obj([hexName, hexName]),
+      Names: ctx.obj([hexName, fileSpecRef])
+    }) as PDFDict
+    leafRefs.push(ctx.register(leaf))
+  }
+
+  const allNames = entries.map((e) => PDFHexString.fromText(e.name))
+  const rootNode = ctx.obj({
+    Limits: ctx.obj([allNames[0], allNames[allNames.length - 1]]),
+    Kids: ctx.obj(leafRefs)
+  }) as PDFDict
+  const namesDict = ctx.obj({ EmbeddedFiles: rootNode }) as PDFDict
+  doc.catalog.set(PDFName.of('Names'), namesDict)
+
+  return Buffer.from(await doc.save())
+}
+
+// ---------------------------------------------------------------------------
 
 describe('mergePdfs', () => {
   it('produces a PDF whose page count equals the sum of both inputs', async () => {
@@ -55,5 +137,122 @@ describe('mergePdfs', () => {
     const sn = await makePdf(1)
     const inv = await makePdf(1)
     expect(await pageCount(await mergePdfs(sn, inv))).toBe(2)
+  })
+
+  it('preserves EmbeddedFiles from the invoice in the merged PDF', async () => {
+    const xmlContent = '<factur-x><invoice>42</invoice></factur-x>'
+    const sn = await makePdf(1)
+    const inv = await makePdfWithAttachment(xmlContent)
+    const merged = await mergePdfs(sn, inv)
+
+    const mergedDoc = await PDFDocument.load(merged)
+    const entries = extractEmbeddedFiles(mergedDoc)
+    expect(entries).toHaveLength(1)
+    expect(entries[0].name.decodeText()).toBe('factur-x.xml')
+  })
+
+  it('gracefully merges a plain PDF invoice without attachments', async () => {
+    const sn = await makePdf(2)
+    const inv = await makePdf(3)
+    const merged = await mergePdfs(sn, inv)
+    expect(await pageCount(merged)).toBe(5)
+    const mergedDoc = await PDFDocument.load(merged)
+    expect(extractEmbeddedFiles(mergedDoc)).toHaveLength(0)
+  })
+
+  it('preserves the XML attachment filename in the merged PDF', async () => {
+    const sn = await makePdf(1)
+    const inv = await makePdfWithAttachment('<x/>', 'ZUGFeRD-invoice.xml')
+    const merged = await mergePdfs(sn, inv)
+    const mergedDoc = await PDFDocument.load(merged)
+    const entries = extractEmbeddedFiles(mergedDoc)
+    expect(entries[0].name.decodeText()).toBe('ZUGFeRD-invoice.xml')
+  })
+})
+
+// ---------------------------------------------------------------------------
+
+describe('extractEmbeddedFiles', () => {
+  it('returns entries from a PDF with a flat /EmbeddedFiles name tree', async () => {
+    const buf = await makePdfWithAttachment('<invoice/>', 'factur-x.xml')
+    const doc = await PDFDocument.load(buf)
+    const entries = extractEmbeddedFiles(doc)
+    expect(entries).toHaveLength(1)
+    expect(entries[0].name.decodeText()).toBe('factur-x.xml')
+    expect(entries[0].afRelationship).toEqual(PDFName.of('Data'))
+    expect(entries[0].streamContents).toBeInstanceOf(Uint8Array)
+  })
+
+  it('returns empty array for a PDF with no attachments', async () => {
+    const doc = await PDFDocument.create()
+    doc.addPage()
+    expect(extractEmbeddedFiles(doc)).toHaveLength(0)
+  })
+
+  it('returns entries from a PDF with a B-tree /EmbeddedFiles structure', async () => {
+    const buf = await makePdfWithBTreeAttachment([
+      { name: 'a.xml', content: '<a/>' },
+      { name: 'b.xml', content: '<b/>' }
+    ])
+    const doc = await PDFDocument.load(buf)
+    const entries = extractEmbeddedFiles(doc)
+    expect(entries).toHaveLength(2)
+    const names = entries.map((e) => e.name.decodeText()).sort()
+    expect(names).toEqual(['a.xml', 'b.xml'])
+  })
+})
+
+// ---------------------------------------------------------------------------
+
+describe('reembedFiles', () => {
+  it('sets /Names/EmbeddedFiles and /AF in the target catalog', async () => {
+    const sourceDoc = await PDFDocument.load(await makePdfWithAttachment('<x/>', 'test.xml'))
+    const entries = extractEmbeddedFiles(sourceDoc)
+    expect(entries).toHaveLength(1)
+
+    const target = await PDFDocument.create()
+    target.addPage()
+    reembedFiles(target, entries)
+
+    // Verify /Names/EmbeddedFiles structure
+    const ctx = target.context
+    const namesDict = target.catalog.lookup(PDFName.of('Names'), PDFDict)
+    expect(namesDict).toBeDefined()
+    const embeddedFilesDict = namesDict!.lookup(PDFName.of('EmbeddedFiles'), PDFDict)
+    expect(embeddedFilesDict).toBeDefined()
+    const namesArray = embeddedFilesDict!.lookup(PDFName.of('Names'), PDFArray)
+    expect(namesArray).toBeDefined()
+    expect(namesArray!.size()).toBe(2) // [name, fileSpecRef]
+
+    // Verify /AF array
+    const afVal = target.catalog.get(PDFName.of('AF'))
+    expect(afVal).toBeDefined()
+  })
+
+  it('round-trips XML content through extract + reembed', async () => {
+    const xmlContent = '<factur-x><total>99.00</total></factur-x>'
+    const sourceDoc = await PDFDocument.load(
+      await makePdfWithAttachment(xmlContent, 'factur-x.xml')
+    )
+    const entries = extractEmbeddedFiles(sourceDoc)
+
+    const target = await PDFDocument.create()
+    target.addPage()
+    reembedFiles(target, entries)
+
+    // Reload and extract to verify round-trip
+    const reloaded = await PDFDocument.load(Buffer.from(await target.save()))
+    const extracted = extractEmbeddedFiles(reloaded)
+    expect(extracted).toHaveLength(1)
+    expect(extracted[0].name.decodeText()).toBe('factur-x.xml')
+    expect(extracted[0].streamContents).toEqual(entries[0].streamContents)
+  })
+
+  it('is a no-op when entries array is empty', async () => {
+    const target = await PDFDocument.create()
+    target.addPage()
+    reembedFiles(target, [])
+    // catalog.get returns undefined (no throw) when key is absent
+    expect(target.catalog.get(PDFName.of('Names'))).toBeUndefined()
   })
 })
