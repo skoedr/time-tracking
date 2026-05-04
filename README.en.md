@@ -115,7 +115,7 @@ src/
     logo.ts      # Logo file -> base64 data URL for PDF embedding
     updater.ts   # electron-updater bridge + IPC handlers (auto-update)
     csvExport.ts # CSV export builder
-    migrations/  # Versioned schema migrations + runner (001..012)
+    migrations/  # Versioned schema migrations + runner (001..013)
   preload/
     index.ts     # Context Bridge (window.api)
     index.d.ts   # TypeScript types for renderer

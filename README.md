@@ -116,7 +116,7 @@ src/
     logo.ts      # Logo file -> base64 data URL for PDF embedding
     updater.ts   # electron-updater bridge + IPC handlers (auto-update)
     csvExport.ts # CSV export builder
-    migrations/  # Versioned schema migrations + runner (001..012)
+    migrations/  # Versioned schema migrations + runner (001..013)
   preload/
     index.ts     # Context Bridge (window.api)
     index.d.ts   # TypeScript types for renderer
@@ -147,7 +147,7 @@ templates/
 
 ## Data Storage
 
-The SQLite database lives at `%AppData%\TimeTrack\timetrack.db`. Schema (as of v1.9.0, schema_version 9):
+The SQLite database lives at `%AppData%\TimeTrack\timetrack.db`. Schema (as of v1.11.1, schema_version 13):
 
 - `clients` — name, color, active flag, `rate_cent` (optional Stundensatz)
 - `projects` — client_id (FK), name, color, active flag, `rate_cent` (optional Stundensatz-Override)
