@@ -20,6 +20,8 @@ import { useTimer } from '../hooks/useTimer'
 import { CalendarDrawer } from '../components/CalendarDrawer'
 import { ExportModal } from '../components/ExportModal'
 import { PdfMergeModal } from '../components/PdfMergeModal'
+import { useRounding } from '../contexts/RoundingContext'
+import { roundDuration } from '../../../shared/duration'
 
 /**
  * Month-grid calendar view. 7×N rows, KW column on the left.
@@ -34,6 +36,7 @@ import { PdfMergeModal } from '../components/PdfMergeModal'
 export default function CalendarView(): React.JSX.Element {
   const t = useT()
   const { clients } = useTimer()
+  const { roundMinutes } = useRounding()
   const version = useEntriesStore((s) => s.version)
   const projectsVersion = useProjectsStore((s) => s.version)
 
@@ -256,6 +259,7 @@ export default function CalendarView(): React.JSX.Element {
             projects={projects}
             focusDay={focusDay}
             months={months}
+            roundMinutes={roundMinutes}
             onSelect={(d) => {
               setFocusDay(d)
               setSelectedDay(d)
@@ -298,6 +302,7 @@ function Week({
   projects,
   focusDay,
   months,
+  roundMinutes,
   onSelect
 }: {
   week: WeekData
@@ -307,6 +312,7 @@ function Week({
   projects: Project[]
   focusDay: Date
   months: readonly string[]
+  roundMinutes: number
   onSelect: (d: Date) => void
 }): React.JSX.Element {
   return (
@@ -324,6 +330,7 @@ function Week({
         const isToday = isSameDay(day, new Date())
         const isFocus = isSameDay(day, focusDay)
         const totalSeconds = dayEntries.reduce((sum, e) => sum + entryDurationSeconds(e), 0)
+        const displaySeconds = roundDuration(totalSeconds, roundMinutes)
         return (
           <button
             key={key}
@@ -353,12 +360,14 @@ function Week({
                 {day.getDate()}
               </span>
               {dayEntries.length > 0 && (
-                <span className="text-[10px] tabular-nums" style={{ color: 'var(--text2)', fontFamily: "'JetBrains Mono', monospace" }}>
-                  {formatHHMM(totalSeconds)}
+                <span className="text-[10px] tabular-nums" style={{ color: 'var(--text2)', fontFamily: "'JetBrains Mono', monospace" }}
+                  title={displaySeconds !== totalSeconds ? formatHHMM(totalSeconds) : undefined}
+                >
+                  {formatHHMM(displaySeconds)}
                 </span>
               )}
             </div>
-            <DayBars entries={dayEntries} clients={clients} projects={projects} />
+            <DayBars entries={dayEntries} clients={clients} projects={projects} roundMinutes={roundMinutes} />
           </button>
         )
       })}
@@ -376,11 +385,13 @@ const DEFAULT_BAR_COLOR = '#6366f1'
 function DayBars({
   entries,
   clients,
-  projects
+  projects,
+  roundMinutes
 }: {
   entries: Entry[]
   clients: Client[]
   projects: Project[]
+  roundMinutes: number
 }): React.JSX.Element | null {
   if (entries.length === 0) return null
   const visible = entries.slice(0, MAX_BARS)
@@ -394,12 +405,17 @@ function DayBars({
         const color = (projectColor || colorById.get(e.client_id)) ?? DEFAULT_BAR_COLOR
         const clientName = clients.find((c) => c.id === e.client_id)?.name ?? 'Eintrag'
         const label = e.description ? `${clientName} — ${e.description}` : clientName
+        const rawSec = entryDurationSeconds(e)
+        const dispSec = roundDuration(rawSec, roundMinutes)
+        const tooltip = rawSec !== dispSec
+          ? `${label} (${formatHHMM(dispSec)} · exakt: ${formatHHMM(rawSec)})`
+          : `${label} (${formatHHMM(rawSec)})`
         return (
           <div
             key={e.id}
             className="h-[3px] rounded-sm"
             style={{ backgroundColor: color }}
-            title={`${label} (${formatHHMM(entryDurationSeconds(e))})`}
+            title={tooltip}
           />
         )
       })}

@@ -4,6 +4,8 @@ import type { AnalyticsSummary } from '../../../shared/types'
 import { TrendChart } from '../components/TrendChart'
 import { ClientBars } from '../components/ClientBars'
 import { WeekdayBars } from '../components/WeekdayBars'
+import { useRounding } from '../contexts/RoundingContext'
+import { roundDuration } from '../../../shared/duration'
 
 // ── Helper formatters ──────────────────────────────────────────────────────
 
@@ -102,6 +104,7 @@ function StatCard({ label, value, accent, foot }: StatCardProps): React.JSX.Elem
 
 export default function AuswertungView(): React.JSX.Element {
   const t = useT()
+  const { roundMinutes } = useRounding()
 
   // Month navigation state — default to current month
   const today = new Date()
@@ -278,7 +281,7 @@ export default function AuswertungView(): React.JSX.Element {
           <div className="grid grid-cols-3 gap-3">
             <StatCard
               label={t('analytics.month.hours')}
-              value={fmtHours(data.month.hours)}
+              value={fmtHours(roundDuration(data.month.hours, roundMinutes))}
               foot={
                 <DeltaPill
                   value={deltaRatio(data.month.hours, data.month.hoursPrev)}
