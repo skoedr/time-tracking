@@ -450,18 +450,16 @@ describe('mergeExportHandler — successful merge', () => {
   it('falls back to save dialog on EPERM write error', async () => {
     const merged = await makeMinimalPdf(1)
     const fallbackPath = resolve('C:/Desktop/merged.pdf')
-    let fallbackWritten: Buffer | null = null
     let firstWrite = true
     const fsDeps: FsDeps = {
       existsSync: (p) => p === resolve('C:/invoices/rechnung.pdf'),
       statSync: () => ({ size: pdf1.length }),
       readFileSync: () => pdf1,
-      writeFileSync: (_p, d) => {
+      writeFileSync: (_p, _d) => {
         if (firstWrite) {
           firstWrite = false
           throw Object.assign(new Error('EPERM'), { code: 'EPERM' })
         }
-        fallbackWritten = d
       }
     }
     const dialogDeps: DialogDeps = {
