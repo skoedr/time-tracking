@@ -8,7 +8,7 @@ import {
   PDFRef
 } from 'pdf-lib'
 import { describe, expect, it } from 'vitest'
-import { EmbeddedFileEntry, extractEmbeddedFiles, mergePdfs, reembedFiles } from './pdfMerge'
+import { EmbeddedFileEntry, copyXmpMetadata, extractEmbeddedFiles, mergePdfs, reembedFiles } from './pdfMerge'
 
 async function makePdf(pageCount: number): Promise<Buffer> {
   const doc = await PDFDocument.create()
@@ -89,6 +89,18 @@ async function makePdfWithBTreeAttachment(
   const namesDict = ctx.obj({ EmbeddedFiles: rootNode }) as PDFDict
   doc.catalog.set(PDFName.of('Names'), namesDict)
 
+  return Buffer.from(await doc.save())
+}
+
+/** Build a PDF with an XMP /Metadata stream containing a given XML string. */
+async function makePdfWithXmp(xmpContent: string): Promise<Buffer> {
+  const doc = await PDFDocument.create()
+  doc.addPage()
+  const ctx = doc.context
+  const xmpBytes = Buffer.from(xmpContent, 'utf8')
+  const stream = ctx.flateStream(xmpBytes)
+  const streamRef = ctx.register(stream)
+  doc.catalog.set(PDFName.of('Metadata'), streamRef)
   return Buffer.from(await doc.save())
 }
 
@@ -254,5 +266,48 @@ describe('reembedFiles', () => {
     reembedFiles(target, [])
     // catalog.get returns undefined (no throw) when key is absent
     expect(target.catalog.get(PDFName.of('Names'))).toBeUndefined()
+  })
+})
+
+// ---------------------------------------------------------------------------
+
+describe('copyXmpMetadata', () => {
+  it('copies /Metadata stream from source to target', async () => {
+    const xmp = '<x:xmpmeta xmlns:x="adobe:ns:meta/"><fx:ConformanceLevel>EN 16931</fx:ConformanceLevel></x:xmpmeta>'
+    const source = await PDFDocument.load(await makePdfWithXmp(xmp))
+    const target = await PDFDocument.create()
+    target.addPage()
+
+    copyXmpMetadata(source, target)
+
+    expect(target.catalog.get(PDFName.of('Metadata'))).toBeDefined()
+  })
+
+  it('is a no-op when source has no /Metadata', async () => {
+    const source = await PDFDocument.create()
+    source.addPage()
+    const target = await PDFDocument.create()
+    target.addPage()
+
+    copyXmpMetadata(source, target)
+
+    expect(target.catalog.get(PDFName.of('Metadata'))).toBeUndefined()
+  })
+
+  it('mergePdfs copies /Metadata from invoice to merged PDF', async () => {
+    const xmp = '<x:xmpmeta xmlns:x="adobe:ns:meta/"><fx:ConformanceLevel>EN 16931</fx:ConformanceLevel></x:xmpmeta>'
+    const sn = await makePdf(1)
+    // Build invoice with both XMP and an attachment
+    const invDoc = await PDFDocument.create()
+    invDoc.addPage()
+    const ctx = invDoc.context
+    const xmpBytes = Buffer.from(xmp, 'utf8')
+    const xmpStream = ctx.flateStream(xmpBytes)
+    invDoc.catalog.set(PDFName.of('Metadata'), ctx.register(xmpStream))
+    const inv = Buffer.from(await invDoc.save())
+
+    const merged = await mergePdfs(sn, inv)
+    const mergedDoc = await PDFDocument.load(merged)
+    expect(mergedDoc.catalog.get(PDFName.of('Metadata'))).toBeDefined()
   })
 })

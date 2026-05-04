@@ -210,11 +210,35 @@ export function reembedFiles(target: PDFDocument, entries: EmbeddedFileEntry[]):
 }
 
 /**
+ * Copy the /Metadata (XMP) stream from the source PDF into the target.
+ * Required for factur-X conformance: Mustang and other validators use the XMP
+ * stream to detect e-invoice PDFs before checking /EmbeddedFiles.
+ * No-op when source has no /Metadata stream.
+ */
+export function copyXmpMetadata(source: PDFDocument, target: PDFDocument): void {
+  const metaVal = source.catalog.get(PDFName.of('Metadata'))
+  if (!metaVal) return
+
+  const sourceCtx = source.context
+  let stream: PDFRawStream | undefined
+  if (metaVal instanceof PDFRef) {
+    stream = sourceCtx.lookup(metaVal, PDFRawStream)
+  } else if (metaVal instanceof PDFRawStream) {
+    stream = metaVal
+  }
+  if (!stream) return
+
+  const newStream = new PDFRawStream(stream.dict, stream.contents)
+  const newRef = target.context.register(newStream)
+  target.catalog.set(PDFName.of('Metadata'), newRef)
+}
+
+/**
  * Merge two PDF buffers. Stundennachweis is appended to (or prepended before)
  * the invoice. Returns a new buffer — both inputs are unchanged.
  *
- * Embedded file attachments (factur-X / ZUGFeRD XML) from the invoice are
- * preserved in the merged document.
+ * Embedded file attachments (factur-X / ZUGFeRD XML) and XMP metadata from
+ * the invoice are preserved in the merged document.
  *
  * Throws if either buffer is not a valid, unencrypted PDF.
  *
@@ -245,6 +269,7 @@ export async function mergePdfs(
   secondPages.forEach((p) => merged.addPage(p))
 
   reembedFiles(merged, embeddedFiles)
+  copyXmpMetadata(invDoc, merged)
 
   return Buffer.from(await merged.save())
 }
