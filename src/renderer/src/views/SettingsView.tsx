@@ -6,6 +6,7 @@ import type { Locale } from '../../../shared/i18n'
 import { AboutDialog } from '../components/AboutDialog'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { useTheme, type ThemeMode } from '../contexts/ThemeContext'
+import { useRounding } from '../contexts/RoundingContext'
 import { Toggle } from '../components/Toggle'
 import { useUiPrefsStore } from '../store/uiPrefsStore'
 
@@ -44,6 +45,7 @@ export default function SettingsView(): React.JSX.Element {
   const t = useT()
   const { locale, setLocale } = useLocale()
   const { themeMode, setThemeMode } = useTheme()
+  const { setRoundMinutes } = useRounding()
   const [settings, setSettings] = useState<Settings | null>(null)
   const [paths, setPaths] = useState<{
     db: string
@@ -534,7 +536,10 @@ export default function SettingsView(): React.JSX.Element {
                   { value: '30', label: '30 min' }
                 ]}
                 value={settings.pdf_round_minutes || '0'}
-                onChange={(v) => update('pdf_round_minutes', v)}
+                onChange={(v) => {
+                  void update('pdf_round_minutes', v)
+                  void setRoundMinutes(parseInt(v, 10) || 0)
+                }}
               />
             </Row>
           </Section>

@@ -11,6 +11,8 @@ import { EntryEditForm } from '../components/EntryEditForm'
 import * as Icons from '../components/Icons'
 import type { TFunction } from '../contexts/I18nContext'
 import { useT } from '../contexts/I18nContext'
+import { useRounding } from '../contexts/RoundingContext'
+import { roundDuration } from '../../../shared/duration'
 
 /**
  * `Heute` view — the new default tab in v1.2 (D1).
@@ -28,6 +30,7 @@ import { useT } from '../contexts/I18nContext'
  */
 export default function TodayView(): React.JSX.Element {
   const t = useT()
+  const { roundMinutes } = useRounding()
   const { runningEntry, clients, startWithClient, stop } = useTimer()
   const version = useEntriesStore((s) => s.version)
   const projectsVersion = useProjectsStore((s) => s.version)
@@ -117,8 +120,8 @@ export default function TodayView(): React.JSX.Element {
       {status === 'ready' && summary && (
         <>
           <div className="grid grid-cols-2 gap-4">
-            <StatCard label={t('today.stats.today')} seconds={summary.todaySeconds} accentColor="var(--accent)" />
-            <StatCard label={t('today.stats.week')} seconds={summary.weekSeconds} accentColor="var(--green)" />
+            <StatCard label={t('today.stats.today')} seconds={roundDuration(summary.todaySeconds, roundMinutes)} rawSeconds={summary.todaySeconds} accentColor="var(--accent)" />
+            <StatCard label={t('today.stats.week')} seconds={roundDuration(summary.weekSeconds, roundMinutes)} rawSeconds={summary.weekSeconds} accentColor="var(--green)" />
           </div>
 
           <QuickStartRow
@@ -133,6 +136,7 @@ export default function TodayView(): React.JSX.Element {
             entries={summary.recentEntries}
             clientsById={clientsById}
             projectsById={projectsById}
+            roundMinutes={roundMinutes}
             onEdit={(e) => setEditEntry(e)}
             onDelete={(e) => setDeleteCandidate(e)}
           />
@@ -279,10 +283,12 @@ function ActiveTimerPill({
 function StatCard({
   label,
   seconds,
+  rawSeconds,
   accentColor
 }: {
   label: string
   seconds: number
+  rawSeconds?: number
   accentColor: string
 }): React.JSX.Element {
   return (
@@ -294,6 +300,7 @@ function StatCard({
       <p
         className="mt-2 tabular-nums"
         style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 40, fontWeight: 700, lineHeight: 1, letterSpacing: 2, color: accentColor }}
+        title={rawSeconds !== undefined && rawSeconds !== seconds ? formatHHMM(rawSeconds) : undefined}
       >
         {formatHHMM(seconds)}
       </p>
@@ -667,12 +674,14 @@ function RecentList({
   entries,
   clientsById,
   projectsById,
+  roundMinutes,
   onEdit,
   onDelete
 }: {
   entries: Entry[]
   clientsById: Map<number, Client>
   projectsById: Map<number, Project>
+  roundMinutes: number
   onEdit: (e: Entry) => void
   onDelete: (e: Entry) => void
 }): React.JSX.Element {
@@ -734,8 +743,10 @@ function RecentList({
             <span className="truncate pr-2" style={{ color: 'var(--text2)' }} title={e.description}>
               {e.description || <span style={{ color: 'var(--text3)' }}>—</span>}
             </span>
-            <span className="text-right text-xs tabular-nums" style={{ color: 'var(--text2)', fontFamily: "'JetBrains Mono', monospace" }}>
-              {formatHHMM(durationSeconds(e))}
+            <span className="text-right text-xs tabular-nums" style={{ color: 'var(--text2)', fontFamily: "'JetBrains Mono', monospace" }}
+              title={(() => { const raw = durationSeconds(e); const disp = roundDuration(raw, roundMinutes); return disp !== raw ? formatHHMM(raw) : undefined })()}
+            >
+              {formatHHMM(roundDuration(durationSeconds(e), roundMinutes))}
             </span>
             <span className="flex justify-end gap-1">
               <button

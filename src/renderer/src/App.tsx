@@ -12,6 +12,7 @@ import { UpdateBanner } from './components/UpdateBanner'
 import { OnboardingWizard } from './components/OnboardingWizard'
 import { useTimer } from './hooks/useTimer'
 import { useT } from './contexts/I18nContext'
+import { useSettings } from './contexts/SettingsContext'
 import { useProjectsStore } from './store/projectsStore'
 import { useUiPrefsStore } from './store/uiPrefsStore'
 
@@ -19,6 +20,7 @@ type View = 'today' | 'calendar' | 'clients' | 'analytics' | 'settings'
 
 function App(): React.JSX.Element {
   const t = useT()
+  const { settings } = useSettings()
   const [view, setView] = useState<View>('today')
   const [showOnboarding, setShowOnboarding] = useState(false)
   const [showTimerModal, setShowTimerModal] = useState(false)
@@ -40,15 +42,11 @@ function App(): React.JSX.Element {
     })
   }, [runningEntry?.project_id, projectsVersion])
 
-  // Check onboarding flag on mount — show wizard only for fresh installs.
+  // Check onboarding flag — show wizard only for fresh installs.
   useEffect(() => {
-    void window.api.settings.getAll().then((res) => {
-      if (res.ok && res.data.onboarding_completed === '0') {
-        setShowOnboarding(true)
-      }
-    })
+    if (settings?.onboarding_completed === '0') setShowOnboarding(true)
     void useUiPrefsStore.getState().load()
-  }, [])
+  }, [settings?.onboarding_completed])
 
   async function finishOnboarding(): Promise<void> {
     setShowOnboarding(false)

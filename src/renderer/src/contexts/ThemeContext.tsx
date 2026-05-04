@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react'
+import { useSettings } from './SettingsContext'
 
 export type ThemeMode = 'light' | 'dark' | 'system'
 
@@ -13,14 +14,13 @@ const ThemeContext = createContext<ThemeContextValue>({
 })
 
 export function ThemeProvider({ children }: { children: React.ReactNode }): React.JSX.Element {
+  const { settings } = useSettings()
   const [mode, setMode] = useState<ThemeMode>('system')
 
-  // Load persisted mode from DB on mount.
+  // Sync theme mode once settings are loaded.
   useEffect(() => {
-    void window.api.settings.getAll().then((res) => {
-      if (res.ok) setMode((res.data.theme_mode as ThemeMode) ?? 'system')
-    })
-  }, [])
+    if (settings?.theme_mode) setMode((settings.theme_mode as ThemeMode) ?? 'system')
+  }, [settings?.theme_mode])
 
   // Apply .dark class and listen for OS preference changes when mode = 'system'.
   useEffect(() => {
