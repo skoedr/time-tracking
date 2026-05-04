@@ -702,6 +702,9 @@ function ProjectItem({
             </span>
           )}
         </span>
+        {p.contact_person && (
+          <span className="block text-xs mt-0.5" style={{ color: 'var(--text3)' }}>{p.contact_person}</span>
+        )}
         {statsLabel && (
           <span className="block text-xs mt-0.5" style={{ color: 'var(--text3)' }}>{statsLabel}</span>
         )}
