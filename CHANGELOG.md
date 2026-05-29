@@ -2,6 +2,12 @@
 
 All notable changes to TimeTrack are documented here.
 
+## [1.13.1] — 2026-05-29
+
+### Fixed
+
+- **Mini-Widget startete nicht mehr** — Beim Öffnen des Mini-Widgets crashte der Renderer mit `useSettings must be used within a SettingsProvider`. Ursache: Seit v1.12 (#106) liest der `I18nProvider` die Sprache aus dem zentralen `SettingsProvider`, der Einstiegspunkt des Mini-Widgets (`mini.tsx`) hatte den `SettingsProvider` aber nie nachgezogen. Mini-Widget ist jetzt wieder benutzbar.
+
 ## [1.13.0] — 2026-05-29
 
 ### Added
