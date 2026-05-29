@@ -350,6 +350,35 @@ Adressblock. In zwei Minuten räumst du fünf veraltete Tags auf.
 
 ---
 
+## v1.13 — Export-Flexibilität ✅ ausgeliefert v1.13.0 (2026-05-29)
+
+📂 [Issues](https://github.com/skoedr/time-tracking/issues?q=is%3Aissue+milestone%3Av1.13)
+
+**Thema:** Vier Reibungspunkte, die beim Rechnungsstellen mit mehreren Kunden
+oder Projekten auftauchen — Export-Optionen, Multi-Stundennachweis-Merge,
+Honorar-Konsistenz und Tag-Hygiene.
+
+- ✅ **PDF-Export-Optionen** (#118) — Gruppierung wählbar (keine / Tag / Projekt
+  / Referenz), Honorarspalte ausblendbar, Projektname pro Zeile bei
+  kundenweiter Auswertung. Letzte Einstellungen werden gemerkt.
+- ✅ **PDF-Merge mit mehreren Stundennachweisen** (#119) — Beliebig viele
+  SN-PDFs in einem Rutsch mit einer Rechnung zusammenführen (z. B. mehrere
+  Projekte eines Kunden). Per-Slot-Seitenzahl, Reihenfolge im Ergebnis:
+  Rechnung → SN #1 → SN #2 → … Embedded Files / XMP / OutputIntents der
+  Rechnung bleiben erhalten (factur-X / ZUGFeRD valide).
+- ✅ **PDF-Export: billable + Projekt-Stundensatz** (#120) — Nicht-abrechenbare
+  Einträge erzeugen kein Honorar mehr; projektspezifischer Stundensatz wird
+  überall konsistent angewendet (Projekt → Kunde → global).
+- ✅ **Tag-Whitespace** (#121) — Tags werden vor dem Speichern getrimmt,
+  Duplikat-Prüfung wirkt jetzt korrekt. Migration 017 normalisiert bestehende
+  Tags retroaktiv.
+
+**Ship-Kriterium:** Du hast einen Kunden mit drei Projekten, exportierst pro
+Projekt einen Stundennachweis und führst alles in einer Rechnung zusammen — in
+einem Dialog, ohne Honorar-Inkonsistenzen, ohne doppelte Tags. ✅
+
+---
+
 ## v2.0 — Outlook-Integration  🎯 echte Story-Stufe
 
 **Thema:** Das eine Feature, das TimeTrack vom „lokalen Toggl-Klon" zum

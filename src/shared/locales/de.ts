@@ -361,6 +361,16 @@ export const de = {
   'export.pdf.groupByTag': 'Nach Tag gruppieren',
   'export.pdf.groupByTagHint':
     'Einträge mit Tags werden in separaten Abschnitten zusammengefasst.',
+  'export.pdf.groupBy': 'Gruppieren nach',
+  'export.pdf.groupByHint':
+    'Einträge werden in separaten Abschnitten mit Zwischensumme zusammengefasst.',
+  'export.pdf.groupBy.none': 'Keine Gruppierung',
+  'export.pdf.groupBy.tag': 'Tag',
+  'export.pdf.groupBy.project': 'Projekt',
+  'export.pdf.groupBy.reference': 'Referenz',
+  'export.pdf.hideFeeColumn': 'Honorar-Spalte ausblenden',
+  'export.pdf.hideFeeColumnHint':
+    'Versteckt die Honorar-Spalte und den Gesamtbetrag im Stundennachweis.',
   'export.pdf.signatures': 'Unterschriftsfelder einblenden',
   'export.pdf.signaturesHint':
     'Fügt unten zwei Linien für Auftragnehmer / Auftraggeber hinzu.',
@@ -388,6 +398,10 @@ export const de = {
   'merge.title': 'PDFs zusammenführen',
   'merge.sn.label': 'Stundennachweis-PDF',
   'merge.sn.pick': 'Datei wählen …',
+  'merge.sn.add': 'Weiteren Stundennachweis hinzufügen …',
+  'merge.sn.remove': 'Entfernen',
+  'merge.sn.slotSingle': 'Stundennachweis',
+  'merge.sn.slot': 'Stundennachweis #{n}',
   'merge.sn.change': 'Wechseln …',
   'merge.sn.noFile': 'keine Datei gewählt',
   'merge.sn.loading': 'lädt …',
@@ -398,6 +412,7 @@ export const de = {
   'merge.inv.swapOffer': 'Sieht aus wie ein Stundennachweis. Tauschen?',
   'merge.swap': 'Tauschen',
   'merge.preview': 'Rechnung ({inv}) + Stundennachweis ({sn}) = {total} Seiten',
+  'merge.preview.multi': 'Rechnung ({inv}) + {count} Stundennachweise ({sn}) = {total} Seiten',
   'merge.status.merging': 'PDFs werden zusammengeführt …',
   'merge.status.error': 'Fehler: {error}',
   'merge.status.snError': 'Stundennachweis: {error}',

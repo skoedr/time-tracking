@@ -225,6 +225,101 @@ describe('mergeOnlyHandler', () => {
   })
 })
 
+// ── mergeOnlyHandler multi-SN tests (#119) ───────────────────────────────────
+
+describe('mergeOnlyHandler — stundennachweisPaths (multi)', () => {
+  it('rejects empty stundennachweisPaths array', async () => {
+    const res = await mergeOnlyHandler(
+      { stundennachweisPaths: [], invoicePath: 'C:/inv.pdf' },
+      mockFs({ 'C:/inv.pdf': pdf1 }),
+      noDialog
+    )
+    expect(res.ok).toBe(false)
+  })
+
+  it('rejects non-pdf extension on one of the SN paths', async () => {
+    const res = await mergeOnlyHandler(
+      { stundennachweisPaths: ['C:/sn1.pdf', 'C:/sn2.txt'], invoicePath: 'C:/inv.pdf' },
+      mockFs({ 'C:/sn1.pdf': pdf1, 'C:/sn2.txt': pdf1, 'C:/inv.pdf': pdf2 }),
+      noDialog
+    )
+    expect(res.ok).toBe(false)
+    expect(unwrapErr(res)).toMatch(/keine PDF/)
+  })
+
+  it('happy path: merges invoice + multiple SNs in correct order', async () => {
+    const written: Array<{ path: string; buf: Buffer }> = []
+    const files: Record<string, Buffer> = {
+      'C:/sn1.pdf': pdf1,
+      'C:/sn2.pdf': pdf2,
+      'C:/sn3.pdf': pdf3page,
+      'C:/inv.pdf': pdf2
+    }
+    const norm: Record<string, Buffer> = {}
+    for (const [k, v] of Object.entries(files)) norm[resolve(k)] = v
+    const fs: FsDeps = {
+      existsSync: (p) => p in norm,
+      statSync: () => ({ size: 1024 }),
+      readFileSync: (p) => norm[p],
+      writeFileSync: (p, buf) => written.push({ path: p, buf })
+    }
+    const res = await mergeOnlyHandler(
+      { stundennachweisPaths: ['C:/sn1.pdf', 'C:/sn2.pdf', 'C:/sn3.pdf'], invoicePath: 'C:/inv.pdf' },
+      fs,
+      noDialog
+    )
+    expect(res.ok).toBe(true)
+    expect(written).toHaveLength(1)
+    const merged = await PDFDocument.load(written[0].buf)
+    // invoice (2) + sn1 (1) + sn2 (2) + sn3 (3) = 8
+    expect(merged.getPageCount()).toBe(8)
+  })
+
+  it('returns EBUSY error if any SN file is locked', async () => {
+    const res = await mergeOnlyHandler(
+      { stundennachweisPaths: ['C:/sn1.pdf', 'C:/sn2.pdf'], invoicePath: 'C:/inv.pdf' },
+      mockFs({ 'C:/sn1.pdf': pdf1, 'C:/sn2.pdf': 'EBUSY', 'C:/inv.pdf': pdf2 }),
+      noDialog
+    )
+    expect(res.ok).toBe(false)
+    expect(unwrapErr(res)).toMatch(/gesperrt/)
+  })
+
+  it('rejects SN file in array that is over 50 MB', async () => {
+    const fs: FsDeps = {
+      existsSync: () => true,
+      statSync: (p) => ({ size: p.includes('sn2') ? 51 * 1024 * 1024 : 1024 }),
+      readFileSync: () => pdf1,
+      writeFileSync: () => {}
+    }
+    const res = await mergeOnlyHandler(
+      { stundennachweisPaths: ['C:/sn1.pdf', 'C:/sn2.pdf'], invoicePath: 'C:/inv.pdf' },
+      fs,
+      noDialog
+    )
+    expect(res.ok).toBe(false)
+    expect(unwrapErr(res)).toMatch(/zu groß/)
+  })
+
+  it('single-element stundennachweisPaths array works (equivalent to legacy)', async () => {
+    const written: Buffer[] = []
+    const fs: FsDeps = {
+      existsSync: (p) => p === resolve('C:/sn.pdf') || p === resolve('C:/inv.pdf'),
+      statSync: () => ({ size: 1024 }),
+      readFileSync: (p) => (p === resolve('C:/sn.pdf') ? pdf1 : pdf2),
+      writeFileSync: (_p, buf) => written.push(buf)
+    }
+    const res = await mergeOnlyHandler(
+      { stundennachweisPaths: ['C:/sn.pdf'], invoicePath: 'C:/inv.pdf' },
+      fs,
+      noDialog
+    )
+    expect(res.ok).toBe(true)
+    const merged = await PDFDocument.load(written[0])
+    expect(merged.getPageCount()).toBe(3)
+  })
+})
+
 // ── pdfInfoHandler tests ──────────────────────────────────────────────────────
 
 describe('pdfInfoHandler', () => {

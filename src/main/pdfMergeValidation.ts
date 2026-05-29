@@ -42,12 +42,30 @@ export function validateMergeExportRequest(req: unknown): string | null {
 }
 
 /**
- * Validates the request shape for pdf:merge-only (merge two existing PDFs).
- * Both stundennachweisPath and invoicePath must be non-empty strings.
+ * Validates the request shape for pdf:merge-only (merge existing PDFs).
+ *
+ * Two shapes accepted (v1.13 #119):
+ *  - Legacy:  `{ stundennachweisPath: string, invoicePath: string }`
+ *  - Multi:   `{ stundennachweisPaths: string[], invoicePath: string }` with ≥1 path
+ *
+ * Both fields may also be present together; in that case `stundennachweisPaths`
+ * takes precedence (callers should send only one shape).
  */
 export function validateMergeOnlyRequest(req: unknown): string | null {
   const r = req as Record<string, unknown> | null | undefined
-  if (!r || !r.stundennachweisPath || !r.invoicePath) {
+  if (!r || !r.invoicePath) {
+    return 'Beide PDF-Pfade sind erforderlich'
+  }
+  if (Array.isArray(r.stundennachweisPaths)) {
+    if (r.stundennachweisPaths.length === 0) {
+      return 'Mindestens ein Stundennachweis ist erforderlich'
+    }
+    if (!r.stundennachweisPaths.every((p) => typeof p === 'string' && p.length > 0)) {
+      return 'Ungültiger Stundennachweis-Pfad'
+    }
+    return null
+  }
+  if (!r.stundennachweisPath) {
     return 'Beide PDF-Pfade sind erforderlich'
   }
   return null

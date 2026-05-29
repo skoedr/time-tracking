@@ -2,6 +2,7 @@ import { ipcMain } from 'electron'
 import type Database from 'better-sqlite3'
 import log from 'electron-log/main'
 import type { IpcResult } from '../shared/types'
+import { MAX_TAG_LEN, TAG_RE } from '../shared/tags'
 
 export interface TagWithCount {
   name: string
@@ -15,13 +16,16 @@ function fail(error: unknown): IpcResult<never> {
   return { ok: false, error: String(error) }
 }
 
-const MAX_TAG_LEN = 50
-
 function validateTagName(name: string): string | null {
   const trimmed = name.trim().toLowerCase()
   if (trimmed.length === 0) return 'Tag-Name darf nicht leer sein'
   if (trimmed.length > MAX_TAG_LEN) return `Tag-Name darf maximal ${MAX_TAG_LEN} Zeichen haben`
-  if (trimmed.includes(',')) return 'Tag-Name darf kein Komma enthalten'
+  if (/\s/.test(trimmed)) {
+    return 'Tag-Name darf keine Leerzeichen enthalten (nutze "_" oder "-")'
+  }
+  if (!TAG_RE.test(trimmed)) {
+    return 'Tag-Name darf nur Kleinbuchstaben, Ziffern und . _ - enthalten'
+  }
   return null
 }
 

@@ -812,4 +812,82 @@ describe('migration SQL execution', () => {
       db.prepare(`INSERT INTO projects (client_id, name, status) VALUES (1, 'App', 'archived')`).run()
     }).not.toThrow()
   })
+
+  // ── migration 017: whitespace cleanup in tag names ─────────────────────
+
+  function applyUpTo(targetVersion: number): void {
+    for (const m of migrations.filter((mm) => mm.version <= targetVersion)) {
+      const tx = db.transaction(() => {
+        db.exec(m.up)
+        db.prepare('INSERT INTO schema_version (version, name) VALUES (?, ?)').run(
+          m.version,
+          m.name
+        )
+      })
+      tx()
+    }
+  }
+
+  function applyVersion(version: number): void {
+    const m = migrations.find((mm) => mm.version === version)!
+    const tx = db.transaction(() => {
+      db.exec(m.up)
+      db.prepare('INSERT INTO schema_version (version, name) VALUES (?, ?)').run(m.version, m.name)
+    })
+    tx()
+  }
+
+  it('migration 017 — replaces space with underscore in master tag names', () => {
+    applyUpTo(16)
+    db.prepare(`INSERT INTO tags (name) VALUES ('ticket 12345')`).run()
+    applyVersion(17)
+    const rows = (db.prepare('SELECT name FROM tags ORDER BY name').all() as Array<{ name: string }>).map(
+      (r) => r.name
+    )
+    expect(rows).toContain('ticket_12345')
+    expect(rows).not.toContain('ticket 12345')
+  })
+
+  it('migration 017 — rewrites entries.tags occurrences of whitespace tags', () => {
+    applyUpTo(16)
+    db.prepare(`INSERT INTO clients (id, name) VALUES (1, 'Acme')`).run()
+    db.prepare(`INSERT INTO tags (name) VALUES ('ticket 12345')`).run()
+    db.prepare(
+      `INSERT INTO entries (client_id, started_at, stopped_at, tags)
+       VALUES (1, '2026-05-01T08:00:00Z', '2026-05-01T09:00:00Z', ',ticket 12345,bug,')`
+    ).run()
+    applyVersion(17)
+    const row = db.prepare('SELECT tags FROM entries LIMIT 1').get() as { tags: string }
+    expect(row.tags).toBe(',ticket_12345,bug,')
+  })
+
+  it('migration 017 — merges into existing cleaned tag when both names collide', () => {
+    applyUpTo(16)
+    db.prepare(`INSERT INTO tags (name) VALUES ('foo bar')`).run()
+    db.prepare(`INSERT INTO tags (name) VALUES ('foo_bar')`).run()
+    applyVersion(17)
+    const rows = (db.prepare('SELECT name FROM tags ORDER BY name').all() as Array<{ name: string }>).map(
+      (r) => r.name
+    )
+    expect(rows).toEqual(['foo_bar'])
+  })
+
+  it('migration 017 — also handles tab characters', () => {
+    applyUpTo(16)
+    db.prepare(`INSERT INTO tags (name) VALUES ('foo\tbar')`).run()
+    applyVersion(17)
+    const rows = (db.prepare('SELECT name FROM tags').all() as Array<{ name: string }>).map((r) => r.name)
+    expect(rows).toContain('foo_bar')
+  })
+
+  it('migration 017 — leaves clean tags untouched', () => {
+    applyUpTo(16)
+    db.prepare(`INSERT INTO tags (name) VALUES ('clean')`).run()
+    db.prepare(`INSERT INTO tags (name) VALUES ('also_clean')`).run()
+    applyVersion(17)
+    const rows = (db.prepare('SELECT name FROM tags ORDER BY name').all() as Array<{ name: string }>).map(
+      (r) => r.name
+    )
+    expect(rows).toEqual(['also_clean', 'clean'])
+  })
 })

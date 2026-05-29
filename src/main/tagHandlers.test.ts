@@ -143,6 +143,25 @@ describe.skipIf(!available)('tagHandlers', () => {
     it('fails when name exceeds 50 characters', () => {
       expect(createTag(db, 'a'.repeat(51)).ok).toBe(false)
     })
+
+    it('fails when name contains a space', () => {
+      const result = createTag(db, 'ticket 12345')
+      expect(result.ok).toBe(false)
+      if (!result.ok) expect(result.error).toMatch(/Leerzeichen/)
+    })
+
+    it('fails when name contains a tab', () => {
+      expect(createTag(db, 'foo\tbar').ok).toBe(false)
+    })
+
+    it('fails when name contains invalid characters', () => {
+      expect(createTag(db, 'tag!').ok).toBe(false)
+      expect(createTag(db, 'umlautä').ok).toBe(false)
+    })
+
+    it('accepts up to 50 characters', () => {
+      expect(createTag(db, 'a'.repeat(50)).ok).toBe(true)
+    })
   })
 
   // ── renameTag ──────────────────────────────────────────────────────────

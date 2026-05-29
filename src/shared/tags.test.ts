@@ -27,10 +27,10 @@ describe('parseTagInput', () => {
     expect(parseTagInput(input)).toHaveLength(10)
   })
 
-  it('silently truncates tokens longer than 32 chars', () => {
-    const long = 'a'.repeat(40)
+  it('silently truncates tokens longer than 50 chars', () => {
+    const long = 'a'.repeat(60)
     const result = parseTagInput(long)
-    expect(result[0]).toHaveLength(32)
+    expect(result[0]).toHaveLength(50)
   })
 
   it('rejects tokens with invalid characters (uppercase after lowercase)', () => {

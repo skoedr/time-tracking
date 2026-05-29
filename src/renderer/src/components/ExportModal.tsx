@@ -14,6 +14,63 @@ interface Props {
 
 type Tab = 'pdf' | 'csv'
 type CsvFormat = 'de' | 'us'
+type GroupBy = 'none' | 'tag' | 'project' | 'reference'
+
+// v1.13 #118: per-modal preferences are remembered across sessions so users
+// don't have to re-tick the same toggles every export. Stored under a
+// versioned key so future shape changes can be migrated/dropped safely.
+const LS_PREFS_KEY = 'export.modal.prefs.v1'
+
+interface ExportPrefs {
+  tab: Tab
+  includeSignatures: boolean
+  groupBy: GroupBy
+  hideFeeColumn: boolean
+  csvFormat: CsvFormat
+  csvGroupByTag: boolean
+}
+
+const DEFAULT_PREFS: ExportPrefs = {
+  tab: 'pdf',
+  includeSignatures: false,
+  groupBy: 'none',
+  hideFeeColumn: false,
+  csvFormat: 'de',
+  csvGroupByTag: false
+}
+
+function loadPrefs(): ExportPrefs {
+  try {
+    const raw = localStorage.getItem(LS_PREFS_KEY)
+    if (!raw) return DEFAULT_PREFS
+    const parsed = JSON.parse(raw) as Partial<ExportPrefs>
+    // Validate each field against its allowed set so corrupted/legacy data
+    // can't crash the render.
+    return {
+      tab: parsed.tab === 'csv' ? 'csv' : 'pdf',
+      includeSignatures: parsed.includeSignatures === true,
+      groupBy:
+        parsed.groupBy === 'tag' ||
+        parsed.groupBy === 'project' ||
+        parsed.groupBy === 'reference'
+          ? parsed.groupBy
+          : 'none',
+      hideFeeColumn: parsed.hideFeeColumn === true,
+      csvFormat: parsed.csvFormat === 'us' ? 'us' : 'de',
+      csvGroupByTag: parsed.csvGroupByTag === true
+    }
+  } catch {
+    return DEFAULT_PREFS
+  }
+}
+
+function savePrefs(prefs: ExportPrefs): void {
+  try {
+    localStorage.setItem(LS_PREFS_KEY, JSON.stringify(prefs))
+  } catch {
+    // Quota exceeded or storage disabled — silent.
+  }
+}
 
 /**
  * Unified export modal (v1.5 PR C, issue #18).
@@ -29,7 +86,11 @@ export function ExportModal(props: Props): React.JSX.Element {
   const { open, onClose, prefilledClientId, prefilledRange } = props
   const t = useT()
 
-  const [tab, setTab] = useState<Tab>('pdf')
+  // Lazy-init from localStorage so the modal opens with the user's last
+  // selection. Persisted via the effect below on every change.
+  const initialPrefs = loadPrefs()
+
+  const [tab, setTab] = useState<Tab>(initialPrefs.tab)
   const [clients, setClients] = useState<Client[]>([])
   const [clientId, setClientId] = useState<number | null>(prefilledClientId ?? null)
   const [projects, setProjects] = useState<Project[]>([])
@@ -38,12 +99,13 @@ export function ExportModal(props: Props): React.JSX.Element {
   const [toIso, setToIso] = useState(prefilledRange?.toIso ?? '')
 
   // PDF-specific
-  const [includeSignatures, setIncludeSignatures] = useState(false)
-  const [groupByTag, setGroupByTag] = useState(false)
+  const [includeSignatures, setIncludeSignatures] = useState(initialPrefs.includeSignatures)
+  const [groupBy, setGroupBy] = useState<GroupBy>(initialPrefs.groupBy)
+  const [hideFeeColumn, setHideFeeColumn] = useState(initialPrefs.hideFeeColumn)
 
   // CSV-specific
-  const [csvFormat, setCsvFormat] = useState<CsvFormat>('de')
-  const [csvGroupByTag, setCsvGroupByTag] = useState(false)
+  const [csvFormat, setCsvFormat] = useState<CsvFormat>(initialPrefs.csvFormat)
+  const [csvGroupByTag, setCsvGroupByTag] = useState(initialPrefs.csvGroupByTag)
 
   const [busy, setBusy] = useState(false)
   const [statusMsg, setStatusMsg] = useState<string | null>(null)
@@ -54,6 +116,11 @@ export function ExportModal(props: Props): React.JSX.Element {
     setTab(next)
     setStatusMsg(null)
   }
+
+  // v1.13 #118: persist user prefs on every change.
+  useEffect(() => {
+    savePrefs({ tab, includeSignatures, groupBy, hideFeeColumn, csvFormat, csvGroupByTag })
+  }, [tab, includeSignatures, groupBy, hideFeeColumn, csvFormat, csvGroupByTag])
 
   // Load clients once when the dialog first opens.
   useEffect(() => {
@@ -81,6 +148,11 @@ export function ExportModal(props: Props): React.JSX.Element {
       setToIso(prefilledRange.toIso)
     }
   }, [prefilledRange])
+
+  // v1.13 #118: grouping by project is meaningless with a single project filter.
+  useEffect(() => {
+    if (projectId != null && groupBy === 'project') setGroupBy('none')
+  }, [projectId, groupBy])
 
   // Load active projects when a client is selected; reset project filter on change.
   useEffect(() => {
@@ -120,7 +192,8 @@ export function ExportModal(props: Props): React.JSX.Element {
       toIso,
       projectId: projectId ?? undefined,
       includeSignatures,
-      groupByTag
+      groupBy,
+      hideFeeColumn
     })
     setBusy(false)
     if (res.ok) {
@@ -262,10 +335,33 @@ export function ExportModal(props: Props): React.JSX.Element {
           <div className="flex flex-col gap-3">
             <div className="flex flex-col gap-1">
               <div className="flex items-center justify-between">
-                <span className="text-sm" style={{ color: 'var(--text)' }}>{t('export.pdf.groupByTag')}</span>
-                <Toggle checked={groupByTag} onChange={setGroupByTag} disabled={busy} />
+                <span className="text-sm" style={{ color: 'var(--text)' }}>{t('export.pdf.groupBy')}</span>
+                <select
+                  title={t('export.pdf.groupBy')}
+                  value={groupBy}
+                  onChange={(e) =>
+                    setGroupBy(e.target.value as 'none' | 'tag' | 'project' | 'reference')
+                  }
+                  disabled={busy}
+                  className={inputClass}
+                  style={inputStyle}
+                >
+                  <option value="none">{t('export.pdf.groupBy.none')}</option>
+                  <option value="tag">{t('export.pdf.groupBy.tag')}</option>
+                  <option value="project" disabled={projectId != null}>
+                    {t('export.pdf.groupBy.project')}
+                  </option>
+                  <option value="reference">{t('export.pdf.groupBy.reference')}</option>
+                </select>
               </div>
-              <span className="text-xs" style={{ color: 'var(--text3)' }}>{t('export.pdf.groupByTagHint')}</span>
+              <span className="text-xs" style={{ color: 'var(--text3)' }}>{t('export.pdf.groupByHint')}</span>
+            </div>
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center justify-between">
+                <span className="text-sm" style={{ color: 'var(--text)' }}>{t('export.pdf.hideFeeColumn')}</span>
+                <Toggle checked={hideFeeColumn} onChange={setHideFeeColumn} disabled={busy} />
+              </div>
+              <span className="text-xs" style={{ color: 'var(--text3)' }}>{t('export.pdf.hideFeeColumnHint')}</span>
             </div>
             <div className="flex flex-col gap-1">
               <div className="flex items-center justify-between">
