@@ -273,6 +273,242 @@ describe('buildPdfPayload', () => {
     const p = buildPdfPayload(db, { clientId: 1, fromIso: '2026-04-01', toIso: '2026-04-30' }, '')
     expect(p.effectiveContactPerson).toBe('Kunden-AP')
   })
+
+  // ── v1.13 #120: billable filter + project rate override ─────────────────
+
+  it('excludes non-billable entries (billable = 0)', () => {
+    db.prepare(
+      `INSERT INTO entries (client_id, description, started_at, stopped_at, billable)
+       VALUES (1, 'billable', '2026-04-15T08:00:00.000Z', '2026-04-15T09:00:00.000Z', 1)`
+    ).run()
+    db.prepare(
+      `INSERT INTO entries (client_id, description, started_at, stopped_at, billable)
+       VALUES (1, 'non-billable', '2026-04-16T08:00:00.000Z', '2026-04-16T09:00:00.000Z', 0)`
+    ).run()
+    const p = buildPdfPayload(db, { clientId: 1, fromIso: '2026-04-01', toIso: '2026-04-30' }, '')
+    expect(p.rows).toHaveLength(1)
+    expect(p.rows[0].description).toBe('billable')
+    expect(p.totals.minutes).toBe(60)
+    expect(p.totals.feeCent).toBe(8500)
+  })
+
+  it('uses project rate_cent when set (overrides client rate)', () => {
+    db.prepare(
+      `INSERT INTO projects (id, client_id, name, color, status, rate_cent)
+       VALUES (20, 1, 'BigDeal', '#6366f1', 'active', 12000)`
+    ).run()
+    db.prepare(
+      `INSERT INTO entries (client_id, project_id, description, started_at, stopped_at)
+       VALUES (1, 20, 'project work', '2026-04-15T08:00:00.000Z', '2026-04-15T09:00:00.000Z')`
+    ).run()
+    const p = buildPdfPayload(db, { clientId: 1, fromIso: '2026-04-01', toIso: '2026-04-30' }, '')
+    // 60 min × 12000 cent/h ÷ 60 = 12000 cent — client rate (8500) is ignored
+    expect(p.rows[0].feeCent).toBe(12000)
+    expect(p.totals.feeCent).toBe(12000)
+  })
+
+  it('falls back to client rate when project has no rate', () => {
+    db.prepare(
+      `INSERT INTO projects (id, client_id, name, color, status, rate_cent)
+       VALUES (21, 1, 'NoRate', '#6366f1', 'active', NULL)`
+    ).run()
+    db.prepare(
+      `INSERT INTO entries (client_id, project_id, description, started_at, stopped_at)
+       VALUES (1, 21, 'fallback', '2026-04-15T08:00:00.000Z', '2026-04-15T09:00:00.000Z')`
+    ).run()
+    const p = buildPdfPayload(db, { clientId: 1, fromIso: '2026-04-01', toIso: '2026-04-30' }, '')
+    expect(p.rows[0].feeCent).toBe(8500)
+  })
+
+  it('mixes project- and client-rate rows in the same export', () => {
+    db.prepare(
+      `INSERT INTO projects (id, client_id, name, color, status, rate_cent)
+       VALUES (22, 1, 'Premium', '#6366f1', 'active', 12000)`
+    ).run()
+    // Row A: uses project rate
+    db.prepare(
+      `INSERT INTO entries (client_id, project_id, started_at, stopped_at)
+       VALUES (1, 22, '2026-04-15T08:00:00.000Z', '2026-04-15T09:00:00.000Z')`
+    ).run()
+    // Row B: no project → client rate
+    db.prepare(
+      `INSERT INTO entries (client_id, started_at, stopped_at)
+       VALUES (1, '2026-04-16T08:00:00.000Z', '2026-04-16T09:00:00.000Z')`
+    ).run()
+    const p = buildPdfPayload(db, { clientId: 1, fromIso: '2026-04-01', toIso: '2026-04-30' }, '')
+    expect(p.rows).toHaveLength(2)
+    expect(p.rows[0].feeCent).toBe(12000)
+    expect(p.rows[1].feeCent).toBe(8500)
+    expect(p.totals.feeCent).toBe(20500)
+  })
+
+  it('shows fee column for free clients when a project rate yields fees', () => {
+    // Client 2 has rate_cent = 0 (Pro Bono). Add a project with a real rate.
+    db.prepare(
+      `INSERT INTO projects (id, client_id, name, color, status, rate_cent)
+       VALUES (23, 2, 'PaidGig', '#10b981', 'active', 9000)`
+    ).run()
+    db.prepare(
+      `INSERT INTO entries (client_id, project_id, started_at, stopped_at)
+       VALUES (2, 23, '2026-04-15T08:00:00.000Z', '2026-04-15T09:00:00.000Z')`
+    ).run()
+    const p = buildPdfPayload(db, { clientId: 2, fromIso: '2026-04-01', toIso: '2026-04-30' }, '')
+    expect(p.rows[0].feeCent).toBe(9000)
+    expect(p.totals.feeCent).toBe(9000)
+  })
+
+  // ── v1.13 #118: grouping dropdown ────────────────────────────────────────
+
+  it('legacy groupByTag still coerces to groupBy=tag', () => {
+    db.prepare(
+      `INSERT INTO entries (client_id, started_at, stopped_at, tags)
+       VALUES (1, '2026-04-15T08:00:00.000Z', '2026-04-15T09:00:00.000Z', ',bug,')`
+    ).run()
+    const p = buildPdfPayload(
+      db,
+      { clientId: 1, fromIso: '2026-04-01', toIso: '2026-04-30', groupByTag: true },
+      ''
+    )
+    expect(p.groups).not.toBeNull()
+    expect(p.groups![0].label).toBe('#bug')
+  })
+
+  it('groupBy=project groups rows by project name, "Ohne Projekt" last', () => {
+    db.prepare(
+      `INSERT INTO projects (id, client_id, name, color, status, rate_cent)
+       VALUES (30, 1, 'Alpha', '#6366f1', 'active', 0)`
+    ).run()
+    db.prepare(
+      `INSERT INTO projects (id, client_id, name, color, status, rate_cent)
+       VALUES (31, 1, 'Bravo', '#6366f1', 'active', 0)`
+    ).run()
+    db.prepare(
+      `INSERT INTO entries (client_id, project_id, started_at, stopped_at)
+       VALUES (1, 30, '2026-04-15T08:00:00.000Z', '2026-04-15T09:00:00.000Z')`
+    ).run()
+    db.prepare(
+      `INSERT INTO entries (client_id, project_id, started_at, stopped_at)
+       VALUES (1, 31, '2026-04-16T08:00:00.000Z', '2026-04-16T09:00:00.000Z')`
+    ).run()
+    db.prepare(
+      `INSERT INTO entries (client_id, started_at, stopped_at)
+       VALUES (1, '2026-04-17T08:00:00.000Z', '2026-04-17T09:00:00.000Z')`
+    ).run()
+    const p = buildPdfPayload(
+      db,
+      { clientId: 1, fromIso: '2026-04-01', toIso: '2026-04-30', groupBy: 'project' },
+      ''
+    )
+    expect(p.groups).not.toBeNull()
+    expect(p.groups!.map((g) => g.label)).toEqual(['Projekt: Alpha', 'Projekt: Bravo', 'Ohne Projekt'])
+    expect(p.groups![0].totalMinutes).toBe(60)
+  })
+
+  it('groupBy=reference groups rows by entry reference, "Sonstiges" last', () => {
+    db.prepare(
+      `INSERT INTO entries (client_id, started_at, stopped_at, reference)
+       VALUES (1, '2026-04-15T08:00:00.000Z', '2026-04-15T09:00:00.000Z', 'JIRA-1')`
+    ).run()
+    db.prepare(
+      `INSERT INTO entries (client_id, started_at, stopped_at, reference)
+       VALUES (1, '2026-04-16T08:00:00.000Z', '2026-04-16T09:00:00.000Z', 'JIRA-2')`
+    ).run()
+    db.prepare(
+      `INSERT INTO entries (client_id, started_at, stopped_at, reference)
+       VALUES (1, '2026-04-17T08:00:00.000Z', '2026-04-17T09:00:00.000Z', '')`
+    ).run()
+    const p = buildPdfPayload(
+      db,
+      { clientId: 1, fromIso: '2026-04-01', toIso: '2026-04-30', groupBy: 'reference' },
+      ''
+    )
+    expect(p.groups).not.toBeNull()
+    expect(p.groups!.map((g) => g.label)).toEqual(['JIRA-1', 'JIRA-2', 'Sonstiges'])
+  })
+
+  it('groupBy=none keeps groups null even with tagged rows', () => {
+    db.prepare(
+      `INSERT INTO entries (client_id, started_at, stopped_at, tags)
+       VALUES (1, '2026-04-15T08:00:00.000Z', '2026-04-15T09:00:00.000Z', ',bug,')`
+    ).run()
+    const p = buildPdfPayload(
+      db,
+      { clientId: 1, fromIso: '2026-04-01', toIso: '2026-04-30', groupBy: 'none' },
+      ''
+    )
+    expect(p.groups).toBeNull()
+  })
+
+  // ── v1.13 #118: hideFeeColumn ────────────────────────────────────────────
+
+  it('hideFeeColumn=true propagates to payload', () => {
+    db.prepare(
+      `INSERT INTO entries (client_id, started_at, stopped_at)
+       VALUES (1, '2026-04-15T08:00:00.000Z', '2026-04-15T09:00:00.000Z')`
+    ).run()
+    const p = buildPdfPayload(
+      db,
+      { clientId: 1, fromIso: '2026-04-01', toIso: '2026-04-30', hideFeeColumn: true },
+      ''
+    )
+    expect(p.hideFeeColumn).toBe(true)
+    // Row-level feeCent is still computed — the renderer is responsible for hiding.
+    expect(p.rows[0].feeCent).toBe(8500)
+  })
+
+  // ── v1.13 #118: per-row project name ─────────────────────────────────────
+
+  it('populates row.projectName when export spans multiple projects', () => {
+    db.prepare(
+      `INSERT INTO projects (id, client_id, name, color, status, rate_cent)
+       VALUES (40, 1, 'Alpha', '#6366f1', 'active', 0)`
+    ).run()
+    db.prepare(
+      `INSERT INTO entries (client_id, project_id, started_at, stopped_at)
+       VALUES (1, 40, '2026-04-15T08:00:00.000Z', '2026-04-15T09:00:00.000Z')`
+    ).run()
+    db.prepare(
+      `INSERT INTO entries (client_id, started_at, stopped_at)
+       VALUES (1, '2026-04-16T08:00:00.000Z', '2026-04-16T09:00:00.000Z')`
+    ).run()
+    const p = buildPdfPayload(db, { clientId: 1, fromIso: '2026-04-01', toIso: '2026-04-30' }, '')
+    expect(p.rows[0].projectName).toBe('Alpha')
+    expect(p.rows[1].projectName).toBeUndefined()
+  })
+
+  it('omits row.projectName when filtering by projectId', () => {
+    db.prepare(
+      `INSERT INTO projects (id, client_id, name, color, status, rate_cent)
+       VALUES (41, 1, 'Alpha', '#6366f1', 'active', 0)`
+    ).run()
+    db.prepare(
+      `INSERT INTO entries (client_id, project_id, started_at, stopped_at)
+       VALUES (1, 41, '2026-04-15T08:00:00.000Z', '2026-04-15T09:00:00.000Z')`
+    ).run()
+    const p = buildPdfPayload(
+      db,
+      { clientId: 1, fromIso: '2026-04-01', toIso: '2026-04-30', projectId: 41 },
+      ''
+    )
+    expect(p.rows[0].projectName).toBeUndefined()
+  })
+
+  it('omits row.projectName when grouping by project (header would duplicate)', () => {
+    db.prepare(
+      `INSERT INTO projects (id, client_id, name, color, status, rate_cent)
+       VALUES (42, 1, 'Alpha', '#6366f1', 'active', 0)`
+    ).run()
+    db.prepare(
+      `INSERT INTO entries (client_id, project_id, started_at, stopped_at)
+       VALUES (1, 42, '2026-04-15T08:00:00.000Z', '2026-04-15T09:00:00.000Z')`
+    ).run()
+    const p = buildPdfPayload(
+      db,
+      { clientId: 1, fromIso: '2026-04-01', toIso: '2026-04-30', groupBy: 'project' },
+      ''
+    )
+    expect(p.rows[0].projectName).toBeUndefined()
+  })
 })
 
 describe('buildPdfHtml', () => {
@@ -434,5 +670,79 @@ describe('buildPdfHtml', () => {
   it('omits z.Hd. line when effectiveContactPerson is null', () => {
     const html = buildPdfHtml(makePayload({ effectiveContactPerson: null }))
     expect(html).not.toContain('z.Hd.')
+  })
+
+  // ── v1.13 #118 ─────────────────────────────────────────────────────────────
+
+  it('hideFeeColumn=true removes Honorar header, fee cells, and euro symbol', () => {
+    const html = buildPdfHtml(makePayload({ hideFeeColumn: true }))
+    expect(html).not.toContain('Honorar')
+    expect(html).not.toContain('€')
+  })
+
+  it('renders entry-project div when row.projectName is set', () => {
+    const html = buildPdfHtml(
+      makePayload({
+        rows: [
+          {
+            date: '15.04.2026',
+            startTime: '08:00',
+            stopTime: '09:30',
+            description: 'Work',
+            minutes: 90,
+            feeCent: 12750,
+            projectName: 'Alpha'
+          }
+        ]
+      })
+    )
+    expect(html).toContain('class="entry-project"')
+    expect(html).toContain('Projekt: Alpha')
+  })
+
+  it('escapes projectName for XSS', () => {
+    const html = buildPdfHtml(
+      makePayload({
+        rows: [
+          {
+            date: '15.04.2026',
+            startTime: '08:00',
+            stopTime: '09:30',
+            description: 'Work',
+            minutes: 90,
+            feeCent: 12750,
+            projectName: '<script>x</script>'
+          }
+        ]
+      })
+    )
+    expect(html).not.toContain('<script>x')
+    expect(html).toContain('&lt;script&gt;x&lt;/script&gt;')
+  })
+
+  it('renders group label verbatim (no #-prefix for non-tag groups)', () => {
+    const html = buildPdfHtml(
+      makePayload({
+        groups: [
+          {
+            label: 'Projekt: Alpha',
+            rows: [
+              {
+                date: '15.04.2026',
+                startTime: '08:00',
+                stopTime: '09:00',
+                description: 'W',
+                minutes: 60,
+                feeCent: 8500
+              }
+            ],
+            totalMinutes: 60,
+            totalFeeCent: 8500
+          }
+        ]
+      })
+    )
+    expect(html).toContain('Projekt: Alpha')
+    expect(html).toContain('Zwischensumme Projekt: Alpha')
   })
 })

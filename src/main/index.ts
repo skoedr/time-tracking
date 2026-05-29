@@ -225,6 +225,13 @@ function resumeGlobalShortcuts(): void {
 }
 
 function applyAutoStart(enabled: boolean): void {
+  // Guard: in dev (`pnpm dev`), `process.execPath` points at
+  // `node_modules/electron/dist/electron.exe` — registering that as a
+  // Windows login item makes Windows launch the bare Electron binary
+  // (without an app path) at next login, which pops up Electron's
+  // default welcome window. Only persist the autostart entry from a
+  // packaged build where execPath is the real `TimeTrack.exe`.
+  if (!app.isPackaged) return
   app.setLoginItemSettings({
     openAtLogin: enabled,
     path: process.execPath,

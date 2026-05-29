@@ -7,7 +7,7 @@ import {
   PDFRef
 } from 'pdf-lib'
 import { describe, expect, it } from 'vitest'
-import { copyOutputIntents, copyXmpMetadata, extractEmbeddedFiles, mergePdfs, reembedFiles } from './pdfMerge'
+import { copyOutputIntents, copyXmpMetadata, extractEmbeddedFiles, mergePdfs, mergePdfsMulti, reembedFiles } from './pdfMerge'
 
 async function makePdf(pageCount: number): Promise<Buffer> {
   const doc = await PDFDocument.create()
@@ -178,6 +178,48 @@ describe('mergePdfs', () => {
     const mergedDoc = await PDFDocument.load(merged)
     const entries = extractEmbeddedFiles(mergedDoc)
     expect(entries[0].name.decodeText()).toBe('ZUGFeRD-invoice.xml')
+  })
+})
+
+describe('mergePdfsMulti', () => {
+  it('throws when stundennachweis array is empty', async () => {
+    const inv = await makePdf(1)
+    await expect(mergePdfsMulti(inv, [])).rejects.toThrow()
+  })
+
+  it('produces a PDF with invoice + sum of all SN page counts', async () => {
+    const inv = await makePdf(2)
+    const sn1 = await makePdf(3)
+    const sn2 = await makePdf(1)
+    const sn3 = await makePdf(4)
+    const merged = await mergePdfsMulti(inv, [sn1, sn2, sn3])
+    expect(await pageCount(merged)).toBe(2 + 3 + 1 + 4)
+  })
+
+  it('places invoice pages first, then each SN in order', async () => {
+    const inv = await makePdf(1)
+    const sn1 = await makePdf(2)
+    const sn2 = await makePdf(3)
+    const merged = await mergePdfsMulti(inv, [sn1, sn2])
+    expect(await pageCount(merged)).toBe(6)
+  })
+
+  it('preserves invoice embedded files in multi merge', async () => {
+    const inv = await makePdfWithAttachment('<factur-x/>', 'factur-x.xml')
+    const sn1 = await makePdf(1)
+    const sn2 = await makePdf(1)
+    const merged = await mergePdfsMulti(inv, [sn1, sn2])
+    const mergedDoc = await PDFDocument.load(merged)
+    const entries = extractEmbeddedFiles(mergedDoc)
+    expect(entries).toHaveLength(1)
+    expect(entries[0].name.decodeText()).toBe('factur-x.xml')
+  })
+
+  it('works with a single SN buffer (same result shape as mergePdfs append)', async () => {
+    const inv = await makePdf(2)
+    const sn = await makePdf(3)
+    const merged = await mergePdfsMulti(inv, [sn])
+    expect(await pageCount(merged)).toBe(5)
   })
 })
 

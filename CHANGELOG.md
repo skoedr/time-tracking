@@ -2,6 +2,28 @@
 
 All notable changes to TimeTrack are documented here.
 
+## [1.13.0] — 2026-05-29
+
+### Added
+
+- **PDF-Export: Gruppierung wählbar (Tag / Projekt / Referenz / keine)** — Im Export-Modal kann jetzt die Gruppierung des PDF-Stundennachweises gewählt werden: keine Gruppierung (chronologisch), nach Tag (#hashtag), nach Projekt oder nach Referenz. Die alte Checkbox „Nach Tag gruppieren“ wird intern auf den neuen Modus abgebildet. Beim Filtern auf ein einzelnes Projekt setzt das Modal die Gruppierung automatisch auf „keine“. ([#118](https://github.com/skoedr/time-tracking/issues/118))
+
+- **PDF-Export: Honorarspalte ausblendbar** — Neuer Toggle „Honorarspalte ausblenden“ im Export-Modal. Damit lässt sich ein neutraler Stundennachweis ohne Preisangaben erzeugen, etwa zur internen Weitergabe oder bei Pauschalabrechnungen. ([#118](https://github.com/skoedr/time-tracking/issues/118))
+
+- **PDF-Export: Projektname pro Zeile bei kundenweiter Auswertung** — Wird das PDF ohne Projektfilter (alle Projekte eines Kunden) und ohne Projekt-Gruppierung erzeugt, erscheint pro Eintrag eine zusätzliche kursive Zeile mit dem Projektnamen. So sind kundenweite Auswertungen ohne Gruppierung trotzdem nachvollziehbar. ([#118](https://github.com/skoedr/time-tracking/issues/118))
+
+- **PDF-Export: Letzte Einstellungen merken** — Tab, Gruppierung, Honorarspalte-Ausblendung, Unterschriften-Bereich und CSV-Format werden je Nutzer in `localStorage` gespeichert und beim nächsten Öffnen wiederhergestellt. ([#118](https://github.com/skoedr/time-tracking/issues/118))
+
+- **PDF-Merge: Mehrere Stundennachweise mit einer Rechnung zusammenführen** — Im Zusammenführen-Dialog können jetzt beliebig viele Stundennachweis-PDFs (z. B. mehrere Kunden / Projekte) hinzugefügt und mit einer einzelnen Rechnung zusammengeführt werden. Jeder Slot hat eigene Seitenzahl-Anzeige und lässt sich einzeln entfernen; die Vorschauzeile zeigt die Gesamtseitenzahl an. Reihenfolge im Ergebnis: Rechnung → SN #1 → SN #2 → … ([#119](https://github.com/skoedr/time-tracking/issues/119))
+
+### Fixed
+
+- **Tags: Führende und nachgestellte Whitespaces werden entfernt** — Beim Eingeben eines Tags werden Leerzeichen und Zeilenumbrüche an den Rändern jetzt vor dem Speichern (und vor Duplikat-Prüfungen) entfernt. Damit verschmelzen `urlaub`, ` urlaub` und `urlaub ` korrekt zum gleichen Tag. ([#121](https://github.com/skoedr/time-tracking/issues/121))
+
+- **PDF-Export: Nicht-abrechenbare Einträge erzeugen kein Honorar mehr** — Beim Erzeugen des PDF-Stundennachweises wurden für Einträge mit `billable=false` weiterhin Honorarwerte berechnet (Spalte „Honorar“ und Endsumme). Diese Einträge werden jetzt korrekt mit 0 € in der Honorarspalte und in der Endsumme ausgewiesen — konsistent mit dem CSV-Export und der Auswertung. ([#120](https://github.com/skoedr/time-tracking/issues/120))
+
+- **PDF-Export: Projekt-spezifischer Stundensatz wird berücksichtigt** — Ist auf einem Projekt ein abweichender Stundensatz hinterlegt, wurde dieser im PDF-Export ignoriert und stattdessen der Kunden-Satz verwendet. Die Honorarberechnung folgt jetzt der gleichen Prioritätsregel wie der Rest der App: Projekt-Satz → Kunden-Satz → globaler Satz. ([#120](https://github.com/skoedr/time-tracking/issues/120))
+
 ## [1.12.5] — 2026-05-04
 
 ### Fixed

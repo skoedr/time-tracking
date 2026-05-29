@@ -34,12 +34,33 @@ export interface PdfRequest {
    */
   includeSignatures?: boolean
   /**
-   * Group rows by tag in the rendered PDF. Each distinct tag gets its
-   * own section with a subtotal. Entries without any tag appear under
-   * "Ohne Tag" at the end. Falls back to flat layout when no entry has
-   * a tag (silent fallback). Default false.
+   * v1.13 #118: row grouping in the rendered PDF. Each distinct group
+   * value gets its own section with a subtotal.
+   *
+   *  - `'none'`      — flat table (default).
+   *  - `'tag'`       — group by tag. Entries with no tag fall under "Ohne Tag".
+   *  - `'project'`   — group by project name. Entries with no project fall
+   *                    under "Ohne Projekt". Only meaningful when `projectId`
+   *                    is not also set (otherwise there is exactly one group).
+   *  - `'reference'` — group by entry reference (e.g. ticket id). Entries
+   *                    with no reference fall under "Sonstiges".
+   *
+   * Falls back to flat layout when no entry carries the chosen grouping
+   * dimension (silent fallback, matches the legacy `groupByTag` behaviour).
+   */
+  groupBy?: 'none' | 'tag' | 'project' | 'reference'
+  /**
+   * Legacy v1.5 flag. When `true` and `groupBy` is unset, coerces to
+   * `groupBy: 'tag'` so existing callers keep working.
+   * @deprecated use `groupBy` instead.
    */
   groupByTag?: boolean
+  /**
+   * v1.13 #118: hide the Honorar column even when a rate is configured.
+   * Used when the sender wants to share a stundennachweis without
+   * exposing the per-row or total billed amount.
+   */
+  hideFeeColumn?: boolean
 }
 
 export interface PdfRow {
@@ -49,15 +70,25 @@ export interface PdfRow {
   description: string
   minutes: number
   feeCent: number | null
-  /** Raw serialized tags string from the DB column (`,bug,ux,` format). Optional — only needed for `groupByTag`. */
+  /** Raw serialized tags string from the DB column (`,bug,ux,` format). Optional — only needed for `groupBy: 'tag'`. */
   tags?: string
   /** Free-text ticket/reference (e.g. 'JIRA-123'). Empty string = no reference. */
   reference?: string
+  /**
+   * v1.13 #118: project name rendered as a small line under the description
+   * when the export spans multiple projects of a client. `undefined` when
+   * the row has no project or when the project context is already implied
+   * by a project filter / project-grouping header.
+   */
+  projectName?: string
 }
 
-/** One group when `groupByTag` is true. tag='' means "Ohne Tag". */
+/**
+ * One group when `groupBy !== 'none'`. `label` is the rendered group heading
+ * (e.g. `#bug`, `Projekt: Alpha`, `Sonstiges`).
+ */
 export interface PdfGroup {
-  tag: string
+  label: string
   rows: PdfRow[]
   totalMinutes: number
   totalFeeCent: number | null
@@ -94,10 +125,15 @@ export interface PdfPayload {
   /** Used for the "erstellt am" footer line. */
   generatedAtIso: string
   /**
-   * When non-null, rows are organised into tag-groups for the HTML
-   * renderer. null = flat layout (default). Empty `tag` = "Ohne Tag".
+   * When non-null, rows are organised into groups for the HTML renderer.
+   * null = flat layout (default).
    */
   groups: PdfGroup[] | null
+  /**
+   * v1.13 #118: when true, the Honorar column is suppressed even though
+   * a rate is configured. Mirrors the user-facing toggle in the export modal.
+   */
+  hideFeeColumn?: boolean
   /**
    * v1.9 #75: optional project name for the PDF header when the export
    * is filtered to a single project. Undefined = all projects (no label shown).
@@ -203,16 +239,31 @@ export function buildPdfPayload(
 
   const entries = db
     .prepare(
-      `SELECT * FROM entries
-         WHERE client_id = ?
-           AND deleted_at IS NULL
-           AND stopped_at IS NOT NULL
-           AND started_at >= ?
-           AND started_at < ?
-           AND (? IS NULL OR project_id = ?)
-         ORDER BY started_at ASC, id ASC`
+      `SELECT e.*, p.rate_cent AS project_rate_cent, p.name AS project_name
+         FROM entries e
+         LEFT JOIN projects p ON p.id = e.project_id
+         WHERE e.client_id = ?
+           AND e.deleted_at IS NULL
+           AND e.stopped_at IS NOT NULL
+           AND e.billable = 1
+           AND e.started_at >= ?
+           AND e.started_at < ?
+           AND (? IS NULL OR e.project_id = ?)
+         ORDER BY e.started_at ASC, e.id ASC`
     )
-    .all(client.id, fromTs, toExclusive, req.projectId ?? null, req.projectId ?? null) as Entry[]
+    .all(client.id, fromTs, toExclusive, req.projectId ?? null, req.projectId ?? null) as Array<
+      Entry & { project_rate_cent: number | null; project_name: string | null }
+    >
+
+  // v1.13 #118: backward-compat — the legacy `groupByTag` boolean coerces
+  // to the new enum when the caller hasn't migrated yet.
+  const groupBy: 'none' | 'tag' | 'project' | 'reference' =
+    req.groupBy ?? (req.groupByTag ? 'tag' : 'none')
+
+  // v1.13 #118: project label per row — only when the export spans
+  // multiple projects (no projectId filter) AND we are not already
+  // grouping by project (the group header would duplicate it).
+  const showProjectPerRow = req.projectId == null && groupBy !== 'project'
 
   const rows: PdfRow[] = entries.map((e) => {
     const start = new Date(e.started_at)
@@ -224,7 +275,13 @@ export function buildPdfPayload(
     const rawMs = Math.max(0, stop.getTime() - start.getTime())
     const rawMin = rawMs > 0 ? Math.ceil(rawMs / 60000) : 0
     const minutes = roundMinutes(rawMin, roundStep)
-    const fee = client.rate_cent > 0 ? feeCent(minutes, client.rate_cent) : null
+    // v1.13 #120: project rate overrides client rate when set
+    // (matches analyticsHandlers' COALESCE(p.rate_cent, c.rate_cent)).
+    const effectiveRate =
+      e.project_rate_cent != null && e.project_rate_cent > 0
+        ? e.project_rate_cent
+        : client.rate_cent
+    const fee = effectiveRate > 0 ? feeCent(minutes, effectiveRate) : null
     // When rounding is on, we also adjust the displayed times so the
     // visible "Von / Bis / Dauer" arithmetic adds up for the recipient.
     // Rule: snap the start to the nearest step, then derive the stop as
@@ -249,16 +306,24 @@ export function buildPdfPayload(
       minutes,
       feeCent: fee,
       tags: e.tags ?? '',
-      reference: e.reference ?? ''
+      reference: e.reference ?? '',
+      projectName: showProjectPerRow && e.project_name ? e.project_name : undefined
     }
   })
 
   const totalMinutes = rows.reduce((sum, r) => sum + r.minutes, 0)
-  const totalFee = client.rate_cent > 0 ? rows.reduce((sum, r) => sum + (r.feeCent ?? 0), 0) : null
+  // v1.13 #120: show fee column when the client has a rate (legacy behavior)
+  // OR when any row carries a fee via project rate (new behavior). Previously
+  // gated only on client.rate_cent > 0, which hid revenue from project-only rates.
+  const anyFee = rows.some((r) => r.feeCent != null)
+  const showFee = client.rate_cent > 0 || anyFee
+  const totalFee = showFee ? rows.reduce((sum, r) => sum + (r.feeCent ?? 0), 0) : null
 
-  // Build tag groups when requested AND at least one row has tags.
+  // v1.13 #118: build groups based on the chosen dimension. Each branch
+  // produces a Map<label, rows[]> + an ordering rule for the labels.
+  // Silent fallback to flat layout when no row carries the chosen dim.
   let groups: PdfGroup[] | null = null
-  if (req.groupByTag && rows.some((r) => r.tags && r.tags !== '')) {
+  if (groupBy === 'tag' && rows.some((r) => r.tags && r.tags !== '')) {
     const groupMap = new Map<string, PdfRow[]>()
     for (const row of rows) {
       const rowTags = deserializeTags(row.tags ?? '')
@@ -274,7 +339,6 @@ export function buildPdfPayload(
         }
       }
     }
-    // Sort: named tags alphabetically, then '' (Ohne Tag) last.
     const sortedKeys = [...groupMap.keys()].sort((a, b) => {
       if (a === '') return 1
       if (b === '') return -1
@@ -283,8 +347,63 @@ export function buildPdfPayload(
     groups = sortedKeys.map((tag) => {
       const groupRows = groupMap.get(tag)!
       const gMinutes = groupRows.reduce((s, r) => s + r.minutes, 0)
-      const gFee = client.rate_cent > 0 ? groupRows.reduce((s, r) => s + (r.feeCent ?? 0), 0) : null
-      return { tag, rows: groupRows, totalMinutes: gMinutes, totalFeeCent: gFee }
+      const gFee = showFee ? groupRows.reduce((s, r) => s + (r.feeCent ?? 0), 0) : null
+      return {
+        label: tag ? `#${tag}` : 'Ohne Tag',
+        rows: groupRows,
+        totalMinutes: gMinutes,
+        totalFeeCent: gFee
+      }
+    })
+  } else if (groupBy === 'project' && entries.some((e) => e.project_name)) {
+    // Group by project name. Entries with no project_id fall under 'Ohne Projekt'.
+    const groupMap = new Map<string, PdfRow[]>()
+    rows.forEach((row, idx) => {
+      const name = entries[idx].project_name ?? ''
+      const bucket = groupMap.get(name) ?? []
+      bucket.push(row)
+      groupMap.set(name, bucket)
+    })
+    const sortedKeys = [...groupMap.keys()].sort((a, b) => {
+      if (a === '') return 1
+      if (b === '') return -1
+      return a.localeCompare(b)
+    })
+    groups = sortedKeys.map((name) => {
+      const groupRows = groupMap.get(name)!
+      const gMinutes = groupRows.reduce((s, r) => s + r.minutes, 0)
+      const gFee = showFee ? groupRows.reduce((s, r) => s + (r.feeCent ?? 0), 0) : null
+      return {
+        label: name ? `Projekt: ${name}` : 'Ohne Projekt',
+        rows: groupRows,
+        totalMinutes: gMinutes,
+        totalFeeCent: gFee
+      }
+    })
+  } else if (groupBy === 'reference' && rows.some((r) => r.reference && r.reference !== '')) {
+    // Group by entry.reference. Empty/missing falls under 'Sonstiges' (per #118).
+    const groupMap = new Map<string, PdfRow[]>()
+    for (const row of rows) {
+      const ref = row.reference && row.reference.trim() !== '' ? row.reference : ''
+      const bucket = groupMap.get(ref) ?? []
+      bucket.push(row)
+      groupMap.set(ref, bucket)
+    }
+    const sortedKeys = [...groupMap.keys()].sort((a, b) => {
+      if (a === '') return 1
+      if (b === '') return -1
+      return a.localeCompare(b, 'de', { numeric: true })
+    })
+    groups = sortedKeys.map((ref) => {
+      const groupRows = groupMap.get(ref)!
+      const gMinutes = groupRows.reduce((s, r) => s + r.minutes, 0)
+      const gFee = showFee ? groupRows.reduce((s, r) => s + (r.feeCent ?? 0), 0) : null
+      return {
+        label: ref || 'Sonstiges',
+        rows: groupRows,
+        totalMinutes: gMinutes,
+        totalFeeCent: gFee
+      }
     })
   }
 
@@ -325,7 +444,8 @@ export function buildPdfPayload(
     generatedAtIso,
     groups,
     projectName,
-    effectiveContactPerson
+    effectiveContactPerson,
+    hideFeeColumn: req.hideFeeColumn === true
   }
 }
 
@@ -364,7 +484,8 @@ function safeColor(color: string): string {
  */
 export function buildPdfHtml(p: PdfPayload): string {
   const accent = safeColor(p.accentColor)
-  const showFee = p.totals.feeCent !== null
+  // v1.13 #118: explicit hide overrides the rate-based default.
+  const showFee = p.hideFeeColumn ? false : p.totals.feeCent !== null
   const dateRange = `${formatDate(p.fromIso)} – ${formatDate(p.toIso)}`
   const generated = formatDate(p.generatedAtIso)
 
@@ -387,7 +508,7 @@ export function buildPdfHtml(p: PdfPayload): string {
         <td class="col-date">${esc(r.date)}</td>
         <td class="col-time">${esc(r.startTime)}</td>
         <td class="col-time">${esc(r.stopTime)}</td>
-        <td class="col-desc">${esc(r.description)}${r.reference ? `<div class="entry-ref">${esc(r.reference)}</div>` : ''}</td>
+        <td class="col-desc">${esc(r.description)}${r.reference ? `<div class="entry-ref">${esc(r.reference)}</div>` : ''}${r.projectName ? `<div class="entry-project">Projekt: ${esc(r.projectName)}</div>` : ''}</td>
         <td class="col-dur">${esc(formatHoursMinutes(r.minutes))}</td>
         ${showFee ? `<td class="col-fee">${esc(formatEur(r.feeCent ?? 0))}</td>` : ''}
       </tr>`
@@ -397,10 +518,10 @@ export function buildPdfHtml(p: PdfPayload): string {
 
   let tableBody: string
   if (p.groups !== null && p.groups.length > 0) {
-    // Grouped layout: each tag gets a group-header row + data rows + subtotal.
+    // Grouped layout: each group gets a group-header row + data rows + subtotal.
     const groupSections = p.groups
       .map((g) => {
-        const label = g.tag ? `#${esc(g.tag)}` : 'Ohne Tag'
+        const label = esc(g.label)
         const subtotalFee = showFee
           ? `<td class="col-fee">${esc(formatEur(g.totalFeeCent ?? 0))}</td>`
           : ''
@@ -529,6 +650,7 @@ export function buildPdfHtml(p: PdfPayload): string {
   table.entries .col-time { white-space: nowrap; width: 52px; text-align: right; }
   table.entries .col-desc { word-break: break-word; }
   table.entries .entry-ref { font-size: 8pt; color: #64748b; margin-top: 1px; }
+  table.entries .entry-project { font-size: 8pt; color: #64748b; margin-top: 1px; font-style: italic; }
   table.entries .col-dur { white-space: nowrap; text-align: right; width: 60px; font-variant-numeric: tabular-nums; }
   table.entries .col-fee { white-space: nowrap; text-align: right; width: 84px; font-variant-numeric: tabular-nums; }
   table.entries tr.total td {

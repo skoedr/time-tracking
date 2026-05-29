@@ -360,3 +360,46 @@ export async function mergePdfs(
 
   return Buffer.from(await merged.save())
 }
+
+/**
+ * Merge an invoice PDF with N Stundennachweis PDFs in the given order.
+ *
+ * Use case (v1.13 #119): late invoicing where one invoice covers multiple
+ * time-tracking periods (e.g. Mai + Juni reports attached to the Juni invoice).
+ *
+ * Output page order: invoice pages first, then each Stundennachweis in the
+ * order provided. The first Stundennachweis is appended right after the
+ * invoice, then the second, etc. Invoice's XMP metadata, OutputIntents, and
+ * embedded files (e.g. Factur-X XML) are preserved on the merged document.
+ *
+ * Throws if `stundennachweise` is empty — callers must use the single-merge
+ * `mergePdfs()` path for that, or simply not call this at all.
+ */
+export async function mergePdfsMulti(
+  invoice: Buffer,
+  stundennachweise: Buffer[]
+): Promise<Buffer> {
+  if (stundennachweise.length === 0) {
+    throw new Error('mergePdfsMulti requires at least one Stundennachweis')
+  }
+
+  const invDoc = await PDFDocument.load(invoice)
+  const snDocs = await Promise.all(stundennachweise.map((b) => PDFDocument.load(b)))
+
+  const embeddedFiles = extractEmbeddedFiles(invDoc)
+  const merged = await PDFDocument.create()
+
+  const invPages = await merged.copyPages(invDoc, invDoc.getPageIndices())
+  invPages.forEach((p) => merged.addPage(p))
+
+  for (const snDoc of snDocs) {
+    const snPages = await merged.copyPages(snDoc, snDoc.getPageIndices())
+    snPages.forEach((p) => merged.addPage(p))
+  }
+
+  reembedFiles(merged, embeddedFiles)
+  copyXmpMetadata(invDoc, merged)
+  copyOutputIntents(invDoc, merged)
+
+  return Buffer.from(await merged.save())
+}

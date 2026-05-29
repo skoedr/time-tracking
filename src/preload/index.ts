@@ -179,6 +179,11 @@ const api = {
       toIso: string
       projectId?: number | null
       includeSignatures?: boolean
+      /** v1.13 #118: row grouping. 'none' = flat. */
+      groupBy?: 'none' | 'tag' | 'project' | 'reference'
+      /** v1.13 #118: hide the Honorar column even when a rate is configured. */
+      hideFeeColumn?: boolean
+      /** @deprecated use groupBy instead. */
       groupByTag?: boolean
     }): Promise<IpcResult<{ path: string }>> => ipcRenderer.invoke('pdf:export', req),
     mergeExport: (req: {
@@ -187,11 +192,17 @@ const api = {
       toIso: string
       projectId?: number | null
       includeSignatures?: boolean
+      groupBy?: 'none' | 'tag' | 'project' | 'reference'
+      hideFeeColumn?: boolean
+      /** @deprecated use groupBy instead. */
       groupByTag?: boolean
       invoicePath: string
     }): Promise<IpcResult<{ path: string }>> => ipcRenderer.invoke('pdf:merge-export', req),
     mergeOnly: (req: {
-      stundennachweisPath: string
+      /** @deprecated v1.13 #119 — use stundennachweisPaths to support multi-SN merges. */
+      stundennachweisPath?: string
+      /** v1.13 #119: one or more Stundennachweis PDFs appended after the invoice, in order. */
+      stundennachweisPaths?: string[]
       invoicePath: string
     }): Promise<IpcResult<{ path: string }>> => ipcRenderer.invoke('pdf:merge-only', req),
     pdfInfo: (req: {

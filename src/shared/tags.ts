@@ -8,18 +8,19 @@
  *
  * Rules enforced at parse time:
  *  - All-lowercase (input is lowercased automatically)
- *  - Max 32 characters per tag (silently truncated on parse, rejected on validate)
+ *  - Max 50 characters per tag (silently truncated on parse, rejected on validate)
  *  - Max 10 tags per entry
  *  - Duplicates are silently removed (first occurrence wins)
  *  - Tags may contain letters, digits, hyphens, underscores, and dots
+ *  - Whitespace is NEVER allowed inside a tag (it splits tokens at parse time)
  *  - Empty tokens are ignored
  */
 
-const MAX_TAG_LEN = 32
+export const MAX_TAG_LEN = 50
 const MAX_TAGS = 10
 
-/** Regex for a valid single tag: 1-32 lowercase alphanumeric + - _ . */
-const TAG_RE = /^[a-z0-9._-]{1,32}$/
+/** Regex for a valid single tag: 1-50 lowercase alphanumeric + - _ . */
+export const TAG_RE = /^[a-z0-9._-]{1,50}$/
 
 /**
  * Parse a raw user input string into a normalised tag array.

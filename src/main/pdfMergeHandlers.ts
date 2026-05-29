@@ -4,7 +4,7 @@ import { join, parse, resolve } from 'path'
 import { PDFDocument } from 'pdf-lib'
 import log from 'electron-log/main'
 import type Database from 'better-sqlite3'
-import { mergePdfs } from './pdfMerge'
+import { mergePdfs, mergePdfsMulti } from './pdfMerge'
 import { buildPdfPayload, buildPdfHtml } from './pdf'
 import type { PdfPayload, PdfRequest } from './pdf'
 import { renderPdfBuffer } from './pdfWindow'
@@ -34,7 +34,10 @@ const realDialogDeps: DialogDeps = { showSaveDialog: (o) => dialog.showSaveDialo
 // ── pdf:merge-only handler ────────────────────────────────────────────────────
 
 export interface MergeOnlyRequest {
-  stundennachweisPath: string
+  /** @deprecated v1.13 #119 — use stundennachweisPaths to support multi-SN merges. */
+  stundennachweisPath?: string
+  /** v1.13 #119: one or more Stundennachweis PDFs appended after the invoice, in order. */
+  stundennachweisPaths?: string[]
   invoicePath: string
 }
 
@@ -44,42 +47,60 @@ export async function mergeOnlyHandler(
   dialogDeps: DialogDeps = realDialogDeps
 ): Promise<IpcResult<{ path: string }>> {
   try {
-    // Shape check — both paths must be non-empty strings.
+    // Shape check — invoice + at least one SN path must be present.
     const shapeErr = validateMergeOnlyRequest(req)
     if (shapeErr) return { ok: false, error: shapeErr }
 
-    const { stundennachweisPath, invoicePath } = req as MergeOnlyRequest
+    const typed = req as MergeOnlyRequest
+    // Normalize: prefer the new `stundennachweisPaths` array; fall back to the
+    // single legacy field. Validation above already ensured at least one is set.
+    const snPaths: string[] =
+      typed.stundennachweisPaths && typed.stundennachweisPaths.length > 0
+        ? typed.stundennachweisPaths
+        : [typed.stundennachweisPath as string]
+    const { invoicePath } = typed
 
-    // Deep path validation: extension + existence (using injected existsSync for testability).
-    const snPathErr = validatePdfPath(stundennachweisPath, fsDeps.existsSync)
-    if (snPathErr) return { ok: false, error: `Stundennachweis: ${snPathErr}` }
+    // Deep path validation: extension + existence for every SN + the invoice.
+    for (let i = 0; i < snPaths.length; i++) {
+      const err = validatePdfPath(snPaths[i], fsDeps.existsSync)
+      if (err) {
+        const label = snPaths.length === 1 ? 'Stundennachweis' : `Stundennachweis ${i + 1}`
+        return { ok: false, error: `${label}: ${err}` }
+      }
+    }
 
     const invPathErr = validatePdfPath(invoicePath, fsDeps.existsSync)
     if (invPathErr) return { ok: false, error: `Rechnung: ${invPathErr}` }
 
-    const resolvedSn = resolve(stundennachweisPath)
+    const resolvedSnPaths = snPaths.map((p) => resolve(p))
     const resolvedInv = resolve(invoicePath)
 
     // Size guard — reject before reading large files.
-    if (fsDeps.statSync(resolvedSn).size > MAX_PDF_BYTES) {
-      return { ok: false, error: 'Stundennachweis-PDF zu groß (max. 50 MB)' }
+    for (let i = 0; i < resolvedSnPaths.length; i++) {
+      if (fsDeps.statSync(resolvedSnPaths[i]).size > MAX_PDF_BYTES) {
+        const label = snPaths.length === 1 ? 'Stundennachweis' : `Stundennachweis ${i + 1}`
+        return { ok: false, error: `${label}-PDF zu groß (max. 50 MB)` }
+      }
     }
     if (fsDeps.statSync(resolvedInv).size > MAX_PDF_BYTES) {
       return { ok: false, error: 'Rechnungs-PDF zu groß (max. 50 MB)' }
     }
 
-    // Read both files — guard against locked files (Lexware / Acrobat open).
-    let snBuffer: Buffer
-    try {
-      snBuffer = fsDeps.readFileSync(resolvedSn)
-    } catch (e: any) {
-      if (e.code === 'EBUSY' || e.code === 'EPERM') {
-        return {
-          ok: false,
-          error: `Stundennachweis ist durch ein anderes Programm gesperrt: ${parse(resolvedSn).base}`
+    // Read all SN files — guard against locked files (Lexware / Acrobat open).
+    const snBuffers: Buffer[] = []
+    for (let i = 0; i < resolvedSnPaths.length; i++) {
+      try {
+        snBuffers.push(fsDeps.readFileSync(resolvedSnPaths[i]))
+      } catch (e: any) {
+        if (e.code === 'EBUSY' || e.code === 'EPERM') {
+          const label = snPaths.length === 1 ? 'Stundennachweis' : `Stundennachweis ${i + 1}`
+          return {
+            ok: false,
+            error: `${label} ist durch ein anderes Programm gesperrt: ${parse(resolvedSnPaths[i]).base}`
+          }
         }
+        return { ok: false, error: String(e) }
       }
-      return { ok: false, error: String(e) }
     }
 
     let invBuffer: Buffer
@@ -95,10 +116,16 @@ export async function mergeOnlyHandler(
       return { ok: false, error: String(e) }
     }
 
-    // Merge: invoice first, then Stundennachweis appended.
-    const merged = await mergePdfs(snBuffer, invBuffer, 'append')
+    // Merge: invoice first, then each Stundennachweis in order.
+    // Single-SN path keeps using mergePdfs to preserve the historical code path
+    // (test coverage + identical output bytes for the v1.5 contract).
+    const merged =
+      snBuffers.length === 1
+        ? await mergePdfs(snBuffers[0], invBuffer, 'append')
+        : await mergePdfsMulti(invBuffer, snBuffers)
     log.debug('[pdf:merge-only] merged', {
-      snBytes: snBuffer.length,
+      snCount: snBuffers.length,
+      snBytes: snBuffers.reduce((s, b) => s + b.length, 0),
       invoiceBytes: invBuffer.length,
       mergedBytes: merged.length
     })

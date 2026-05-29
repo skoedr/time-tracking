@@ -5,29 +5,79 @@ import { detectFilePurpose } from './pdfMergeUtils'
 
 const basename = (p: string): string => p.replace(/.*[\\/]/, '')
 
-const LS_SN_KEY = 'pdfMerge.lastSnPath'
+// v1.13 #119: switched from single path to an array of paths. Legacy key is
+// migrated on first open and then dropped.
+const LS_SN_PATHS_KEY = 'pdfMerge.lastSnPaths'
+const LS_SN_LEGACY_KEY = 'pdfMerge.lastSnPath'
 const LS_INV_KEY = 'pdfMerge.lastInvPath'
+
+interface SnEntry {
+  id: number
+  path: string
+  pages: number | null
+}
 
 interface Props {
   open: boolean
   onClose: () => void
 }
 
+function loadStoredSnPaths(): string[] {
+  const rawNew = localStorage.getItem(LS_SN_PATHS_KEY)
+  if (rawNew) {
+    try {
+      const parsed = JSON.parse(rawNew)
+      if (Array.isArray(parsed) && parsed.every((p) => typeof p === 'string')) {
+        return parsed
+      }
+    } catch {
+      // fall through to legacy / empty
+    }
+  }
+  // Migrate the legacy single-path key into the new array key on first read.
+  const legacy = localStorage.getItem(LS_SN_LEGACY_KEY)
+  if (legacy) {
+    localStorage.setItem(LS_SN_PATHS_KEY, JSON.stringify([legacy]))
+    localStorage.removeItem(LS_SN_LEGACY_KEY)
+    return [legacy]
+  }
+  return []
+}
+
+function persistSnPaths(paths: string[]): void {
+  if (paths.length === 0) {
+    localStorage.removeItem(LS_SN_PATHS_KEY)
+  } else {
+    localStorage.setItem(LS_SN_PATHS_KEY, JSON.stringify(paths))
+  }
+}
+
 export function PdfMergeModal({ open, onClose }: Props): React.JSX.Element {
   const t = useT()
-  const [snPath, setSnPath] = useState<string | null>(null)
+  const [snEntries, setSnEntries] = useState<SnEntry[]>([])
   const [invPath, setInvPath] = useState<string | null>(null)
-  const [snPages, setSnPages] = useState<number | null>(null)
   const [invPages, setInvPages] = useState<number | null>(null)
-  // 'sn' = picked SN-looking file into invoice slot; 'invoice' = reverse
-  const [swapOffer, setSwapOffer] = useState<'sn' | 'invoice' | null>(null)
+  // Swap-offer is only shown when the swap target is unambiguous:
+  //  - 'sn'       → invoice slot holds an SN-looking file (single invoice slot)
+  //  - 'invoice'  → an SN slot holds an invoice-looking file AND invoice is empty
+  const [swapOffer, setSwapOffer] = useState<
+    { kind: 'sn' } | { kind: 'invoice'; snId: number } | null
+  >(null)
   const [busy, setBusy] = useState(false)
   const [statusMsg, setStatusMsg] = useState<string | null>(null)
   const [statusKind, setStatusKind] = useState<'info' | 'error' | 'success'>('info')
 
-  // Version refs prevent stale pdf:pdf-info responses from overwriting newer picks.
-  const snInfoVersion = useRef(0)
+  // Version refs prevent stale pdf:pdf-info responses from overwriting newer
+  // picks. Each SN slot has its own counter keyed by stable id so adding/
+  // removing entries doesn't race.
+  const snInfoVersions = useRef<Map<number, number>>(new Map())
+  const snEntryIdCounter = useRef(0)
   const invInfoVersion = useRef(0)
+
+  function nextSnId(): number {
+    snEntryIdCounter.current += 1
+    return snEntryIdCounter.current
+  }
 
   // Pre-fill from localStorage on open. Any failure = treat path as gone.
   useEffect(() => {
@@ -35,22 +85,44 @@ export function PdfMergeModal({ open, onClose }: Props): React.JSX.Element {
     setStatusMsg(null)
     setStatusKind('info')
     setBusy(false)
+    setSwapOffer(null)
 
-    const storedSn = localStorage.getItem(LS_SN_KEY)
+    const storedSnPaths = loadStoredSnPaths()
     const storedInv = localStorage.getItem(LS_INV_KEY)
 
-    if (storedSn) {
-      snInfoVersion.current++
-      const v = snInfoVersion.current
-      void window.api.pdf.pdfInfo({ filePath: storedSn }).then((res) => {
-        if (snInfoVersion.current !== v) return
-        if (res.ok) {
-          setSnPath(storedSn)
-          setSnPages(res.data.pageCount)
-        } else {
-          localStorage.removeItem(LS_SN_KEY)
-        }
+    if (storedSnPaths.length > 0) {
+      const initial: SnEntry[] = storedSnPaths.map((path) => ({ id: nextSnId(), path, pages: null }))
+      setSnEntries(initial)
+
+      initial.forEach(({ id, path }) => {
+        const v = (snInfoVersions.current.get(id) ?? 0) + 1
+        snInfoVersions.current.set(id, v)
+        void window.api.pdf.pdfInfo({ filePath: path }).then((res) => {
+          if (snInfoVersions.current.get(id) !== v) return
+          if (res.ok) {
+            setSnEntries((entries) => {
+              const entryIdx = entries.findIndex((e) => e.id === id)
+              if (entryIdx === -1) return entries
+              const next = entries.slice()
+              next[entryIdx] = { ...next[entryIdx], pages: res.data.pageCount }
+              return next
+            })
+          } else {
+            // File gone — drop entry and re-persist.
+            setSnEntries((entries) => {
+              const entryIdx = entries.findIndex((e) => e.id === id)
+              if (entryIdx === -1) return entries
+              const next = entries.slice()
+              next.splice(entryIdx, 1)
+              persistSnPaths(next.map((e) => e.path))
+              return next
+            })
+            snInfoVersions.current.delete(id)
+          }
+        })
       })
+    } else {
+      setSnEntries([])
     }
 
     if (storedInv) {
@@ -68,53 +140,83 @@ export function PdfMergeModal({ open, onClose }: Props): React.JSX.Element {
     }
   }, [open])
 
-  async function loadFileInfo(filePath: string, slot: 'sn' | 'invoice'): Promise<void> {
-    if (slot === 'sn') {
-      snInfoVersion.current++
-      const v = snInfoVersion.current
-      setSnPath(filePath)
-      setSnPages(null)
-      setSwapOffer(null)
-      setStatusMsg(null)
-      localStorage.setItem(LS_SN_KEY, filePath)
+  // ── SN slot operations ────────────────────────────────────────────────────
 
-      const purpose = detectFilePurpose(basename(filePath))
-      if (purpose === 'invoice') setSwapOffer('sn')
+  async function addSnFile(filePath: string): Promise<void> {
+    const id = nextSnId()
+    setSnEntries((entries) => {
+      const next = [...entries, { id, path: filePath, pages: null }]
+      persistSnPaths(next.map((e) => e.path))
+      return next
+    })
+    setStatusMsg(null)
 
-      const res = await window.api.pdf.pdfInfo({ filePath })
-      if (snInfoVersion.current !== v) return
-      if (res.ok) {
-        setSnPages(res.data.pageCount)
-      } else {
-        setSnPath(null)
-        setSnPages(null)
-        setStatusKind('error')
-        setStatusMsg(t('merge.status.snError', { error: res.error }))
-        localStorage.removeItem(LS_SN_KEY)
-      }
+    // Offer swap only when the swap target is unambiguous: invoice slot empty.
+    const purpose = detectFilePurpose(basename(filePath))
+    if (purpose === 'invoice' && !invPath) {
+      setSwapOffer({ kind: 'invoice', snId: id })
+    }
+
+    const v = (snInfoVersions.current.get(id) ?? 0) + 1
+    snInfoVersions.current.set(id, v)
+    const res = await window.api.pdf.pdfInfo({ filePath })
+    if (snInfoVersions.current.get(id) !== v) return
+    if (res.ok) {
+      setSnEntries((entries) => {
+        const entryIdx = entries.findIndex((e) => e.id === id)
+        if (entryIdx === -1) return entries
+        const next = entries.slice()
+        next[entryIdx] = { ...next[entryIdx], pages: res.data.pageCount }
+        return next
+      })
     } else {
-      invInfoVersion.current++
-      const v = invInfoVersion.current
-      setInvPath(filePath)
+      setSnEntries((entries) => {
+        const entryIdx = entries.findIndex((e) => e.id === id)
+        if (entryIdx === -1) return entries
+        const next = entries.slice()
+        next.splice(entryIdx, 1)
+        persistSnPaths(next.map((e) => e.path))
+        return next
+      })
+      snInfoVersions.current.delete(id)
+      setStatusKind('error')
+      setStatusMsg(t('merge.status.snError', { error: res.error }))
+    }
+  }
+
+  function removeSnEntry(id: number): void {
+    setSnEntries((entries) => {
+      const next = entries.filter((e) => e.id !== id)
+      if (next.length === entries.length) return entries
+      persistSnPaths(next.map((e) => e.path))
+      return next
+    })
+    snInfoVersions.current.delete(id)
+    setSwapOffer(null)
+  }
+
+  async function loadInvoiceInfo(filePath: string): Promise<void> {
+    invInfoVersion.current++
+    const v = invInfoVersion.current
+    setInvPath(filePath)
+    setInvPages(null)
+    setSwapOffer(null)
+    setStatusMsg(null)
+    localStorage.setItem(LS_INV_KEY, filePath)
+
+    const purpose = detectFilePurpose(basename(filePath))
+    if (purpose === 'sn') setSwapOffer({ kind: 'sn' })
+
+    const res = await window.api.pdf.pdfInfo({ filePath })
+    if (invInfoVersion.current !== v) return
+    if (res.ok) {
+      setInvPages(res.data.pageCount)
+    } else {
+      setInvPath(null)
       setInvPages(null)
-      setSwapOffer(null)
-      setStatusMsg(null)
-      localStorage.setItem(LS_INV_KEY, filePath)
-
-      const purpose = detectFilePurpose(basename(filePath))
-      if (purpose === 'sn') setSwapOffer('invoice')
-
-      const res = await window.api.pdf.pdfInfo({ filePath })
-      if (invInfoVersion.current !== v) return
-      if (res.ok) {
-        setInvPages(res.data.pageCount)
-      } else {
-        setInvPath(null)
-        setInvPages(null)
-        setStatusKind('error')
-        setStatusMsg(t('merge.status.invError', { error: res.error }))
-        localStorage.removeItem(LS_INV_KEY)
-      }
+      setStatusKind('error')
+      setStatusMsg(t('merge.status.invError', { error: res.error }))
+      localStorage.removeItem(LS_INV_KEY)
     }
   }
 
@@ -125,33 +227,61 @@ export function PdfMergeModal({ open, onClose }: Props): React.JSX.Element {
       setStatusMsg(t('merge.status.openError', { error: res.error }))
       return
     }
-    if (res.data === null) return // user cancelled — do nothing
-    void loadFileInfo(res.data.filePath, slot)
+    if (res.data === null) return
+    if (slot === 'sn') {
+      void addSnFile(res.data.filePath)
+    } else {
+      void loadInvoiceInfo(res.data.filePath)
+    }
   }
 
   function executeSwap(): void {
-    const oldSn = snPath
-    const oldInv = invPath
-    const oldSnPages = snPages
-    const oldInvPages = invPages
-    setSnPath(oldInv)
-    setInvPath(oldSn)
-    setSnPages(oldInvPages)
-    setInvPages(oldSnPages)
-    if (oldInv) localStorage.setItem(LS_SN_KEY, oldInv)
-    else localStorage.removeItem(LS_SN_KEY)
-    if (oldSn) localStorage.setItem(LS_INV_KEY, oldSn)
-    else localStorage.removeItem(LS_INV_KEY)
+    if (!swapOffer) return
+    if (swapOffer.kind === 'sn') {
+      // Invoice slot held an SN-looking file → move it to the SN list.
+      if (!invPath) return
+      const movedPath = invPath
+      const movedPages = invPages
+      setInvPath(null)
+      setInvPages(null)
+      localStorage.removeItem(LS_INV_KEY)
+      const id = nextSnId()
+      setSnEntries((entries) => {
+        const next = [...entries, { id, path: movedPath, pages: movedPages }]
+        persistSnPaths(next.map((e) => e.path))
+        return next
+      })
+    } else {
+      // An SN slot held an invoice-looking file → promote it to the invoice slot.
+      const targetId = swapOffer.snId
+      const entry = snEntries.find((e) => e.id === targetId)
+      if (!entry) {
+        setSwapOffer(null)
+        return
+      }
+      setInvPath(entry.path)
+      setInvPages(entry.pages)
+      localStorage.setItem(LS_INV_KEY, entry.path)
+      setSnEntries((entries) => {
+        const next = entries.filter((e) => e.id !== targetId)
+        persistSnPaths(next.map((e) => e.path))
+        return next
+      })
+      snInfoVersions.current.delete(targetId)
+    }
     setSwapOffer(null)
   }
 
   async function handleMerge(): Promise<void> {
-    if (!snPath || !invPath) return
+    if (snEntries.length === 0 || !invPath) return
     setBusy(true)
     setStatusMsg(t('merge.status.merging'))
     setStatusKind('info')
 
-    const res = await window.api.pdf.mergeOnly({ stundennachweisPath: snPath, invoicePath: invPath })
+    const res = await window.api.pdf.mergeOnly({
+      stundennachweisPaths: snEntries.map((e) => e.path),
+      invoicePath: invPath
+    })
     setBusy(false)
 
     if (res.ok) {
@@ -166,22 +296,75 @@ export function PdfMergeModal({ open, onClose }: Props): React.JSX.Element {
     }
   }
 
-  // Both paths AND page counts must be loaded before allowing merge.
+  const allSnPagesLoaded = snEntries.every((e) => e.pages !== null)
   const canMerge =
-    snPath !== null &&
+    snEntries.length > 0 &&
     invPath !== null &&
-    snPages !== null &&
+    allSnPagesLoaded &&
     invPages !== null &&
     !busy
 
   const successPath = statusKind === 'success' ? statusMsg : null
 
+  const snPagesTotal = snEntries.reduce((sum, e) => sum + (e.pages ?? 0), 0)
+  const totalPages =
+    invPages !== null && allSnPagesLoaded ? invPages + snPagesTotal : null
+
   return (
     <Dialog open={open} onClose={onClose} title={t('merge.title')} widthClass="w-[520px]">
       <div className="flex flex-col gap-4">
-        {/* Stundennachweis slot */}
-        <div className="flex flex-col gap-1">
+        {/* Stundennachweis slots */}
+        <div className="flex flex-col gap-2">
           <span className="text-sm font-medium" style={{ color: 'var(--text2)' }}>{t('merge.sn.label')}</span>
+          {snEntries.map((entry, idx) => {
+            const isOnlyEntry = snEntries.length === 1
+            return (
+              <div
+                key={entry.id}
+                className="flex flex-col gap-1 rounded-md border px-3 py-2"
+                style={{ borderColor: 'var(--card-border)', background: 'var(--card-bg)' }}
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-medium" style={{ color: 'var(--text2)' }}>
+                    {isOnlyEntry ? t('merge.sn.slotSingle') : t('merge.sn.slot', { n: String(idx + 1) })}
+                  </span>
+                  <span className="flex-1 max-w-[280px] truncate text-xs" style={{ color: 'var(--text3)' }}>
+                    {basename(entry.path)}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => removeSnEntry(entry.id)}
+                    disabled={busy}
+                    className="rounded px-2 py-0.5 text-xs hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-indigo-400 disabled:opacity-50"
+                    style={{ color: 'var(--text3)' }}
+                    aria-label={t('merge.sn.remove')}
+                    title={t('merge.sn.remove')}
+                  >
+                    ×
+                  </button>
+                </div>
+                <span className="text-xs" style={{ color: 'var(--text3)' }}>
+                  {entry.pages === null
+                    ? t('merge.sn.loading')
+                    : entry.pages === 1
+                      ? t('merge.sn.pages.one')
+                      : t('merge.sn.pages.other', { count: String(entry.pages) })}
+                </span>
+                {swapOffer?.kind === 'invoice' && swapOffer.snId === entry.id && (
+                  <div className="flex items-center gap-2 rounded-md bg-amber-900/30 px-3 py-1.5 text-xs text-amber-300">
+                    <span>{t('merge.inv.swapOffer')}</span>
+                    <button
+                      type="button"
+                      onClick={executeSwap}
+                      className="font-semibold underline hover:text-amber-200"
+                    >
+                      {t('merge.swap')}
+                    </button>
+                  </div>
+                )}
+              </div>
+            )
+          })}
           <div className="flex items-center gap-2">
             <button
               type="button"
@@ -190,29 +373,12 @@ export function PdfMergeModal({ open, onClose }: Props): React.JSX.Element {
               className="rounded-lg border px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-400 disabled:opacity-50 hover:opacity-80"
               style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)', color: 'var(--text2)' }}
             >
-              {snPath ? t('merge.sn.change') : t('merge.sn.pick')}
+              {snEntries.length === 0 ? t('merge.sn.pick') : t('merge.sn.add')}
             </button>
-            <span className="max-w-[260px] truncate text-xs" style={{ color: 'var(--text3)' }}>
-              {snPath ? basename(snPath) : t('merge.sn.noFile')}
-            </span>
+            {snEntries.length === 0 && (
+              <span className="text-xs" style={{ color: 'var(--text3)' }}>{t('merge.sn.noFile')}</span>
+            )}
           </div>
-          {snPath && (
-            <span className="text-xs" style={{ color: 'var(--text3)' }}>
-              {snPages === null ? t('merge.sn.loading') : (snPages === 1 ? t('merge.sn.pages.one') : t('merge.sn.pages.other', { count: String(snPages) }))}
-            </span>
-          )}
-          {swapOffer === 'sn' && (
-            <div className="flex items-center gap-2 rounded-md bg-amber-900/30 px-3 py-1.5 text-xs text-amber-300">
-              <span>{t('merge.sn.swapOffer')}</span>
-              <button
-                type="button"
-                onClick={executeSwap}
-                className="font-semibold underline hover:text-amber-200"
-              >
-                {t('merge.swap')}
-              </button>
-            </div>
-          )}
         </div>
 
         {/* Invoice slot */}
@@ -237,9 +403,9 @@ export function PdfMergeModal({ open, onClose }: Props): React.JSX.Element {
               {invPages === null ? t('merge.sn.loading') : (invPages === 1 ? t('merge.sn.pages.one') : t('merge.sn.pages.other', { count: String(invPages) }))}
             </span>
           )}
-          {swapOffer === 'invoice' && (
+          {swapOffer?.kind === 'sn' && (
             <div className="flex items-center gap-2 rounded-md bg-amber-900/30 px-3 py-1.5 text-xs text-amber-300">
-              <span>{t('merge.inv.swapOffer')}</span>
+              <span>{t('merge.sn.swapOffer')}</span>
               <button
                 type="button"
                 onClick={executeSwap}
@@ -251,10 +417,12 @@ export function PdfMergeModal({ open, onClose }: Props): React.JSX.Element {
           )}
         </div>
 
-        {/* Page count preview */}
-        {snPages !== null && invPages !== null && (
+        {/* Total page preview */}
+        {totalPages !== null && (
           <div className="rounded-lg px-3 py-2 text-sm border" style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)', color: 'var(--text2)' }}>
-            {t('merge.preview', { inv: String(invPages), sn: String(snPages), total: String(invPages! + snPages!) })}
+            {snEntries.length === 1
+              ? t('merge.preview', { inv: String(invPages), sn: String(snPagesTotal), total: String(totalPages) })
+              : t('merge.preview.multi', { inv: String(invPages), count: String(snEntries.length), sn: String(snPagesTotal), total: String(totalPages) })}
           </div>
         )}
 

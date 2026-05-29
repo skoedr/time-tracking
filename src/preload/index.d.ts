@@ -121,6 +121,9 @@ declare global {
           toIso: string
           projectId?: number | null
           includeSignatures?: boolean
+          groupBy?: 'none' | 'tag' | 'project' | 'reference'
+          hideFeeColumn?: boolean
+          /** @deprecated use groupBy instead. */
           groupByTag?: boolean
         }): Promise<IpcResult<{ path: string }>>
         mergeExport(req: {
@@ -129,11 +132,17 @@ declare global {
           toIso: string
           projectId?: number | null
           includeSignatures?: boolean
+          groupBy?: 'none' | 'tag' | 'project' | 'reference'
+          hideFeeColumn?: boolean
+          /** @deprecated use groupBy instead. */
           groupByTag?: boolean
           invoicePath: string
         }): Promise<IpcResult<{ path: string }>>
         mergeOnly(req: {
-          stundennachweisPath: string
+          /** @deprecated v1.13 #119 — use stundennachweisPaths to support multi-SN merges. */
+          stundennachweisPath?: string
+          /** v1.13 #119: one or more Stundennachweis PDFs appended after the invoice, in order. */
+          stundennachweisPaths?: string[]
           invoicePath: string
         }): Promise<IpcResult<{ path: string }>>
         pdfInfo(req: {
