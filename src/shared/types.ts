@@ -184,6 +184,10 @@ export interface Settings {
   // v1.11 #94 — Show external project number in square brackets.
   // '0' (default) = hidden, '1' = shown.
   show_project_number?: string
+  // v1.13.2 — Export modal preferences as a JSON blob (see ExportModal.tsx).
+  // Lives in the DB instead of localStorage so it survives hard exits,
+  // second instances, and is included in backups. Absent until first change.
+  export_prefs?: string
 }
 
 export interface CreateClientInput {

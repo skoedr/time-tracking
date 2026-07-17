@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react'
 import type { Client, Project } from '../../../shared/types'
 import { useT } from '../contexts/I18nContext'
+import { useSettings } from '../contexts/SettingsContext'
 import { Dialog } from './Dialog'
 import { Toggle } from './Toggle'
+import { LS_PREFS_KEY, parsePrefs, readLegacyPrefs } from './exportPrefs'
+import type { CsvFormat, ExportPrefs, ExportTab as Tab, GroupBy } from './exportPrefs'
 
 interface Props {
   open: boolean
@@ -12,65 +15,9 @@ interface Props {
   prefilledRange?: { fromIso: string; toIso: string }
 }
 
-type Tab = 'pdf' | 'csv'
-type CsvFormat = 'de' | 'us'
-type GroupBy = 'none' | 'tag' | 'project' | 'reference'
-
-// v1.13 #118: per-modal preferences are remembered across sessions so users
-// don't have to re-tick the same toggles every export. Stored under a
-// versioned key so future shape changes can be migrated/dropped safely.
-const LS_PREFS_KEY = 'export.modal.prefs.v1'
-
-interface ExportPrefs {
-  tab: Tab
-  includeSignatures: boolean
-  groupBy: GroupBy
-  hideFeeColumn: boolean
-  csvFormat: CsvFormat
-  csvGroupByTag: boolean
-}
-
-const DEFAULT_PREFS: ExportPrefs = {
-  tab: 'pdf',
-  includeSignatures: false,
-  groupBy: 'none',
-  hideFeeColumn: false,
-  csvFormat: 'de',
-  csvGroupByTag: false
-}
-
-function loadPrefs(): ExportPrefs {
-  try {
-    const raw = localStorage.getItem(LS_PREFS_KEY)
-    if (!raw) return DEFAULT_PREFS
-    const parsed = JSON.parse(raw) as Partial<ExportPrefs>
-    // Validate each field against its allowed set so corrupted/legacy data
-    // can't crash the render.
-    return {
-      tab: parsed.tab === 'csv' ? 'csv' : 'pdf',
-      includeSignatures: parsed.includeSignatures === true,
-      groupBy:
-        parsed.groupBy === 'tag' ||
-        parsed.groupBy === 'project' ||
-        parsed.groupBy === 'reference'
-          ? parsed.groupBy
-          : 'none',
-      hideFeeColumn: parsed.hideFeeColumn === true,
-      csvFormat: parsed.csvFormat === 'us' ? 'us' : 'de',
-      csvGroupByTag: parsed.csvGroupByTag === true
-    }
-  } catch {
-    return DEFAULT_PREFS
-  }
-}
-
-function savePrefs(prefs: ExportPrefs): void {
-  try {
-    localStorage.setItem(LS_PREFS_KEY, JSON.stringify(prefs))
-  } catch {
-    // Quota exceeded or storage disabled — silent.
-  }
-}
+// Pref shape, defaults, parsing/validation, and the legacy localStorage key
+// live in exportPrefs.ts (pure module, unit-tested). Persistence moved from
+// localStorage to the DB `settings` table in v1.13.2 — see the rationale there.
 
 /**
  * Unified export modal (v1.5 PR C, issue #18).
@@ -85,10 +32,16 @@ function savePrefs(prefs: ExportPrefs): void {
 export function ExportModal(props: Props): React.JSX.Element {
   const { open, onClose, prefilledClientId, prefilledRange } = props
   const t = useT()
+  const { settings, setSetting } = useSettings()
 
-  // Lazy-init from localStorage so the modal opens with the user's last
-  // selection. Persisted via the effect below on every change.
-  const initialPrefs = loadPrefs()
+  // Init from the settings DB so the modal opens with the user's last
+  // selection; the localStorage fallback covers the short window before the
+  // one-time migration below has run. CalendarView remounts this component
+  // per open (key prop), so this re-reads the latest value each time the
+  // modal opens. Lazy useState: parse once per mount, not on every render.
+  const [initialPrefs] = useState<ExportPrefs>(() =>
+    parsePrefs(settings?.export_prefs ?? readLegacyPrefs())
+  )
 
   const [tab, setTab] = useState<Tab>(initialPrefs.tab)
   const [clients, setClients] = useState<Client[]>([])
@@ -111,16 +64,56 @@ export function ExportModal(props: Props): React.JSX.Element {
   const [statusMsg, setStatusMsg] = useState<string | null>(null)
   const [statusKind, setStatusKind] = useState<'info' | 'error' | 'success'>('info')
 
+  // v1.13 #118 / v1.13.2: persist prefs ONLY from user-interaction handlers,
+  // never from an effect. Effect-based persistence clobbers stored prefs when
+  // a fresh mount runs its effect with default state (StrictMode re-runs the
+  // effect with the ref already set, so a mount-skip ref is not safe). The
+  // patch is merged over the current state so one call persists the full blob.
+  function persistPrefs(patch: Partial<ExportPrefs>): void {
+    // Before the initial settings load there is nothing safe to merge onto —
+    // skip; the next interaction after load persists the full state.
+    if (!settings) return
+    const prefs: ExportPrefs = {
+      tab,
+      includeSignatures,
+      groupBy,
+      hideFeeColumn,
+      csvFormat,
+      csvGroupByTag,
+      ...patch
+    }
+    setSetting('export_prefs', JSON.stringify(prefs)).catch(() => {
+      // IPC/DB write failed — non-fatal, the modal still works this session.
+    })
+  }
+
   // Reset status when switching tabs so stale messages don't confuse.
   function handleTabChange(next: Tab): void {
     setTab(next)
     setStatusMsg(null)
+    persistPrefs({ tab: next })
   }
 
-  // v1.13 #118: persist user prefs on every change.
+  // v1.13.2: one-time migration of legacy localStorage prefs into the DB.
+  // Runs once settings have loaded; the legacy key is removed afterwards so
+  // this never fires again.
   useEffect(() => {
-    savePrefs({ tab, includeSignatures, groupBy, hideFeeColumn, csvFormat, csvGroupByTag })
-  }, [tab, includeSignatures, groupBy, hideFeeColumn, csvFormat, csvGroupByTag])
+    if (!settings || settings.export_prefs !== undefined) return
+    const legacy = readLegacyPrefs()
+    if (legacy === null) return
+    setSetting('export_prefs', JSON.stringify(parsePrefs(legacy)))
+      .then(() => {
+        try {
+          localStorage.removeItem(LS_PREFS_KEY)
+        } catch {
+          // Storage disabled — the DB value wins from now on either way.
+        }
+      })
+      .catch(() => {
+        // Migration write failed — keep the legacy key so the next mount
+        // retries instead of losing the prefs.
+      })
+  }, [settings, setSetting])
 
   // Load clients once when the dialog first opens.
   useEffect(() => {
@@ -339,9 +332,11 @@ export function ExportModal(props: Props): React.JSX.Element {
                 <select
                   title={t('export.pdf.groupBy')}
                   value={groupBy}
-                  onChange={(e) =>
-                    setGroupBy(e.target.value as 'none' | 'tag' | 'project' | 'reference')
-                  }
+                  onChange={(e) => {
+                    const next = e.target.value as GroupBy
+                    setGroupBy(next)
+                    persistPrefs({ groupBy: next })
+                  }}
                   disabled={busy}
                   className={inputClass}
                   style={inputStyle}
@@ -359,14 +354,28 @@ export function ExportModal(props: Props): React.JSX.Element {
             <div className="flex flex-col gap-1">
               <div className="flex items-center justify-between">
                 <span className="text-sm" style={{ color: 'var(--text)' }}>{t('export.pdf.hideFeeColumn')}</span>
-                <Toggle checked={hideFeeColumn} onChange={setHideFeeColumn} disabled={busy} />
+                <Toggle
+                  checked={hideFeeColumn}
+                  onChange={(v) => {
+                    setHideFeeColumn(v)
+                    persistPrefs({ hideFeeColumn: v })
+                  }}
+                  disabled={busy}
+                />
               </div>
               <span className="text-xs" style={{ color: 'var(--text3)' }}>{t('export.pdf.hideFeeColumnHint')}</span>
             </div>
             <div className="flex flex-col gap-1">
               <div className="flex items-center justify-between">
                 <span className="text-sm" style={{ color: 'var(--text)' }}>{t('export.pdf.signatures')}</span>
-                <Toggle checked={includeSignatures} onChange={setIncludeSignatures} disabled={busy} />
+                <Toggle
+                  checked={includeSignatures}
+                  onChange={(v) => {
+                    setIncludeSignatures(v)
+                    persistPrefs({ includeSignatures: v })
+                  }}
+                  disabled={busy}
+                />
               </div>
               <span className="text-xs" style={{ color: 'var(--text3)' }}>{t('export.pdf.signaturesHint')}</span>
             </div>
@@ -379,7 +388,14 @@ export function ExportModal(props: Props): React.JSX.Element {
             <div className="flex flex-col gap-1">
               <div className="flex items-center justify-between">
                 <span className="text-sm" style={{ color: 'var(--text)' }}>{t('export.csv.groupByTag')}</span>
-                <Toggle checked={csvGroupByTag} onChange={setCsvGroupByTag} disabled={busy} />
+                <Toggle
+                  checked={csvGroupByTag}
+                  onChange={(v) => {
+                    setCsvGroupByTag(v)
+                    persistPrefs({ csvGroupByTag: v })
+                  }}
+                  disabled={busy}
+                />
               </div>
               <span className="text-xs" style={{ color: 'var(--text3)' }}>{t('export.csv.groupByTagHint')}</span>
             </div>
@@ -391,7 +407,10 @@ export function ExportModal(props: Props): React.JSX.Element {
                   name="csvFormat"
                   value="de"
                   checked={csvFormat === 'de'}
-                  onChange={() => setCsvFormat('de')}
+                  onChange={() => {
+                    setCsvFormat('de')
+                    persistPrefs({ csvFormat: 'de' })
+                  }}
                   disabled={busy}
                   className="h-4 w-4 text-indigo-500 focus:ring-indigo-400"
                 />
@@ -405,7 +424,10 @@ export function ExportModal(props: Props): React.JSX.Element {
                   name="csvFormat"
                   value="us"
                   checked={csvFormat === 'us'}
-                  onChange={() => setCsvFormat('us')}
+                  onChange={() => {
+                    setCsvFormat('us')
+                    persistPrefs({ csvFormat: 'us' })
+                  }}
                   disabled={busy}
                   className="h-4 w-4 text-indigo-500 focus:ring-indigo-400"
                 />
