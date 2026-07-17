@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { Client, Project } from '../../../shared/types'
 import { useT } from '../contexts/I18nContext'
-import { useSettings } from '../contexts/SettingsContext'
+import { useSettingsStore } from '../store/settingsStore'
 import { Dialog } from './Dialog'
 import { Toggle } from './Toggle'
 import { LS_PREFS_KEY, parsePrefs, readLegacyPrefs } from './exportPrefs'
@@ -32,7 +32,12 @@ interface Props {
 export function ExportModal(props: Props): React.JSX.Element {
   const { open, onClose, prefilledClientId, prefilledRange } = props
   const t = useT()
-  const { settings, setSetting } = useSettings()
+  // Selectors (v1.13.2 PR 2): subscribe to the export_prefs key and the
+  // loaded flag only — this modal's own writes no longer re-render every
+  // settings consumer in the app.
+  const exportPrefs = useSettingsStore((s) => s.settings?.export_prefs)
+  const settingsLoaded = useSettingsStore((s) => s.settings !== null)
+  const setSetting = useSettingsStore((s) => s.setSetting)
 
   // Init from the settings DB so the modal opens with the user's last
   // selection; the localStorage fallback covers the short window before the
@@ -40,7 +45,7 @@ export function ExportModal(props: Props): React.JSX.Element {
   // per open (key prop), so this re-reads the latest value each time the
   // modal opens. Lazy useState: parse once per mount, not on every render.
   const [initialPrefs] = useState<ExportPrefs>(() =>
-    parsePrefs(settings?.export_prefs ?? readLegacyPrefs())
+    parsePrefs(exportPrefs ?? readLegacyPrefs())
   )
 
   const [tab, setTab] = useState<Tab>(initialPrefs.tab)
@@ -72,7 +77,7 @@ export function ExportModal(props: Props): React.JSX.Element {
   function persistPrefs(patch: Partial<ExportPrefs>): void {
     // Before the initial settings load there is nothing safe to merge onto —
     // skip; the next interaction after load persists the full state.
-    if (!settings) return
+    if (!settingsLoaded) return
     const prefs: ExportPrefs = {
       tab,
       includeSignatures,
@@ -98,7 +103,7 @@ export function ExportModal(props: Props): React.JSX.Element {
   // Runs once settings have loaded; the legacy key is removed afterwards so
   // this never fires again.
   useEffect(() => {
-    if (!settings || settings.export_prefs !== undefined) return
+    if (!settingsLoaded || exportPrefs !== undefined) return
     const legacy = readLegacyPrefs()
     if (legacy === null) return
     setSetting('export_prefs', JSON.stringify(parsePrefs(legacy)))
@@ -110,10 +115,12 @@ export function ExportModal(props: Props): React.JSX.Element {
         }
       })
       .catch(() => {
-        // Migration write failed — keep the legacy key so the next mount
-        // retries instead of losing the prefs.
+        // Migration write failed — keep the legacy key so the next app
+        // launch retries instead of losing the prefs. (The optimistic store
+        // update keeps export_prefs set for this session, so this effect
+        // won't re-fire before a restart.)
       })
-  }, [settings, setSetting])
+  }, [settingsLoaded, exportPrefs, setSetting])
 
   // Load clients once when the dialog first opens.
   useEffect(() => {

@@ -12,15 +12,16 @@
  *  4. A failed DB write must not crash and must keep the legacy key so the
  *     migration retries on the next mount.
  *
- * Uses the real SettingsProvider/I18nProvider with a mocked window.api,
- * mirroring CalendarView's key-remount pattern (fresh mount per open).
+ * Uses the real settings store (useSettingsStore) + I18nProvider with a
+ * mocked window.api, mirroring CalendarView's key-remount pattern (fresh
+ * mount per open).
  */
 import { StrictMode } from 'react'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { act, render, waitFor } from '@testing-library/react'
 import { fireEvent } from '@testing-library/dom'
 import { ExportModal } from './ExportModal'
-import { SettingsProvider } from '../contexts/SettingsContext'
+import { useSettingsStore } from '../store/settingsStore'
 import { I18nProvider } from '../contexts/I18nContext'
 import { LS_PREFS_KEY } from './exportPrefs'
 
@@ -57,11 +58,9 @@ function mockApi(initial: Store): ApiMock {
 function Harness({ open }: { open: boolean }): React.JSX.Element {
   return (
     <StrictMode>
-      <SettingsProvider>
-        <I18nProvider>
-          <ExportModal key={open ? 'open' : 'closed'} open={open} onClose={() => {}} />
-        </I18nProvider>
-      </SettingsProvider>
+      <I18nProvider>
+        <ExportModal key={open ? 'open' : 'closed'} open={open} onClose={() => {}} />
+      </I18nProvider>
     </StrictMode>
   )
 }
@@ -87,10 +86,12 @@ function setup(initialStore: Store): Setup {
 }
 
 async function openModal(rerender: (ui: React.ReactElement) => void): Promise<void> {
-  // Flush the SettingsProvider's initial getAll before the modal (re)mounts —
-  // mirrors real usage, where the app is long since loaded when the user
+  // Load the settings store before the modal (re)mounts — mirrors real
+  // usage, where the entry point kicked off load() long before the user
   // opens the export dialog.
-  await act(async () => {})
+  await act(async () => {
+    await useSettingsStore.getState().load()
+  })
   rerender(<Harness open={true} />)
   await act(async () => {})
 }
@@ -98,6 +99,8 @@ async function openModal(rerender: (ui: React.ReactElement) => void): Promise<vo
 describe('ExportModal pref persistence (DB-backed, v1.13.2)', () => {
   beforeEach(() => {
     localStorage.clear()
+    // The zustand store is module-global — reset between tests.
+    useSettingsStore.setState({ settings: null })
   })
 
   it('opens with the prefs stored in the settings DB', async () => {

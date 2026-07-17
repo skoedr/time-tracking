@@ -12,7 +12,7 @@ import { UpdateBanner } from './components/UpdateBanner'
 import { OnboardingWizard } from './components/OnboardingWizard'
 import { useTimer } from './hooks/useTimer'
 import { useT } from './contexts/I18nContext'
-import { useSettings } from './contexts/SettingsContext'
+import { useSettingsStore } from './store/settingsStore'
 import { useProjectsStore } from './store/projectsStore'
 import { useUiPrefsStore } from './store/uiPrefsStore'
 
@@ -20,7 +20,8 @@ type View = 'today' | 'calendar' | 'clients' | 'analytics' | 'settings'
 
 function App(): React.JSX.Element {
   const t = useT()
-  const { settings } = useSettings()
+  // Selector: re-renders only when the onboarding flag changes (v1.13.2 PR 2).
+  const onboardingCompleted = useSettingsStore((s) => s.settings?.onboarding_completed)
   const [view, setView] = useState<View>('today')
   const [showOnboarding, setShowOnboarding] = useState(false)
   const [showTimerModal, setShowTimerModal] = useState(false)
@@ -44,9 +45,9 @@ function App(): React.JSX.Element {
 
   // Check onboarding flag — show wizard only for fresh installs.
   useEffect(() => {
-    if (settings?.onboarding_completed === '0') setShowOnboarding(true)
+    if (onboardingCompleted === '0') setShowOnboarding(true)
     void useUiPrefsStore.getState().load()
-  }, [settings?.onboarding_completed])
+  }, [onboardingCompleted])
 
   async function finishOnboarding(): Promise<void> {
     setShowOnboarding(false)
