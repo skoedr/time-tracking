@@ -27,6 +27,12 @@ Deferred items from plan reviews. Items here have explicit decisions — they ar
 - **Merge modal Nav-Trigger** — PdfMergeModal ist nur via CalendarView erreichbar. Zweiter Einstiegspunkt in Sidebar oder ExportModal. Design-Gespräch ausstehend.
 - **Competitive positioning** — README + App-Beschreibung auf LocalFirst / Datenschutz / Kein-Abo schärfen. Kein Code, nur Text. Gespräch ausstehend.
 
+### v1.13.2 Follow-ups (aus /ship-Review 2026-07-17)
+
+- **SettingsContext Split-Context-Refactor** — `SettingsContext` in Read-/Write-Context aufteilen und Provider-Value memoizen, damit `setSetting`-Writes nicht alle `useSettings`-Konsumenten re-rendern (Perf-Finding aus v1.13.2-Review, Confidence 8/10). **Vereinbart:** eigener PR #2 in v1.13.2, Merge nach dem Persistenz-Fix-PR, Release erst danach.
+
+- **Smoke-Test nutzt Live-DB** (Red-Team-Finding, pre-existing seit v1.2) — `--smoke-test` öffnet die produktive `userData`-DB, migriert sie ggf. und löscht via `DELETE FROM clients WHERE id = 9999` — ein echter Kunde mit id 9999 würde Daten verlieren (Seed nutzt `INSERT OR IGNORE`). Fix: `app.setPath('userData', tmpdir)` vor `getDb()` im Smoke-Pfad, oder Seed in einer immer zurückgerollten Transaktion. → Housekeeping-PR.
+
 ### Nächster Hotfix (technisches Housekeeping) → eigene PR vor v1.12
 
 - **Handler extraction: pdf:merge-export** — `pdf:merge-export` in `ipc.ts` noch im alten Inline-Stil; in `pdfMergeHandlers.ts`-Muster überführen für testbarere Struktur. Kein User-Value, aber sauberer.
