@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react'
-import { useSettings } from './SettingsContext'
+import { useSettingsStore } from '../store/settingsStore'
 
 interface RoundingCtx {
   /** Rounding step in minutes; 0 = no rounding (pass-through). */
@@ -14,7 +14,7 @@ const RoundingContext = createContext<RoundingCtx>({
 })
 
 /**
- * Reads `pdf_round_minutes` from SettingsContext (no own IPC call).
+ * Reads `pdf_round_minutes` from the settings store (no own IPC call).
  * Exposes `roundMinutes` and `setRoundMinutes` to the component tree.
  *
  * `setRoundMinutes` updates local state immediately and persists via
@@ -22,18 +22,20 @@ const RoundingContext = createContext<RoundingCtx>({
  * without a reload. v1.12 #106
  */
 export function RoundingProvider({ children }: { children: React.ReactNode }): React.JSX.Element {
-  const { settings, setSetting } = useSettings()
+  // Selector: re-renders only when pdf_round_minutes changes (v1.13.2 PR 2).
+  const pdfRoundMinutes = useSettingsStore((s) => s.settings?.pdf_round_minutes)
+  const setSetting = useSettingsStore((s) => s.setSetting)
   const [roundMinutes, setRoundMinutesState] = useState(0)
 
-  // Sync from SettingsContext once loaded (and whenever it changes).
+  // Sync from the settings store once loaded (and whenever it changes).
   useEffect(() => {
-    const v = parseInt(settings?.pdf_round_minutes ?? '0', 10)
+    const v = parseInt(pdfRoundMinutes ?? '0', 10)
     setRoundMinutesState(Number.isFinite(v) && v > 0 ? v : 0)
-  }, [settings?.pdf_round_minutes])
+  }, [pdfRoundMinutes])
 
   const setRoundMinutes = async (n: number): Promise<void> => {
     setRoundMinutesState(n)
-    await setSetting('pdf_round_minutes', String(n) as never)
+    await setSetting('pdf_round_minutes', String(n))
   }
 
   return (

@@ -10,21 +10,23 @@ import 'electron-log/renderer'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App'
-import { SettingsProvider } from './contexts/SettingsContext'
+import { useSettingsStore } from './store/settingsStore'
 import { I18nProvider } from './contexts/I18nContext'
 import { ThemeProvider } from './contexts/ThemeContext'
 import { RoundingProvider } from './contexts/RoundingContext'
 
+// v1.13.2 PR 2: settings live in a zustand store (selector-based, no
+// provider needed). Kick off the initial load before first render.
+void useSettingsStore.getState().load()
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <SettingsProvider>
-      <I18nProvider>
-        <ThemeProvider>
-          <RoundingProvider>
-            <App />
-          </RoundingProvider>
-        </ThemeProvider>
-      </I18nProvider>
-    </SettingsProvider>
+    <I18nProvider>
+      <ThemeProvider>
+        <RoundingProvider>
+          <App />
+        </RoundingProvider>
+      </ThemeProvider>
+    </I18nProvider>
   </StrictMode>
 )

@@ -4,6 +4,10 @@ All notable changes to TimeTrack are documented here.
 
 ## [1.13.2] — 2026-07-17
 
+### Changed
+
+- **Schnellere UI bei Einstellungs-Änderungen** — Einstellungen werden intern nicht mehr über einen React-Context verteilt, sondern über einen Selector-basierten Store: Ändert sich ein einzelner Wert (z. B. eine Export-Option), zeichnet nur noch die betroffene Komponente neu statt der gesamten App-Oberfläche. Nebeneffekt: Die Fehlerklasse „vergessener Settings-Provider", die in v1.13.0 das Mini-Widget crashte, kann nicht mehr auftreten.
+
 ### Fixed
 
 - **Export-Einstellungen gehen nicht mehr verloren** — Die im Export-Modal gemerkten Einstellungen (Tab, Gruppierung, Honorarspalte, Unterschriften, CSV-Format) wurden bisher im Browser-Speicher (`localStorage`) abgelegt und gingen sporadisch verloren — etwa wenn versehentlich eine zweite App-Instanz lief oder die App nach einem Backup-Restore hart neu startete. Die Einstellungen liegen jetzt in der SQLite-Datenbank (Key `export_prefs`), überleben damit auch harte App-Beendigungen und wandern automatisch mit in Backups. Vorhandene Einstellungen werden beim ersten Öffnen einmalig übernommen.

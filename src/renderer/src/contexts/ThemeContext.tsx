@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react'
-import { useSettings } from './SettingsContext'
+import { useSettingsStore } from '../store/settingsStore'
 
 export type ThemeMode = 'light' | 'dark' | 'system'
 
@@ -14,13 +14,14 @@ const ThemeContext = createContext<ThemeContextValue>({
 })
 
 export function ThemeProvider({ children }: { children: React.ReactNode }): React.JSX.Element {
-  const { settings } = useSettings()
+  // Selector: re-renders only when theme_mode changes (v1.13.2 PR 2).
+  const themeMode = useSettingsStore((s) => s.settings?.theme_mode)
   const [mode, setMode] = useState<ThemeMode>('system')
 
   // Sync theme mode once settings are loaded.
   useEffect(() => {
-    if (settings?.theme_mode) setMode((settings.theme_mode as ThemeMode) ?? 'system')
-  }, [settings?.theme_mode])
+    if (themeMode) setMode((themeMode as ThemeMode) ?? 'system')
+  }, [themeMode])
 
   // Apply .dark class and listen for OS preference changes when mode = 'system'.
   useEffect(() => {

@@ -4,7 +4,7 @@ import { translate } from '../../../shared/i18n'
 import type { TranslationKey } from '../../../shared/locales/de'
 import { de } from '../../../shared/locales/de'
 import { en } from '../../../shared/locales/en'
-import { useSettings } from './SettingsContext'
+import { useSettingsStore } from '../store/settingsStore'
 
 const localeMap: Record<Locale, Record<string, string>> = { de, en }
 
@@ -29,13 +29,15 @@ const I18nContext = createContext<I18nCtx | null>(null)
  * survives app restarts.
  */
 export function I18nProvider({ children }: { children: React.ReactNode }): React.JSX.Element {
-  const { settings } = useSettings()
+  // Selector: re-renders only when the language key changes, not on every
+  // settings write (v1.13.2 PR 2).
+  const language = useSettingsStore((s) => s.settings?.language)
   const [locale, setLocaleState] = useState<Locale>('de')
 
   // Sync locale once settings are loaded.
   useEffect(() => {
-    if (settings?.language === 'en') setLocaleState('en')
-  }, [settings?.language])
+    if (language === 'en') setLocaleState('en')
+  }, [language])
 
   const setLocale = useCallback(async (l: Locale) => {
     setLocaleState(l)
