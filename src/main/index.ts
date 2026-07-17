@@ -54,6 +54,35 @@ let mainWindow: BrowserWindow | null = null
 let tray: Tray | null = null
 let isQuitting = false
 
+// ── Single-instance enforcement (v1.13.2) ───────────────────────
+// Closing the window only hides to tray, so accidental second launches are
+// common. A second instance can't acquire Chromium's LevelDB lock on the
+// shared profile — its localStorage silently degrades to in-memory and all
+// renderer-side prefs set there are lost on exit — and it would also write
+// to the same SQLite DB in parallel. Quit the newcomer and focus the
+// existing window instead. Smoke-test mode is exempt so a locally running
+// TimeTrack instance can't silently break a smoke run on a dev machine.
+// (argv is scanned once here; the whenReady smoke block reuses smokeTestArg.)
+const smokeTestArg = process.argv.find((a) => a.startsWith('--smoke-test'))
+const isSecondInstance = smokeTestArg === undefined && !app.requestSingleInstanceLock()
+if (isSecondInstance) {
+  // quit() is asynchronous — the whenReady handler below early-returns on
+  // isSecondInstance so the loser never opens the DB, registers global
+  // hotkeys, or creates windows while its quit is still in flight.
+  app.quit()
+} else {
+  app.on('second-instance', () => {
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore()
+      mainWindow.show()
+      mainWindow.focus()
+    } else {
+      // Startup race: second launch arrived before createWindow ran.
+      log.info('second-instance signal received before main window exists — ignored')
+    }
+  })
+}
+
 // ── Hotkey registration state ────────────────────────────────────
 // Tracked per-slot so `registerHotkey` and `registerMiniHotkey` can update
 // independently without clobbering each other (no more `unregisterAll`).
@@ -316,6 +345,12 @@ function createWindow(): void {
 }
 
 app.whenReady().then(async () => {
+  // Lock loser (v1.13.2): app.quit() above is async and ready can fire
+  // before the quit lands. Bail out before touching the DB, hotkeys, tray,
+  // or windows — otherwise the dying instance steals global shortcuts and
+  // runs recoverZombieEntries against the primary's live DB.
+  if (isSecondInstance) return
+
   electronApp.setAppUserModelId('com.timetrack.app')
 
   // Smoke-test mode (CI release pipeline). When invoked with
@@ -324,8 +359,8 @@ app.whenReady().then(async () => {
   // <path>, and exit. No window, no tray, no IPC handlers.
   // This is the v1.2 packaged-binary smoke check (E11) that catches
   // ABI / native-module regressions before we publish a release.
-  const smokeArg = process.argv.find((a) => a.startsWith('--smoke-test'))
-  if (smokeArg) {
+  if (smokeTestArg !== undefined) {
+    const smokeArg = smokeTestArg
     const outPath = smokeArg.includes('=') ? smokeArg.split('=').slice(1).join('=') : ''
     try {
       const db = getDb()

@@ -2,6 +2,16 @@
 
 All notable changes to TimeTrack are documented here.
 
+## [1.13.2] — 2026-07-17
+
+### Fixed
+
+- **Export-Einstellungen gehen nicht mehr verloren** — Die im Export-Modal gemerkten Einstellungen (Tab, Gruppierung, Honorarspalte, Unterschriften, CSV-Format) wurden bisher im Browser-Speicher (`localStorage`) abgelegt und gingen sporadisch verloren — etwa wenn versehentlich eine zweite App-Instanz lief oder die App nach einem Backup-Restore hart neu startete. Die Einstellungen liegen jetzt in der SQLite-Datenbank (Key `export_prefs`), überleben damit auch harte App-Beendigungen und wandern automatisch mit in Backups. Vorhandene Einstellungen werden beim ersten Öffnen einmalig übernommen.
+
+- **TimeTrack läuft nur noch einmal** — Startet man die App erneut, während sie bereits läuft (auch minimiert im Tray), öffnet sich jetzt das bestehende Fenster statt einer zweiten Instanz. Zweitinstanzen konnten bisher unbemerkt Einstellungen verlieren und parallel in die Datenbank schreiben.
+
+- **Neustart nach Backup-Restore ist jetzt sauber** — Der automatische Neustart (nach Backup-Wiederherstellung oder Onboarding) beendet die App jetzt geordnet statt hart, sodass noch nicht gespeicherte Browser-Daten vorher auf die Platte geschrieben werden. Die Single-Instance-Sperre wird vor dem Neustart freigegeben, damit die neue Instanz zuverlässig startet.
+
 ## [1.13.1] — 2026-05-29
 
 ### Fixed
