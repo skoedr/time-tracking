@@ -811,8 +811,19 @@ export function registerIpcHandlers(hooks: IpcHooks): void {
   )
 
   ipcMain.handle('app:relaunch', (): IpcResult<void> => {
+    // Release the single-instance lock BEFORE spawning the successor:
+    // graceful quit takes long enough that the relaunched process would
+    // otherwise request the lock while we still hold it, lose, and quit —
+    // leaving the user with no app at all after a restore/onboarding
+    // relaunch (v1.13.2).
+    app.releaseSingleInstanceLock()
     app.relaunch()
-    app.exit(0)
+    // quit(), not exit(0): exit() skips Chromium's shutdown flush, losing
+    // localStorage writes from the last few seconds (v1.13.2 — this is how
+    // export prefs went missing after a backup restore). quit() runs
+    // before-quit, which sets isQuitting so the tray-hide close handler
+    // lets the window actually close.
+    app.quit()
     return ok(undefined)
   })
 
