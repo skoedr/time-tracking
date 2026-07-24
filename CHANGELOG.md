@@ -2,6 +2,12 @@
 
 All notable changes to TimeTrack are documented here.
 
+## [Unreleased]
+
+### Added
+
+- **MCP-Server (read-only)** — TimeTrack stellt einen [Model-Context-Protocol](https://modelcontextprotocol.io)-Server über stdio bereit, mit dem Werkzeuge wie Claude Code die lokale Zeiterfassung **auslesen** können: `list_clients`, `list_projects`, `list_entries` (Monat oder Datumsspanne, Filter nach Kunde/Projekt/Tag), `get_running_timer`, `get_dashboard` und `get_analytics`. Die Datenbank wird strikt schreibgeschützt geöffnet — es existieren keine Schreib-Tools. Stundensätze/Umsätze und interne Notizen sind standardmäßig ausgeblendet und lassen sich per Umgebungsvariable (`TIMETRACK_MCP_EXPOSE_RATES`, `TIMETRACK_MCP_EXPOSE_PRIVATE_NOTES`) einschalten. Build via `pnpm build:mcp`, Start via `pnpm mcp`; Registrierung und Native-ABI-Hinweise siehe README → „MCP-Integration". Der abgesicherte Schreibpfad ist als separates Opt-in-Feature geplant.
+
 ## [1.13.2] — 2026-07-17
 
 ### Changed

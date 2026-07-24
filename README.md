@@ -74,6 +74,54 @@ pnpm test
 pnpm build:win
 ```
 
+## MCP-Integration (read-only)
+
+TimeTrack ships a **read-only [MCP](https://modelcontextprotocol.io) server** so
+tools like **Claude Code** können die lokale Zeiterfassung auslesen — z. B. „summiere
+meine Stunden für Kunde X im Juni nach Projekt". Der Server öffnet die SQLite-DB
+**strikt schreibgeschützt**; es gibt keine Schreib-Tools. Der abgesicherte Schreibpfad
+ist ein separates, bewusst opt-in gestaltetes Feature (siehe Issues).
+
+**Tools:** `list_clients`, `list_projects`, `list_entries` (Monat oder Datumsspanne,
+Filter nach Kunde/Projekt/Tag), `get_running_timer`, `get_dashboard`, `get_analytics`
+(Monatsstunden, optional Umsatz).
+
+**Bauen & starten:**
+
+```bash
+pnpm build:mcp   # kompiliert nach out/mcp/mcp/server.js
+pnpm mcp         # startet den stdio-Server
+```
+
+> **Native-ABI-Hinweis:** `pnpm install` baut `better-sqlite3` gegen die **Electron**-ABI
+> (`electron-builder install-app-deps`). Der MCP-Server läuft unter **Node**, daher muss
+> das Modul für Node vorliegen: `npm rebuild better-sqlite3 --build-from-source`
+> (danach ggf. `pnpm install` erneut, um die App-Version wiederherzustellen). Perspektivisch
+> wird der Server als eigenständiges Paket mit eigener Node-ABI-Kopie ausgeliefert.
+
+**In Claude Code registrieren** (`.mcp.json` im Projekt oder `~/.claude.json`):
+
+```json
+{
+  "mcpServers": {
+    "timetrack": {
+      "command": "node",
+      "args": ["/absoluter/pfad/time-tracking/out/mcp/mcp/server.js"]
+    }
+  }
+}
+```
+
+Der DB-Pfad wird plattformübergreifend aufgelöst (Windows `%APPDATA%\TimeTrack\`,
+macOS `~/Library/Application Support/TimeTrack/`, Linux `~/.config/TimeTrack/`) und lässt
+sich per `TIMETRACK_DB_PATH` überschreiben.
+
+**Datenschutz:** Stundensätze/Umsätze und interne Notizen (`private_note`) sind **standardmäßig
+ausgeblendet**. Einschalten via Umgebungsvariablen:
+
+- `TIMETRACK_MCP_EXPOSE_RATES=1` — Stundensätze und Umsätze einblenden
+- `TIMETRACK_MCP_EXPOSE_PRIVATE_NOTES=1` — interne Notizen einblenden
+
 ## Releases
 
 Releases are built automatically by `.github/workflows/release.yml` when a `v*` tag
