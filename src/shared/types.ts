@@ -188,6 +188,12 @@ export interface Settings {
   // Lives in the DB instead of localStorage so it survives hard exits,
   // second instances, and is included in backups. Absent until first change.
   export_prefs?: string
+  // v1.14 #128 — MCP integration flags (seeded by migration 018). Stored as
+  // '0'/'1' strings. The read-only MCP server reads the two expose_* flags
+  // (env vars override); mcp_write_enabled gates the future write path (#127).
+  mcp_expose_rates?: string
+  mcp_expose_private_notes?: string
+  mcp_write_enabled?: string
 }
 
 export interface CreateClientInput {
@@ -307,7 +313,13 @@ export interface DashboardSummary {
   todaySeconds: number
   weekSeconds: number
   recentEntries: Entry[]
-  topClients30d: Array<{ client_id: number; name: string; color: string; seconds: number; last_project_id: number | null }>
+  topClients30d: Array<{
+    client_id: number
+    name: string
+    color: string
+    seconds: number
+    last_project_id: number | null
+  }>
 }
 
 /**

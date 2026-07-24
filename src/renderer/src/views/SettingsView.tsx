@@ -14,7 +14,7 @@ import TagManagementView from './TagManagementView'
 const DEFAULT_HOTKEY = 'Alt+Shift+S'
 const DEFAULT_MINI_HOTKEY = 'Alt+Shift+M'
 
-type SettingsTab = 'general' | 'timer' | 'export' | 'data' | 'tags' | 'about'
+type SettingsTab = 'general' | 'timer' | 'export' | 'data' | 'tags' | 'integrations' | 'about'
 
 /** Settings keys that hold a global accelerator string. */
 type HotkeyKey = 'hotkey_toggle' | 'mini_hotkey'
@@ -210,7 +210,7 @@ export default function SettingsView(): React.JSX.Element {
   }
 
   async function pickLogo(): Promise<void> {
-      setStatusMsg(t('settings.pdf.logoPicking'))
+    setStatusMsg(t('settings.pdf.logoPicking'))
     const res = await window.api.logo.set()
     if (res.ok) {
       setSettings((prev) => (prev ? { ...prev, pdf_logo_path: res.data.path } : prev))
@@ -244,8 +244,34 @@ export default function SettingsView(): React.JSX.Element {
     { id: 'export', label: t('settings.nav.export') },
     { id: 'data', label: t('settings.nav.data') },
     { id: 'tags', label: t('settings.nav.tags') },
+    { id: 'integrations', label: t('settings.nav.integrations') },
     { id: 'about', label: t('settings.nav.about') }
   ]
+
+  // Ready-to-paste Claude Code registration. The server path is the app's
+  // install location (unknown to the renderer), so we show a placeholder the
+  // user swaps for their build output (pnpm build:mcp).
+  const mcpConfigSnippet = JSON.stringify(
+    {
+      mcpServers: {
+        timetrack: {
+          command: 'node',
+          args: ['<Pfad-zu>/time-tracking/out/mcp/mcp/server.js']
+        }
+      }
+    },
+    null,
+    2
+  )
+
+  async function copyMcpConfig(): Promise<void> {
+    try {
+      await navigator.clipboard.writeText(mcpConfigSnippet)
+      setStatusMsg(t('settings.mcp.copied'))
+    } catch (e) {
+      setStatusMsg(t('common.error', { error: String(e) }))
+    }
+  }
 
   return (
     <div className="mx-auto flex w-full min-w-0 max-w-4xl flex-row gap-8 pb-12">
@@ -255,11 +281,12 @@ export default function SettingsView(): React.JSX.Element {
           <button
             key={item.id}
             type="button"
-            onClick={() => { setTab(item.id); setStatusMsg(null) }}
+            onClick={() => {
+              setTab(item.id)
+              setStatusMsg(null)
+            }}
             className={`w-full rounded-full px-4 py-2 text-left text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
-              tab === item.id
-                ? 'bg-indigo-600 text-white'
-                : 'hover:bg-white/10'
+              tab === item.id ? 'bg-indigo-600 text-white' : 'hover:bg-white/10'
             }`}
             style={tab !== item.id ? { color: 'var(--text2)' } : undefined}
           >
@@ -274,7 +301,9 @@ export default function SettingsView(): React.JSX.Element {
           <div
             className="rounded-md px-3 py-2 text-sm"
             style={{ background: 'var(--card-bg)', color: 'var(--text)' }}
-          >{statusMsg}</div>
+          >
+            {statusMsg}
+          </div>
         )}
 
         {/* Allgemein */}
@@ -314,13 +343,19 @@ export default function SettingsView(): React.JSX.Element {
                 {t('settings.onboarding.retrigger')}
               </button>
             </Row>
-            <Row label={t('settings.general.autoStart')} hint={t('settings.general.autoStartLabel')}>
+            <Row
+              label={t('settings.general.autoStart')}
+              hint={t('settings.general.autoStartLabel')}
+            >
               <Toggle
                 checked={settings.auto_start === '1'}
                 onChange={(v) => update('auto_start', v ? '1' : '0')}
               />
             </Row>
-            <Row label={t('settings.general.showProjectNumber')} hint={t('settings.general.showProjectNumberHint')}>
+            <Row
+              label={t('settings.general.showProjectNumber')}
+              hint={t('settings.general.showProjectNumberHint')}
+            >
               <Toggle
                 checked={settings.show_project_number === '1'}
                 onChange={(v) => {
@@ -356,15 +391,17 @@ export default function SettingsView(): React.JSX.Element {
                     onChange={(e) => update('idle_threshold_minutes', e.target.value)}
                     className={`${inputClass} w-24`}
                   />
-                  <span className="text-sm" style={{ color: 'var(--text2)' }}>{t('settings.timer.idleUnit')}</span>
+                  <span className="text-sm" style={{ color: 'var(--text2)' }}>
+                    {t('settings.timer.idleUnit')}
+                  </span>
                 </div>
               </Row>
-              <Row
-                label={t('settings.timer.hotkey')}
-                hint={t('settings.timer.hotkeyHint')}
-              >
+              <Row label={t('settings.timer.hotkey')} hint={t('settings.timer.hotkeyHint')}>
                 <div className="flex items-center gap-2">
-                  <code className="rounded px-3 py-1.5 text-sm" style={{ background: 'var(--card-bg)', color: 'var(--text)' }}>
+                  <code
+                    className="rounded px-3 py-1.5 text-sm"
+                    style={{ background: 'var(--card-bg)', color: 'var(--text)' }}
+                  >
                     {capturingHotkey === 'hotkey_toggle'
                       ? t('settings.timer.hotkeyCapturing')
                       : settings.hotkey_toggle}
@@ -377,7 +414,9 @@ export default function SettingsView(): React.JSX.Element {
                     }}
                     className={btnSecondaryClass}
                   >
-                    {capturingHotkey === 'hotkey_toggle' ? t('common.cancel') : t('settings.timer.hotkeyChange')}
+                    {capturingHotkey === 'hotkey_toggle'
+                      ? t('common.cancel')
+                      : t('settings.timer.hotkeyChange')}
                   </button>
                   {settings.hotkey_toggle !== DEFAULT_HOTKEY && (
                     <button
@@ -397,21 +436,18 @@ export default function SettingsView(): React.JSX.Element {
 
             {/* Mini-Widget (v1.4) */}
             <Section title={t('settings.section.miniWidget')}>
-              <Row
-                label={t('settings.mini.enable')}
-                hint={t('settings.mini.enableHint')}
-              >
+              <Row label={t('settings.mini.enable')} hint={t('settings.mini.enableHint')}>
                 <Toggle
                   checked={settings.mini_enabled === '1'}
                   onChange={(v) => update('mini_enabled', v ? '1' : '0')}
                 />
               </Row>
-              <Row
-                label={t('settings.mini.hotkey')}
-                hint={t('settings.mini.hotkeyHint')}
-              >
+              <Row label={t('settings.mini.hotkey')} hint={t('settings.mini.hotkeyHint')}>
                 <div className="flex items-center gap-2">
-                  <code className="rounded px-3 py-1.5 text-sm" style={{ background: 'var(--card-bg)', color: 'var(--text)' }}>
+                  <code
+                    className="rounded px-3 py-1.5 text-sm"
+                    style={{ background: 'var(--card-bg)', color: 'var(--text)' }}
+                  >
                     {capturingHotkey === 'mini_hotkey'
                       ? t('settings.timer.hotkeyCapturing')
                       : settings.mini_hotkey}
@@ -424,7 +460,9 @@ export default function SettingsView(): React.JSX.Element {
                     }}
                     className={btnSecondaryClass}
                   >
-                    {capturingHotkey === 'mini_hotkey' ? t('common.cancel') : t('settings.timer.hotkeyChange')}
+                    {capturingHotkey === 'mini_hotkey'
+                      ? t('common.cancel')
+                      : t('settings.timer.hotkeyChange')}
                   </button>
                   {settings.mini_hotkey !== DEFAULT_MINI_HOTKEY && (
                     <button
@@ -440,10 +478,7 @@ export default function SettingsView(): React.JSX.Element {
                   <p className="mt-1 text-xs text-red-400">{hotkeyError}</p>
                 )}
               </Row>
-              <Row
-                label={t('settings.mini.position')}
-                hint={t('settings.mini.positionHint')}
-              >
+              <Row label={t('settings.mini.position')} hint={t('settings.mini.positionHint')}>
                 <button
                   type="button"
                   onClick={async () => {
@@ -467,11 +502,16 @@ export default function SettingsView(): React.JSX.Element {
             <Row label={t('settings.pdf.logo')} hint={t('settings.pdf.logoHint')} stacked>
               <div className="flex items-center gap-3">
                 {settings.pdf_logo_path ? (
-                  <code className="flex-1 truncate rounded px-3 py-1.5 text-xs" style={{ background: 'var(--card-bg)', color: 'var(--text2)' }}>
+                  <code
+                    className="flex-1 truncate rounded px-3 py-1.5 text-xs"
+                    style={{ background: 'var(--card-bg)', color: 'var(--text2)' }}
+                  >
                     {settings.pdf_logo_path}
                   </code>
                 ) : (
-                  <span className="flex-1 text-sm" style={{ color: 'var(--text3)' }}>{t('settings.pdf.noLogo')}</span>
+                  <span className="flex-1 text-sm" style={{ color: 'var(--text3)' }}>
+                    {t('settings.pdf.noLogo')}
+                  </span>
                 )}
                 <button type="button" onClick={pickLogo} className={btnSecondaryClass}>
                   {t('settings.pdf.chooseLogo')}
@@ -511,10 +551,14 @@ export default function SettingsView(): React.JSX.Element {
                       : '#4f46e5'
                   }
                   onChange={(e) => update('pdf_accent_color', e.target.value)}
-                  className="h-10 w-16 cursor-pointer rounded border" style={{ borderColor: 'var(--card-border)', background: 'var(--card-bg)' }}
+                  className="h-10 w-16 cursor-pointer rounded border"
+                  style={{ borderColor: 'var(--card-border)', background: 'var(--card-bg)' }}
                   aria-label={t('settings.pdf.accentColorAria')}
                 />
-                <code className="rounded px-3 py-1.5 text-xs" style={{ background: 'var(--card-bg)', color: 'var(--text2)' }}>
+                <code
+                  className="rounded px-3 py-1.5 text-xs"
+                  style={{ background: 'var(--card-bg)', color: 'var(--text2)' }}
+                >
                   {settings.pdf_accent_color || '#4f46e5'}
                 </code>
               </div>
@@ -553,7 +597,10 @@ export default function SettingsView(): React.JSX.Element {
             <Section title={t('settings.section.data')}>
               <Row label={t('settings.data.database')} stacked>
                 <div className="flex items-center gap-2">
-                  <code className="flex-1 truncate rounded px-3 py-1.5 text-xs" style={{ background: 'var(--card-bg)', color: 'var(--text2)' }}>
+                  <code
+                    className="flex-1 truncate rounded px-3 py-1.5 text-xs"
+                    style={{ background: 'var(--card-bg)', color: 'var(--text2)' }}
+                  >
                     {paths.db}
                   </code>
                   <button
@@ -576,9 +623,16 @@ export default function SettingsView(): React.JSX.Element {
                 </div>
               )}
 
-              <Row label={t('settings.data.backupPath')} hint={t('settings.data.backupPathHint')} stacked>
+              <Row
+                label={t('settings.data.backupPath')}
+                hint={t('settings.data.backupPathHint')}
+                stacked
+              >
                 <div className="flex items-center gap-2">
-                  <code className="flex-1 truncate rounded px-3 py-1.5 text-xs" style={{ background: 'var(--card-bg)', color: 'var(--text2)' }}>
+                  <code
+                    className="flex-1 truncate rounded px-3 py-1.5 text-xs"
+                    style={{ background: 'var(--card-bg)', color: 'var(--text2)' }}
+                  >
                     {backupPathInfo?.dir ?? paths.backups}
                   </code>
                   <button
@@ -620,7 +674,11 @@ export default function SettingsView(): React.JSX.Element {
                 </button>
               </Row>
 
-              <Row label={t('settings.data.restoreBackup')} hint={t('settings.data.restoreBackupHint')} stacked>
+              <Row
+                label={t('settings.data.restoreBackup')}
+                hint={t('settings.data.restoreBackupHint')}
+                stacked
+              >
                 {backups.length === 0 ? (
                   <p className="text-sm" style={{ color: 'var(--text3)' }}>
                     {t('settings.data.noBackupToRestore')}
@@ -632,11 +690,16 @@ export default function SettingsView(): React.JSX.Element {
                       value={selectedRestoreFile}
                       onChange={(e) => setSelectedRestoreFile(e.target.value)}
                       className="flex-1 rounded-lg border px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-400"
-                      style={{ background: 'var(--input-bg)', borderColor: 'var(--card-border)', color: 'var(--text)' }}
+                      style={{
+                        background: 'var(--input-bg)',
+                        borderColor: 'var(--card-border)',
+                        color: 'var(--text)'
+                      }}
                     >
                       {backups.map((b) => (
                         <option key={b.fullPath} value={b.fullPath}>
-                          {new Date(b.createdAt).toLocaleString('de-DE')} · {b.reason} · {(b.sizeBytes / 1024).toFixed(0)} KB
+                          {new Date(b.createdAt).toLocaleString('de-DE')} · {b.reason} ·{' '}
+                          {(b.sizeBytes / 1024).toFixed(0)} KB
                         </option>
                       ))}
                     </select>
@@ -674,13 +737,12 @@ export default function SettingsView(): React.JSX.Element {
 
             {/* Diagnose (v1.5 PR A, issue #34) */}
             <Section title={t('settings.diagnose.title')}>
-              <Row
-                label="Log-Datei"
-                hint={t('settings.diagnose.hint')}
-                stacked
-              >
+              <Row label="Log-Datei" hint={t('settings.diagnose.hint')} stacked>
                 <div className="flex items-center gap-2">
-                  <code className="flex-1 truncate rounded px-3 py-1.5 text-xs" style={{ background: 'var(--card-bg)', color: 'var(--text2)' }}>
+                  <code
+                    className="flex-1 truncate rounded px-3 py-1.5 text-xs"
+                    style={{ background: 'var(--card-bg)', color: 'var(--text2)' }}
+                  >
                     {paths.logFile}
                   </code>
                   <button
@@ -699,7 +761,8 @@ export default function SettingsView(): React.JSX.Element {
                   </button>
                 </div>
                 <p className="mt-1 text-xs" style={{ color: 'var(--text3)' }}>
-                  Rotiert automatisch bei 5 MB. Enthält App-Ereignisse und Fehler aus Main- und Renderer-Process.
+                  Rotiert automatisch bei 5 MB. Enthält App-Ereignisse und Fehler aus Main- und
+                  Renderer-Process.
                 </p>
               </Row>
             </Section>
@@ -714,7 +777,9 @@ export default function SettingsView(): React.JSX.Element {
 
             <Section title={t('settings.section.about')}>
               <Row label={t('settings.about.version')}>
-                <span className="text-sm" style={{ color: 'var(--text)' }}>{version || '—'}</span>
+                <span className="text-sm" style={{ color: 'var(--text)' }}>
+                  {version || '—'}
+                </span>
               </Row>
               <Row label={t('about.open')}>
                 <button
@@ -731,6 +796,84 @@ export default function SettingsView(): React.JSX.Element {
 
         {/* Tags */}
         {tab === 'tags' && <TagManagementView />}
+
+        {/* Integrationen — MCP (v1.14 #128) */}
+        {tab === 'integrations' && (
+          <>
+            <Section title={t('settings.mcp.section')}>
+              <Row label={t('settings.mcp.section')} hint={t('settings.mcp.desc')} stacked>
+                <span
+                  className="inline-flex w-fit items-center rounded-full px-2.5 py-0.5 text-xs font-semibold"
+                  style={{ background: 'var(--accent-bg)', color: 'var(--accent)' }}
+                >
+                  {t('settings.mcp.readonlyBadge')}
+                </span>
+              </Row>
+              <Row label={t('settings.mcp.dbPath')} stacked>
+                <div className="flex items-center gap-2">
+                  <code
+                    className="flex-1 truncate rounded px-3 py-1.5 text-xs"
+                    style={{ background: 'var(--card-bg)', color: 'var(--text2)' }}
+                  >
+                    {paths.db}
+                  </code>
+                  <button
+                    type="button"
+                    onClick={() => window.api.shell.showItemInFolder(paths.db)}
+                    className={btnSecondaryClass}
+                  >
+                    {t('settings.data.openInExplorer')}
+                  </button>
+                </div>
+              </Row>
+              <Row
+                label={t('settings.mcp.registration')}
+                hint={t('settings.mcp.registrationHint')}
+                stacked
+              >
+                <div className="flex flex-col gap-2">
+                  <pre
+                    className="overflow-x-auto rounded px-3 py-2 text-xs"
+                    style={{ background: 'var(--card-bg)', color: 'var(--text2)' }}
+                  >
+                    {mcpConfigSnippet}
+                  </pre>
+                  <button
+                    type="button"
+                    onClick={() => void copyMcpConfig()}
+                    className={`${btnSecondaryClass} w-fit`}
+                  >
+                    {t('settings.mcp.copy')}
+                  </button>
+                </div>
+              </Row>
+            </Section>
+
+            <Section title={t('settings.mcp.privacyTitle')}>
+              <Row label={t('settings.mcp.exposeRates')} hint={t('settings.mcp.exposeRatesHint')}>
+                <Toggle
+                  checked={settings.mcp_expose_rates === '1'}
+                  onChange={(v) => void update('mcp_expose_rates', v ? '1' : '0')}
+                />
+              </Row>
+              <Row
+                label={t('settings.mcp.exposePrivateNotes')}
+                hint={t('settings.mcp.exposePrivateNotesHint')}
+              >
+                <Toggle
+                  checked={settings.mcp_expose_private_notes === '1'}
+                  onChange={(v) => void update('mcp_expose_private_notes', v ? '1' : '0')}
+                />
+              </Row>
+            </Section>
+
+            <Section title={t('settings.mcp.writeTitle')}>
+              <Row label={t('settings.mcp.writeEnable')} hint={t('settings.mcp.writeSoon')}>
+                <Toggle checked={false} disabled onChange={() => {}} />
+              </Row>
+            </Section>
+          </>
+        )}
 
         <AboutDialog open={showAbout} onClose={() => setShowAbout(false)} version={version} />
       </div>
@@ -789,9 +932,18 @@ function Row({
       className={`flex ${stacked ? 'flex-col gap-2.5' : 'items-center justify-between gap-4'} px-[18px] py-[13px]`}
       style={{ borderBottom: '1px solid var(--card-border)' }}
     >
-      <div className="flex flex-col gap-0.5 min-w-0" style={{ flex: stacked ? undefined : '1 1 0%' }}>
-        <span className="text-sm font-medium" style={{ color: 'var(--text)' }}>{label}</span>
-        {hint && <span className="text-xs" style={{ color: 'var(--text3)' }}>{hint}</span>}
+      <div
+        className="flex flex-col gap-0.5 min-w-0"
+        style={{ flex: stacked ? undefined : '1 1 0%' }}
+      >
+        <span className="text-sm font-medium" style={{ color: 'var(--text)' }}>
+          {label}
+        </span>
+        {hint && (
+          <span className="text-xs" style={{ color: 'var(--text3)' }}>
+            {hint}
+          </span>
+        )}
       </div>
       <div className={stacked ? 'w-full' : 'shrink-0'}>{children}</div>
     </div>
@@ -879,14 +1031,15 @@ function UpdatesSection(): React.JSX.Element {
   return (
     <Section title={t('settings.update.title')}>
       <Row label={t('settings.update.version', { version: appVersion || '—' })}>
-        <span className="text-sm" style={{ color: 'var(--text2)' }}>{appVersion || '\u2014'}</span>
+        <span className="text-sm" style={{ color: 'var(--text2)' }}>
+          {appVersion || '\u2014'}
+        </span>
       </Row>
-      <Row label={t('settings.update.status')} hint={`${t('settings.update.lastCheck')}: ${lastCheckedLabel}`}>
-        <p
-          className={`text-sm ${
-            status.status === 'error' ? 'text-amber-300' : ''
-          }`}
-        >
+      <Row
+        label={t('settings.update.status')}
+        hint={`${t('settings.update.lastCheck')}: ${lastCheckedLabel}`}
+      >
+        <p className={`text-sm ${status.status === 'error' ? 'text-amber-300' : ''}`}>
           {statusLabel}
         </p>
       </Row>

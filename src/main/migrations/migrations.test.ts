@@ -117,6 +117,10 @@ describe('migration SQL execution', () => {
       { key: 'hotkey_toggle', value: 'Alt+Shift+S' },
       { key: 'idle_threshold_minutes', value: '5' },
       { key: 'language', value: 'de' },
+      // Migration 018 — MCP integration flags (v1.14 #128)
+      { key: 'mcp_expose_private_notes', value: '0' },
+      { key: 'mcp_expose_rates', value: '0' },
+      { key: 'mcp_write_enabled', value: '0' },
       // Migration 006 — Mini-Widget (v1.4)
       { key: 'mini_enabled', value: '0' },
       { key: 'mini_hotkey', value: 'Alt+Shift+M' },
@@ -478,9 +482,9 @@ describe('migration SQL execution', () => {
 
   it("migration 008 seeds onboarding_completed = '0'", () => {
     applyAll()
-    const row = db
-      .prepare("SELECT value FROM settings WHERE key='onboarding_completed'")
-      .get() as { value: string } | undefined
+    const row = db.prepare("SELECT value FROM settings WHERE key='onboarding_completed'").get() as
+      | { value: string }
+      | undefined
     expect(row).toBeDefined()
     expect(row?.value).toBe('0')
   })
@@ -513,18 +517,18 @@ describe('migration SQL execution', () => {
         m008.name
       )
     })()
-    const row = db
-      .prepare("SELECT value FROM settings WHERE key='onboarding_completed'")
-      .get() as { value: string }
+    const row = db.prepare("SELECT value FROM settings WHERE key='onboarding_completed'").get() as {
+      value: string
+    }
     expect(row.value).toBe('1')
   })
 
   it('migration 008 keeps onboarding_completed = 0 for fresh installs (no entries)', () => {
     applyAll()
     // applyAll() on an empty DB → no entries → backfill should leave value as '0'.
-    const row = db
-      .prepare("SELECT value FROM settings WHERE key='onboarding_completed'")
-      .get() as { value: string }
+    const row = db.prepare("SELECT value FROM settings WHERE key='onboarding_completed'").get() as {
+      value: string
+    }
     expect(row.value).toBe('0')
   })
 
@@ -682,9 +686,13 @@ describe('migration SQL execution', () => {
     // After migration 013, status column exists with DEFAULT 'active'.
     // Must set status='archived' to match active=0; otherwise the new
     // idx_projects_unique_status_name (WHERE status='active') would fire.
-    db.prepare(`INSERT INTO projects (client_id, name, active, status) VALUES (1, 'App', 0, 'archived')`).run()
+    db.prepare(
+      `INSERT INTO projects (client_id, name, active, status) VALUES (1, 'App', 0, 'archived')`
+    ).run()
     expect(() => {
-      db.prepare(`INSERT INTO projects (client_id, name, active, status) VALUES (1, 'App', 0, 'archived')`).run()
+      db.prepare(
+        `INSERT INTO projects (client_id, name, active, status) VALUES (1, 'App', 0, 'archived')`
+      ).run()
     }).not.toThrow()
   })
 
@@ -692,9 +700,9 @@ describe('migration SQL execution', () => {
 
   it('migration 013 — clients table has all 7 new columns', () => {
     applyAll()
-    const cols = (
-      db.prepare('PRAGMA table_info(clients)').all() as Array<{ name: string }>
-    ).map((c) => c.name)
+    const cols = (db.prepare('PRAGMA table_info(clients)').all() as Array<{ name: string }>).map(
+      (c) => c.name
+    )
     expect(cols).toContain('billing_address_line1')
     expect(cols).toContain('billing_address_line2')
     expect(cols).toContain('billing_address_line3')
@@ -706,9 +714,9 @@ describe('migration SQL execution', () => {
 
   it('migration 013 — projects table has all new columns', () => {
     applyAll()
-    const cols = (
-      db.prepare('PRAGMA table_info(projects)').all() as Array<{ name: string }>
-    ).map((c) => c.name)
+    const cols = (db.prepare('PRAGMA table_info(projects)').all() as Array<{ name: string }>).map(
+      (c) => c.name
+    )
     expect(cols).toContain('external_project_number')
     expect(cols).toContain('start_date')
     expect(cols).toContain('end_date')
@@ -720,7 +728,9 @@ describe('migration SQL execution', () => {
     applyAll()
     db.prepare(`INSERT INTO clients (id, name) VALUES (1, 'Acme')`).run()
     expect(() => {
-      db.prepare(`INSERT INTO projects (client_id, name, status) VALUES (1, 'App', 'invalid')`).run()
+      db.prepare(
+        `INSERT INTO projects (client_id, name, status) VALUES (1, 'App', 'invalid')`
+      ).run()
     }).toThrow()
   })
 
@@ -738,8 +748,12 @@ describe('migration SQL execution', () => {
       tx()
     }
     db.prepare(`INSERT INTO clients (id, name) VALUES (1, 'Acme')`).run()
-    db.prepare(`INSERT INTO projects (id, client_id, name, active) VALUES (1, 1, 'Active Project', 1)`).run()
-    db.prepare(`INSERT INTO projects (id, client_id, name, active) VALUES (2, 1, 'Archived Project', 0)`).run()
+    db.prepare(
+      `INSERT INTO projects (id, client_id, name, active) VALUES (1, 1, 'Active Project', 1)`
+    ).run()
+    db.prepare(
+      `INSERT INTO projects (id, client_id, name, active) VALUES (2, 1, 'Archived Project', 0)`
+    ).run()
     // Now apply migration 013
     const m013 = migrations.find((m) => m.version === 13)!
     const tx = db.transaction(() => {
@@ -750,7 +764,10 @@ describe('migration SQL execution', () => {
       )
     })
     tx()
-    const rows = db.prepare('SELECT id, status FROM projects ORDER BY id').all() as Array<{ id: number; status: string }>
+    const rows = db.prepare('SELECT id, status FROM projects ORDER BY id').all() as Array<{
+      id: number
+      status: string
+    }>
     expect(rows[0].status).toBe('active')
     expect(rows[1].status).toBe('archived')
   })
@@ -809,7 +826,9 @@ describe('migration SQL execution', () => {
     db.prepare(`INSERT INTO clients (id, name) VALUES (1, 'Acme')`).run()
     db.prepare(`INSERT INTO projects (client_id, name, status) VALUES (1, 'App', 'archived')`).run()
     expect(() => {
-      db.prepare(`INSERT INTO projects (client_id, name, status) VALUES (1, 'App', 'archived')`).run()
+      db.prepare(
+        `INSERT INTO projects (client_id, name, status) VALUES (1, 'App', 'archived')`
+      ).run()
     }).not.toThrow()
   })
 
@@ -841,9 +860,9 @@ describe('migration SQL execution', () => {
     applyUpTo(16)
     db.prepare(`INSERT INTO tags (name) VALUES ('ticket 12345')`).run()
     applyVersion(17)
-    const rows = (db.prepare('SELECT name FROM tags ORDER BY name').all() as Array<{ name: string }>).map(
-      (r) => r.name
-    )
+    const rows = (
+      db.prepare('SELECT name FROM tags ORDER BY name').all() as Array<{ name: string }>
+    ).map((r) => r.name)
     expect(rows).toContain('ticket_12345')
     expect(rows).not.toContain('ticket 12345')
   })
@@ -866,9 +885,9 @@ describe('migration SQL execution', () => {
     db.prepare(`INSERT INTO tags (name) VALUES ('foo bar')`).run()
     db.prepare(`INSERT INTO tags (name) VALUES ('foo_bar')`).run()
     applyVersion(17)
-    const rows = (db.prepare('SELECT name FROM tags ORDER BY name').all() as Array<{ name: string }>).map(
-      (r) => r.name
-    )
+    const rows = (
+      db.prepare('SELECT name FROM tags ORDER BY name').all() as Array<{ name: string }>
+    ).map((r) => r.name)
     expect(rows).toEqual(['foo_bar'])
   })
 
@@ -876,7 +895,9 @@ describe('migration SQL execution', () => {
     applyUpTo(16)
     db.prepare(`INSERT INTO tags (name) VALUES ('foo\tbar')`).run()
     applyVersion(17)
-    const rows = (db.prepare('SELECT name FROM tags').all() as Array<{ name: string }>).map((r) => r.name)
+    const rows = (db.prepare('SELECT name FROM tags').all() as Array<{ name: string }>).map(
+      (r) => r.name
+    )
     expect(rows).toContain('foo_bar')
   })
 
@@ -885,9 +906,9 @@ describe('migration SQL execution', () => {
     db.prepare(`INSERT INTO tags (name) VALUES ('clean')`).run()
     db.prepare(`INSERT INTO tags (name) VALUES ('also_clean')`).run()
     applyVersion(17)
-    const rows = (db.prepare('SELECT name FROM tags ORDER BY name').all() as Array<{ name: string }>).map(
-      (r) => r.name
-    )
+    const rows = (
+      db.prepare('SELECT name FROM tags ORDER BY name').all() as Array<{ name: string }>
+    ).map((r) => r.name)
     expect(rows).toEqual(['also_clean', 'clean'])
   })
 })

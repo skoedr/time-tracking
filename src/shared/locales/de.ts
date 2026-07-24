@@ -34,8 +34,7 @@ export const de = {
   'settings.diagnose.title': 'Diagnose',
   'settings.diagnose.reveal': 'Log-Datei im Explorer zeigen',
   'settings.diagnose.open': 'Log-Verzeichnis öffnen',
-  'settings.diagnose.hint':
-    'Bei Problemen: Log-Datei kopieren und beim Bug-Report anhängen.',
+  'settings.diagnose.hint': 'Bei Problemen: Log-Datei kopieren und beim Bug-Report anhängen.',
 
   // ── Settings → Updates ──────────────────────────────────────────────────
   'settings.update.title': 'Updates',
@@ -85,7 +84,8 @@ export const de = {
 
   // Step 4 — Backup wiederherstellen
   'onboarding.restore.title': 'Daten wiederherstellen?',
-  'onboarding.restore.body': 'Es wurde ein Backup gefunden. Möchtest du deine früheren Daten jetzt wiederherstellen?',
+  'onboarding.restore.body':
+    'Es wurde ein Backup gefunden. Möchtest du deine früheren Daten jetzt wiederherstellen?',
   'onboarding.restore.latestLabel': 'Neuestes Backup:',
   'onboarding.restore.restoreBtn': 'Wiederherstellen',
   'onboarding.restore.skip': 'Ohne Wiederherstellung starten',
@@ -359,8 +359,7 @@ export const de = {
   'export.from': 'Von',
   'export.to': 'Bis',
   'export.pdf.groupByTag': 'Nach Tag gruppieren',
-  'export.pdf.groupByTagHint':
-    'Einträge mit Tags werden in separaten Abschnitten zusammengefasst.',
+  'export.pdf.groupByTagHint': 'Einträge mit Tags werden in separaten Abschnitten zusammengefasst.',
   'export.pdf.groupBy': 'Gruppieren nach',
   'export.pdf.groupByHint':
     'Einträge werden in separaten Abschnitten mit Zwischensumme zusammengefasst.',
@@ -372,8 +371,7 @@ export const de = {
   'export.pdf.hideFeeColumnHint':
     'Versteckt die Honorar-Spalte und den Gesamtbetrag im Stundennachweis.',
   'export.pdf.signatures': 'Unterschriftsfelder einblenden',
-  'export.pdf.signaturesHint':
-    'Fügt unten zwei Linien für Auftragnehmer / Auftraggeber hinzu.',
+  'export.pdf.signaturesHint': 'Fügt unten zwei Linien für Auftragnehmer / Auftraggeber hinzu.',
   'export.csv.format': 'Format',
   'export.csv.formatDeHint': '(Semikolon, Komma-Dezimal — Excel DE)',
   'export.csv.formatUsHint': '(Komma, Punkt-Dezimal — DATEV)',
@@ -433,7 +431,8 @@ export const de = {
   'settings.general.autoStart': 'Mit Windows starten',
   'settings.general.autoStartLabel': 'Beim Anmelden automatisch starten',
   'settings.general.showProjectNumber': 'Projektnummer anzeigen',
-  'settings.general.showProjectNumberHint': 'Externe Projektnummer in eckigen Klammern hinter dem Projektnamen anzeigen, falls vergeben.',
+  'settings.general.showProjectNumberHint':
+    'Externe Projektnummer in eckigen Klammern hinter dem Projektnamen anzeigen, falls vergeben.',
   'settings.general.company': 'Firma (für Exporte)',
   'settings.general.companyPlaceholder': 'z. B. Meine Firma GmbH',
   'settings.section.timer': 'Timer',
@@ -472,12 +471,14 @@ export const de = {
   'settings.data.backupPathChanging': 'Pfad wird gewählt …',
   'settings.data.backupPathChanged': 'Backup-Pfad gespeichert.',
   'settings.data.backupPathReset': 'Backup-Pfad auf Standard zurückgesetzt.',
-  'settings.data.backupPathUnreachable': 'Backup-Pfad nicht erreichbar — neue Backups werden im Standardpfad gespeichert.',
+  'settings.data.backupPathUnreachable':
+    'Backup-Pfad nicht erreichbar — neue Backups werden im Standardpfad gespeichert.',
   'settings.data.restoreBackup': 'Aus Backup wiederherstellen',
   'settings.data.restoreBackupHint': 'Die App startet nach der Wiederherstellung automatisch neu.',
   'settings.data.restoreBtn': 'Wiederherstellen …',
   'settings.data.restoreConfirmTitle': 'Backup wiederherstellen?',
-  'settings.data.restoreConfirmBody': 'Alle aktuellen Daten werden durch das gewählte Backup ersetzt. Eine Sicherungskopie des aktuellen Stands wird vorher angelegt.',
+  'settings.data.restoreConfirmBody':
+    'Alle aktuellen Daten werden durch das gewählte Backup ersetzt. Eine Sicherungskopie des aktuellen Stands wird vorher angelegt.',
   'settings.data.restoreConfirmOk': 'Jetzt wiederherstellen',
   'settings.data.restoring': 'Wiederherstellung läuft …',
   'settings.data.noBackupToRestore': 'Keine Backups vorhanden',
@@ -518,7 +519,8 @@ export const de = {
   'settings.pdf.footer': 'Footer-Text',
   'settings.pdf.footerHint': 'Z. B. Bankverbindung oder Zahlungshinweis.',
   'settings.pdf.roundMinutes': 'Stunden runden auf',
-  'settings.pdf.roundMinutesHint': 'Gilt für alle Timer-Einträge — sowohl im PDF als auch in der Auswertung.',
+  'settings.pdf.roundMinutesHint':
+    'Gilt für alle Timer-Einträge — sowohl im PDF als auch in der Auswertung.',
   'settings.pdf.roundNone': 'Keine Rundung',
   'settings.pdf.round5': '5 Minuten',
   'settings.pdf.round10': '10 Minuten',
@@ -529,6 +531,29 @@ export const de = {
   'settings.nav.export': 'PDF & Export',
   'settings.nav.data': 'Daten',
   'settings.nav.about': 'Über',
+  'settings.nav.integrations': 'Integrationen',
+  // ── Integrationen — MCP (v1.14 #128) ──────────────────────────────────────
+  'settings.mcp.section': 'Model Context Protocol (MCP)',
+  'settings.mcp.desc':
+    'Erlaubt Werkzeugen wie Claude Code, deine Zeiterfassung auszulesen — z. B. Stunden pro Kunde/Projekt auswerten oder eine Rechnung vorbereiten.',
+  'settings.mcp.readonlyBadge': 'Nur Lesen',
+  'settings.mcp.dbPath': 'Datenbank-Pfad',
+  'settings.mcp.registration': 'Registrierung in Claude Code',
+  'settings.mcp.registrationHint':
+    'In die .mcp.json (Projekt) oder ~/.claude.json eintragen. Pfad zum gebauten Server anpassen (pnpm build:mcp).',
+  'settings.mcp.copy': 'Kopieren',
+  'settings.mcp.copied': 'In die Zwischenablage kopiert.',
+  'settings.mcp.privacyTitle': 'Datenschutz',
+  'settings.mcp.exposeRates': 'Stundensätze & Umsätze einblenden',
+  'settings.mcp.exposeRatesHint':
+    'Standardmäßig aus. Wenn aus, liefert der Server keine Honorare oder Umsätze an das KI-Modell.',
+  'settings.mcp.exposePrivateNotes': 'Interne Notizen einblenden',
+  'settings.mcp.exposePrivateNotesHint':
+    'Standardmäßig aus. Betrifft das interne Notizfeld (private_note), das nie exportiert wird.',
+  'settings.mcp.writeTitle': 'Schreibzugriff',
+  'settings.mcp.writeEnable': 'Schreibzugriff erlauben',
+  'settings.mcp.writeSoon':
+    'Kommt später als eigenes, abgesichertes Feature (Allowlist, Vorschau, Pre-Write-Backup).',
   'settings.theme.title': 'Erscheinungsbild',
   'settings.theme.light': 'Hell',
   'settings.theme.dark': 'Dunkel',
@@ -546,7 +571,8 @@ export const de = {
   'timer.project.placeholder': '— Kein Projekt —',
   'timer.project.effectiveRate': 'Effektiver Satz: {rate} €/h (Projekt überschreibt Kunden)',
   // v1.11 #94 — Budget-Warnung
-  'timer.budget.warning': 'Achtung: {percent} % des Budgets bereits verbucht ({used} h / {total} h).',
+  'timer.budget.warning':
+    'Achtung: {percent} % des Budgets bereits verbucht ({used} h / {total} h).',
   'timer.budget.overBudget': 'Budget überschritten: {used} h von {total} h verbucht.',
 
   // ── EntryEditForm — Projekt (v1.9 #75 PR 3) ───────────────────────────────
@@ -595,7 +621,8 @@ export const de = {
   'settings.tags.mergeLabel': 'Zusammenführen mit →',
   'settings.tags.mergeSelect': '— Ziel-Tag wählen —',
   'settings.tags.mergeConfirmTitle': 'Tags zusammenführen',
-  'settings.tags.mergeConfirmBody': '{count} Eintrag/Einträge von \'{source}\' werden in \'{target}\' umgeschrieben. Diese Aktion kann nicht rückgängig gemacht werden.',
+  'settings.tags.mergeConfirmBody':
+    "{count} Eintrag/Einträge von '{source}' werden in '{target}' umgeschrieben. Diese Aktion kann nicht rückgängig gemacht werden.",
   'settings.tags.mergeConfirmOk': 'Zusammenführen',
   'settings.tags.delete': 'Löschen',
   'settings.tags.deleteTitle': 'Tag löschen',
@@ -607,7 +634,7 @@ export const de = {
 
   // ── TagInput — closed system (v1.12 #107) ──────────────────────────────────
   'tags.createOption': "+ '{tag}' erstellen",
-  'tags.manageLink': 'Tags verwalten →',
+  'tags.manageLink': 'Tags verwalten →'
 } as const
 
 export type TranslationKey = keyof typeof de
