@@ -4,11 +4,10 @@ import { dialog } from 'electron'
 import { writeFileSync, readFileSync, mkdirSync, readdirSync } from 'fs'
 import { dirname, join, normalize, resolve, sep } from 'path'
 import log from 'electron-log/main'
-import { randomUUID } from 'crypto'
 import { getDb, getDbPath } from './db'
 import { getBackupsDir, getDefaultBackupsDir, readBackupPathSetting } from './backup'
 import { createBackup, listBackups, restoreBackup as restoreBackupFile } from './backup'
-import { splitAtMidnight } from '../shared/midnightSplit'
+import { createManualEntry, updateManualEntry, startTimer, stopEntry } from './entryMutations'
 import { buildJsonExportPayload } from './jsonExport'
 import { buildPdfHtml, buildPdfPayload, type PdfRequest } from './pdf'
 import { renderPdfBuffer } from './pdfWindow'
@@ -37,11 +36,6 @@ import type {
   LicenseEntry
 } from '../shared/types'
 
-const MAX_DESCRIPTION_LEN = 500
-const MAX_REFERENCE_LEN = 200
-const MAX_NOTE_LEN = 1000
-const MAX_DURATION_SECONDS = 24 * 3600
-
 export interface IpcHooks {
   refreshTrayClients(): void
   setHotkey(accelerator: string): boolean
@@ -49,6 +43,7 @@ export interface IpcHooks {
   setIdleThreshold(minutes: number): void
   setMiniEnabled(enabled: boolean): void
   setMiniHotkey(accelerator: string): boolean
+  setMcpWriteEnabled(enabled: boolean): void
 }
 
 function ok<T>(data: T): IpcResult<T> {
@@ -111,7 +106,9 @@ export function registerIpcHandlers(hooks: IpcHooks): void {
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
         )
         .run(
-          input.name.trim(), input.color, rate,
+          input.name.trim(),
+          input.color,
+          rate,
           input.billing_address_line1?.trim() ?? null,
           input.billing_address_line2?.trim() ?? null,
           input.billing_address_line3?.trim() ?? null,
@@ -141,7 +138,10 @@ export function registerIpcHandlers(hooks: IpcHooks): void {
            vat_id = ?, contact_person = ?, contact_email = ?
          WHERE id = ?`
       ).run(
-        input.name.trim(), input.color, input.active, rate,
+        input.name.trim(),
+        input.color,
+        input.active,
+        rate,
         input.billing_address_line1?.trim() ?? null,
         input.billing_address_line2?.trim() ?? null,
         input.billing_address_line3?.trim() ?? null,
@@ -172,20 +172,7 @@ export function registerIpcHandlers(hooks: IpcHooks): void {
   // ── Entries ───────────────────────────────────────────────────
   ipcMain.handle('entries:start', (_e, input: CreateEntryInput): IpcResult<Entry> => {
     try {
-      // Stop any currently running entry first
-      db.prepare(`UPDATE entries SET stopped_at = ? WHERE stopped_at IS NULL`).run(
-        new Date().toISOString()
-      )
-      const info = db
-        .prepare(
-          `INSERT INTO entries (client_id, description, started_at, heartbeat_at, project_id)
-           VALUES (?, ?, ?, ?, ?)`
-        )
-        .run(input.client_id, input.description, input.started_at, input.started_at, input.project_id ?? null)
-      const row = db
-        .prepare(`SELECT * FROM entries WHERE id = ?`)
-        .get(info.lastInsertRowid) as Entry
-      return ok(row)
+      return startTimer(db, input)
     } catch (e) {
       return fail(e)
     }
@@ -193,14 +180,7 @@ export function registerIpcHandlers(hooks: IpcHooks): void {
 
   ipcMain.handle('entries:stop', (_e, id: number): IpcResult<Entry> => {
     try {
-      const now = new Date().toISOString()
-      db.prepare(`UPDATE entries SET stopped_at = ?, heartbeat_at = ? WHERE id = ?`).run(
-        now,
-        now,
-        id
-      )
-      const row = db.prepare(`SELECT * FROM entries WHERE id = ?`).get(id) as Entry
-      return ok(row)
+      return stopEntry(db, id)
     } catch (e) {
       return fail(e)
     }
@@ -265,11 +245,7 @@ export function registerIpcHandlers(hooks: IpcHooks): void {
    */
   ipcMain.handle('entries:create', (_e, input: CreateManualEntryInput): IpcResult<Entry> => {
     try {
-      const err = validateManualEntry(db, input)
-      if (err) return fail(err)
-      const segments = splitAtMidnight(new Date(input.started_at), new Date(input.stopped_at))
-      const insertedRow = insertEntrySegments(db, input, segments, input.tags ?? '', input.reference ?? '', input.billable ?? 1, input.private_note ?? '', input.project_id ?? null)
-      return ok(insertedRow)
+      return createManualEntry(db, input)
     } catch (e) {
       return fail(e)
     }
@@ -277,29 +253,7 @@ export function registerIpcHandlers(hooks: IpcHooks): void {
 
   ipcMain.handle('entries:update', (_e, input: UpdateEntryInput): IpcResult<Entry> => {
     try {
-      // Reuse the same validation contract as create. We exclude both the
-      // current row (`input.id`) and any sibling sharing its link_id so the
-      // overlap check doesn't fire against the about-to-be-deleted halves.
-      const existing = db.prepare(`SELECT link_id FROM entries WHERE id = ?`).get(input.id) as
-        | { link_id: string | null }
-        | undefined
-      const existingLinkId = existing?.link_id ?? undefined
-      const err = validateManualEntry(db, input, input.id, existingLinkId ?? undefined)
-      if (err) return fail(err)
-      const segments = splitAtMidnight(new Date(input.started_at), new Date(input.stopped_at))
-      const tx = db.transaction((): Entry => {
-        // Drop the original row + any linked sibling, then re-insert. This
-        // keeps the cross-midnight bookkeeping in one place rather than
-        // distinguishing "edit one half" vs "edit a single-day row".
-        if (existingLinkId) {
-          db.prepare(`DELETE FROM entries WHERE link_id = ?`).run(existingLinkId)
-        } else {
-          db.prepare(`DELETE FROM entries WHERE id = ?`).run(input.id)
-        }
-        return insertEntrySegments(db, input, segments, input.tags ?? '', input.reference ?? '', input.billable ?? 1, input.private_note ?? '', input.project_id ?? null)
-      })
-      const row = tx()
-      return ok(row)
+      return updateManualEntry(db, input)
     } catch (e) {
       return fail(e)
     }
@@ -365,9 +319,7 @@ export function registerIpcHandlers(hooks: IpcHooks): void {
           freq.set(tag, (freq.get(tag) ?? 0) + 1)
         }
       }
-      const sorted = [...freq.entries()]
-        .sort((a, b) => b[1] - a[1])
-        .map(([tag]) => tag)
+      const sorted = [...freq.entries()].sort((a, b) => b[1] - a[1]).map(([tag]) => tag)
       return ok(sorted)
     } catch (e) {
       return fail(e)
@@ -452,15 +404,13 @@ export function registerIpcHandlers(hooks: IpcHooks): void {
     try {
       const err = validateProject(input, db)
       if (err) return fail(err)
-      const current = db
-        .prepare('SELECT client_id FROM projects WHERE id = ?')
-        .get(input.id) as { client_id: number | null } | undefined
+      const current = db.prepare('SELECT client_id FROM projects WHERE id = ?').get(input.id) as
+        | { client_id: number | null }
+        | undefined
       if (!current) return fail('Projekt nicht gefunden')
       if (current.client_id !== input.client_id) {
         const countRow = db
-          .prepare(
-            `SELECT COUNT(*) AS n FROM entries WHERE project_id = ? AND deleted_at IS NULL`
-          )
+          .prepare(`SELECT COUNT(*) AS n FROM entries WHERE project_id = ? AND deleted_at IS NULL`)
           .get(input.id) as { n: number }
         if (countRow.n > 0) {
           return fail(
@@ -514,9 +464,7 @@ export function registerIpcHandlers(hooks: IpcHooks): void {
     try {
       const tx = db.transaction(() => {
         const countRow = db
-          .prepare(
-            `SELECT COUNT(*) AS n FROM entries WHERE project_id = ? AND deleted_at IS NULL`
-          )
+          .prepare(`SELECT COUNT(*) AS n FROM entries WHERE project_id = ? AND deleted_at IS NULL`)
           .get(id) as { n: number }
         if (countRow.n > 0) throw new Error('Projekt hat noch aktive Einträge')
         db.prepare('DELETE FROM projects WHERE id = ?').run(id)
@@ -690,6 +638,8 @@ export function registerIpcHandlers(hooks: IpcHooks): void {
       } else if (key === 'mini_hotkey') {
         const okHotkey = hooks.setMiniHotkey(value)
         if (!okHotkey) return fail(`Hotkey "${value}" konnte nicht registriert werden`)
+      } else if (key === 'mcp_write_enabled') {
+        hooks.setMcpWriteEnabled(value === '1')
       }
       return ok(undefined)
     } catch (e) {
@@ -702,9 +652,9 @@ export function registerIpcHandlers(hooks: IpcHooks): void {
   // Used exclusively by preload to read theme_mode before first paint.
   ipcMain.on('settings:getSync', (event, key: string) => {
     try {
-      const row = db
-        .prepare(`SELECT value FROM settings WHERE key = ?`)
-        .get(key) as { value: string } | undefined
+      const row = db.prepare(`SELECT value FROM settings WHERE key = ?`).get(key) as
+        | { value: string }
+        | undefined
       event.returnValue = row?.value ?? null
     } catch {
       event.returnValue = null
@@ -745,10 +695,7 @@ export function registerIpcHandlers(hooks: IpcHooks): void {
         const configuredPath = getBackupPathSetting()
         const configuredDir = configuredPath ? resolve(configuredPath) : defaultDir
         const resolved = resolve(filePath)
-        if (
-          !resolved.startsWith(defaultDir + sep) &&
-          !resolved.startsWith(configuredDir + sep)
-        ) {
+        if (!resolved.startsWith(defaultDir + sep) && !resolved.startsWith(configuredDir + sep)) {
           return fail('Ungültiger Backup-Pfad')
         }
         const dbPath = getDbPath()
@@ -979,19 +926,22 @@ export function registerIpcHandlers(hooks: IpcHooks): void {
 
   // PDF open dialog: opens a native file picker and returns the selected path.
   // Safer than relying on file.path in the renderer (not available with contextIsolation).
-  ipcMain.handle('pdf:open-pdf-dialog', async (): Promise<IpcResult<{ filePath: string } | null>> => {
-    try {
-      const result = await dialog.showOpenDialog({
-        title: 'PDF auswählen',
-        filters: [{ name: 'PDF', extensions: ['pdf'] }],
-        properties: ['openFile']
-      })
-      if (result.canceled || !result.filePaths[0]) return ok(null)
-      return ok({ filePath: result.filePaths[0] })
-    } catch (e) {
-      return fail(e)
+  ipcMain.handle(
+    'pdf:open-pdf-dialog',
+    async (): Promise<IpcResult<{ filePath: string } | null>> => {
+      try {
+        const result = await dialog.showOpenDialog({
+          title: 'PDF auswählen',
+          filters: [{ name: 'PDF', extensions: ['pdf'] }],
+          properties: ['openFile']
+        })
+        if (result.canceled || !result.filePaths[0]) return ok(null)
+        return ok({ filePath: result.filePaths[0] })
+      } catch (e) {
+        return fail(e)
+      }
     }
-  })
+  )
 
   // Logo picker — copies user-chosen image into userData/pdf-logo.<ext>
   // and persists the path into settings.pdf_logo_path.
@@ -1081,141 +1031,10 @@ function validateProject(
     if (!Number.isFinite(rate) || rate < 0) return 'Stundensatz darf nicht negativ sein'
   }
   if (db && input.client_id !== null && input.client_id !== undefined) {
-    const clientRow = db
-      .prepare('SELECT id FROM clients WHERE id = ?')
-      .get(input.client_id) as { id: number } | undefined
+    const clientRow = db.prepare('SELECT id FROM clients WHERE id = ?').get(input.client_id) as
+      | { id: number }
+      | undefined
     if (!clientRow) return 'Kunde existiert nicht'
   }
   return null
-}
-
-/**
- * Server-side validation contract for manual entry create/update (E3).
- * Returns an error string if invalid, `null` if valid. Single point of
- * truth: UI may pre-validate but must not be the only line of defence
- * (e.g. against malicious renderer code or future scripted clients).
- *
- * Rules:
- *  - started_at <= now (no future entries)
- *  - stopped_at > started_at
- *  - client_id exists
- *  - description.length <= 500
- *  - duration <= 24h
- *  - no overlap with existing non-deleted entry of the same client
- *    (excluding the entry itself when updating; for cross-midnight splits
- *    the caller passes `excludeLinkId` so the second half doesn't claim
- *    its sibling overlaps)
- *
- * Cross-midnight is allowed since v1.3 PR B — entries that cross local
- * midnight are auto-split into linked halves by the create/update IPC
- * before insertion (see `splitAtMidnight`).
- */
-function validateManualEntry(
-  db: ReturnType<typeof getDb>,
-  input: {
-    client_id: number
-    description: string
-    started_at: string
-    stopped_at: string
-    reference?: string
-    private_note?: string
-  },
-  excludeId?: number,
-  excludeLinkId?: string
-): string | null {
-  const start = new Date(input.started_at)
-  const stop = new Date(input.stopped_at)
-  if (Number.isNaN(start.getTime())) return 'Startzeit ist ungültig'
-  if (Number.isNaN(stop.getTime())) return 'Endzeit ist ungültig'
-  const now = Date.now()
-  if (start.getTime() > now) return 'Startzeit darf nicht in der Zukunft liegen'
-  if (stop.getTime() <= start.getTime()) return 'Endzeit muss nach der Startzeit liegen'
-  const durationSec = (stop.getTime() - start.getTime()) / 1000
-  if (durationSec > MAX_DURATION_SECONDS) return 'Dauer überschreitet 24 Stunden'
-  if ((input.description ?? '').length > MAX_DESCRIPTION_LEN) {
-    return `Beschreibung überschreitet ${MAX_DESCRIPTION_LEN} Zeichen`
-  }
-  if ((input.reference ?? '').length > MAX_REFERENCE_LEN) {
-    return `Referenz überschreitet ${MAX_REFERENCE_LEN} Zeichen`
-  }
-  if ((input.private_note ?? '').length > MAX_NOTE_LEN) {
-    return `Notiz überschreitet ${MAX_NOTE_LEN} Zeichen`
-  }
-  const clientRow = db.prepare(`SELECT id FROM clients WHERE id = ?`).get(input.client_id) as
-    | { id: number }
-    | undefined
-  if (!clientRow) return 'Kunde existiert nicht'
-  // Overlap: any non-deleted entry of the same client whose time range
-  // intersects [start, stop). Two intervals overlap iff
-  //   existing.started_at < stop AND COALESCE(existing.stopped_at, now) > start
-  const params: Array<string | number> = [input.client_id, input.stopped_at, input.started_at]
-  let overlapSql = `SELECT id FROM entries
-                     WHERE client_id = ? AND deleted_at IS NULL
-                       AND started_at < ?
-                       AND COALESCE(stopped_at, datetime('now')) > ?`
-  if (excludeId !== undefined) {
-    overlapSql += ` AND id != ?`
-    params.push(excludeId)
-  }
-  if (excludeLinkId !== undefined) {
-    overlapSql += ` AND (link_id IS NULL OR link_id != ?)`
-    params.push(excludeLinkId)
-  }
-  const overlap = db.prepare(overlapSql).get(...params) as { id: number } | undefined
-  if (overlap) return 'Eintrag überlappt mit einem bestehenden Eintrag desselben Kunden'
-  return null
-}
-
-/**
- * Insert one or more time segments produced by `splitAtMidnight`. Single
- * segment → plain insert (link_id stays NULL). Multiple segments → all
- * rows share a fresh UUID `link_id` so the UI / delete flow can find
- * siblings later. Returns the FIRST inserted row (the one whose start
- * matches the user's input.started_at), so the renderer can reveal the
- * correct day in the calendar.
- *
- * Caller must have already run `validateManualEntry` against the full
- * (un-split) range. Runs inside a single transaction so a failed insert
- * leaves no half-state behind.
- */
-function insertEntrySegments(
-  db: ReturnType<typeof getDb>,
-  input: { client_id: number; description: string },
-  segments: Array<{ start: Date; stop: Date }>,
-  tags = '',
-  reference = '',
-  billable = 1,
-  private_note = '',
-  project_id: number | null = null
-): Entry {
-  const linkId = segments.length > 1 ? randomUUID() : null
-  const description = input.description.trim()
-  const insertStmt = db.prepare(
-    `INSERT INTO entries (client_id, description, started_at, stopped_at, heartbeat_at, rounded_min, link_id, project_id, tags, reference, billable, private_note)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-  )
-  const tx = db.transaction((): Entry => {
-    let firstId = 0
-    for (const seg of segments) {
-      const startedAt = seg.start.toISOString()
-      const stoppedAt = seg.stop.toISOString()
-      const info = insertStmt.run(
-        input.client_id,
-        description,
-        startedAt,
-        stoppedAt,
-        stoppedAt,
-        Math.round((seg.stop.getTime() - seg.start.getTime()) / 60000),
-        linkId,
-        project_id,
-        tags,
-        reference,
-        billable,
-        private_note
-      )
-      if (firstId === 0) firstId = Number(info.lastInsertRowid)
-    }
-    return db.prepare(`SELECT * FROM entries WHERE id = ?`).get(firstId) as Entry
-  })
-  return tx()
 }

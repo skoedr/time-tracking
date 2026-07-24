@@ -1,0 +1,245 @@
+/**
+ * Entry mutation core — extracted from the `entries:*` IPC handlers so both
+ * the Electron IPC layer (src/main/ipc.ts) and the MCP write bridge
+ * (src/main/mcpBridge.ts) can execute the exact same validated logic.
+ *
+ * Deliberately Electron-free: it takes a better-sqlite3 handle structurally,
+ * imports only `crypto`, the shared midnight-split helper, and shared types.
+ * That keeps it trivially unit-testable against an in-memory DB and safe to
+ * import from a non-Electron context.
+ *
+ * Behaviour is identical to the previous inline handlers: validate the full
+ * un-split range first, then split at local midnight into linked halves
+ * (shared `link_id`), insert in one transaction, and return the first row.
+ */
+import type Database from 'better-sqlite3'
+import { randomUUID } from 'crypto'
+import { splitAtMidnight } from '../shared/midnightSplit'
+import type {
+  Entry,
+  CreateEntryInput,
+  CreateManualEntryInput,
+  UpdateEntryInput,
+  IpcResult
+} from '../shared/types'
+
+// Server-side limits (were module-private constants in ipc.ts).
+export const MAX_DESCRIPTION_LEN = 500
+export const MAX_REFERENCE_LEN = 200
+export const MAX_NOTE_LEN = 1000
+export const MAX_DURATION_SECONDS = 24 * 3600
+
+type Db = Database.Database
+
+function ok<T>(data: T): IpcResult<T> {
+  return { ok: true, data }
+}
+function fail(error: string): IpcResult<never> {
+  return { ok: false, error }
+}
+
+/**
+ * Validate a manual entry's full (un-split) range. Returns a German error
+ * message string, or null when valid. `excludeId` / `excludeLinkId` let the
+ * update path skip the row(s) it's about to replace in the overlap check.
+ */
+export function validateManualEntry(
+  db: Db,
+  input: {
+    client_id: number
+    description: string
+    started_at: string
+    stopped_at: string
+    reference?: string
+    private_note?: string
+  },
+  excludeId?: number,
+  excludeLinkId?: string
+): string | null {
+  const start = new Date(input.started_at)
+  const stop = new Date(input.stopped_at)
+  if (Number.isNaN(start.getTime())) return 'Startzeit ist ungültig'
+  if (Number.isNaN(stop.getTime())) return 'Endzeit ist ungültig'
+  const now = Date.now()
+  if (start.getTime() > now) return 'Startzeit darf nicht in der Zukunft liegen'
+  if (stop.getTime() <= start.getTime()) return 'Endzeit muss nach der Startzeit liegen'
+  const durationSec = (stop.getTime() - start.getTime()) / 1000
+  if (durationSec > MAX_DURATION_SECONDS) return 'Dauer überschreitet 24 Stunden'
+  if ((input.description ?? '').length > MAX_DESCRIPTION_LEN) {
+    return `Beschreibung überschreitet ${MAX_DESCRIPTION_LEN} Zeichen`
+  }
+  if ((input.reference ?? '').length > MAX_REFERENCE_LEN) {
+    return `Referenz überschreitet ${MAX_REFERENCE_LEN} Zeichen`
+  }
+  if ((input.private_note ?? '').length > MAX_NOTE_LEN) {
+    return `Notiz überschreitet ${MAX_NOTE_LEN} Zeichen`
+  }
+  const clientRow = db.prepare(`SELECT id FROM clients WHERE id = ?`).get(input.client_id) as
+    | { id: number }
+    | undefined
+  if (!clientRow) return 'Kunde existiert nicht'
+  // Overlap: any non-deleted entry of the same client whose time range
+  // intersects [start, stop). Two intervals overlap iff
+  //   existing.started_at < stop AND COALESCE(existing.stopped_at, now) > start
+  const params: Array<string | number> = [input.client_id, input.stopped_at, input.started_at]
+  let overlapSql = `SELECT id FROM entries
+                     WHERE client_id = ? AND deleted_at IS NULL
+                       AND started_at < ?
+                       AND COALESCE(stopped_at, datetime('now')) > ?`
+  if (excludeId !== undefined) {
+    overlapSql += ` AND id != ?`
+    params.push(excludeId)
+  }
+  if (excludeLinkId !== undefined) {
+    overlapSql += ` AND (link_id IS NULL OR link_id != ?)`
+    params.push(excludeLinkId)
+  }
+  const overlap = db.prepare(overlapSql).get(...params) as { id: number } | undefined
+  if (overlap) return 'Eintrag überlappt mit einem bestehenden Eintrag desselben Kunden'
+  return null
+}
+
+/**
+ * Insert one or more time segments produced by `splitAtMidnight`. Single
+ * segment → plain insert (link_id stays NULL). Multiple segments → all rows
+ * share a fresh UUID `link_id`. Returns the FIRST inserted row (matching the
+ * user's input.started_at). Caller must have validated the full range first.
+ */
+export function insertEntrySegments(
+  db: Db,
+  input: { client_id: number; description: string },
+  segments: Array<{ start: Date; stop: Date }>,
+  tags = '',
+  reference = '',
+  billable = 1,
+  private_note = '',
+  project_id: number | null = null
+): Entry {
+  const linkId = segments.length > 1 ? randomUUID() : null
+  const description = input.description.trim()
+  const insertStmt = db.prepare(
+    `INSERT INTO entries (client_id, description, started_at, stopped_at, heartbeat_at, rounded_min, link_id, project_id, tags, reference, billable, private_note)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  )
+  const tx = db.transaction((): Entry => {
+    let firstId = 0
+    for (const seg of segments) {
+      const startedAt = seg.start.toISOString()
+      const stoppedAt = seg.stop.toISOString()
+      const info = insertStmt.run(
+        input.client_id,
+        description,
+        startedAt,
+        stoppedAt,
+        stoppedAt,
+        Math.round((seg.stop.getTime() - seg.start.getTime()) / 60000),
+        linkId,
+        project_id,
+        tags,
+        reference,
+        billable,
+        private_note
+      )
+      if (firstId === 0) firstId = Number(info.lastInsertRowid)
+    }
+    return db.prepare(`SELECT * FROM entries WHERE id = ?`).get(firstId) as Entry
+  })
+  return tx()
+}
+
+/** Create a manual (already-stopped) entry. Mirrors the `entries:create` handler. */
+export function createManualEntry(db: Db, input: CreateManualEntryInput): IpcResult<Entry> {
+  const err = validateManualEntry(db, input)
+  if (err) return fail(err)
+  const segments = splitAtMidnight(new Date(input.started_at), new Date(input.stopped_at))
+  const row = insertEntrySegments(
+    db,
+    input,
+    segments,
+    input.tags ?? '',
+    input.reference ?? '',
+    input.billable ?? 1,
+    input.private_note ?? '',
+    input.project_id ?? null
+  )
+  return ok(row)
+}
+
+/** Update an entry (delete-and-reinsert with cross-midnight bookkeeping). Mirrors `entries:update`. */
+export function updateManualEntry(db: Db, input: UpdateEntryInput): IpcResult<Entry> {
+  const existing = db.prepare(`SELECT link_id FROM entries WHERE id = ?`).get(input.id) as
+    | { link_id: string | null }
+    | undefined
+  if (!existing) return fail('Eintrag existiert nicht')
+  const existingLinkId = existing.link_id ?? undefined
+  const err = validateManualEntry(db, input, input.id, existingLinkId)
+  if (err) return fail(err)
+  const segments = splitAtMidnight(new Date(input.started_at), new Date(input.stopped_at))
+  const tx = db.transaction((): Entry => {
+    if (existingLinkId) {
+      db.prepare(`DELETE FROM entries WHERE link_id = ?`).run(existingLinkId)
+    } else {
+      db.prepare(`DELETE FROM entries WHERE id = ?`).run(input.id)
+    }
+    return insertEntrySegments(
+      db,
+      input,
+      segments,
+      input.tags ?? '',
+      input.reference ?? '',
+      input.billable ?? 1,
+      input.private_note ?? '',
+      input.project_id ?? null
+    )
+  })
+  return ok(tx())
+}
+
+/** Start a running timer (stops any running entry first). Mirrors `entries:start`. */
+export function startTimer(db: Db, input: CreateEntryInput): IpcResult<Entry> {
+  const clientRow = db.prepare(`SELECT id FROM clients WHERE id = ?`).get(input.client_id) as
+    | { id: number }
+    | undefined
+  if (!clientRow) return fail('Kunde existiert nicht')
+  const tx = db.transaction((): Entry => {
+    db.prepare(`UPDATE entries SET stopped_at = ? WHERE stopped_at IS NULL`).run(
+      new Date().toISOString()
+    )
+    const info = db
+      .prepare(
+        `INSERT INTO entries (client_id, description, started_at, heartbeat_at, project_id)
+         VALUES (?, ?, ?, ?, ?)`
+      )
+      .run(
+        input.client_id,
+        input.description,
+        input.started_at,
+        input.started_at,
+        input.project_id ?? null
+      )
+    return db.prepare(`SELECT * FROM entries WHERE id = ?`).get(info.lastInsertRowid) as Entry
+  })
+  return ok(tx())
+}
+
+/** Stop a specific entry by id (stamps now). Mirrors `entries:stop`. */
+export function stopEntry(db: Db, id: number): IpcResult<Entry> {
+  const now = new Date().toISOString()
+  db.prepare(`UPDATE entries SET stopped_at = ?, heartbeat_at = ? WHERE id = ?`).run(now, now, id)
+  const row = db.prepare(`SELECT * FROM entries WHERE id = ?`).get(id) as Entry | undefined
+  if (!row) return fail('Eintrag existiert nicht')
+  return ok(row)
+}
+
+/** Stop the currently running timer, if any. Returns null when nothing runs. */
+export function stopRunningTimer(db: Db): IpcResult<Entry | null> {
+  const running = db
+    .prepare(
+      `SELECT id FROM entries WHERE stopped_at IS NULL AND deleted_at IS NULL
+       ORDER BY started_at DESC LIMIT 1`
+    )
+    .get() as { id: number } | undefined
+  if (!running) return ok(null)
+  const res = stopEntry(db, running.id)
+  return res.ok ? ok(res.data) : res
+}

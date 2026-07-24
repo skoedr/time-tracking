@@ -43,15 +43,15 @@ Vollständige Roadmap: [ROADMAP.md](ROADMAP.md) · Issues: [github.com/skoedr/ti
 
 ## Tech Stack
 
-| Layer | Library |
-|---|---|
-| Shell | Electron 39 |
-| Build | electron-vite 5 |
-| UI | React 19 + TypeScript 5 |
-| Styling | Tailwind CSS 4 |
-| State | Zustand 5 |
-| Database | better-sqlite3 12 |
-| Dates | date-fns 4 |
+| Layer    | Library                 |
+| -------- | ----------------------- |
+| Shell    | Electron 39             |
+| Build    | electron-vite 5         |
+| UI       | React 19 + TypeScript 5 |
+| Styling  | Tailwind CSS 4          |
+| State    | Zustand 5               |
+| Database | better-sqlite3 12       |
+| Dates    | date-fns 4              |
 
 ## Development
 
@@ -74,17 +74,18 @@ pnpm test
 pnpm build:win
 ```
 
-## MCP-Integration (read-only)
+## MCP-Integration
 
-TimeTrack ships a **read-only [MCP](https://modelcontextprotocol.io) server** so
-tools like **Claude Code** können die lokale Zeiterfassung auslesen — z. B. „summiere
-meine Stunden für Kunde X im Juni nach Projekt". Der Server öffnet die SQLite-DB
-**strikt schreibgeschützt**; es gibt keine Schreib-Tools. Der abgesicherte Schreibpfad
-ist ein separates, bewusst opt-in gestaltetes Feature (siehe Issues).
+TimeTrack bringt einen **[MCP](https://modelcontextprotocol.io)-Server** mit, damit
+Werkzeuge wie **Claude Code** die lokale Zeiterfassung nutzen können — z. B. „summiere
+meine Stunden für Kunde X im Juni nach Projekt" oder „trag den vergessenen Termin nach".
 
-**Tools:** `list_clients`, `list_projects`, `list_entries` (Monat oder Datumsspanne,
-Filter nach Kunde/Projekt/Tag), `get_running_timer`, `get_dashboard`, `get_analytics`
-(Monatsstunden, optional Umsatz).
+**Lese-Tools** (der Server öffnet die SQLite-DB **strikt schreibgeschützt**): `list_clients`,
+`list_projects`, `list_entries` (Monat oder Datumsspanne, Filter nach Kunde/Projekt/Tag),
+`get_running_timer`, `get_dashboard`, `get_analytics` (Monatsstunden, optional Umsatz).
+
+**Schreib-Tools** (opt-in, siehe unten): `create_manual_entry`, `update_entry_fields`,
+`start_timer`, `stop_running_timer` — jeweils mit `preview: true` für eine Vorschau ohne Commit.
 
 **Bauen & starten:**
 
@@ -123,8 +124,31 @@ Schalter werden pro Anfrage frisch aus der DB gelesen) oder per Umgebungsvariabl
 - `TIMETRACK_MCP_EXPOSE_RATES=1` — Stundensätze und Umsätze einblenden
 - `TIMETRACK_MCP_EXPOSE_PRIVATE_NOTES=1` — interne Notizen einblenden
 
-Das Submenü **Einstellungen → Integrationen** zeigt außerdem den DB-Pfad, die kopierbare
-`.mcp.json`-Registrierung und (ausgegraut) den späteren Schreibzugriff-Schalter.
+Das Submenü **Einstellungen → Integrationen** zeigt außerdem den DB-Pfad und die kopierbare
+`.mcp.json`-Registrierung.
+
+**Schreibzugriff (opt-in, standardmäßig aus).** Aktivierbar unter **Einstellungen →
+Integrationen → Schreibzugriff**. Sicherheitsmodell:
+
+- Der MCP-Server schreibt **nie** direkt in die DB. Schreib-Tools senden über einen lokalen
+  **Named Pipe / Unix-Socket** an die **laufende App**, die die Änderung durch ihre eigene
+  validierte Logik ausführt (Overlap-Prüfung, Cross-Midnight-Split usw.). Ist die App zu, oder
+  Schreiben aus, antworten die Tools mit einer klaren Fehlermeldung.
+- **Token:** Beim Aktivieren erzeugt die App ein Zufallstoken (`<userData>/mcp-write.token`,
+  mode `0600`), das je App-Start rotiert; jede Schreibanfrage muss es tragen.
+- **Bestätigung** je Schreibaktion wählbar: bei jeder Änderung nachfragen (Default), einmal pro
+  Sitzung, oder nicht nachfragen.
+- **Pre-Write-Backup** einmal je Sitzung vor der ersten Änderung; jede ausgeführte Aktion landet
+  im Append-only-**Audit-Log** `mcp-writes.log` (Token/interne Notizen werden nie protokolliert).
+
+Empfehlung: Schreib-Tools zuerst mit `preview: true` aufrufen, dann committen.
+
+> **Hinweis zu `TIMETRACK_DB_PATH`:** Socket und Token liegen **neben der DB** der
+> laufenden App. `TIMETRACK_DB_PATH` (der Lese-Override) muss daher auf die **echte DB
+> der laufenden App** zeigen — sonst liest der Server aus der einen DB, während die
+> Schreib-Bridge die App an ihrer eigenen Stelle adressiert. Ohne Override greift auf
+> beiden Seiten der Standardpfad; nur im Dev-Modus (abweichendes `userData`) ist der
+> Override nötig.
 
 ## Releases
 

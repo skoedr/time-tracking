@@ -868,9 +868,40 @@ export default function SettingsView(): React.JSX.Element {
             </Section>
 
             <Section title={t('settings.mcp.writeTitle')}>
-              <Row label={t('settings.mcp.writeEnable')} hint={t('settings.mcp.writeSoon')}>
-                <Toggle checked={false} disabled onChange={() => {}} />
+              <Row label={t('settings.mcp.writeEnable')} hint={t('settings.mcp.writeEnableHint')}>
+                <Toggle
+                  checked={settings.mcp_write_enabled === '1'}
+                  onChange={(v) => void update('mcp_write_enabled', v ? '1' : '0')}
+                />
               </Row>
+              {settings.mcp_write_enabled === '1' && (
+                <>
+                  <Row
+                    label={t('settings.mcp.confirmMode')}
+                    hint={t('settings.mcp.confirmModeHint')}
+                  >
+                    <select
+                      aria-label={t('settings.mcp.confirmMode')}
+                      value={settings.mcp_write_confirm_mode ?? 'per-write'}
+                      onChange={(e) => void update('mcp_write_confirm_mode', e.target.value)}
+                      className={inputClass}
+                    >
+                      <option value="per-write">{t('settings.mcp.confirmPerWrite')}</option>
+                      <option value="session">{t('settings.mcp.confirmSession')}</option>
+                      <option value="silent">{t('settings.mcp.confirmSilent')}</option>
+                    </select>
+                  </Row>
+                  <Row label={t('settings.mcp.auditLog')} hint={t('settings.mcp.auditLogHint')}>
+                    <button
+                      type="button"
+                      onClick={() => window.api.shell.openPath(paths.logs)}
+                      className={btnSecondaryClass}
+                    >
+                      {t('settings.mcp.openAuditLog')}
+                    </button>
+                  </Row>
+                </>
+              )}
             </Section>
           </>
         )}

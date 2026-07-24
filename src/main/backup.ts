@@ -1,16 +1,9 @@
 import type Database from 'better-sqlite3'
 import { app } from 'electron'
 import { join, normalize } from 'path'
-import {
-  mkdirSync,
-  existsSync,
-  copyFileSync,
-  readdirSync,
-  statSync,
-  unlinkSync
-} from 'fs'
+import { mkdirSync, existsSync, copyFileSync, readdirSync, statSync, unlinkSync } from 'fs'
 
-export type BackupReason = 'daily' | 'manual' | 'pre-migration'
+export type BackupReason = 'daily' | 'manual' | 'pre-migration' | 'mcp'
 
 export interface BackupInfo {
   filename: string
@@ -60,12 +53,15 @@ function buildFilename(reason: BackupReason, fromVersion?: number): string {
       return `backup-manual-${isoTimestamp()}.sqlite`
     case 'pre-migration':
       return `backup-pre-migration-v${fromVersion ?? 0}-${isoTimestamp()}.sqlite`
+    case 'mcp':
+      return `backup-mcp-${isoTimestamp()}.sqlite`
   }
 }
 
 function classify(filename: string): BackupReason | null {
   if (filename.startsWith('backup-daily-')) return 'daily'
   if (filename.startsWith('backup-manual-')) return 'manual'
+  if (filename.startsWith('backup-mcp-')) return 'mcp'
   if (filename.startsWith('backup-pre-migration-')) return 'pre-migration'
   // Legacy v1.1.0 pre-migration filename.
   if (filename.startsWith('pre-migration-')) return 'pre-migration'
@@ -182,9 +178,9 @@ export async function runDailyBackupIfNeeded(db: Database.Database): Promise<voi
  */
 export function readBackupPathSetting(db: Database.Database): string | undefined {
   try {
-    const row = db
-      .prepare("SELECT value FROM settings WHERE key = 'backup_path'")
-      .get() as { value: string } | undefined
+    const row = db.prepare("SELECT value FROM settings WHERE key = 'backup_path'").get() as
+      | { value: string }
+      | undefined
     return row?.value?.trim() || undefined
   } catch {
     return undefined

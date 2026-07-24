@@ -1,18 +1,16 @@
 /**
- * TimeTrack MCP server — read-only (MVP).
+ * TimeTrack MCP server — over stdio.
  *
- * Exposes the local TimeTrack SQLite database to any MCP client (Claude Code,
- * …) over stdio. This server can ONLY read: the DB is opened read-only and no
- * write tools exist. The guarded write path is a separate, opt-in feature —
- * see the "MCP-Write-Mode" issue.
+ * READS open the local SQLite DB directly in read-only mode. WRITES never touch
+ * the DB from here — they forward over a local socket to the running TimeTrack
+ * app, which executes them through its own validated logic behind opt-in,
+ * token, confirmation, backup and audit guards (v1.14 #127).
  *
- * Tools:
- *   list_clients        — clients (active by default)
- *   list_projects       — projects, optionally filtered by client
- *   list_entries        — entries by month or date range, with filters + totals
- *   get_running_timer   — the currently running entry, if any
- *   get_dashboard       — today/week totals, recent entries, top clients (30d)
- *   get_analytics       — monthly hours (+ revenue when rates are exposed)
+ * Read tools:
+ *   list_clients · list_projects · list_entries · get_running_timer
+ *   get_dashboard · get_analytics
+ * Write tools (require write mode enabled in the app; each supports preview):
+ *   create_manual_entry · update_entry_fields · start_timer · stop_running_timer
  *
  * Privacy: rates and internal notes are hidden by default. Enable per-request
  * either in the app (Einstellungen → Integrationen) or via env override:
@@ -34,6 +32,7 @@ import {
   readStoredPrivacy,
   type SqliteDb
 } from './queries'
+import { sendWrite } from './writeClient'
 
 /**
  * Open the DB fresh per call and close it afterwards. TimeTrack uses WAL, so a
@@ -71,10 +70,12 @@ export function buildServer(): McpServer {
     { name: 'timetrack', version: '0.1.0' },
     {
       instructions:
-        'Read-only Zugriff auf die lokale TimeTrack-Zeiterfassung. Nutze list_entries ' +
-        'und get_analytics für Auswertungen (z. B. Stunden pro Kunde/Projekt), ' +
-        'get_dashboard für den aktuellen Tag/Woche. Stundensätze und interne Notizen ' +
-        'sind standardmäßig ausgeblendet.'
+        'Zugriff auf die lokale TimeTrack-Zeiterfassung. Lesen: list_entries/get_analytics ' +
+        'für Auswertungen (Stunden pro Kunde/Projekt), get_dashboard für Tag/Woche. ' +
+        'Schreiben (create_manual_entry, update_entry_fields, start_timer, stop_running_timer) ' +
+        'erfordert aktivierten Schreibzugriff in der App und kann eine Bestätigung auslösen — ' +
+        'rufe Write-Tools bevorzugt zuerst mit preview:true auf. Stundensätze und interne ' +
+        'Notizen sind standardmäßig ausgeblendet.'
     }
   )
 
@@ -235,6 +236,137 @@ export function buildServer(): McpServer {
         return errorResult(e)
       }
     }
+  )
+
+  // ── Write tools (v1.14 #127) ────────────────────────────────────────────
+  // These forward to the running TimeTrack app over a local socket; they do
+  // NOT touch the DB directly. They require the write bridge to be enabled in
+  // the app (Einstellungen → Integrationen) and may trigger an in-app
+  // confirmation. Every tool supports `preview: true` to see the planned
+  // change without committing.
+  const WRITE_HINT =
+    'Erfordert aktivierten Schreibzugriff (Einstellungen → Integrationen); je nach Einstellung ' +
+    'erscheint eine Bestätigung in TimeTrack. preview:true zeigt die geplante Änderung ohne Commit.'
+
+  async function runWrite(
+    op: string,
+    args: Record<string, unknown>,
+    preview: boolean | undefined
+  ): Promise<ReturnType<typeof jsonResult>> {
+    const r = await sendWrite(op, args, preview === true)
+    return r.ok ? jsonResult(r.data ?? { ok: true }) : errorResult(r.error ?? 'Unbekannter Fehler')
+  }
+
+  server.registerTool(
+    'create_manual_entry',
+    {
+      title: 'Eintrag nachtragen',
+      description: `Legt einen abgeschlossenen Zeiteintrag an (Start + Ende). ${WRITE_HINT}`,
+      inputSchema: {
+        client_id: z.number().int().describe('Kunden-ID'),
+        description: z.string().describe('Tätigkeitsbeschreibung'),
+        started_at: z.string().describe('Startzeit als ISO-Zeitstempel'),
+        stopped_at: z.string().describe('Endzeit als ISO-Zeitstempel'),
+        tags: z.string().optional().describe("Serialisierte Tags, z. B. ',bug,ux,'"),
+        reference: z.string().optional().describe('Ticket/Referenz'),
+        billable: z.boolean().optional().describe('Abrechenbar (Default true)'),
+        private_note: z.string().optional().describe('Interne Notiz (nie exportiert)'),
+        project_id: z.number().int().nullable().optional().describe('Projekt-ID oder null'),
+        preview: z.boolean().optional().describe('Nur Vorschau, kein Commit')
+      }
+    },
+    async (a) =>
+      runWrite(
+        'create_manual_entry',
+        {
+          client_id: a.client_id,
+          description: a.description,
+          started_at: a.started_at,
+          stopped_at: a.stopped_at,
+          tags: a.tags,
+          reference: a.reference,
+          billable: a.billable,
+          private_note: a.private_note,
+          project_id: a.project_id
+        },
+        a.preview
+      )
+  )
+
+  server.registerTool(
+    'update_entry_fields',
+    {
+      title: 'Eintrag bearbeiten',
+      description: `Ändert Felder eines bestehenden Eintrags (nur angegebene Felder). Laufende Timer sind ausgenommen. ${WRITE_HINT}`,
+      inputSchema: {
+        id: z.number().int().describe('ID des Eintrags'),
+        client_id: z.number().int().optional().describe('Neuer Kunde'),
+        description: z.string().optional().describe('Neue Beschreibung'),
+        started_at: z.string().optional().describe('Neue Startzeit (ISO)'),
+        stopped_at: z.string().optional().describe('Neue Endzeit (ISO)'),
+        tags: z.string().optional().describe("Neue Tags, z. B. ',bug,'"),
+        reference: z.string().optional().describe('Neue Referenz'),
+        billable: z.boolean().optional().describe('Abrechenbar'),
+        private_note: z.string().optional().describe('Interne Notiz'),
+        project_id: z.number().int().nullable().optional().describe('Projekt-ID oder null'),
+        preview: z.boolean().optional().describe('Nur Vorschau, kein Commit')
+      }
+    },
+    async (a) =>
+      runWrite(
+        'update_entry_fields',
+        {
+          id: a.id,
+          client_id: a.client_id,
+          description: a.description,
+          started_at: a.started_at,
+          stopped_at: a.stopped_at,
+          tags: a.tags,
+          reference: a.reference,
+          billable: a.billable,
+          private_note: a.private_note,
+          project_id: a.project_id
+        },
+        a.preview
+      )
+  )
+
+  server.registerTool(
+    'start_timer',
+    {
+      title: 'Timer starten',
+      description: `Startet einen laufenden Timer für einen Kunden (stoppt einen ggf. laufenden). ${WRITE_HINT}`,
+      inputSchema: {
+        client_id: z.number().int().describe('Kunden-ID'),
+        description: z.string().optional().describe('Beschreibung'),
+        started_at: z.string().optional().describe('Startzeit (ISO); Default jetzt'),
+        project_id: z.number().int().nullable().optional().describe('Projekt-ID oder null'),
+        preview: z.boolean().optional().describe('Nur Vorschau, kein Commit')
+      }
+    },
+    async (a) =>
+      runWrite(
+        'start_timer',
+        {
+          client_id: a.client_id,
+          description: a.description,
+          started_at: a.started_at,
+          project_id: a.project_id
+        },
+        a.preview
+      )
+  )
+
+  server.registerTool(
+    'stop_running_timer',
+    {
+      title: 'Laufenden Timer stoppen',
+      description: `Stoppt den aktuell laufenden Timer (falls einer läuft). ${WRITE_HINT}`,
+      inputSchema: {
+        preview: z.boolean().optional().describe('Nur Vorschau, kein Commit')
+      }
+    },
+    async (a) => runWrite('stop_running_timer', {}, a.preview)
   )
 
   return server

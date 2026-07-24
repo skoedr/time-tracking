@@ -545,8 +545,16 @@ export const en: Record<TranslationKey, string> = {
     'Off by default. Affects the internal note field (private_note), which is never exported.',
   'settings.mcp.writeTitle': 'Write access',
   'settings.mcp.writeEnable': 'Allow write access',
-  'settings.mcp.writeSoon':
-    'Coming later as a separate, guarded feature (allowlist, preview, pre-write backup).',
+  'settings.mcp.writeEnableHint':
+    'Lets Claude create/edit entries and start/stop timers via MCP — guarded by confirmation, a pre-write backup and an audit log. Only while the app is running.',
+  'settings.mcp.confirmMode': 'Confirmation',
+  'settings.mcp.confirmModeHint': 'How a write action is confirmed in the app.',
+  'settings.mcp.confirmPerWrite': 'Ask on every change',
+  'settings.mcp.confirmSession': 'Once per session',
+  'settings.mcp.confirmSilent': "Don't ask",
+  'settings.mcp.auditLog': 'Audit log',
+  'settings.mcp.auditLogHint': 'Every executed write action is logged to mcp-writes.log.',
+  'settings.mcp.openAuditLog': 'Open log folder',
   'settings.theme.title': 'Appearance',
   'settings.theme.light': 'Light',
   'settings.theme.dark': 'Dark',
