@@ -15,6 +15,7 @@ import { migration014 } from './014-v12-housekeeping'
 import { migration015 } from './015-v12-project-contact-person'
 import { migration016 } from './016-v112-tags'
 import { migration017 } from './017-v113-tag-whitespace'
+import { migration018 } from './018-v114-mcp-integration'
 
 export interface Migration {
   /** Monotonically increasing integer. Never reused, never reordered. */
@@ -46,5 +47,6 @@ export const migrations: Migration[] = [
   migration014,
   migration015,
   migration016,
-  migration017
+  migration017,
+  migration018
 ].sort((a, b) => a.version - b.version)

@@ -116,6 +116,27 @@ interface EntryRow {
   private_note: string
 }
 
+// ── Settings ─────────────────────────────────────────────────────────────
+
+/** Read a single settings value, or undefined when the key is absent. */
+export function getSetting(db: SqliteDb, key: string): string | undefined {
+  const row = db.prepare(`SELECT value FROM settings WHERE key = ?`).get(key) as
+    | { value: string }
+    | undefined
+  return row?.value
+}
+
+/** Read the stored MCP privacy flags (mcp_expose_rates / _private_notes). */
+export function readStoredPrivacy(db: SqliteDb): {
+  exposeRates: boolean
+  exposePrivateNotes: boolean
+} {
+  return {
+    exposeRates: getSetting(db, 'mcp_expose_rates') === '1',
+    exposePrivateNotes: getSetting(db, 'mcp_expose_private_notes') === '1'
+  }
+}
+
 // ── Helpers ──────────────────────────────────────────────────────────────
 
 /** Seconds between two ISO timestamps; running entries measured to `nowMs`. */

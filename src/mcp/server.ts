@@ -14,7 +14,8 @@
  *   get_dashboard       — today/week totals, recent entries, top clients (30d)
  *   get_analytics       — monthly hours (+ revenue when rates are exposed)
  *
- * Privacy: rates and internal notes are hidden by default. Enable with
+ * Privacy: rates and internal notes are hidden by default. Enable per-request
+ * either in the app (Einstellungen → Integrationen) or via env override:
  *   TIMETRACK_MCP_EXPOSE_RATES=1 / TIMETRACK_MCP_EXPOSE_PRIVATE_NOTES=1
  */
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
@@ -22,7 +23,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { z } from 'zod'
 import { openReadonly } from './db'
 import { resolveDbPath } from './dbPath'
-import { privacyFromEnv } from './privacy'
+import { resolvePrivacy, type PrivacyConfig } from './privacy'
 import {
   listClients,
   listProjects,
@@ -30,20 +31,24 @@ import {
   getRunningTimer,
   getDashboard,
   getAnalytics,
+  readStoredPrivacy,
   type SqliteDb
 } from './queries'
-
-const privacy = privacyFromEnv()
 
 /**
  * Open the DB fresh per call and close it afterwards. TimeTrack uses WAL, so a
  * read-only connection never blocks the app's writer, and reopening guarantees
- * every tool call sees the latest committed state.
+ * every tool call sees the latest committed state — including privacy flags
+ * just toggled in Einstellungen → Integrationen.
+ *
+ * The callback receives the effective PrivacyConfig, resolved per call from the
+ * stored app settings merged with any env-var overrides.
  */
-function withDb<T>(fn: (db: SqliteDb) => T): T {
+function withDb<T>(fn: (db: SqliteDb, privacy: PrivacyConfig) => T): T {
   const { db } = openReadonly()
   try {
-    return fn(db)
+    const privacy = resolvePrivacy(readStoredPrivacy(db))
+    return fn(db, privacy)
   } finally {
     db.close()
   }
@@ -86,7 +91,7 @@ export function buildServer(): McpServer {
     },
     async ({ include_archived }) => {
       try {
-        const clients = withDb((db) =>
+        const clients = withDb((db, privacy) =>
           listClients(db, privacy, { includeArchived: include_archived })
         )
         return jsonResult({ count: clients.length, clients })
@@ -115,7 +120,7 @@ export function buildServer(): McpServer {
     },
     async ({ client_id, include_archived }) => {
       try {
-        const projects = withDb((db) =>
+        const projects = withDb((db, privacy) =>
           listProjects(db, privacy, {
             clientId: client_id === undefined ? undefined : client_id,
             includeArchived: include_archived
@@ -149,7 +154,7 @@ export function buildServer(): McpServer {
     },
     async (args) => {
       try {
-        const result = withDb((db) =>
+        const result = withDb((db, privacy) =>
           listEntries(
             db,
             privacy,
@@ -182,7 +187,7 @@ export function buildServer(): McpServer {
     },
     async () => {
       try {
-        const entry = withDb((db) => getRunningTimer(db, privacy, Date.now()))
+        const entry = withDb((db, privacy) => getRunningTimer(db, privacy, Date.now()))
         return jsonResult({ running: entry !== null, entry })
       } catch (e) {
         return errorResult(e)
@@ -201,7 +206,7 @@ export function buildServer(): McpServer {
     },
     async () => {
       try {
-        const dash = withDb((db) => getDashboard(db, privacy, Date.now()))
+        const dash = withDb((db, privacy) => getDashboard(db, privacy, Date.now()))
         return jsonResult(dash)
       } catch (e) {
         return errorResult(e)
@@ -224,7 +229,7 @@ export function buildServer(): McpServer {
     },
     async ({ year, month }) => {
       try {
-        const analytics = withDb((db) => getAnalytics(db, privacy, year, month))
+        const analytics = withDb((db, privacy) => getAnalytics(db, privacy, year, month))
         return jsonResult(analytics)
       } catch (e) {
         return errorResult(e)

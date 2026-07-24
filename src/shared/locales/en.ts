@@ -84,7 +84,8 @@ export const en: Record<TranslationKey, string> = {
 
   // Step 4 — Restore backup
   'onboarding.restore.title': 'Restore data?',
-  'onboarding.restore.body': 'A backup was found. Would you like to restore your previous data now?',
+  'onboarding.restore.body':
+    'A backup was found. Would you like to restore your previous data now?',
   'onboarding.restore.latestLabel': 'Latest backup:',
   'onboarding.restore.restoreBtn': 'Restore',
   'onboarding.restore.skip': 'Start without restoring',
@@ -216,8 +217,7 @@ export const en: Record<TranslationKey, string> = {
   'clients.archived.label': 'Archived',
   'clients.action.archive': 'Archive',
   'clients.action.reactivate': 'Reactivate',
-  'clients.confirm.delete':
-    'Really delete client "{name}"?\nAll time entries will be deleted too.',
+  'clients.confirm.delete': 'Really delete client "{name}"?\nAll time entries will be deleted too.',
   'clients.confirm.deleteTitle': 'Delete client?',
   'clients.form.createTitle': 'New client',
   'clients.form.editTitle': 'Edit client',
@@ -332,8 +332,7 @@ export const en: Record<TranslationKey, string> = {
 
   // ── IdleModal ─────────────────────────────────────────────────────────────
   'idle.title': 'Inactivity detected',
-  'idle.body':
-    'You have been inactive since {time} ({duration}). What should happen to this time?',
+  'idle.body': 'You have been inactive since {time} ({duration}). What should happen to this time?',
   'idle.keep': 'Keep running',
   'idle.stopAtIdle': 'Stop at inactivity ({time})',
   'idle.markPause': 'Mark as break',
@@ -360,15 +359,13 @@ export const en: Record<TranslationKey, string> = {
   'export.pdf.groupByTag': 'Group by tag',
   'export.pdf.groupByTagHint': 'Entries with tags are grouped into separate sections.',
   'export.pdf.groupBy': 'Group by',
-  'export.pdf.groupByHint':
-    'Entries are grouped into separate sections with a subtotal.',
+  'export.pdf.groupByHint': 'Entries are grouped into separate sections with a subtotal.',
   'export.pdf.groupBy.none': 'No grouping',
   'export.pdf.groupBy.tag': 'Tag',
   'export.pdf.groupBy.project': 'Project',
   'export.pdf.groupBy.reference': 'Reference',
   'export.pdf.hideFeeColumn': 'Hide fee column',
-  'export.pdf.hideFeeColumnHint':
-    'Hides the fee column and the grand total in the time sheet.',
+  'export.pdf.hideFeeColumnHint': 'Hides the fee column and the grand total in the time sheet.',
   'export.pdf.signatures': 'Show signature fields',
   'export.pdf.signaturesHint': 'Adds two lines at the bottom for contractor / client.',
   'export.csv.format': 'Format',
@@ -429,7 +426,8 @@ export const en: Record<TranslationKey, string> = {
   'settings.general.autoStart': 'Start with Windows',
   'settings.general.autoStartLabel': 'Launch automatically on login',
   'settings.general.showProjectNumber': 'Show project number',
-  'settings.general.showProjectNumberHint': 'Display the external project number in square brackets after the project name, if set.',
+  'settings.general.showProjectNumberHint':
+    'Display the external project number in square brackets after the project name, if set.',
   'settings.general.company': 'Company (for exports)',
   'settings.general.companyPlaceholder': 'e.g. My Company Ltd.',
   'settings.section.timer': 'Timer',
@@ -438,14 +436,16 @@ export const en: Record<TranslationKey, string> = {
   'settings.timer.idleAria': 'Idle threshold in minutes',
   'settings.timer.idleUnit': 'minutes',
   'settings.timer.hotkey': 'Global hotkey',
-  'settings.timer.hotkeyHint': 'Start/stop from anywhere. Modifier (Ctrl/Alt/Shift) + letter or F-key.',
+  'settings.timer.hotkeyHint':
+    'Start/stop from anywhere. Modifier (Ctrl/Alt/Shift) + letter or F-key.',
   'settings.timer.hotkeyCapturing': 'Press a key combo …',
   'settings.timer.hotkeyChange': 'Change',
   'settings.timer.hotkeyReset': 'Reset',
 
   'settings.section.miniWidget': 'Mini widget',
   'settings.mini.enable': 'Enable',
-  'settings.mini.enableHint': 'Always-on-top 200×40 overlay with timer and stop button. Disabled by default.',
+  'settings.mini.enableHint':
+    'Always-on-top 200×40 overlay with timer and stop button. Disabled by default.',
   'settings.mini.enableLabel': 'Show mini widget',
   'settings.mini.hotkey': 'Hotkey',
   'settings.mini.hotkeyHint': 'Show/hide mini widget. Modifier + letter or F-key.',
@@ -465,12 +465,14 @@ export const en: Record<TranslationKey, string> = {
   'settings.data.backupPathChanging': 'Choosing path…',
   'settings.data.backupPathChanged': 'Backup path saved.',
   'settings.data.backupPathReset': 'Backup path reset to default.',
-  'settings.data.backupPathUnreachable': 'Backup path unreachable — new backups will be saved to the default location.',
+  'settings.data.backupPathUnreachable':
+    'Backup path unreachable — new backups will be saved to the default location.',
   'settings.data.restoreBackup': 'Restore from backup',
   'settings.data.restoreBackupHint': 'The app will restart automatically after the restore.',
   'settings.data.restoreBtn': 'Restore…',
   'settings.data.restoreConfirmTitle': 'Restore backup?',
-  'settings.data.restoreConfirmBody': 'All current data will be replaced with the selected backup. A safety copy of the current state will be created first.',
+  'settings.data.restoreConfirmBody':
+    'All current data will be replaced with the selected backup. A safety copy of the current state will be created first.',
   'settings.data.restoreConfirmOk': 'Restore now',
   'settings.data.restoring': 'Restoring…',
   'settings.data.noBackupToRestore': 'No backups available',
@@ -510,7 +512,8 @@ export const en: Record<TranslationKey, string> = {
   'settings.pdf.footer': 'Footer text',
   'settings.pdf.footerHint': 'E.g. bank details or payment instructions.',
   'settings.pdf.roundMinutes': 'Round hours to',
-  'settings.pdf.roundMinutesHint': 'Applies to all timer entries — both in the PDF and in the analytics view.',
+  'settings.pdf.roundMinutesHint':
+    'Applies to all timer entries — both in the PDF and in the analytics view.',
   'settings.pdf.roundNone': 'No rounding',
   'settings.pdf.round5': '5 minutes',
   'settings.pdf.round10': '10 minutes',
@@ -521,6 +524,29 @@ export const en: Record<TranslationKey, string> = {
   'settings.nav.export': 'PDF & Export',
   'settings.nav.data': 'Data',
   'settings.nav.about': 'About',
+  'settings.nav.integrations': 'Integrations',
+  // ── Integrations — MCP (v1.14 #128) ───────────────────────────────────────
+  'settings.mcp.section': 'Model Context Protocol (MCP)',
+  'settings.mcp.desc':
+    'Lets tools like Claude Code read your time tracking — e.g. summarise hours per client/project or prepare an invoice.',
+  'settings.mcp.readonlyBadge': 'Read-only',
+  'settings.mcp.dbPath': 'Database path',
+  'settings.mcp.registration': 'Register in Claude Code',
+  'settings.mcp.registrationHint':
+    'Add to .mcp.json (project) or ~/.claude.json. Adjust the path to the built server (pnpm build:mcp).',
+  'settings.mcp.copy': 'Copy',
+  'settings.mcp.copied': 'Copied to clipboard.',
+  'settings.mcp.privacyTitle': 'Privacy',
+  'settings.mcp.exposeRates': 'Expose hourly rates & revenue',
+  'settings.mcp.exposeRatesHint':
+    'Off by default. When off, the server never sends fees or revenue to the AI model.',
+  'settings.mcp.exposePrivateNotes': 'Expose internal notes',
+  'settings.mcp.exposePrivateNotesHint':
+    'Off by default. Affects the internal note field (private_note), which is never exported.',
+  'settings.mcp.writeTitle': 'Write access',
+  'settings.mcp.writeEnable': 'Allow write access',
+  'settings.mcp.writeSoon':
+    'Coming later as a separate, guarded feature (allowlist, preview, pre-write backup).',
   'settings.theme.title': 'Appearance',
   'settings.theme.light': 'Light',
   'settings.theme.dark': 'Dark',
@@ -538,7 +564,8 @@ export const en: Record<TranslationKey, string> = {
   'timer.project.placeholder': '— No project —',
   'timer.project.effectiveRate': 'Effective rate: {rate} €/h (project overrides client)',
   // v1.11 #94 — Budget warning
-  'timer.budget.warning': 'Warning: {percent} % of the budget already booked ({used} h / {total} h).',
+  'timer.budget.warning':
+    'Warning: {percent} % of the budget already booked ({used} h / {total} h).',
   'timer.budget.overBudget': 'Budget exceeded: {used} h of {total} h booked.',
 
   // ── EntryEditForm — Project (v1.9 #75 PR 3) ──────────────────────────────
@@ -587,7 +614,8 @@ export const en: Record<TranslationKey, string> = {
   'settings.tags.mergeLabel': 'Merge into →',
   'settings.tags.mergeSelect': '— Select target tag —',
   'settings.tags.mergeConfirmTitle': 'Merge tags',
-  'settings.tags.mergeConfirmBody': "{count} entries from '{source}' will be rewritten to '{target}'. This action cannot be undone.",
+  'settings.tags.mergeConfirmBody':
+    "{count} entries from '{source}' will be rewritten to '{target}'. This action cannot be undone.",
   'settings.tags.mergeConfirmOk': 'Merge',
   'settings.tags.delete': 'Delete',
   'settings.tags.deleteTitle': 'Delete tag',
@@ -599,5 +627,5 @@ export const en: Record<TranslationKey, string> = {
 
   // ── TagInput — closed system (v1.12 #107) ─────────────────────────────────
   'tags.createOption': "+ Create '{tag}'",
-  'tags.manageLink': 'Manage tags →',
+  'tags.manageLink': 'Manage tags →'
 } as const satisfies Record<TranslationKey, string>

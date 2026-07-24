@@ -31,3 +31,20 @@ export function privacyFromEnv(env: NodeJS.ProcessEnv = process.env): PrivacyCon
     exposePrivateNotes: truthy(env.TIMETRACK_MCP_EXPOSE_PRIVATE_NOTES)
   }
 }
+
+/**
+ * Effective privacy config for a request. A category is exposed when EITHER
+ * the stored app setting (Einstellungen → Integrationen) OR the corresponding
+ * environment variable enables it — so the in-app toggle and an explicit env
+ * override are both honoured, and either one alone suffices.
+ */
+export function resolvePrivacy(
+  stored: { exposeRates?: boolean; exposePrivateNotes?: boolean },
+  env: NodeJS.ProcessEnv = process.env
+): PrivacyConfig {
+  const fromEnv = privacyFromEnv(env)
+  return {
+    exposeRates: fromEnv.exposeRates || stored.exposeRates === true,
+    exposePrivateNotes: fromEnv.exposePrivateNotes || stored.exposePrivateNotes === true
+  }
+}

@@ -117,10 +117,14 @@ macOS `~/Library/Application Support/TimeTrack/`, Linux `~/.config/TimeTrack/`) 
 sich per `TIMETRACK_DB_PATH` überschreiben.
 
 **Datenschutz:** Stundensätze/Umsätze und interne Notizen (`private_note`) sind **standardmäßig
-ausgeblendet**. Einschalten via Umgebungsvariablen:
+ausgeblendet**. Einschalten wahlweise in der App unter **Einstellungen → Integrationen** (die
+Schalter werden pro Anfrage frisch aus der DB gelesen) oder per Umgebungsvariable als Override:
 
 - `TIMETRACK_MCP_EXPOSE_RATES=1` — Stundensätze und Umsätze einblenden
 - `TIMETRACK_MCP_EXPOSE_PRIVATE_NOTES=1` — interne Notizen einblenden
+
+Das Submenü **Einstellungen → Integrationen** zeigt außerdem den DB-Pfad, die kopierbare
+`.mcp.json`-Registrierung und (ausgegraut) den späteren Schreibzugriff-Schalter.
 
 ## Releases
 

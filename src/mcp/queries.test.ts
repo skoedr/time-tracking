@@ -16,9 +16,11 @@ import {
   listEntries,
   getRunningTimer,
   getAnalytics,
+  getSetting,
+  readStoredPrivacy,
   type SqliteDb
 } from './queries'
-import type { PrivacyConfig } from './privacy'
+import { resolvePrivacy, type PrivacyConfig } from './privacy'
 
 const HIDE: PrivacyConfig = { exposeRates: false, exposePrivateNotes: false }
 const SHOW: PrivacyConfig = { exposeRates: true, exposePrivateNotes: true }
@@ -256,5 +258,36 @@ describe('query layer', () => {
     expect(a.revenue_cent).toBe(15000)
     const acme = a.by_client.find((c) => c.client_id === 1)!
     expect(acme.revenue_cent).toBe(15000)
+  })
+
+  it('migration 018 seeds MCP flags to off; readStoredPrivacy reflects them', () => {
+    expect(getSetting(sdb, 'mcp_expose_rates')).toBe('0')
+    expect(getSetting(sdb, 'mcp_expose_private_notes')).toBe('0')
+    expect(getSetting(sdb, 'mcp_write_enabled')).toBe('0')
+    expect(readStoredPrivacy(sdb)).toEqual({ exposeRates: false, exposePrivateNotes: false })
+
+    db.prepare(`UPDATE settings SET value = '1' WHERE key = 'mcp_expose_rates'`).run()
+    expect(readStoredPrivacy(sdb)).toEqual({ exposeRates: true, exposePrivateNotes: false })
+  })
+})
+
+describe('resolvePrivacy (stored + env)', () => {
+  it('exposes when the stored flag is on', () => {
+    expect(resolvePrivacy({ exposeRates: true, exposePrivateNotes: false }, {})).toEqual({
+      exposeRates: true,
+      exposePrivateNotes: false
+    })
+  })
+
+  it('env var can enable even when stored is off', () => {
+    const env = { TIMETRACK_MCP_EXPOSE_PRIVATE_NOTES: '1' } as NodeJS.ProcessEnv
+    expect(resolvePrivacy({ exposeRates: false, exposePrivateNotes: false }, env)).toEqual({
+      exposeRates: false,
+      exposePrivateNotes: true
+    })
+  })
+
+  it('defaults to hidden when neither source enables', () => {
+    expect(resolvePrivacy({}, {})).toEqual({ exposeRates: false, exposePrivateNotes: false })
   })
 })
