@@ -194,6 +194,9 @@ export interface Settings {
   mcp_expose_rates?: string
   mcp_expose_private_notes?: string
   mcp_write_enabled?: string
+  // v1.14 #127 — MCP write-mode confirmation (seeded by migration 019):
+  // 'per-write' (default) | 'session' | 'silent'.
+  mcp_write_confirm_mode?: string
 }
 
 export interface CreateClientInput {
@@ -286,7 +289,7 @@ export interface MonthQuery {
 
 export type IpcResult<T> = { ok: true; data: T } | { ok: false; error: string }
 
-export type BackupReason = 'daily' | 'manual' | 'pre-migration'
+export type BackupReason = 'daily' | 'manual' | 'pre-migration' | 'mcp'
 
 export interface BackupInfo {
   filename: string

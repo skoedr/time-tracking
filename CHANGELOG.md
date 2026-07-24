@@ -4,11 +4,15 @@ All notable changes to TimeTrack are documented here.
 
 ## [Unreleased]
 
+## [1.14.0] — 2026-07-24
+
 ### Added
 
-- **MCP-Server (read-only)** — TimeTrack stellt einen [Model-Context-Protocol](https://modelcontextprotocol.io)-Server über stdio bereit, mit dem Werkzeuge wie Claude Code die lokale Zeiterfassung **auslesen** können: `list_clients`, `list_projects`, `list_entries` (Monat oder Datumsspanne, Filter nach Kunde/Projekt/Tag), `get_running_timer`, `get_dashboard` und `get_analytics`. Die Datenbank wird strikt schreibgeschützt geöffnet — es existieren keine Schreib-Tools. Stundensätze/Umsätze und interne Notizen sind standardmäßig ausgeblendet und lassen sich in der App (siehe unten) oder per Umgebungsvariable (`TIMETRACK_MCP_EXPOSE_RATES`, `TIMETRACK_MCP_EXPOSE_PRIVATE_NOTES`) einschalten. Build via `pnpm build:mcp`, Start via `pnpm mcp`; Registrierung und Native-ABI-Hinweise siehe README → „MCP-Integration". Der abgesicherte Schreibpfad ist als separates Opt-in-Feature geplant.
+- **MCP-Server (Lesen + Schreiben)** — TimeTrack stellt einen [Model-Context-Protocol](https://modelcontextprotocol.io)-Server über stdio bereit, mit dem Werkzeuge wie Claude Code die lokale Zeiterfassung nutzen können. **Lesen** (read-only, direkt auf der DB): `list_clients`, `list_projects`, `list_entries` (Monat oder Datumsspanne, Filter nach Kunde/Projekt/Tag), `get_running_timer`, `get_dashboard`, `get_analytics`. Stundensätze/Umsätze und interne Notizen sind standardmäßig ausgeblendet und lassen sich in der App oder per Umgebungsvariable (`TIMETRACK_MCP_EXPOSE_RATES`, `TIMETRACK_MCP_EXPOSE_PRIVATE_NOTES`) einschalten. Build via `pnpm build:mcp`, Start via `pnpm mcp`; Registrierung und Native-ABI-Hinweise siehe README → „MCP-Integration".
 
-- **Einstellungen → Integrationen** — Neues Settings-Submenü als Einstiegspunkt für die MCP-Integration: zeigt den Datenbank-Pfad und die kopierbare `.mcp.json`-Registrierung für Claude Code, bietet Schalter für „Stundensätze/Umsätze einblenden" und „Interne Notizen einblenden" (persistiert in der DB, vom Server pro Anfrage berücksichtigt) und einen — vorerst ausgegrauten — Schalter für den späteren, abgesicherten Schreibzugriff.
+- **MCP-Write-Mode** — Optionaler, standardmäßig deaktivierter Schreibzugriff: Claude kann Einträge nachtragen/ändern und Timer starten/stoppen (`create_manual_entry`, `update_entry_fields`, `start_timer`, `stop_running_timer`). Sicherheit steht im Vordergrund: Schreiben läuft **nie** direkt in die DB, sondern über einen lokalen, tokengesicherten Socket an die **laufende App**, die es durch ihre validierte Logik ausführt (Cross-Midnight-Split, Overlap-Prüfung usw.). Abgesichert durch Opt-in, Token (mode 0600, Rotation je App-Start), Allowlist, Vorschau (`preview`), ein **Pre-Write-Backup** je Sitzung und ein Append-only-**Audit-Log** (`mcp-writes.log`). Bestätigung pro Schreibaktion wählbar (bei jeder Änderung / einmal pro Sitzung / nie).
+
+- **Einstellungen → Integrationen** — Neues Settings-Submenü als Einstiegspunkt für die MCP-Integration: zeigt den Datenbank-Pfad und die kopierbare `.mcp.json`-Registrierung für Claude Code, bietet Schalter für „Stundensätze/Umsätze einblenden" und „Interne Notizen einblenden" sowie den **Schreibzugriff-Schalter** mit **Bestätigungs-Modus-Auswahl** und „Audit-Log öffnen".
 
 ## [1.13.2] — 2026-07-17
 

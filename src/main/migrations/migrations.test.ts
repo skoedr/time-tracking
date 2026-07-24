@@ -120,6 +120,7 @@ describe('migration SQL execution', () => {
       // Migration 018 — MCP integration flags (v1.14 #128)
       { key: 'mcp_expose_private_notes', value: '0' },
       { key: 'mcp_expose_rates', value: '0' },
+      { key: 'mcp_write_confirm_mode', value: 'per-write' },
       { key: 'mcp_write_enabled', value: '0' },
       // Migration 006 — Mini-Widget (v1.4)
       { key: 'mini_enabled', value: '0' },

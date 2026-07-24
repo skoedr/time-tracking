@@ -18,6 +18,13 @@ import trayRunningIcon from '../../resources/tray-running.png?asset'
 import trayStoppedIcon from '../../resources/tray-stopped.png?asset'
 import { getDb, recoverZombieEntries, MigrationError } from './db'
 import { registerIpcHandlers } from './ipc'
+import {
+  startMcpBridge,
+  stopMcpBridge,
+  generateWriteToken,
+  clearWriteToken,
+  type BridgeDeps
+} from './mcpBridge'
 import { initAutoUpdater } from './updater'
 import { applyMiniEnabled, destroyMini, pushMiniState, toggleMini } from './miniWindow'
 import {
@@ -344,6 +351,29 @@ function createWindow(): void {
   }
 }
 
+/** Dependencies handed to the MCP write bridge (all resolved lazily at call time). */
+function mcpBridgeDeps(): BridgeDeps {
+  return {
+    getDb,
+    refreshTray: () => {
+      refreshActiveClients()
+      tray?.setContextMenu(buildTrayMenu())
+    },
+    broadcast: (channel, payload) => {
+      for (const w of BrowserWindow.getAllWindows()) {
+        if (!w.isDestroyed()) w.webContents.send(channel, payload)
+      }
+    },
+    getMainWindow: () => mainWindow,
+    getSetting: (key) =>
+      (
+        getDb().prepare('SELECT value FROM settings WHERE key = ?').get(key) as
+          | { value: string }
+          | undefined
+      )?.value
+  }
+}
+
 app.whenReady().then(async () => {
   // Lock loser (v1.13.2): app.quit() above is async and ready can fire
   // before the quit lands. Bail out before touching the DB, hotkeys, tray,
@@ -387,11 +417,15 @@ app.whenReady().then(async () => {
           `INSERT INTO entries (client_id, description, started_at, stopped_at)
              VALUES (9999, 'smoke', ?, ?)`
         ).run(startIso, stopIso)
-        const payload = buildPdfPayload(db, {
-          clientId: 9999,
-          fromIso: today,
-          toIso: today
-        }, '')
+        const payload = buildPdfPayload(
+          db,
+          {
+            clientId: 9999,
+            fromIso: today,
+            toIso: today
+          },
+          ''
+        )
         const html = buildPdfHtml(payload)
         const buf = await renderPdfBuffer({ html })
         pdfBytes = buf.length
@@ -477,7 +511,16 @@ app.whenReady().then(async () => {
     setAutoStart: (enabled) => applyAutoStart(enabled),
     setIdleThreshold: (minutes) => setIdleThresholdMinutes(minutes),
     setMiniEnabled: (enabled) => applyMiniEnabled(enabled),
-    setMiniHotkey: (accelerator) => registerMiniHotkey(accelerator)
+    setMiniHotkey: (accelerator) => registerMiniHotkey(accelerator),
+    setMcpWriteEnabled: (enabled) => {
+      if (enabled) {
+        generateWriteToken()
+        startMcpBridge(mcpBridgeDeps())
+      } else {
+        stopMcpBridge()
+        clearWriteToken()
+      }
+    }
   })
   createWindow()
 
@@ -488,6 +531,14 @@ app.whenReady().then(async () => {
   refreshActiveClients()
   configureIdleWatcher({ getWindow: () => mainWindow })
   loadStartupSettings()
+
+  // v1.14 #127 — start the MCP write bridge only when opted in. A fresh token
+  // is minted per app run (rotation); the socket lives on the primary instance
+  // only (this code path is skipped for second-instance / smoke runs above).
+  if (mcpBridgeDeps().getSetting('mcp_write_enabled') === '1') {
+    generateWriteToken()
+    startMcpBridge(mcpBridgeDeps())
+  }
 
   tray = new Tray(trayStoppedIcon)
   updateTray(false, '', 0)
@@ -553,6 +604,7 @@ app.on('will-quit', () => {
   globalShortcut.unregisterAll()
   stopIdleWatcher()
   destroyMini()
+  stopMcpBridge()
 })
 
 app.on('window-all-closed', () => {

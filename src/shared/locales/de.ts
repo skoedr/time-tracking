@@ -552,8 +552,17 @@ export const de = {
     'Standardmäßig aus. Betrifft das interne Notizfeld (private_note), das nie exportiert wird.',
   'settings.mcp.writeTitle': 'Schreibzugriff',
   'settings.mcp.writeEnable': 'Schreibzugriff erlauben',
-  'settings.mcp.writeSoon':
-    'Kommt später als eigenes, abgesichertes Feature (Allowlist, Vorschau, Pre-Write-Backup).',
+  'settings.mcp.writeEnableHint':
+    'Erlaubt Claude, über den MCP Einträge anzulegen/zu ändern und Timer zu starten/stoppen — abgesichert durch Bestätigung, Pre-Write-Backup und Audit-Log. Nur bei laufender App.',
+  'settings.mcp.confirmMode': 'Bestätigung',
+  'settings.mcp.confirmModeHint': 'Wie eine Schreibaktion in der App bestätigt wird.',
+  'settings.mcp.confirmPerWrite': 'Bei jeder Änderung nachfragen',
+  'settings.mcp.confirmSession': 'Einmal pro Sitzung',
+  'settings.mcp.confirmSilent': 'Nicht nachfragen',
+  'settings.mcp.auditLog': 'Audit-Log',
+  'settings.mcp.auditLogHint':
+    'Jede ausgeführte Schreibaktion wird in mcp-writes.log protokolliert.',
+  'settings.mcp.openAuditLog': 'Log-Ordner öffnen',
   'settings.theme.title': 'Erscheinungsbild',
   'settings.theme.light': 'Hell',
   'settings.theme.dark': 'Dunkel',
