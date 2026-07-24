@@ -14,9 +14,11 @@
 import net from 'net'
 import { existsSync, unlinkSync, readFileSync, writeFileSync, chmodSync } from 'fs'
 import { randomBytes } from 'crypto'
-import { app, dialog, type BrowserWindow } from 'electron'
+import { dirname } from 'path'
+import { dialog, type BrowserWindow } from 'electron'
 import log from 'electron-log/main'
 import type Database from 'better-sqlite3'
+import { getDbPath } from './db'
 import { createBackup } from './backup'
 import { auditWrite } from './mcpAudit'
 import { handleRequest, type BridgeCtx, type BridgeRequest } from './mcpBridgeCore'
@@ -35,11 +37,18 @@ let deps: BridgeDeps | null = null
 let sessionApproved = false
 let backupDone = false
 
+// Anchor token + socket on the DIRECTORY OF THE DB the app actually uses
+// (getDbPath() === <userData>/timetrack.sqlite). The MCP side derives the same
+// paths from dirname(resolveDbPath()), so both agree as long as the MCP server
+// points at the app's real DB (see socketPath.ts / README).
+function endpointDir(): string {
+  return dirname(getDbPath())
+}
 function tokenPath(): string {
-  return tokenPathForDir(app.getPath('userData'))
+  return tokenPathForDir(endpointDir())
 }
 function sockPath(): string {
-  return socketPathForDir(app.getPath('userData'))
+  return socketPathForDir(endpointDir())
 }
 
 /** Generate + persist a fresh write token (mode 0600). Returns it. */
@@ -85,7 +94,9 @@ function confirmMode(): 'per-write' | 'session' | 'silent' {
 async function confirm(summary: string): Promise<boolean> {
   const mode = confirmMode()
   if (mode === 'silent') return true
-  if (mode === 'session' && sessionApproved) return true
+  // Once approved-for-session — either via 'session' mode or the "remember"
+  // checkbox in 'per-write' mode — skip the dialog for the rest of the run.
+  if (sessionApproved) return true
 
   const win = deps?.getMainWindow() ?? null
   if (win) {

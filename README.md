@@ -43,15 +43,15 @@ Vollständige Roadmap: [ROADMAP.md](ROADMAP.md) · Issues: [github.com/skoedr/ti
 
 ## Tech Stack
 
-| Layer | Library |
-|---|---|
-| Shell | Electron 39 |
-| Build | electron-vite 5 |
-| UI | React 19 + TypeScript 5 |
-| Styling | Tailwind CSS 4 |
-| State | Zustand 5 |
-| Database | better-sqlite3 12 |
-| Dates | date-fns 4 |
+| Layer    | Library                 |
+| -------- | ----------------------- |
+| Shell    | Electron 39             |
+| Build    | electron-vite 5         |
+| UI       | React 19 + TypeScript 5 |
+| Styling  | Tailwind CSS 4          |
+| State    | Zustand 5               |
+| Database | better-sqlite3 12       |
+| Dates    | date-fns 4              |
 
 ## Development
 
@@ -142,6 +142,13 @@ Integrationen → Schreibzugriff**. Sicherheitsmodell:
   im Append-only-**Audit-Log** `mcp-writes.log` (Token/interne Notizen werden nie protokolliert).
 
 Empfehlung: Schreib-Tools zuerst mit `preview: true` aufrufen, dann committen.
+
+> **Hinweis zu `TIMETRACK_DB_PATH`:** Socket und Token liegen **neben der DB** der
+> laufenden App. `TIMETRACK_DB_PATH` (der Lese-Override) muss daher auf die **echte DB
+> der laufenden App** zeigen — sonst liest der Server aus der einen DB, während die
+> Schreib-Bridge die App an ihrer eigenen Stelle adressiert. Ohne Override greift auf
+> beiden Seiten der Standardpfad; nur im Dev-Modus (abweichendes `userData`) ist der
+> Override nötig.
 
 ## Releases
 

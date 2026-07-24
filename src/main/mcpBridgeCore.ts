@@ -143,9 +143,12 @@ function planOp(db: Db, op: WriteOp, args: Record<string, unknown>): Plan | { er
         .prepare(`SELECT * FROM entries WHERE id = ? AND deleted_at IS NULL`)
         .get(id) as Entry | undefined
       if (!existing) return { error: 'Eintrag existiert nicht' }
-      if (existing.stopped_at === null && args.stopped_at === undefined) {
+      // Running timers are excluded from update_entry_fields entirely (matches
+      // the tool description). Stop the timer via stop_running_timer first.
+      if (existing.stopped_at === null) {
         return {
-          error: 'Laufende Einträge können nicht über update_entry_fields bearbeitet werden'
+          error:
+            'Laufende Einträge können nicht über update_entry_fields bearbeitet werden — erst stop_running_timer nutzen'
         }
       }
       const input: UpdateEntryInput = {

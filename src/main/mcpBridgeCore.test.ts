@@ -195,6 +195,31 @@ describe('handleRequest', () => {
     expect(row.started_at).toBe('2026-06-10T09:00:00.000Z') // untouched
   })
 
+  it('update_entry_fields refuses a running entry even if stopped_at is supplied', async () => {
+    const { ctx } = makeCtx(db)
+    await handleRequest(ctx, {
+      v: 1,
+      token: 'secret',
+      op: 'start_timer',
+      args: { client_id: 1, description: 'run', started_at: '2026-06-10T09:00:00.000Z' }
+    })
+    const id = (
+      db.prepare(`SELECT id FROM entries WHERE stopped_at IS NULL`).get() as { id: number }
+    ).id
+    const res = await handleRequest(ctx, {
+      v: 1,
+      token: 'secret',
+      op: 'update_entry_fields',
+      args: { id, stopped_at: '2026-06-10T10:00:00.000Z', description: 'x' }
+    })
+    expect(res).toMatchObject({ ok: false, code: 'invalid' })
+    // Still running — untouched.
+    const row = db.prepare(`SELECT stopped_at FROM entries WHERE id = ?`).get(id) as {
+      stopped_at: string | null
+    }
+    expect(row.stopped_at).toBeNull()
+  })
+
   it('start_timer then stop_running_timer', async () => {
     const { ctx } = makeCtx(db)
     const start = await handleRequest(ctx, {

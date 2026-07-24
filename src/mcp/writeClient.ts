@@ -80,5 +80,9 @@ export function sendWrite(
       }
     })
     conn.on('error', () => finish({ ok: false, error: UNAVAILABLE, code: 'unavailable' }))
+    // If the app closes the connection without a newline-terminated response
+    // (e.g. it crashed mid-request), resolve now instead of hanging until the
+    // deadline. No-op once a response has already been delivered.
+    conn.on('close', () => finish({ ok: false, error: UNAVAILABLE, code: 'unavailable' }))
   })
 }
