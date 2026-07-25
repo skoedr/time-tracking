@@ -17,6 +17,7 @@ import { mergeExportHandler, mergeOnlyHandler, pdfInfoHandler } from './pdfMerge
 import { registerAnalyticsHandlers } from './analyticsHandlers'
 import { registerBudgetHandlers } from './budgetHandlers'
 import { registerTagHandlers } from './tagHandlers'
+import { buildMcpRegistration, type McpRegistration } from './mcpLaunch'
 import type {
   Client,
   Entry,
@@ -795,7 +796,13 @@ export function registerIpcHandlers(hooks: IpcHooks): void {
   // ── Paths (for Settings-View) ──────────────────────────
   ipcMain.handle(
     'paths:get',
-    (): IpcResult<{ db: string; backups: string; logs: string; logFile: string }> => {
+    (): IpcResult<{
+      db: string
+      backups: string
+      logs: string
+      logFile: string
+      mcp: McpRegistration
+    }> => {
       // electron-log returns a File transport whose `getFile()` resolves
       // the on-disk log path lazily; the directory is its parent.
       const logFile = log.transports.file.getFile().path
@@ -809,7 +816,9 @@ export function registerIpcHandlers(hooks: IpcHooks): void {
         db: getDbPath(),
         backups: backupsDir,
         logs: dirname(logFile),
-        logFile
+        logFile,
+        // Settings → Integrationen renders this as a copy-paste `.mcp.json`.
+        mcp: buildMcpRegistration(process.execPath, app.getAppPath())
       })
     }
   )

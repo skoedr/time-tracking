@@ -1,6 +1,6 @@
 {
   "name": "time-tracking",
-  "version": "1.14.1",
+  "version": "1.14.2",
   "description": "Schlanker Desktop-Zeiterfasser für Windows — Toggl-Track-Style, lokal, ohne Cloud.",
   "main": "./out/main/index.js",
   "author": "skoedr",
@@ -21,7 +21,7 @@
     "typecheck:mcp": "tsc --noEmit -p tsconfig.mcp.json",
     "typecheck": "npm run typecheck:node && npm run typecheck:web && npm run typecheck:mcp",
     "build:mcp": "tsc -p tsconfig.mcp.json",
-    "mcp": "node out/mcp/mcp/server.js",
+    "mcp": "node scripts/run-mcp.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:ui": "vitest --ui",
@@ -29,12 +29,12 @@
     "dev": "electron-vite dev",
     "sync-icon": "node scripts/sync-icon.mjs",
     "prebuild": "npm run sync-icon && node scripts/generate-licenses.mjs",
-    "build": "npm run typecheck && electron-vite build",
+    "build": "npm run typecheck && npm run build:mcp && electron-vite build",
     "postinstall": "electron-builder install-app-deps",
     "build:unpack": "npm run build && electron-builder --dir",
     "build:win": "npm run build && electron-builder --win",
-    "build:mac": "electron-vite build && electron-builder --mac",
-    "build:linux": "electron-vite build && electron-builder --linux"
+    "build:mac": "npm run build && electron-builder --mac",
+    "build:linux": "npm run build && electron-builder --linux"
   },
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.2",

@@ -53,6 +53,12 @@ export default function SettingsView(): React.JSX.Element {
     backups: string
     logs: string
     logFile: string
+    mcp: {
+      command: string
+      args: string[]
+      env: Record<string, string>
+      available: boolean
+    }
   } | null>(null)
   const [version, setVersion] = useState<string>('')
   const [backups, setBackups] = useState<BackupInfo[]>([])
@@ -248,15 +254,16 @@ export default function SettingsView(): React.JSX.Element {
     { id: 'about', label: t('settings.nav.about') }
   ]
 
-  // Ready-to-paste Claude Code registration. The server path is the app's
-  // install location (unknown to the renderer), so we show a placeholder the
-  // user swaps for their build output (pnpm build:mcp).
+  // Ready-to-paste Claude Code registration, resolved by the main process.
+  // The server runs on the app's own Electron binary in Node mode, so the
+  // native-module ABI always matches — no system Node, no rebuild.
   const mcpConfigSnippet = JSON.stringify(
     {
       mcpServers: {
         timetrack: {
-          command: 'node',
-          args: ['<Pfad-zu>/time-tracking/out/mcp/mcp/server.js']
+          command: paths.mcp.command,
+          args: paths.mcp.args,
+          env: paths.mcp.env
         }
       }
     },
@@ -832,6 +839,9 @@ export default function SettingsView(): React.JSX.Element {
                 stacked
               >
                 <div className="flex flex-col gap-2">
+                  {!paths.mcp.available && (
+                    <p className="text-xs text-amber-300">{t('settings.mcp.unavailable')}</p>
+                  )}
                   <pre
                     className="overflow-x-auto rounded px-3 py-2 text-xs"
                     style={{ background: 'var(--card-bg)', color: 'var(--text2)' }}

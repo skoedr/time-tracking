@@ -87,31 +87,41 @@ meine Stunden für Kunde X im Juni nach Projekt" oder „trag den vergessenen Te
 **Schreib-Tools** (opt-in, siehe unten): `create_manual_entry`, `update_entry_fields`,
 `start_timer`, `stop_running_timer` — jeweils mit `preview: true` für eine Vorschau ohne Commit.
 
-**Bauen & starten:**
+**Der Server ist in der installierten App enthalten** — es braucht weder ein Checkout
+noch einen Build noch ein separat installiertes Node.
 
-```bash
-pnpm build:mcp   # kompiliert nach out/mcp/mcp/server.js
-pnpm mcp         # startet den stdio-Server
-```
-
-> **Native-ABI-Hinweis:** `pnpm install` baut `better-sqlite3` gegen die **Electron**-ABI
-> (`electron-builder install-app-deps`). Der MCP-Server läuft unter **Node**, daher muss
-> das Modul für Node vorliegen: `npm rebuild better-sqlite3 --build-from-source`
-> (danach ggf. `pnpm install` erneut, um die App-Version wiederherzustellen). Perspektivisch
-> wird der Server als eigenständiges Paket mit eigener Node-ABI-Kopie ausgeliefert.
-
-**In Claude Code registrieren** (`.mcp.json` im Projekt oder `~/.claude.json`):
+**In Claude Code registrieren:** Den fertigen Block unter **Einstellungen → Integrationen**
+kopieren (die Pfade sind dort bereits für deine Installation eingesetzt) und in die
+`.mcp.json` des Projekts oder in `~/.claude.json` eintragen. Er sieht so aus:
 
 ```json
 {
   "mcpServers": {
     "timetrack": {
-      "command": "node",
-      "args": ["/absoluter/pfad/time-tracking/out/mcp/mcp/server.js"]
+      "command": "C:/Program Files/TimeTrack/TimeTrack.exe",
+      "args": ["C:/Program Files/TimeTrack/resources/app.asar/out/mcp/mcp/server.js"],
+      "env": { "ELECTRON_RUN_AS_NODE": "1" }
     }
   }
 }
 ```
+
+> **Warum die App sich selbst startet:** `better-sqlite3` wird gegen die **Electron**-ABI
+> gebaut (`electron-builder install-app-deps`), ein System-Node kann das Modul nicht laden.
+> `ELECTRON_RUN_AS_NODE=1` lässt die Electron-Binary als reines Node laufen — gleiche ABI
+> wie das mitgelieferte Modul, ohne zweite Binärkopie im Installer.
+
+**Aus dem Checkout (Entwicklung):**
+
+```bash
+pnpm build:mcp   # kompiliert nach out/mcp/mcp/server.js
+pnpm mcp         # startet den Server über die Electron-Binary in Node-Modus
+```
+
+`pnpm build` zieht `build:mcp` automatisch mit, der Server landet also in jedem Paketbuild.
+Für die Registrierung eines Dev-Checkouts denselben Aufbau nutzen, mit
+`node_modules/electron/dist/electron.exe` als `command` — genau das zeigt auch
+**Einstellungen → Integrationen** an, wenn die App aus dem Checkout läuft.
 
 Der DB-Pfad wird plattformübergreifend aufgelöst (Windows `%APPDATA%\time-tracking\`,
 macOS `~/Library/Application Support/time-tracking/`, Linux `~/.config/time-tracking/`) und

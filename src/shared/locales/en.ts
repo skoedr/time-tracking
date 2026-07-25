@@ -533,7 +533,9 @@ export const en: Record<TranslationKey, string> = {
   'settings.mcp.dbPath': 'Database path',
   'settings.mcp.registration': 'Register in Claude Code',
   'settings.mcp.registrationHint':
-    'Add to .mcp.json (project) or ~/.claude.json. Adjust the path to the built server (pnpm build:mcp).',
+    'Add to .mcp.json (project) or ~/.claude.json — the paths are already filled in for this installation.',
+  'settings.mcp.unavailable':
+    'The bundled server is missing from this installation. In a dev checkout: run “pnpm build:mcp” and reopen settings.',
   'settings.mcp.copy': 'Copy',
   'settings.mcp.copied': 'Copied to clipboard.',
   'settings.mcp.privacyTitle': 'Privacy',

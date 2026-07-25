@@ -4,6 +4,20 @@ All notable changes to TimeTrack are documented here.
 
 ## [Unreleased]
 
+## [1.14.2] — 2026-07-25
+
+### Added
+
+- **Der MCP-Server steckt jetzt in der App** — Bisher lieferte der Installer ihn nicht mit: Wer die MCP-Integration nutzen wollte, musste das Repository auschecken, `pnpm build:mcp` ausführen und `better-sqlite3` von Hand gegen eine andere Native-ABI neu bauen. Jetzt ist der Server Teil jedes Paketbuilds. **Einstellungen → Integrationen** zeigt die fertige `.mcp.json`-Registrierung mit den echten Pfaden dieser Installation statt eines Platzhalters — kopieren, einfügen, fertig. Kein Checkout, kein Build, kein separat installiertes Node.
+
+### Changed
+
+- **Kein Native-ABI-Tanz mehr** — Der Server läuft auf der Electron-Binary der App im Node-Modus (`ELECTRON_RUN_AS_NODE=1`) statt auf einem System-Node. Damit passt die Modul-ABI von `better-sqlite3` immer, und `pnpm install` und `pnpm mcp` schließen sich im Checkout nicht mehr gegenseitig aus. `pnpm build` baut den Server automatisch mit, und `pnpm build:mac`/`pnpm build:linux` durchlaufen jetzt dieselbe Pipeline wie `build:win` — vorher fehlten ihnen Typecheck und MCP-Build.
+
+### Fixed
+
+- **Fehlende Lizenzangaben nachgetragen** — Seit v1.14.0 liefert die App `@modelcontextprotocol/sdk` samt Abhängigkeiten aus, die mitgelieferte Lizenzübersicht listete diese 87 Pakete aber nicht. Sie ist jetzt vollständig.
+
 ## [1.14.1] — 2026-07-25
 
 ### Fixed
