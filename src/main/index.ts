@@ -37,8 +37,9 @@ import {
 import type { Client } from '../shared/types'
 
 // ── Logging (v1.5 PR A) ─────────────────────────────────────────
-// electron-log writes to %AppData%\TimeTrack\logs\main.log on Windows
-// (~/Library/Logs/TimeTrack on macOS, ~/.config/TimeTrack/logs on Linux).
+// electron-log writes to %AppData%\time-tracking\logs\main.log on Windows
+// (~/Library/Logs/time-tracking on macOS, ~/.config/time-tracking/logs on
+// Linux) — the directory is app.getName(), i.e. package.json → name.
 // `spyRendererConsole: true` mirrors renderer console.* into the same
 // file via IPC — no separate channel needed. `Object.assign(console, …)`
 // routes main-process console.* through the logger too, so existing

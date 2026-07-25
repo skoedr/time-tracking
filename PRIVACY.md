@@ -7,9 +7,9 @@ Es gibt keine Cloud-Synchronisation, keine Konten und keinen eigenen Server.
 
 | Typ | Pfad (Windows) | Pfad (macOS) |
 | --- | -------------- | ------------ |
-| Datenbank | `%AppData%\TimeTrack\timetrack.db` | `~/Library/Application Support/TimeTrack/timetrack.db` |
-| Einstellungen | `%AppData%\TimeTrack\timetrack.db` | (selbe DB) |
-| Log-Dateien | `%AppData%\TimeTrack\logs\` | `~/Library/Logs/TimeTrack/` |
+| Datenbank | `%AppData%\time-tracking\timetrack.sqlite` | `~/Library/Application Support/time-tracking/timetrack.sqlite` |
+| Einstellungen | `%AppData%\time-tracking\timetrack.sqlite` | (selbe DB) |
+| Log-Dateien | `%AppData%\time-tracking\logs\` | `~/Library/Logs/time-tracking/` |
 | PDF-Exporte | Frei wählbarer Speicherort | Frei wählbarer Speicherort |
 
 Du kannst die Datenbank jederzeit sichern oder löschen. Ein Backup-Export

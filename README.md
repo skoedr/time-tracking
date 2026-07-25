@@ -113,9 +113,11 @@ pnpm mcp         # startet den stdio-Server
 }
 ```
 
-Der DB-Pfad wird plattformübergreifend aufgelöst (Windows `%APPDATA%\TimeTrack\`,
-macOS `~/Library/Application Support/TimeTrack/`, Linux `~/.config/TimeTrack/`) und lässt
-sich per `TIMETRACK_DB_PATH` überschreiben.
+Der DB-Pfad wird plattformübergreifend aufgelöst (Windows `%APPDATA%\time-tracking\`,
+macOS `~/Library/Application Support/time-tracking/`, Linux `~/.config/time-tracking/`) und
+lässt sich per `TIMETRACK_DB_PATH` überschreiben. Das Verzeichnis heißt `time-tracking`
+(package.json → `name`), nicht `TimeTrack` — der `productName` aus `electron-builder.yml`
+benennt nur die installierte App, nicht `app.getPath('userData')`.
 
 **Datenschutz:** Stundensätze/Umsätze und interne Notizen (`private_note`) sind **standardmäßig
 ausgeblendet**. Einschalten wahlweise in der App unter **Einstellungen → Integrationen** (die

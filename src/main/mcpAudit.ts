@@ -2,7 +2,7 @@
  * Append-only audit log for MCP write-mode mutations.
  *
  * Uses a dedicated electron-log scope so entries land next to the app logs
- * (%AppData%/TimeTrack/logs on Windows) as `mcp-writes.log`, with the same
+ * (%AppData%/time-tracking/logs on Windows) as `mcp-writes.log`, with the same
  * size-based rotation electron-log already provides. Never records the token
  * or `private_note` content.
  */
