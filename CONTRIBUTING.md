@@ -35,8 +35,8 @@ pnpm lint           # ESLint
 pnpm build          # Production-Build (electron-builder, ohne Publish)
 ```
 
-App-Daten landen lokal in `%AppData%\TimeTrack\` (Windows) bzw.
-`~/Library/Application Support/TimeTrack/` (macOS). Diese kannst du beim
+App-Daten landen lokal in `%AppData%\time-tracking\` (Windows) bzw.
+`~/Library/Application Support/time-tracking/` (macOS). Diese kannst du beim
 Entwickeln gefahrlos sichern oder löschen.
 
 ## Pull-Request-Workflow
