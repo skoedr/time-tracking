@@ -840,9 +840,7 @@ export default function SettingsView(): React.JSX.Element {
               >
                 <div className="flex flex-col gap-2">
                   {!paths.mcp.available && (
-                    <p className="text-xs" style={{ color: 'var(--warn, #f59e0b)' }}>
-                      {t('settings.mcp.unavailable')}
-                    </p>
+                    <p className="text-xs text-amber-300">{t('settings.mcp.unavailable')}</p>
                   )}
                   <pre
                     className="overflow-x-auto rounded px-3 py-2 text-xs"
