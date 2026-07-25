@@ -4,6 +4,16 @@ All notable changes to TimeTrack are documented here.
 
 ## [Unreleased]
 
+## [1.14.1] — 2026-07-25
+
+### Fixed
+
+- **MCP-Server findet die Datenbank wieder** — Der Server suchte die Zeiterfassung in `%APPDATA%\TimeTrack\` (macOS `~/Library/Application Support/TimeTrack/`, Linux `~/.config/TimeTrack/`), die App legt sie aber in `time-tracking` ab: Electron leitet dieses Verzeichnis aus `package.json` → `name` ab, der `productName` aus dem Installer benennt nur die installierte App. Der gesuchte Ordner existierte damit auf **keiner** Installation — alle Lese-Tools scheiterten mit „Datenbank nicht gefunden", solange man `TIMETRACK_DB_PATH` nicht von Hand setzte. Der Schreibzugriff war genauso betroffen: Token und Socket werden neben der Datenbank gesucht, also antworteten die Schreib-Tools mit „TimeTrack läuft nicht", obwohl die App lief. Wer den Fehler mit einer Kopie der Datenbank im alten Ordner umgangen hat, liest ab jetzt wieder die echte — die Kopie kann weg.
+
+### Changed
+
+- **Dokumentierte Datenpfade korrigiert** — README, PRIVACY.md und CONTRIBUTING.md nannten `%AppData%\TimeTrack\` als Ablageort; tatsächlich ist es `%AppData%\time-tracking\` (macOS `~/Library/Application Support/time-tracking/`). PRIVACY.md nannte zusätzlich einen Dateinamen, den es nie gab (`timetrack.db` statt `timetrack.sqlite`).
+
 ## [1.14.0] — 2026-07-24
 
 ### Added
