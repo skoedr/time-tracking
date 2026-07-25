@@ -540,7 +540,9 @@ export const de = {
   'settings.mcp.dbPath': 'Datenbank-Pfad',
   'settings.mcp.registration': 'Registrierung in Claude Code',
   'settings.mcp.registrationHint':
-    'In die .mcp.json (Projekt) oder ~/.claude.json eintragen. Pfad zum gebauten Server anpassen (pnpm build:mcp).',
+    'In die .mcp.json (Projekt) oder ~/.claude.json eintragen — die Pfade sind für diese Installation bereits eingesetzt.',
+  'settings.mcp.unavailable':
+    'Der mitgelieferte Server fehlt in dieser Installation. Im Entwicklungs-Checkout: „pnpm build:mcp" ausführen und die Einstellungen erneut öffnen.',
   'settings.mcp.copy': 'Kopieren',
   'settings.mcp.copied': 'In die Zwischenablage kopiert.',
   'settings.mcp.privacyTitle': 'Datenschutz',
