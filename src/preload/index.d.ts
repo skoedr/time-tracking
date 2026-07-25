@@ -101,7 +101,20 @@ declare global {
         showItemInFolder(path: string): Promise<IpcResult<void>>
       }
       paths: {
-        get(): Promise<IpcResult<{ db: string; backups: string; logs: string; logFile: string }>>
+        get(): Promise<
+          IpcResult<{
+            db: string
+            backups: string
+            logs: string
+            logFile: string
+            mcp: {
+              command: string
+              args: string[]
+              env: Record<string, string>
+              available: boolean
+            }
+          }>
+        >
       }
       exporter: {
         json(): Promise<IpcResult<{ path: string; bytes: number }>>
