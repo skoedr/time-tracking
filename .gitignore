@@ -22,3 +22,7 @@ templates/*.png
 
 # Claude Code local settings (personal, machine-specific)
 .claude/settings.local.json
+
+# Worktree-Kopien paralleler Agenten (nicht einchecken; der Rest von .claude/
+# bleibt bewusst trackbar).
+.claude/worktrees/
