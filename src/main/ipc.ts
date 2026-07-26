@@ -15,6 +15,7 @@ import { buildPdfHtml, buildPdfPayload, type PdfRequest } from './pdf'
 import { renderPdfBuffer } from './pdfWindow'
 import { readLogoAsDataUrl, removeLogo, saveLogo } from './logo'
 import { handleCsvExport, type CsvRequest } from './csvExport'
+import { handleIcalExport, type IcalRequest } from './icalExport'
 import { mergeExportHandler, mergeOnlyHandler, pdfInfoHandler } from './pdfMergeHandlers'
 import { registerAnalyticsHandlers } from './analyticsHandlers'
 import { registerBudgetHandlers } from './budgetHandlers'
@@ -1008,6 +1009,14 @@ export function registerIpcHandlers(hooks: IpcHooks): void {
     'csv:export',
     async (_e, req: CsvRequest): Promise<IpcResult<{ path: string }>> => {
       return handleCsvExport(db, req)
+    }
+  )
+
+  // === iCal export (#135, Stufe 1 — statischer .ics-Export) ================
+  ipcMain.handle(
+    'ical:export',
+    async (_e, req: IcalRequest): Promise<IpcResult<{ path: string }>> => {
+      return handleIcalExport(db, req)
     }
   )
 

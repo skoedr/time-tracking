@@ -171,6 +171,15 @@ declare global {
           groupByTag?: boolean
         }): Promise<IpcResult<{ path: string }>>
       }
+      ical: {
+        export(req: {
+          clientId: number
+          fromIso: string
+          toIso: string
+          projectId?: number | null
+          showClientName?: boolean
+        }): Promise<IpcResult<{ path: string }>>
+      }
       projects: {
         getAll(req?: { clientId?: number | null }): Promise<IpcResult<Project[]>>
         create(input: CreateProjectInput): Promise<IpcResult<Project>>

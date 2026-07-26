@@ -11,7 +11,7 @@
 // call; the value is also included in backups. The old localStorage key is
 // migrated once in ExportModal.
 
-export type ExportTab = 'pdf' | 'csv'
+export type ExportTab = 'pdf' | 'csv' | 'ical'
 export type CsvFormat = 'de' | 'us'
 export type GroupBy = 'none' | 'tag' | 'project' | 'reference'
 
@@ -22,6 +22,12 @@ export interface ExportPrefs {
   hideFeeColumn: boolean
   csvFormat: CsvFormat
   csvGroupByTag: boolean
+  /**
+   * #135: iCal-Export — Kundenname im Titel sichtbar (true, Default) oder
+   * generischer „Fokus"-Titel (false). Der Schalter gehört ins Export-Modal,
+   * nicht in die Einstellungen.
+   */
+  icalShowClientName: boolean
 }
 
 export const DEFAULT_PREFS: ExportPrefs = {
@@ -30,7 +36,8 @@ export const DEFAULT_PREFS: ExportPrefs = {
   groupBy: 'none',
   hideFeeColumn: false,
   csvFormat: 'de',
-  csvGroupByTag: false
+  csvGroupByTag: false,
+  icalShowClientName: true
 }
 
 /** Legacy localStorage key (pre-v1.13.2); read once for migration, then removed. */
@@ -43,7 +50,7 @@ export function parsePrefs(raw: string | null | undefined): ExportPrefs {
     // Validate each field against its allowed set so corrupted/legacy data
     // can't crash the render.
     return {
-      tab: parsed.tab === 'csv' ? 'csv' : 'pdf',
+      tab: parsed.tab === 'csv' || parsed.tab === 'ical' ? parsed.tab : 'pdf',
       includeSignatures: parsed.includeSignatures === true,
       groupBy:
         parsed.groupBy === 'tag' || parsed.groupBy === 'project' || parsed.groupBy === 'reference'
@@ -51,7 +58,10 @@ export function parsePrefs(raw: string | null | undefined): ExportPrefs {
           : 'none',
       hideFeeColumn: parsed.hideFeeColumn === true,
       csvFormat: parsed.csvFormat === 'us' ? 'us' : 'de',
-      csvGroupByTag: parsed.csvGroupByTag === true
+      csvGroupByTag: parsed.csvGroupByTag === true,
+      // Default true: Kundenname sichtbar (Issue-Vorgabe). Nur explizit false
+      // schaltet auf den generischen Titel.
+      icalShowClientName: parsed.icalShowClientName !== false
     }
   } catch {
     return DEFAULT_PREFS

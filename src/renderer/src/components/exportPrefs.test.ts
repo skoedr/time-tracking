@@ -36,7 +36,8 @@ describe('parsePrefs', () => {
       groupBy: 'reference',
       hideFeeColumn: true,
       csvFormat: 'us',
-      csvGroupByTag: true
+      csvGroupByTag: true,
+      icalShowClientName: false
     }
     expect(parsePrefs(JSON.stringify(prefs))).toEqual(prefs)
   })
@@ -49,8 +50,14 @@ describe('parsePrefs', () => {
     }
   )
 
-  it.each(['pdf', 'csv'] as const)('roundtrips tab value %s', (tab) => {
+  it.each(['pdf', 'csv', 'ical'] as const)('roundtrips tab value %s', (tab) => {
     expect(parsePrefs(JSON.stringify({ ...DEFAULT_PREFS, tab })).tab).toBe(tab)
+  })
+
+  it.each([true, false] as const)('roundtrips icalShowClientName value %s', (val) => {
+    expect(
+      parsePrefs(JSON.stringify({ ...DEFAULT_PREFS, icalShowClientName: val })).icalShowClientName
+    ).toBe(val)
   })
 
   it.each(['de', 'us'] as const)('roundtrips csvFormat value %s', (csvFormat) => {
