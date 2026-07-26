@@ -4,13 +4,7 @@ import { tmpdir } from 'os'
 import { join } from 'path'
 import { mkdirSync, rmSync } from 'fs'
 import { migrations } from './migrations/index'
-import {
-  getAllTagsWithCount,
-  createTag,
-  renameTag,
-  mergeTag,
-  deleteTag
-} from './tagHandlers'
+import { getAllTagsWithCount, createTag, renameTag, mergeTag, deleteTag } from './tagHandlers'
 
 // Skip if the native module isn't available (CI without electron rebuild)
 let available = true
@@ -202,7 +196,9 @@ describe.skipIf(!available)('tagHandlers', () => {
         `INSERT INTO entries (client_id, started_at, stopped_at, tags) VALUES (1, '2026-01-02T09:00:00Z', '2026-01-02T10:00:00Z', ',ux,')`
       ).run()
       renameTag(db, 'bug', 'defect')
-      const rows = db.prepare('SELECT tags FROM entries WHERE tags LIKE ?').all('%,ux,%') as Array<{ tags: string }>
+      const rows = db.prepare('SELECT tags FROM entries WHERE tags LIKE ?').all('%,ux,%') as Array<{
+        tags: string
+      }>
       expect(rows.some((r) => r.tags === ',ux,')).toBe(true)
     })
   })

@@ -1,4 +1,3 @@
-
 ## Skill routing
 
 When the user's request matches an available skill, invoke it via the Skill tool. The
@@ -7,6 +6,7 @@ results than an ad-hoc answer. When in doubt, invoke the skill. A false positive
 cheaper than a false negative.
 
 Key routing rules:
+
 - Product ideas, "is this worth building", brainstorming → invoke /office-hours
 - Strategy, scope, "think bigger", "what should we build" → invoke /plan-ceo-review
 - Architecture, "does this design make sense" → invoke /plan-eng-review
@@ -41,6 +41,7 @@ Key routing rules:
 - Code quality dashboard → invoke /health
 
 ## GBrain Configuration (configured by /setup-gbrain)
+
 - Engine: pglite
 - Config file: ~/.gbrain/config.json (mode 0600)
 - Setup date: 2026-04-26

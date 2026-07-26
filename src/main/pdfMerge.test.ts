@@ -1,13 +1,13 @@
-import {
-  PDFArray,
-  PDFDict,
-  PDFDocument,
-  PDFHexString,
-  PDFName,
-  PDFRef
-} from 'pdf-lib'
+import { PDFArray, PDFDict, PDFDocument, PDFHexString, PDFName, PDFRef } from 'pdf-lib'
 import { describe, expect, it } from 'vitest'
-import { copyOutputIntents, copyXmpMetadata, extractEmbeddedFiles, mergePdfs, mergePdfsMulti, reembedFiles } from './pdfMerge'
+import {
+  copyOutputIntents,
+  copyXmpMetadata,
+  extractEmbeddedFiles,
+  mergePdfs,
+  mergePdfsMulti,
+  reembedFiles
+} from './pdfMerge'
 
 async function makePdf(pageCount: number): Promise<Buffer> {
   const doc = await PDFDocument.create()
@@ -312,7 +312,8 @@ describe('reembedFiles', () => {
 
 describe('copyXmpMetadata', () => {
   it('copies /Metadata stream from source to target', async () => {
-    const xmp = '<x:xmpmeta xmlns:x="adobe:ns:meta/"><fx:ConformanceLevel>EN 16931</fx:ConformanceLevel></x:xmpmeta>'
+    const xmp =
+      '<x:xmpmeta xmlns:x="adobe:ns:meta/"><fx:ConformanceLevel>EN 16931</fx:ConformanceLevel></x:xmpmeta>'
     const source = await PDFDocument.load(await makePdfWithXmp(xmp))
     const target = await PDFDocument.create()
     target.addPage()
@@ -334,7 +335,8 @@ describe('copyXmpMetadata', () => {
   })
 
   it('mergePdfs copies /Metadata from invoice to merged PDF', async () => {
-    const xmp = '<x:xmpmeta xmlns:x="adobe:ns:meta/"><fx:ConformanceLevel>EN 16931</fx:ConformanceLevel></x:xmpmeta>'
+    const xmp =
+      '<x:xmpmeta xmlns:x="adobe:ns:meta/"><fx:ConformanceLevel>EN 16931</fx:ConformanceLevel></x:xmpmeta>'
     const sn = await makePdf(1)
     // Build invoice with both XMP and an attachment
     const invDoc = await PDFDocument.create()

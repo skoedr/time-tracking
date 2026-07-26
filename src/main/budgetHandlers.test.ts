@@ -52,19 +52,25 @@ describe.skipIf(!available)('buildBudgetStatus', () => {
   })
 
   it('returns budgetMinutes=null when project has no budget set', () => {
-    db.prepare(`INSERT INTO projects (id, client_id, name, budget_minutes) VALUES (1, 1, 'App', NULL)`).run()
+    db.prepare(
+      `INSERT INTO projects (id, client_id, name, budget_minutes) VALUES (1, 1, 'App', NULL)`
+    ).run()
     const result = buildBudgetStatus(db, 1)
     expect(result).toEqual({ ok: true, data: { budgetMinutes: null, usedMinutes: 0 } })
   })
 
   it('returns usedMinutes=0 when project has no entries', () => {
-    db.prepare(`INSERT INTO projects (id, client_id, name, budget_minutes) VALUES (1, 1, 'App', 600)`).run()
+    db.prepare(
+      `INSERT INTO projects (id, client_id, name, budget_minutes) VALUES (1, 1, 'App', 600)`
+    ).run()
     const result = buildBudgetStatus(db, 1)
     expect(result).toEqual({ ok: true, data: { budgetMinutes: 600, usedMinutes: 0 } })
   })
 
   it('sums rounded_min of completed entries only', () => {
-    db.prepare(`INSERT INTO projects (id, client_id, name, budget_minutes) VALUES (1, 1, 'App', 600)`).run()
+    db.prepare(
+      `INSERT INTO projects (id, client_id, name, budget_minutes) VALUES (1, 1, 'App', 600)`
+    ).run()
     // completed entries
     db.prepare(
       `INSERT INTO entries (client_id, project_id, started_at, stopped_at, rounded_min)
@@ -79,7 +85,9 @@ describe.skipIf(!available)('buildBudgetStatus', () => {
   })
 
   it('excludes the currently running entry (stopped_at IS NULL)', () => {
-    db.prepare(`INSERT INTO projects (id, client_id, name, budget_minutes) VALUES (1, 1, 'App', 600)`).run()
+    db.prepare(
+      `INSERT INTO projects (id, client_id, name, budget_minutes) VALUES (1, 1, 'App', 600)`
+    ).run()
     // completed entry
     db.prepare(
       `INSERT INTO entries (client_id, project_id, started_at, stopped_at, rounded_min)
@@ -100,7 +108,9 @@ describe.skipIf(!available)('buildBudgetStatus', () => {
   })
 
   it('excludes soft-deleted entries (deleted_at IS NOT NULL)', () => {
-    db.prepare(`INSERT INTO projects (id, client_id, name, budget_minutes) VALUES (1, 1, 'App', 600)`).run()
+    db.prepare(
+      `INSERT INTO projects (id, client_id, name, budget_minutes) VALUES (1, 1, 'App', 600)`
+    ).run()
     // completed + deleted entry — should not count
     db.prepare(
       `INSERT INTO entries (client_id, project_id, started_at, stopped_at, rounded_min, deleted_at)

@@ -59,7 +59,11 @@ export function ConfirmDialog({
         className="w-[440px] rounded-xl border p-6 shadow-2xl backdrop-blur-xl"
         style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)' }}
       >
-        <h2 id="confirm-title" className="mb-2 text-lg font-semibold" style={{ color: 'var(--text)' }}>
+        <h2
+          id="confirm-title"
+          className="mb-2 text-lg font-semibold"
+          style={{ color: 'var(--text)' }}
+        >
           {title}
         </h2>
         <p id="confirm-message" className="mb-6 text-sm" style={{ color: 'var(--text2)' }}>
@@ -71,7 +75,11 @@ export function ConfirmDialog({
             type="button"
             onClick={onCancel}
             className="rounded-lg px-4 py-2.5 text-sm font-medium hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-400 border backdrop-blur-xl"
-            style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)', color: 'var(--text)' }}
+            style={{
+              background: 'var(--card-bg)',
+              borderColor: 'var(--card-border)',
+              color: 'var(--text)'
+            }}
           >
             {cancelLabel}
           </button>

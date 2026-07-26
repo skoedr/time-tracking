@@ -1,14 +1,14 @@
 name: Feature Request
 description: Neue Funktion oder Verbesserung vorschlagen
-title: "[Feature] "
-labels: ["enhancement"]
+title: '[Feature] '
+labels: ['enhancement']
 body:
   - type: textarea
     id: problem
     attributes:
       label: Problem / Motivation
       description: Welches Problem soll diese Funktion lösen?
-      placeholder: "Als Freelancer möchte ich ..., damit ..."
+      placeholder: 'Als Freelancer möchte ich ..., damit ...'
     validations:
       required: true
   - type: textarea

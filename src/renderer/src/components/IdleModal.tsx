@@ -36,7 +36,11 @@ export function IdleModal({ idleSince, idleSeconds, onKeep, onStopAtIdle, onMark
         className="w-[460px] rounded-xl border p-6 shadow-2xl backdrop-blur-xl"
         style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)' }}
       >
-        <h2 id="idle-modal-title" className="mb-2 text-xl font-semibold" style={{ color: 'var(--text)' }}>
+        <h2
+          id="idle-modal-title"
+          className="mb-2 text-xl font-semibold"
+          style={{ color: 'var(--text)' }}
+        >
           {t('idle.title')}
         </h2>
         <p className="mb-6 text-sm" style={{ color: 'var(--text2)' }}>
@@ -56,7 +60,11 @@ export function IdleModal({ idleSince, idleSeconds, onKeep, onStopAtIdle, onMark
             type="button"
             onClick={onStopAtIdle}
             className="rounded-lg px-4 py-2.5 text-sm font-medium hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-400 border backdrop-blur-xl"
-            style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)', color: 'var(--text)' }}
+            style={{
+              background: 'var(--card-bg)',
+              borderColor: 'var(--card-border)',
+              color: 'var(--text)'
+            }}
           >
             {t('idle.stopAtIdle', { time: idleSinceLocal })}
           </button>
@@ -64,7 +72,11 @@ export function IdleModal({ idleSince, idleSeconds, onKeep, onStopAtIdle, onMark
             type="button"
             onClick={onMarkPause}
             className="rounded-lg px-4 py-2.5 text-sm font-medium hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-400 border backdrop-blur-xl"
-            style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)', color: 'var(--text)' }}
+            style={{
+              background: 'var(--card-bg)',
+              borderColor: 'var(--card-border)',
+              color: 'var(--text)'
+            }}
           >
             {t('idle.markPause')}
           </button>

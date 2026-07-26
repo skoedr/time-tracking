@@ -53,22 +53,22 @@ describe('roundDuration', () => {
   })
 
   it('exact multiples are unchanged', () => {
-    expect(roundDuration(900, 15)).toBe(900)   // 15min exact
+    expect(roundDuration(900, 15)).toBe(900) // 15min exact
     expect(roundDuration(1800, 30)).toBe(1800) // 30min exact
     expect(roundDuration(0, 5)).toBe(0)
   })
 
   it('rounds up to next 5-minute interval (ceiling)', () => {
-    expect(roundDuration(1, 5)).toBe(300)       // 0s → 5min
-    expect(roundDuration(299, 5)).toBe(300)     // 4:59 → 5min
-    expect(roundDuration(301, 5)).toBe(600)     // 5:01 → 10min
+    expect(roundDuration(1, 5)).toBe(300) // 0s → 5min
+    expect(roundDuration(299, 5)).toBe(300) // 4:59 → 5min
+    expect(roundDuration(301, 5)).toBe(600) // 5:01 → 10min
   })
 
   it('rounds up to next 15-minute interval', () => {
-    expect(roundDuration(60, 15)).toBe(900)     // 1min → 15min
-    expect(roundDuration(899, 15)).toBe(900)    // 14:59 → 15min
-    expect(roundDuration(901, 15)).toBe(1800)   // 15:01 → 30min
-    expect(roundDuration(1380, 15)).toBe(1800)  // 23min → 30min
+    expect(roundDuration(60, 15)).toBe(900) // 1min → 15min
+    expect(roundDuration(899, 15)).toBe(900) // 14:59 → 15min
+    expect(roundDuration(901, 15)).toBe(1800) // 15:01 → 30min
+    expect(roundDuration(1380, 15)).toBe(1800) // 23min → 30min
   })
 
   it('rounds up to next 30-minute interval', () => {

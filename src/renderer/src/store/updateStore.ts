@@ -38,7 +38,8 @@ export const useUpdateStore = create<UpdateStore>((set, get) => ({
     // New `ready` event resets the dismissed flag so we show it again.
     set((prev) => ({
       status,
-      dismissed: status.status === 'ready' && prev.status.status !== 'ready' ? false : prev.dismissed
+      dismissed:
+        status.status === 'ready' && prev.status.status !== 'ready' ? false : prev.dismissed
     }))
   },
   setAppVersion: (v) => set({ appVersion: v }),

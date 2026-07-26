@@ -110,7 +110,10 @@ export function StartTimerModal({ open, onClose }: StartTimerModalProps): React.
 
         {/* Client */}
         <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text3)' }}>
+          <label
+            className="text-xs font-semibold uppercase tracking-wide"
+            style={{ color: 'var(--text3)' }}
+          >
             {t('timer.client.label')}
           </label>
           <div className="relative">
@@ -120,14 +123,23 @@ export function StartTimerModal({ open, onClose }: StartTimerModalProps): React.
               onChange={(e) => setSelectedClientId(e.target.value ? Number(e.target.value) : null)}
               className="w-full appearance-none rounded-[10px] border px-3.5 py-2.5 pr-9 text-sm backdrop-blur-xl
                 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              style={{ background: 'var(--input-bg)', borderColor: 'var(--card-border)', color: 'var(--text)' }}
+              style={{
+                background: 'var(--input-bg)',
+                borderColor: 'var(--card-border)',
+                color: 'var(--text)'
+              }}
             >
               <option value="">{t('timer.client.placeholder')}</option>
               {activeClients.map((c) => (
-                <option key={c.id} value={c.id}>{c.name}</option>
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
               ))}
             </select>
-            <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text3)' }}>
+            <span
+              className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2"
+              style={{ color: 'var(--text3)' }}
+            >
               <Icons.ChevronDown />
             </span>
           </div>
@@ -143,32 +155,54 @@ export function StartTimerModal({ open, onClose }: StartTimerModalProps): React.
         {/* Project — only when client has projects */}
         {selectedClientId !== null && projects.length > 0 && (
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text3)' }}>
+            <label
+              className="text-xs font-semibold uppercase tracking-wide"
+              style={{ color: 'var(--text3)' }}
+            >
               {t('timer.project.label')}
             </label>
             <div className="relative">
               <select
                 aria-label={t('timer.project.label')}
                 value={selectedProjectId ?? ''}
-                onChange={(e) => setSelectedProjectId(e.target.value ? Number(e.target.value) : null)}
+                onChange={(e) =>
+                  setSelectedProjectId(e.target.value ? Number(e.target.value) : null)
+                }
                 className="w-full appearance-none rounded-[10px] border px-3.5 py-2.5 pr-9 text-sm backdrop-blur-xl
                   focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                style={{ background: 'var(--input-bg)', borderColor: 'var(--card-border)', color: 'var(--text)' }}
+                style={{
+                  background: 'var(--input-bg)',
+                  borderColor: 'var(--card-border)',
+                  color: 'var(--text)'
+                }}
               >
                 <option value="">{t('timer.project.placeholder')}</option>
                 {projects.map((p) => {
-                  const label = showProjectNumber && p.external_project_number ? `${p.name} [${p.external_project_number}]` : p.name
-                  return <option key={p.id} value={p.id}>{label}</option>
+                  const label =
+                    showProjectNumber && p.external_project_number
+                      ? `${p.name} [${p.external_project_number}]`
+                      : p.name
+                  return (
+                    <option key={p.id} value={p.id}>
+                      {label}
+                    </option>
+                  )
                 })}
               </select>
-              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text3)' }}>
+              <span
+                className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2"
+                style={{ color: 'var(--text3)' }}
+              >
                 <Icons.ChevronDown />
               </span>
             </div>
             {showRateHint && effectiveRate !== null && (
               <p className="text-xs" style={{ color: 'var(--text3)' }}>
                 {t('timer.project.effectiveRate', {
-                  rate: effectiveRate.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                  rate: effectiveRate.toLocaleString('de-DE', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                  })
                 })}
               </p>
             )}
@@ -176,36 +210,44 @@ export function StartTimerModal({ open, onClose }: StartTimerModalProps): React.
         )}
 
         {/* Budget warning — shows when selected project is ≥80% consumed */}
-        {selectedProject?.budget_minutes != null && selectedProject.budget_minutes > 0 && (() => {
-          const usedMin = selectedProject.used_minutes ?? 0
-          const budgetMin = selectedProject.budget_minutes
-          const pct = Math.round((usedMin / budgetMin) * 100)
-          if (pct < 80) return null
-          const usedH = (usedMin / 60).toFixed(1)
-          const totalH = (budgetMin / 60).toFixed(1)
-          const over = usedMin > budgetMin
-          return (
-            <div
-              className="flex items-start gap-2 rounded-[10px] px-3 py-2.5 text-xs"
-              style={{
-                background: over ? 'rgba(239,68,68,0.12)' : 'rgba(245,158,11,0.12)',
-                color: over ? 'var(--danger)' : '#f59e0b'
-              }}
-            >
-              <span className="shrink-0 mt-0.5">⚠</span>
-              <span>
-                {over
-                  ? t('timer.budget.overBudget', { used: usedH, total: totalH })
-                  : t('timer.budget.warning', { percent: String(pct), used: usedH, total: totalH })
-                }
-              </span>
-            </div>
-          )
-        })()}
+        {selectedProject?.budget_minutes != null &&
+          selectedProject.budget_minutes > 0 &&
+          (() => {
+            const usedMin = selectedProject.used_minutes ?? 0
+            const budgetMin = selectedProject.budget_minutes
+            const pct = Math.round((usedMin / budgetMin) * 100)
+            if (pct < 80) return null
+            const usedH = (usedMin / 60).toFixed(1)
+            const totalH = (budgetMin / 60).toFixed(1)
+            const over = usedMin > budgetMin
+            return (
+              <div
+                className="flex items-start gap-2 rounded-[10px] px-3 py-2.5 text-xs"
+                style={{
+                  background: over ? 'rgba(239,68,68,0.12)' : 'rgba(245,158,11,0.12)',
+                  color: over ? 'var(--danger)' : '#f59e0b'
+                }}
+              >
+                <span className="shrink-0 mt-0.5">⚠</span>
+                <span>
+                  {over
+                    ? t('timer.budget.overBudget', { used: usedH, total: totalH })
+                    : t('timer.budget.warning', {
+                        percent: String(pct),
+                        used: usedH,
+                        total: totalH
+                      })}
+                </span>
+              </div>
+            )
+          })()}
 
         {/* Description */}
         <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text3)' }}>
+          <label
+            className="text-xs font-semibold uppercase tracking-wide"
+            style={{ color: 'var(--text3)' }}
+          >
             {t('timer.description.label')}
           </label>
           <input
@@ -217,7 +259,11 @@ export function StartTimerModal({ open, onClose }: StartTimerModalProps): React.
             autoFocus
             className="rounded-[10px] border px-3.5 py-2.5 text-sm backdrop-blur-xl
               focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            style={{ background: 'var(--input-bg)', borderColor: 'var(--card-border)', color: 'var(--text)' }}
+            style={{
+              background: 'var(--input-bg)',
+              borderColor: 'var(--card-border)',
+              color: 'var(--text)'
+            }}
           />
         </div>
 

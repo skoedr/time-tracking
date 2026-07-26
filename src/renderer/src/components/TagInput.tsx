@@ -46,7 +46,12 @@ const CREATE_SENTINEL = '__create__'
  *
  * Stores tags as the serialized DB format (`,tag1,tag2,`) via `onChange`.
  */
-export function TagInput({ value, onChange, disabled = false, onManageTags }: Props): React.ReactElement {
+export function TagInput({
+  value,
+  onChange,
+  disabled = false,
+  onManageTags
+}: Props): React.ReactElement {
   const t = useT()
   const tags = deserializeTags(value)
   const [inputValue, setInputValue] = useState('')
@@ -74,9 +79,7 @@ export function TagInput({ value, onChange, disabled = false, onManageTags }: Pr
     if (!q) {
       matches = allKnown.filter((t) => !tags.includes(t)).slice(0, 8)
     } else {
-      matches = allKnown
-        .filter((t) => t.startsWith(q) && !tags.includes(t))
-        .slice(0, 8)
+      matches = allKnown.filter((t) => t.startsWith(q) && !tags.includes(t)).slice(0, 8)
     }
     // Append "create" sentinel if typed text is non-empty and not an exact match
     if (q && !allKnown.includes(q) && !tags.includes(q)) {
@@ -85,7 +88,7 @@ export function TagInput({ value, onChange, disabled = false, onManageTags }: Pr
       setSuggestions(matches)
     }
     setHighlightedIndex(-1)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [inputValue, allKnown, value])
 
   async function addTag(tag: string): Promise<void> {
@@ -239,11 +242,13 @@ export function TagInput({ value, onChange, disabled = false, onManageTags }: Pr
                 void commitInput(s)
               }}
               className={`cursor-pointer px-3 py-1 text-xs ${
-                i === highlightedIndex
-                  ? 'bg-indigo-600 text-white'
-                  : 'hover:bg-white/10'
+                i === highlightedIndex ? 'bg-indigo-600 text-white' : 'hover:bg-white/10'
               }`}
-              style={i !== highlightedIndex ? { color: s === CREATE_SENTINEL ? 'var(--text2)' : 'var(--text)' } : undefined}
+              style={
+                i !== highlightedIndex
+                  ? { color: s === CREATE_SENTINEL ? 'var(--text2)' : 'var(--text)' }
+                  : undefined
+              }
             >
               {s === CREATE_SENTINEL
                 ? t('tags.createOption', { tag: inputValue.trim().toLowerCase().replace(/^#/, '') })

@@ -44,10 +44,7 @@ export function I18nProvider({ children }: { children: React.ReactNode }): React
     await window.api.settings.set('language', l)
   }, [])
 
-  const t = useCallback<TFunction>(
-    (key, vars) => translate(localeMap[locale], key, vars),
-    [locale]
-  )
+  const t = useCallback<TFunction>((key, vars) => translate(localeMap[locale], key, vars), [locale])
 
   const value = useMemo<I18nCtx>(() => ({ locale, setLocale, t }), [locale, setLocale, t])
 

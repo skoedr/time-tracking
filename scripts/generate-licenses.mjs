@@ -38,7 +38,7 @@ const LICENSE_FILES = [
   'LICENCE.md',
   'license',
   'license.md',
-  'license.txt',
+  'license.txt'
 ]
 
 function readLicenseText(pkgDir) {
@@ -78,7 +78,7 @@ function collectPackage(pkgDir, fallbackName) {
     version: pkg.version ?? '?',
     license: pkg.license ?? 'UNLICENSED',
     repository: normRepoUrl(pkg.repository),
-    licenseText: readLicenseText(pkgDir),
+    licenseText: readLicenseText(pkgDir)
   }
 }
 

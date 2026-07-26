@@ -9,7 +9,11 @@ import { buildPdfPayload, buildPdfHtml } from './pdf'
 import type { PdfPayload, PdfRequest } from './pdf'
 import { renderPdfBuffer } from './pdfWindow'
 import { readLogoAsDataUrl } from './logo'
-import { validateMergeExportRequest, validateMergeOnlyRequest, validatePdfPath } from './pdfMergeValidation'
+import {
+  validateMergeExportRequest,
+  validateMergeOnlyRequest,
+  validatePdfPath
+} from './pdfMergeValidation'
 import type { IpcResult, Settings } from '../shared/types'
 
 const MAX_PDF_BYTES = 50 * 1024 * 1024 // 50 MB
@@ -261,10 +265,13 @@ export async function mergeExportHandler(
       return { ok: false, error: String(e) }
     }
 
-    const settingsRows = db
-      .prepare(`SELECT key, value FROM settings`)
-      .all() as Array<{ key: string; value: string }>
-    const settings = Object.fromEntries(settingsRows.map((r) => [r.key, r.value])) as unknown as Settings
+    const settingsRows = db.prepare(`SELECT key, value FROM settings`).all() as Array<{
+      key: string
+      value: string
+    }>
+    const settings = Object.fromEntries(
+      settingsRows.map((r) => [r.key, r.value])
+    ) as unknown as Settings
 
     const logoDataUrl = pdfDeps.readLogoAsDataUrl(settings.pdf_logo_path ?? '')
     const payload = pdfDeps.buildPdfPayload(db, typedReq, logoDataUrl)

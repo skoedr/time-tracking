@@ -35,11 +35,7 @@ declare global {
       }
       mini: {
         onState(
-          callback: (state: {
-            running: boolean
-            label: string
-            startedAt: string | null
-          }) => void
+          callback: (state: { running: boolean; label: string; startedAt: string | null }) => void
         ): () => void
         requestStart(): void
         requestStop(): void
@@ -158,9 +154,7 @@ declare global {
           stundennachweisPaths?: string[]
           invoicePath: string
         }): Promise<IpcResult<{ path: string }>>
-        pdfInfo(req: {
-          filePath: string
-        }): Promise<IpcResult<{ pageCount: number }>>
+        pdfInfo(req: { filePath: string }): Promise<IpcResult<{ pageCount: number }>>
         openPdfDialog(): Promise<IpcResult<{ filePath: string } | null>>
       }
       logo: {

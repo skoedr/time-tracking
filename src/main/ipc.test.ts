@@ -325,9 +325,9 @@ describe('pdf:merge-export — request validation', () => {
   })
 
   it('rejects request with non-number clientId', () => {
-    expect(validateMergeExportRequest({ clientId: '1', fromIso: '2026-01-01', toIso: '2026-01-31' })).toBe(
-      'Ungültige PDF-Anfrage'
-    )
+    expect(
+      validateMergeExportRequest({ clientId: '1', fromIso: '2026-01-01', toIso: '2026-01-31' })
+    ).toBe('Ungültige PDF-Anfrage')
   })
 
   it('rejects request with missing fromIso', () => {
@@ -344,7 +344,12 @@ describe('pdf:merge-export — request validation', () => {
 
   it('rejects valid request fields but missing invoicePath', () => {
     expect(
-      validateMergeExportRequest({ clientId: 1, fromIso: '2026-01-01', toIso: '2026-01-31', invoicePath: '' })
+      validateMergeExportRequest({
+        clientId: 1,
+        fromIso: '2026-01-01',
+        toIso: '2026-01-31',
+        invoicePath: ''
+      })
     ).toBe('Kein Rechnungspfad angegeben')
   })
 
@@ -450,10 +455,10 @@ describe('reference field — insertEntrySegments round-trip', () => {
     )
     const start = todayAt(8, 0)
     const stop = todayAt(9, 30)
-    const info = insertStmt.run(
-      1, 'work', start, stop, stop, 90, linkId, '', 'JIRA-123'
-    )
-    const row = db.prepare('SELECT reference FROM entries WHERE id = ?').get(info.lastInsertRowid) as { reference: string }
+    const info = insertStmt.run(1, 'work', start, stop, stop, 90, linkId, '', 'JIRA-123')
+    const row = db
+      .prepare('SELECT reference FROM entries WHERE id = ?')
+      .get(info.lastInsertRowid) as { reference: string }
     expect(row.reference).toBe('JIRA-123')
   })
 
@@ -464,10 +469,10 @@ describe('reference field — insertEntrySegments round-trip', () => {
     )
     const start = todayAt(10, 0)
     const stop = todayAt(11, 0)
-    const info = insertStmt.run(
-      1, 'work', start, stop, stop, 60, null, '', ''
-    )
-    const row = db.prepare('SELECT reference FROM entries WHERE id = ?').get(info.lastInsertRowid) as { reference: string }
+    const info = insertStmt.run(1, 'work', start, stop, stop, 60, null, '', '')
+    const row = db
+      .prepare('SELECT reference FROM entries WHERE id = ?')
+      .get(info.lastInsertRowid) as { reference: string }
     expect(row.reference).toBe('')
   })
 
@@ -536,39 +541,57 @@ describe('billable + private_note — DB round-trip', () => {
   function insertEntry(overrides: { billable?: number; private_note?: string } = {}): number {
     const start = todayAt(8, 0)
     const stop = todayAt(9, 0)
-    const info = db.prepare(
-      `INSERT INTO entries (client_id, description, started_at, stopped_at, heartbeat_at,
+    const info = db
+      .prepare(
+        `INSERT INTO entries (client_id, description, started_at, stopped_at, heartbeat_at,
         rounded_min, link_id, tags, reference, billable, private_note)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-    ).run(
-      1, 'work', start, stop, stop, 60, null, '', '',
-      overrides.billable ?? 1,
-      overrides.private_note ?? ''
-    )
+      )
+      .run(
+        1,
+        'work',
+        start,
+        stop,
+        stop,
+        60,
+        null,
+        '',
+        '',
+        overrides.billable ?? 1,
+        overrides.private_note ?? ''
+      )
     return Number(info.lastInsertRowid)
   }
 
   it('billable defaults to 1', () => {
     const id = insertEntry()
-    const row = db.prepare('SELECT billable FROM entries WHERE id = ?').get(id) as { billable: number }
+    const row = db.prepare('SELECT billable FROM entries WHERE id = ?').get(id) as {
+      billable: number
+    }
     expect(row.billable).toBe(1)
   })
 
   it('persists billable = 0 (non-billable)', () => {
     const id = insertEntry({ billable: 0 })
-    const row = db.prepare('SELECT billable FROM entries WHERE id = ?').get(id) as { billable: number }
+    const row = db.prepare('SELECT billable FROM entries WHERE id = ?').get(id) as {
+      billable: number
+    }
     expect(row.billable).toBe(0)
   })
 
   it('private_note defaults to empty string', () => {
     const id = insertEntry()
-    const row = db.prepare('SELECT private_note FROM entries WHERE id = ?').get(id) as { private_note: string }
+    const row = db.prepare('SELECT private_note FROM entries WHERE id = ?').get(id) as {
+      private_note: string
+    }
     expect(row.private_note).toBe('')
   })
 
   it('persists non-empty private_note', () => {
     const id = insertEntry({ private_note: 'Interner Hinweis' })
-    const row = db.prepare('SELECT private_note FROM entries WHERE id = ?').get(id) as { private_note: string }
+    const row = db.prepare('SELECT private_note FROM entries WHERE id = ?').get(id) as {
+      private_note: string
+    }
     expect(row.private_note).toBe('Interner Hinweis')
   })
 
@@ -768,9 +791,9 @@ describe('projects — SQL contract tests', () => {
       .get(pid) as { n: number }
     expect(n).toBeGreaterThan(0)
     // The handler would return fail() here — validate the guard
-    const current = db
-      .prepare('SELECT client_id FROM projects WHERE id = ?')
-      .get(pid) as { client_id: number | null }
+    const current = db.prepare('SELECT client_id FROM projects WHERE id = ?').get(pid) as {
+      client_id: number | null
+    }
     expect(current.client_id).toBe(1)
     // Moving to client 2 should be blocked
     const wouldBlock = current.client_id !== 2 && n > 0
@@ -852,9 +875,7 @@ describe('projects — SQL contract tests', () => {
   // v1.12 #105 — projects.contact_person persists correctly
   it('projects:update — persists contact_person', () => {
     const pid = createProject(1, 'App')
-    db.prepare(
-      `UPDATE projects SET contact_person = 'Max Mustermann' WHERE id = ?`
-    ).run(pid)
+    db.prepare(`UPDATE projects SET contact_person = 'Max Mustermann' WHERE id = ?`).run(pid)
     const row = db.prepare('SELECT contact_person FROM projects WHERE id = ?').get(pid) as {
       contact_person: string | null
     }
@@ -893,27 +914,25 @@ describe('dashboard:summary — duration precision', () => {
     db.prepare('DELETE FROM entries').run()
   })
 
-  it.skipIf(!DatabaseImpl)(
-    'returns exactly 3600 seconds for a 1-hour entry (not 3599)',
-    () => {
-      const d = db!
-      const clientId = (
-        d
-          .prepare(`INSERT INTO clients (name, color, rate_cent, active) VALUES (?,?,?,1)`)
-          .run('Test', '#fff', 0) as { lastInsertRowid: number | bigint }
-      ).lastInsertRowid
+  it.skipIf(!DatabaseImpl)('returns exactly 3600 seconds for a 1-hour entry (not 3599)', () => {
+    const d = db!
+    const clientId = (
+      d
+        .prepare(`INSERT INTO clients (name, color, rate_cent, active) VALUES (?,?,?,1)`)
+        .run('Test', '#fff', 0) as { lastInsertRowid: number | bigint }
+    ).lastInsertRowid
 
-      // Insert an entry that is exactly 1 hour (3600 s)
-      const start = '2026-01-01T10:00:00.000Z'
-      const stop = '2026-01-01T11:00:00.000Z'
-      d.prepare(
-        `INSERT INTO entries (client_id, description, started_at, stopped_at, heartbeat_at, rounded_min, link_id, tags)
+    // Insert an entry that is exactly 1 hour (3600 s)
+    const start = '2026-01-01T10:00:00.000Z'
+    const stop = '2026-01-01T11:00:00.000Z'
+    d.prepare(
+      `INSERT INTO entries (client_id, description, started_at, stopped_at, heartbeat_at, rounded_min, link_id, tags)
          VALUES (?, '', ?, ?, ?, 60, NULL, '')`
-      ).run(clientId, start, stop, stop)
+    ).run(clientId, start, stop, stop)
 
-      const row = d
-        .prepare(
-          `SELECT COALESCE(SUM(
+    const row = d
+      .prepare(
+        `SELECT COALESCE(SUM(
              CASE
                WHEN stopped_at IS NULL
                  THEN CAST(strftime('%s', 'now') AS INTEGER) - CAST(strftime('%s', started_at) AS INTEGER)
@@ -922,12 +941,11 @@ describe('dashboard:summary — duration precision', () => {
            ), 0) AS seconds
            FROM entries
            WHERE deleted_at IS NULL`
-        )
-        .get() as { seconds: number }
+      )
+      .get() as { seconds: number }
 
-      expect(row.seconds).toBe(3600)
-    }
-  )
+    expect(row.seconds).toBe(3600)
+  })
 })
 
 // ── normaliseBudgetMinutes (v1.11 #94) ──────────────────────────────────────
@@ -1056,13 +1074,21 @@ describe('projects status/active sync', () => {
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       )
       .run(
-        'Neuer Kunde', '#abc', 0,
-        'Musterstraße 1', null, null, null,
-        'DE123456789', 'Max Muster', 'max@example.com'
+        'Neuer Kunde',
+        '#abc',
+        0,
+        'Musterstraße 1',
+        null,
+        null,
+        null,
+        'DE123456789',
+        'Max Muster',
+        'max@example.com'
       )
-    const row = db2
-      .prepare(`SELECT * FROM clients WHERE name = 'Neuer Kunde'`)
-      .get() as Record<string, unknown>
+    const row = db2.prepare(`SELECT * FROM clients WHERE name = 'Neuer Kunde'`).get() as Record<
+      string,
+      unknown
+    >
     expect(row.billing_address_line1).toBe('Musterstraße 1')
     expect(row.billing_address_line2).toBeNull()
     expect(row.vat_id).toBe('DE123456789')

@@ -242,9 +242,7 @@ describe('buildPdfPayload', () => {
       `INSERT INTO projects (id, client_id, name, color, status, contact_person)
        VALUES (10, 1, 'Alpha', '#6366f1', 'active', 'Projekt-AP')`
     ).run()
-    db.prepare(
-      `UPDATE clients SET contact_person = 'Kunden-AP' WHERE id = 1`
-    ).run()
+    db.prepare(`UPDATE clients SET contact_person = 'Kunden-AP' WHERE id = 1`).run()
     const p = buildPdfPayload(
       db,
       { clientId: 1, fromIso: '2026-04-01', toIso: '2026-04-30', projectId: 10 },
@@ -257,9 +255,7 @@ describe('buildPdfPayload', () => {
     db.prepare(
       `INSERT INTO projects (id, client_id, name, color, status) VALUES (11, 1, 'Beta', '#6366f1', 'active')`
     ).run()
-    db.prepare(
-      `UPDATE clients SET contact_person = 'Kunden-AP' WHERE id = 1`
-    ).run()
+    db.prepare(`UPDATE clients SET contact_person = 'Kunden-AP' WHERE id = 1`).run()
     const p = buildPdfPayload(
       db,
       { clientId: 1, fromIso: '2026-04-01', toIso: '2026-04-30', projectId: 11 },
@@ -400,7 +396,11 @@ describe('buildPdfPayload', () => {
       ''
     )
     expect(p.groups).not.toBeNull()
-    expect(p.groups!.map((g) => g.label)).toEqual(['Projekt: Alpha', 'Projekt: Bravo', 'Ohne Projekt'])
+    expect(p.groups!.map((g) => g.label)).toEqual([
+      'Projekt: Alpha',
+      'Projekt: Bravo',
+      'Ohne Projekt'
+    ])
     expect(p.groups![0].totalMinutes).toBe(60)
   })
 

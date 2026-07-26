@@ -92,10 +92,7 @@ export function initAutoUpdater(opts: { isDev: boolean }): void {
 
   // ── IPC handlers ───────────────────────────────────────────
   ipcMain.handle('update:getStatus', (): IpcResult<UpdateStatus> => ok(lastStatus))
-  ipcMain.handle(
-    'update:getLastCheck',
-    (): IpcResult<string | null> => ok(lastCheckIso)
-  )
+  ipcMain.handle('update:getLastCheck', (): IpcResult<string | null> => ok(lastCheckIso))
   ipcMain.handle('update:getVersion', (): IpcResult<string> => ok(app.getVersion()))
 
   ipcMain.handle('update:check', async (): Promise<IpcResult<void>> => {

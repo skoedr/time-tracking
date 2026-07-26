@@ -4,10 +4,10 @@
 
 Only the latest minor release receives security fixes.
 
-| Version | Supported |
-| ------- | --------- |
+| Version      | Supported          |
+| ------------ | ------------------ |
 | 1.x (latest) | :white_check_mark: |
-| < 1.x | :x: |
+| < 1.x        | :x:                |
 
 ## Reporting a Vulnerability
 

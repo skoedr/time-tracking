@@ -9,9 +9,9 @@ for macOS targets.
 
 ### Changes
 
-| File | What changed |
-| ---- | ------------ |
-| `electron-builder.yml` | New `mac:` section: `hardenedRuntime: true`, entitlements wired to existing `build/entitlements.mac.plist`, targets: `dmg` + `zip` for `arm64` |
+| File                            | What changed                                                                                                                                                                                                      |
+| ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `electron-builder.yml`          | New `mac:` section: `hardenedRuntime: true`, entitlements wired to existing `build/entitlements.mac.plist`, targets: `dmg` + `zip` for `arm64`                                                                    |
 | `.github/workflows/release.yml` | New `build-macos` job (mirrors `build-windows`: typecheck → test → electron-rebuild → build → smoke test → upload). `publish-release` now `needs: [build-windows, build-macos]` and downloads both artifact sets. |
 
 ### What the macOS job does

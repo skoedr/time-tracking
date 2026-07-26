@@ -5,46 +5,46 @@
    two parameters (rgba(r,g,b,a)) become unreadable as utility classes.
 ───────────────────────────────────────────────────────────────────────────── */
 :root {
-  --page-bg:     linear-gradient(145deg, #dde4f8 0%, #e8edfb 100%);
-  --card-bg:     rgba(255, 255, 255, 0.70);
-  --card-hover:  rgba(255, 255, 255, 0.85);
+  --page-bg: linear-gradient(145deg, #dde4f8 0%, #e8edfb 100%);
+  --card-bg: rgba(255, 255, 255, 0.7);
+  --card-hover: rgba(255, 255, 255, 0.85);
   --card-border: rgba(0, 0, 0, 0.07);
-  --nav-bg:      rgba(255, 255, 255, 0.75);
-  --modal-bg:    rgba(255, 255, 255, 0.96);
-  --input-bg:    rgba(255, 255, 255, 0.90);
-  --shadow:      0 8px 32px rgba(100, 120, 200, 0.12);
+  --nav-bg: rgba(255, 255, 255, 0.75);
+  --modal-bg: rgba(255, 255, 255, 0.96);
+  --input-bg: rgba(255, 255, 255, 0.9);
+  --shadow: 0 8px 32px rgba(100, 120, 200, 0.12);
   --accent-glow: rgba(91, 78, 240, 0.18);
-  --blur:        blur(20px);
-  --text:        #1a1c2e;
-  --text2:       #5b6080;
-  --text3:       #9098b8;
-  --accent:      #5b4ef0;
-  --accent-bg:   rgba(91, 78, 240, 0.08);
-  --green:       #16a34a;
-  --green-bg:    rgba(22, 163, 74, 0.07);
-  --danger:      #dc2626;
-  --danger-bg:   rgba(220, 38, 38, 0.07);
+  --blur: blur(20px);
+  --text: #1a1c2e;
+  --text2: #5b6080;
+  --text3: #9098b8;
+  --accent: #5b4ef0;
+  --accent-bg: rgba(91, 78, 240, 0.08);
+  --green: #16a34a;
+  --green-bg: rgba(22, 163, 74, 0.07);
+  --danger: #dc2626;
+  --danger-bg: rgba(220, 38, 38, 0.07);
 }
 
 .dark {
-  --page-bg:     linear-gradient(145deg, #0d0f1e 0%, #080c1a 100%);
-  --card-bg:     rgba(255, 255, 255, 0.045);
-  --card-hover:  rgba(255, 255, 255, 0.07);
+  --page-bg: linear-gradient(145deg, #0d0f1e 0%, #080c1a 100%);
+  --card-bg: rgba(255, 255, 255, 0.045);
+  --card-hover: rgba(255, 255, 255, 0.07);
   --card-border: rgba(255, 255, 255, 0.08);
-  --nav-bg:      rgba(10, 12, 28, 0.80);
-  --modal-bg:    rgba(15, 17, 35, 0.95);
-  --input-bg:    rgba(0, 0, 0, 0.30);
-  --shadow:      0 8px 32px rgba(0, 0, 0, 0.50);
+  --nav-bg: rgba(10, 12, 28, 0.8);
+  --modal-bg: rgba(15, 17, 35, 0.95);
+  --input-bg: rgba(0, 0, 0, 0.3);
+  --shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
   --accent-glow: rgba(139, 124, 248, 0.25);
-  --text:        #e8eaf6;
-  --text2:       #8b93bc;
-  --text3:       #4a5270;
-  --accent:      #8b7cf8;
-  --accent-bg:   rgba(139, 124, 248, 0.12);
-  --green:       #4ade80;
-  --green-bg:    rgba(74, 222, 128, 0.10);
-  --danger:      #f87171;
-  --danger-bg:   rgba(248, 113, 113, 0.10);
+  --text: #e8eaf6;
+  --text2: #8b93bc;
+  --text3: #4a5270;
+  --accent: #8b7cf8;
+  --accent-bg: rgba(139, 124, 248, 0.12);
+  --green: #4ade80;
+  --green-bg: rgba(74, 222, 128, 0.1);
+  --danger: #f87171;
+  --danger-bg: rgba(248, 113, 113, 0.1);
 }
 
 :root {
@@ -100,8 +100,12 @@ body {
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to   { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 /* ── Quick Start radial fan (full ring, clock-face) ─────────────────────── */
@@ -120,8 +124,14 @@ body {
 }
 
 @keyframes qs-fan-fade {
-  from { opacity: 0; transform: translate(-50%, -50%) scale(1); }
-  to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
 }
 
 .qs-fan-item {
@@ -129,8 +139,12 @@ body {
 }
 
 @keyframes qs-ring-draw {
-  from { stroke-dashoffset: var(--qs-ring-circ, 1000); }
-  to   { stroke-dashoffset: 0; }
+  from {
+    stroke-dashoffset: var(--qs-ring-circ, 1000);
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
 }
 
 .qs-ring-arc {
@@ -150,7 +164,8 @@ body {
 }
 
 @keyframes qs-pill-pulse {
-  0%, 100% {
+  0%,
+  100% {
     box-shadow:
       0 0 0 2px var(--qs-pill-color, #5b4ef0),
       0 0 18px color-mix(in srgb, var(--qs-pill-color, #5b4ef0) 38%, transparent);

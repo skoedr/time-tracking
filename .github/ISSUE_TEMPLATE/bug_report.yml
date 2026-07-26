@@ -1,20 +1,20 @@
 name: Bug Report
 description: Fehler oder unerwartetes Verhalten melden
-title: "[Bug] "
-labels: ["bug"]
+title: '[Bug] '
+labels: ['bug']
 body:
   - type: input
     id: version
     attributes:
       label: TimeTrack Version
-      placeholder: "z. B. 1.5.2 (Hilfe → Über TimeTrack)"
+      placeholder: 'z. B. 1.5.2 (Hilfe → Über TimeTrack)'
     validations:
       required: true
   - type: input
     id: os
     attributes:
       label: Betriebssystem
-      placeholder: "z. B. Windows 11 24H2, macOS 15.3"
+      placeholder: 'z. B. Windows 11 24H2, macOS 15.3'
     validations:
       required: true
   - type: textarea

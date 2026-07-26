@@ -124,7 +124,9 @@ export function PdfExportModal(props: Props): React.JSX.Element {
     <Dialog open={open} onClose={onClose} title="Stundennachweis als PDF" widthClass="w-[520px]">
       <div className="flex flex-col gap-4">
         <label className="flex flex-col gap-1 text-sm">
-          <span className="font-medium" style={{ color: 'var(--text2)' }}>Kunde</span>
+          <span className="font-medium" style={{ color: 'var(--text2)' }}>
+            Kunde
+          </span>
           <select
             value={clientId ?? ''}
             onChange={(e) =>
@@ -132,7 +134,11 @@ export function PdfExportModal(props: Props): React.JSX.Element {
             }
             disabled={busy}
             className="rounded-lg border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400"
-            style={{ background: 'var(--input-bg)', borderColor: 'var(--card-border)', color: 'var(--text)' }}
+            style={{
+              background: 'var(--input-bg)',
+              borderColor: 'var(--card-border)',
+              color: 'var(--text)'
+            }}
           >
             <option value="">— Kunde wählen —</option>
             {clients.map((c) => (
@@ -146,25 +152,37 @@ export function PdfExportModal(props: Props): React.JSX.Element {
 
         <div className="grid grid-cols-2 gap-3">
           <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium" style={{ color: 'var(--text2)' }}>Von</span>
+            <span className="font-medium" style={{ color: 'var(--text2)' }}>
+              Von
+            </span>
             <input
               type="date"
               value={fromIso}
               onChange={(e) => setFromIso(e.target.value)}
               disabled={busy}
               className="rounded-lg border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400"
-              style={{ background: 'var(--input-bg)', borderColor: 'var(--card-border)', color: 'var(--text)' }}
+              style={{
+                background: 'var(--input-bg)',
+                borderColor: 'var(--card-border)',
+                color: 'var(--text)'
+              }}
             />
           </label>
           <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium" style={{ color: 'var(--text2)' }}>Bis</span>
+            <span className="font-medium" style={{ color: 'var(--text2)' }}>
+              Bis
+            </span>
             <input
               type="date"
               value={toIso}
               onChange={(e) => setToIso(e.target.value)}
               disabled={busy}
               className="rounded-lg border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400"
-              style={{ background: 'var(--input-bg)', borderColor: 'var(--card-border)', color: 'var(--text)' }}
+              style={{
+                background: 'var(--input-bg)',
+                borderColor: 'var(--card-border)',
+                color: 'var(--text)'
+              }}
             />
           </label>
         </div>
@@ -240,7 +258,11 @@ export function PdfExportModal(props: Props): React.JSX.Element {
               disabled={busy}
               aria-label="Rechnung-PDF auswählen"
               className="rounded-lg border px-3 py-1.5 text-xs hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-400 disabled:opacity-50 transition-colors"
-              style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)', color: 'var(--text2)' }}
+              style={{
+                background: 'var(--card-bg)',
+                borderColor: 'var(--card-border)',
+                color: 'var(--text2)'
+              }}
             >
               {invoicePath ? 'Rechnung wechseln …' : 'Rechnung wählen …'}
             </button>
@@ -272,7 +294,11 @@ export function PdfExportModal(props: Props): React.JSX.Element {
             onClick={onClose}
             disabled={busy}
             className="rounded-lg border px-4 py-2 text-sm font-medium hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-400 disabled:opacity-50 transition-colors"
-            style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)', color: 'var(--text2)' }}
+            style={{
+              background: 'var(--card-bg)',
+              borderColor: 'var(--card-border)',
+              color: 'var(--text2)'
+            }}
           >
             Schließen
           </button>
@@ -288,7 +314,10 @@ export function PdfExportModal(props: Props): React.JSX.Element {
 
         <p className="text-xs" style={{ color: 'var(--text3)' }}>
           Vorlage anpassen unter{' '}
-          <span className="font-medium" style={{ color: 'var(--text2)' }}>Einstellungen → PDF-Vorlage</span>.
+          <span className="font-medium" style={{ color: 'var(--text2)' }}>
+            Einstellungen → PDF-Vorlage
+          </span>
+          .
         </p>
       </div>
     </Dialog>

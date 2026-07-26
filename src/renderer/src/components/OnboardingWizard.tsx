@@ -13,8 +13,14 @@ const BASE_STEPS = 3
 
 // Default colors for new clients — same palette as ClientsView.
 const PRESET_COLORS = [
-  '#6366f1', '#8b5cf6', '#ec4899', '#f59e0b',
-  '#10b981', '#06b6d4', '#f97316', '#84cc16',
+  '#6366f1',
+  '#8b5cf6',
+  '#ec4899',
+  '#f59e0b',
+  '#10b981',
+  '#06b6d4',
+  '#f97316',
+  '#84cc16'
 ]
 
 /**
@@ -91,7 +97,11 @@ export function OnboardingWizard({ open, onFinish }: Props): React.JSX.Element |
 
   const inputClass =
     'rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 w-full'
-  const inputStyle = { background: 'var(--input-bg)', borderColor: 'var(--card-border)', color: 'var(--text)' } as React.CSSProperties
+  const inputStyle = {
+    background: 'var(--input-bg)',
+    borderColor: 'var(--card-border)',
+    color: 'var(--text)'
+  } as React.CSSProperties
 
   return (
     // Full-screen overlay — sits above everything including UpdateBanner.
@@ -111,7 +121,9 @@ export function OnboardingWizard({ open, onFinish }: Props): React.JSX.Element |
         </button>
 
         {/* Step indicator */}
-        <p className="text-xs" style={{ color: 'var(--text3)' }}>{stepLabel}</p>
+        <p className="text-xs" style={{ color: 'var(--text3)' }}>
+          {stepLabel}
+        </p>
 
         {/* ── Step 1: Welcome + Language ── */}
         {step === 1 && (
@@ -158,13 +170,19 @@ export function OnboardingWizard({ open, onFinish }: Props): React.JSX.Element |
         {step === 2 && (
           <>
             <div className="flex flex-col gap-2">
-              <h2 className="text-xl font-bold" style={{ color: 'var(--text)' }}>{t('onboarding.client.title')}</h2>
-              <p className="text-sm" style={{ color: 'var(--text2)' }}>{t('onboarding.client.body')}</p>
+              <h2 className="text-xl font-bold" style={{ color: 'var(--text)' }}>
+                {t('onboarding.client.title')}
+              </h2>
+              <p className="text-sm" style={{ color: 'var(--text2)' }}>
+                {t('onboarding.client.body')}
+              </p>
             </div>
 
             <div className="flex flex-col gap-4">
               <label className="flex flex-col gap-1.5 text-sm">
-                <span className="font-medium" style={{ color: 'var(--text2)' }}>{t('onboarding.client.nameLabel')}</span>
+                <span className="font-medium" style={{ color: 'var(--text2)' }}>
+                  {t('onboarding.client.nameLabel')}
+                </span>
                 <input
                   type="text"
                   value={clientName}
@@ -178,7 +196,9 @@ export function OnboardingWizard({ open, onFinish }: Props): React.JSX.Element |
               </label>
 
               <label className="flex flex-col gap-1.5 text-sm">
-                <span className="font-medium" style={{ color: 'var(--text2)' }}>{t('onboarding.client.rateLabel')}</span>
+                <span className="font-medium" style={{ color: 'var(--text2)' }}>
+                  {t('onboarding.client.rateLabel')}
+                </span>
                 <div className="flex items-center gap-2">
                   <input
                     type="number"
@@ -188,15 +208,23 @@ export function OnboardingWizard({ open, onFinish }: Props): React.JSX.Element |
                     onChange={(e) => setClientRate(e.target.value)}
                     placeholder={t('onboarding.client.ratePlaceholder')}
                     className="rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 w-28"
-                    style={{ background: 'var(--input-bg)', borderColor: 'var(--card-border)', color: 'var(--text)' }}
+                    style={{
+                      background: 'var(--input-bg)',
+                      borderColor: 'var(--card-border)',
+                      color: 'var(--text)'
+                    }}
                     disabled={clientBusy}
                   />
-                  <span className="text-sm" style={{ color: 'var(--text2)' }}>{t('onboarding.client.rateUnit')}</span>
+                  <span className="text-sm" style={{ color: 'var(--text2)' }}>
+                    {t('onboarding.client.rateUnit')}
+                  </span>
                 </div>
               </label>
 
               <div className="flex flex-col gap-1.5 text-sm">
-                <span className="font-medium" style={{ color: 'var(--text2)' }}>{t('onboarding.client.colorLabel')}</span>
+                <span className="font-medium" style={{ color: 'var(--text2)' }}>
+                  {t('onboarding.client.colorLabel')}
+                </span>
                 <div className="flex flex-wrap gap-2">
                   {PRESET_COLORS.map((c) => (
                     <button
@@ -236,14 +264,20 @@ export function OnboardingWizard({ open, onFinish }: Props): React.JSX.Element |
         {step === 3 && (
           <>
             <div className="flex flex-col gap-2">
-              <h2 className="text-xl font-bold" style={{ color: 'var(--text)' }}>{t('onboarding.hotkey.title')}</h2>
-              <p className="text-sm" style={{ color: 'var(--text2)' }}>{t('onboarding.hotkey.body')}</p>
+              <h2 className="text-xl font-bold" style={{ color: 'var(--text)' }}>
+                {t('onboarding.hotkey.title')}
+              </h2>
+              <p className="text-sm" style={{ color: 'var(--text2)' }}>
+                {t('onboarding.hotkey.body')}
+              </p>
             </div>
 
             <div className="flex flex-col gap-4">
               <HotkeyHint label={t('onboarding.hotkey.default', { hotkey: 'Alt+Shift+S' })} />
               <HotkeyHint label={t('onboarding.hotkey.mini', { hotkey: 'Alt+Shift+M' })} />
-              <p className="text-xs" style={{ color: 'var(--text3)' }}>{t('onboarding.hotkey.hint')}</p>
+              <p className="text-xs" style={{ color: 'var(--text3)' }}>
+                {t('onboarding.hotkey.hint')}
+              </p>
 
               {clientCreated && (
                 <p className="rounded-lg bg-emerald-900/30 px-3 py-2 text-sm text-emerald-300">
@@ -265,18 +299,24 @@ export function OnboardingWizard({ open, onFinish }: Props): React.JSX.Element |
         {step === 4 && availableBackups.length > 0 && (
           <>
             <div className="flex flex-col gap-2">
-              <h2 className="text-xl font-bold" style={{ color: 'var(--text)' }}>{t('onboarding.restore.title')}</h2>
-              <p className="text-sm" style={{ color: 'var(--text2)' }}>{t('onboarding.restore.body')}</p>
+              <h2 className="text-xl font-bold" style={{ color: 'var(--text)' }}>
+                {t('onboarding.restore.title')}
+              </h2>
+              <p className="text-sm" style={{ color: 'var(--text2)' }}>
+                {t('onboarding.restore.body')}
+              </p>
             </div>
 
             <div className="flex flex-col gap-3">
-              <div className="rounded-lg border p-3 text-sm" style={{ borderColor: 'var(--card-border)', background: 'var(--input-bg)' }}>
+              <div
+                className="rounded-lg border p-3 text-sm"
+                style={{ borderColor: 'var(--card-border)', background: 'var(--input-bg)' }}
+              >
                 <span className="font-medium" style={{ color: 'var(--text2)' }}>
                   {t('onboarding.restore.latestLabel')}
                 </span>{' '}
                 <span style={{ color: 'var(--text)' }}>
-                  {new Date(availableBackups[0].createdAt).toLocaleString('de-DE')}
-                  {' '}·{' '}
+                  {new Date(availableBackups[0].createdAt).toLocaleString('de-DE')} ·{' '}
                   {(availableBackups[0].sizeBytes / 1024).toFixed(0)} KB
                 </span>
               </div>
@@ -336,7 +376,14 @@ interface FooterProps {
   t: TFunction
 }
 
-function WizardFooter({ step, totalSteps, onNext, nextLabel, disabled, t }: FooterProps): React.JSX.Element {
+function WizardFooter({
+  step,
+  totalSteps,
+  onNext,
+  nextLabel,
+  disabled,
+  t
+}: FooterProps): React.JSX.Element {
   const isLast = step === totalSteps
   const label = isLast ? t('onboarding.finish') : (nextLabel ?? t('onboarding.next'))
 
@@ -369,7 +416,11 @@ function HotkeyHint({ label }: { label: string }): React.JSX.Element {
             <kbd
               key={i}
               className="rounded px-1.5 py-0.5 font-mono text-xs border"
-              style={{ background: 'var(--input-bg)', borderColor: 'var(--card-border)', color: 'var(--text)' }}
+              style={{
+                background: 'var(--input-bg)',
+                borderColor: 'var(--card-border)',
+                color: 'var(--text)'
+              }}
             >
               {part}
             </kbd>

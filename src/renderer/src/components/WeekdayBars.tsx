@@ -18,7 +18,7 @@ export function WeekdayBars({ weekday }: WeekdayBarsProps): React.JSX.Element {
       style={{
         gridTemplateColumns: 'repeat(7, 1fr)',
         alignItems: 'end',
-        height: 170,
+        height: 170
       }}
     >
       {weekday.map((d) => {
@@ -36,7 +36,7 @@ export function WeekdayBars({ weekday }: WeekdayBarsProps): React.JSX.Element {
               style={{
                 fontSize: 10,
                 fontFamily: 'var(--font-mono, monospace)',
-                color: 'var(--text2)',
+                color: 'var(--text2)'
               }}
             >
               {fmtH(d.h)}
@@ -49,14 +49,14 @@ export function WeekdayBars({ weekday }: WeekdayBarsProps): React.JSX.Element {
                 background: isWeekend
                   ? 'linear-gradient(180deg, var(--text3-50, rgba(74,82,112,.4)), var(--text3-25, rgba(74,82,112,.2)))'
                   : 'linear-gradient(180deg, var(--accent), var(--accent-88, rgba(139,124,248,.55)))',
-                transition: 'height 0.4s ease',
+                transition: 'height 0.4s ease'
               }}
             />
             <span
               style={{
                 fontSize: 11,
                 fontWeight: isWeekend ? 400 : 600,
-                color: isWeekend ? 'var(--text3)' : 'var(--text2)',
+                color: isWeekend ? 'var(--text3)' : 'var(--text2)'
               }}
             >
               {d.d}

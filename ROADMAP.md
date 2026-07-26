@@ -170,7 +170,7 @@ About-Dialog „MIT" anzeigte. Repariert in einem Commit + History-Rewrite:
 
 ---
 
-## v1.6 — OSS-Readiness  🎯 nächste Stufe
+## v1.6 — OSS-Readiness 🎯 nächste Stufe
 
 **Thema:** Aus „mein Repo zufällig auf GitHub" wird „Repo das ein anderer
 Freelancer clonen, verstehen und beitragen kann".
@@ -379,7 +379,7 @@ einem Dialog, ohne Honorar-Inkonsistenzen, ohne doppelte Tags. ✅
 
 ---
 
-## v2.0 — Outlook-Integration  🎯 echte Story-Stufe
+## v2.0 — Outlook-Integration 🎯 echte Story-Stufe
 
 **Thema:** Das eine Feature, das TimeTrack vom „lokalen Toggl-Klon" zum
 „meinem Kalender ist die Quelle der Wahrheit"-Tool macht.
@@ -450,6 +450,7 @@ nicht erst v1.4. ✅ Roadmap stimmt.
 
 **6-Monats-Regret-Test:** Was würde dich in 6 Monaten am meisten ärgern, nicht gemacht zu
 haben?
+
 1. Wenn Idle-Detection fehlt → du traust deinen eigenen Daten nicht → Rückkehr zu Excel
 2. Wenn DB-Migrationen fehlen → v1.2-Update bricht v1.0-Installs → Datenverlust
 3. Wenn Auto-Backup fehlt → ein Festplattencrash macht Monate Arbeit zunichte
@@ -457,6 +458,7 @@ haben?
 Alle drei sind in v1.1 abgedeckt. ✅
 
 **Was NICHT in der Roadmap ist (bewusst):**
+
 - Cloud-Sync, Multi-Device → User-Direktive: schlank bleiben
 - Multi-User / Team-Features → nicht der Anwendungsfall
 - Mobile App → kein Mehrwert für Desktop-Workflow
@@ -464,6 +466,7 @@ Alle drei sind in v1.1 abgedeckt. ✅
 - Kollaboration / Sharing → Solo-Tool
 
 **Was fehlt aber sollte rein?**
+
 - ⚠️ **Datenexport / Daten-Portabilität** als explizites Feature. Aktuell: SQLite-Datei
   kopieren funktioniert, aber kein dokumentierter "Alle Daten als JSON exportieren"-Knopf.
   Vertrauen-stiftend wenn man später wechseln will. Schlage vor: zu v1.3 hinzufügen.
@@ -475,6 +478,7 @@ in v1.1, Mini-Widget (zweithäufigster) in v1.4. Idle-Detection (kritischster) i
 Kalender (selten genutzt aber wichtig wenn) in v1.2. ✅
 
 **Fehlende UI-States in der Roadmap:**
+
 - Kalender ohne Daten: leerer Monat, was sieht User?
 - Settings: ohne Backups noch keine "Wiederherstellen"-Option
 - Update-Verfügbar: Banner-Position, Dismiss-Verhalten?
@@ -501,46 +505,47 @@ in Bildschirmecke). **Taste-Entscheidung — siehe unten.**
    - GitHub Releases — gratis, dein PAT als Token, latest.yml ist schon da
    - Generic HTTP — eigener Server nötig, du willst keinen
    - S3 — kostenlos im Free-Tier, aber AWS-Account-Kram
-   → GitHub Releases ist die einzige sinnvolle Wahl. Schon vorbereitet, da
-   `dist/latest.yml` schon im Release liegt.
+     → GitHub Releases ist die einzige sinnvolle Wahl. Schon vorbereitet, da
+     `dist/latest.yml` schon im Release liegt.
 
 3. **PDF-Library-Wahl.**
    - `pdfkit` — pure JS, ~5MB, programmatisch, gute Tabellen, langweiliges Default-Layout
    - `pdf-lib` — pure JS, ~2MB, low-level, du baust alles selbst
    - `puppeteer` — Chrome-headless via HTML/CSS, schöne Layouts, +200MB Installer
-   **Taste-Entscheidung — siehe unten.**
+     **Taste-Entscheidung — siehe unten.**
 
 4. **Idle-Detection-Library.**
    - `desktop-idle` — natives N-API Modul, gibt Sekunden seit letzter Eingabe. Klein, einfach.
    - `electron`-eigenes `powerMonitor.getSystemIdleTime()` — schon eingebaut. ✅ Kein Extra-Dep.
-   → powerMonitor nutzen. Auto-decided (P4 DRY: schon im Stack).
+     → powerMonitor nutzen. Auto-decided (P4 DRY: schon im Stack).
 
 5. **Tags-Schema.**
    - JSON-Spalte `tags TEXT` mit `["a","b"]` — einfach, keine Joins
    - Separate `tags` + `entry_tags` Tabellen — normalisiert, langsamere Queries für Solo-Use
-   → JSON-Spalte. Auto-decided (P5 explicit: 5 Zeilen vs 50, Solo-Skala).
+     → JSON-Spalte. Auto-decided (P5 explicit: 5 Zeilen vs 50, Solo-Skala).
 
 6. **Code-Signing für Windows.** Ohne Signing zeigt Windows SmartScreen "Unbekannter
    Herausgeber" beim Installer. Kostet:
    - **OV-Zertifikat:** ~70€/Jahr (z.B. Sectigo via SSLs.com)
    - **EV-Zertifikat:** ~250€/Jahr, aber sofortige SmartScreen-Reputation
    - **Ohne Signing:** Warnung bei jeder Installation, User muss "Trotzdem ausführen"
-   **Taste-Entscheidung — siehe unten.**
+     **Taste-Entscheidung — siehe unten.**
 
 **Test-Lücken in der Roadmap:**
+
 - Aktuell: 0 automatisierte Tests im Repo. Bei v1.2 (Edit-Logik mit Datum-Parsing)
   und v1.3 (PDF-Generation) wird das schmerzhaft. **Empfehlung:** Vitest in v1.1
   einführen, primär für `src/main/db.ts` (Migrationen, IPC-Handler) und Datums-Utils.
 
 **Failure-Modes-Registry:**
 
-| Wo | Was bricht | Wann | Mitigation |
-|----|------------|------|------------|
-| Auto-Update | GitHub-API down | bei jedem Update-Check | Silent fail + Log, retry next day |
-| Idle-Detection | User klickt "Pause", App crasht vorher | selten | Auto-Backup (v1.1) deckt ab |
-| PDF-Export | Pfad nicht beschreibbar | OneDrive-Sync-Konflikt | Fallback auf `Documents`, Toast |
-| Migration | SQL-Fehler in Migration | Schema-Bug | Backup vor Migration, Rollback wenn fail |
-| Tray | Icon nicht ladbar | User löscht resources/ | Fallback ohne Tray, Console-Warnung |
+| Wo             | Was bricht                             | Wann                   | Mitigation                               |
+| -------------- | -------------------------------------- | ---------------------- | ---------------------------------------- |
+| Auto-Update    | GitHub-API down                        | bei jedem Update-Check | Silent fail + Log, retry next day        |
+| Idle-Detection | User klickt "Pause", App crasht vorher | selten                 | Auto-Backup (v1.1) deckt ab              |
+| PDF-Export     | Pfad nicht beschreibbar                | OneDrive-Sync-Konflikt | Fallback auf `Documents`, Toast          |
+| Migration      | SQL-Fehler in Migration                | Schema-Bug             | Backup vor Migration, Rollback wenn fail |
+| Tray           | Icon nicht ladbar                      | User löscht resources/ | Fallback ohne Tray, Console-Warnung      |
 
 ## DX-Sicht
 
@@ -550,17 +555,17 @@ in Bildschirmecke). **Taste-Entscheidung — siehe unten.**
 
 # Decision Audit Trail
 
-| # | Phase | Entscheidung | Klassifikation | Prinzip | Begründung |
-|---|-------|--------------|----------------|---------|------------|
-| 1 | CEO  | Cloud/Multi-User aus Roadmap raus | Mechanical | P6 | User-Direktive "schlank bleiben" |
-| 2 | CEO  | Idle-Detection in v1.1 (statt später) | Mechanical | P1 | Größte Vertrauens-Schmerzstelle, Boil the lake |
-| 3 | CEO  | Daten-Export-Knopf in v1.3 ergänzen | Mechanical | P1 | Daten-Portabilität = Vertrauen |
-| 4 | Eng  | DB-Migrationen v1.1-Pflicht | Mechanical | P2 | Verhindert v1.0→v1.2 Datenverlust |
-| 5 | Eng  | Auto-Update via GitHub Releases | Mechanical | P3 | Einzige sinnvolle Wahl, schon vorbereitet |
-| 6 | Eng  | Idle-Detection via powerMonitor | Mechanical | P4 | DRY, schon im electron-Stack |
-| 7 | Eng  | Tags als JSON-Spalte | Mechanical | P5 | Solo-Skala, 5 Zeilen statt 50 |
-| 8 | Eng  | Vitest in v1.1 einführen | Mechanical | P1 | Vor v1.2-Edit-Logik kritisch |
-| 9 | Design| Onboarding auf v1.2 vorziehen | Mechanical | P5 | v1.5 zu spät |
-| 10| Design| PDF-Library: **puppeteer** | User Taste | — | Schöneres Layout wichtiger als Installer-Größe. Folge: ~290MB statt 96MB |
-| 11| Design| Mini-Widget: **200×40 horizontal** | User Taste | — | Toggl-Style, passt in Bildschirm-Kanten |
-| 12| Eng  | Code-Signing: **nie** | User Taste | — | SmartScreen-Warnung wird akzeptiert, Geld gespart |
+| #   | Phase  | Entscheidung                          | Klassifikation | Prinzip | Begründung                                                               |
+| --- | ------ | ------------------------------------- | -------------- | ------- | ------------------------------------------------------------------------ |
+| 1   | CEO    | Cloud/Multi-User aus Roadmap raus     | Mechanical     | P6      | User-Direktive "schlank bleiben"                                         |
+| 2   | CEO    | Idle-Detection in v1.1 (statt später) | Mechanical     | P1      | Größte Vertrauens-Schmerzstelle, Boil the lake                           |
+| 3   | CEO    | Daten-Export-Knopf in v1.3 ergänzen   | Mechanical     | P1      | Daten-Portabilität = Vertrauen                                           |
+| 4   | Eng    | DB-Migrationen v1.1-Pflicht           | Mechanical     | P2      | Verhindert v1.0→v1.2 Datenverlust                                        |
+| 5   | Eng    | Auto-Update via GitHub Releases       | Mechanical     | P3      | Einzige sinnvolle Wahl, schon vorbereitet                                |
+| 6   | Eng    | Idle-Detection via powerMonitor       | Mechanical     | P4      | DRY, schon im electron-Stack                                             |
+| 7   | Eng    | Tags als JSON-Spalte                  | Mechanical     | P5      | Solo-Skala, 5 Zeilen statt 50                                            |
+| 8   | Eng    | Vitest in v1.1 einführen              | Mechanical     | P1      | Vor v1.2-Edit-Logik kritisch                                             |
+| 9   | Design | Onboarding auf v1.2 vorziehen         | Mechanical     | P5      | v1.5 zu spät                                                             |
+| 10  | Design | PDF-Library: **puppeteer**            | User Taste     | —       | Schöneres Layout wichtiger als Installer-Größe. Folge: ~290MB statt 96MB |
+| 11  | Design | Mini-Widget: **200×40 horizontal**    | User Taste     | —       | Toggl-Style, passt in Bildschirm-Kanten                                  |
+| 12  | Eng    | Code-Signing: **nie**                 | User Taste     | —       | SmartScreen-Warnung wird akzeptiert, Geld gespart                        |

@@ -15,9 +15,7 @@ let alreadyEmitted = false
 let thresholdSeconds = 300 // default 5 min, overridden by setThreshold
 let getWindow: () => BrowserWindow | null = () => null
 
-export function configureIdleWatcher(opts: {
-  getWindow: () => BrowserWindow | null
-}): void {
+export function configureIdleWatcher(opts: { getWindow: () => BrowserWindow | null }): void {
   getWindow = opts.getWindow
 }
 

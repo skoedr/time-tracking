@@ -87,8 +87,12 @@ describe('buildAnalyticsSummary', () => {
     db = makeDb(DatabaseImpl, tmpDir)
 
     // Seed two clients
-    db.prepare(`INSERT INTO clients (id, name, color, rate_cent) VALUES (1, 'Acme', '#8b7cf8', 8500)`).run()
-    db.prepare(`INSERT INTO clients (id, name, color, rate_cent) VALUES (2, 'Beta', '#4ade80', 0)`).run()
+    db.prepare(
+      `INSERT INTO clients (id, name, color, rate_cent) VALUES (1, 'Acme', '#8b7cf8', 8500)`
+    ).run()
+    db.prepare(
+      `INSERT INTO clients (id, name, color, rate_cent) VALUES (2, 'Beta', '#4ade80', 0)`
+    ).run()
   })
 
   afterEach(() => {
@@ -104,7 +108,7 @@ describe('buildAnalyticsSummary', () => {
     addEntry(db, {
       client_id: 1,
       started_at: '2025-04-10T08:00:00.000Z',
-      stopped_at: '2025-04-10T10:00:00.000Z', // 7200 sec
+      stopped_at: '2025-04-10T10:00:00.000Z' // 7200 sec
     })
 
     const res = buildAnalyticsSummary(db, { year: 2025, month: 4 })
@@ -135,14 +139,16 @@ describe('buildAnalyticsSummary', () => {
 
   it('uses project rate_cent when it overrides client rate', () => {
     // Project with 120 €/h = 12000 cents
-    db.prepare(`INSERT INTO projects (id, client_id, name, color, rate_cent) VALUES (10, 1, 'BigDeal', '#fff', 12000)`).run()
+    db.prepare(
+      `INSERT INTO projects (id, client_id, name, color, rate_cent) VALUES (10, 1, 'BigDeal', '#fff', 12000)`
+    ).run()
 
     // 1 hour on that project → 120 € = 12000 cents
     addEntry(db, {
       client_id: 1,
       started_at: '2025-06-01T09:00:00.000Z',
       stopped_at: '2025-06-01T10:00:00.000Z', // 3600 sec
-      project_id: 10,
+      project_id: 10
     })
 
     const res = buildAnalyticsSummary(db, { year: 2025, month: 6 })
@@ -160,7 +166,7 @@ describe('buildAnalyticsSummary', () => {
       client_id: 1,
       started_at: '2025-07-05T08:00:00.000Z',
       stopped_at: '2025-07-05T11:00:00.000Z', // 10800 sec
-      project_id: null,
+      project_id: null
     })
 
     const res = buildAnalyticsSummary(db, { year: 2025, month: 7 })
@@ -179,13 +185,13 @@ describe('buildAnalyticsSummary', () => {
       client_id: 1,
       started_at: '2025-08-01T08:00:00.000Z',
       stopped_at: '2025-08-01T10:00:00.000Z', // 7200 sec, billable=1
-      billable: 1,
+      billable: 1
     })
     addEntry(db, {
       client_id: 1,
       started_at: '2025-08-01T11:00:00.000Z',
       stopped_at: '2025-08-01T12:00:00.000Z', // 3600 sec, billable=0
-      billable: 0,
+      billable: 0
     })
 
     const res = buildAnalyticsSummary(db, { year: 2025, month: 8 })
@@ -204,13 +210,13 @@ describe('buildAnalyticsSummary', () => {
     addEntry(db, {
       client_id: 1,
       started_at: '2024-12-15T09:00:00.000Z',
-      stopped_at: '2024-12-15T10:00:00.000Z',
+      stopped_at: '2024-12-15T10:00:00.000Z'
     })
     // January 2025 entry
     addEntry(db, {
       client_id: 1,
       started_at: '2025-01-10T09:00:00.000Z',
-      stopped_at: '2025-01-10T11:00:00.000Z',
+      stopped_at: '2025-01-10T11:00:00.000Z'
     })
 
     const res = buildAnalyticsSummary(db, { year: 2025, month: 1 })
@@ -228,7 +234,7 @@ describe('buildAnalyticsSummary', () => {
     addEntry(db, {
       client_id: 2,
       started_at: '2024-02-14T10:00:00.000Z',
-      stopped_at: '2024-02-14T11:00:00.000Z',
+      stopped_at: '2024-02-14T11:00:00.000Z'
     })
 
     const res = buildAnalyticsSummary(db, { year: 2024, month: 2 })
@@ -244,7 +250,7 @@ describe('buildAnalyticsSummary', () => {
     addEntry(db, {
       client_id: 1,
       started_at: '2025-04-10T08:00:00.000Z',
-      stopped_at: '2025-04-10T10:00:00.000Z',
+      stopped_at: '2025-04-10T10:00:00.000Z'
     })
 
     const res = buildAnalyticsSummary(db, { year: 2025, month: 4 })
@@ -266,7 +272,7 @@ describe('buildAnalyticsSummary', () => {
     addEntry(db, {
       client_id: 1,
       started_at: '2025-04-10T08:00:00.000Z',
-      stopped_at: '2025-04-10T10:00:00.000Z',
+      stopped_at: '2025-04-10T10:00:00.000Z'
     })
 
     const res = buildAnalyticsSummary(db, { year: 2025, month: 4 })
@@ -293,10 +299,14 @@ describe('buildAnalyticsSummary', () => {
 
   it('excludes deleted entries from totals', () => {
     // Insert entry + mark deleted
-    const info = db.prepare(
-      `INSERT INTO entries (client_id, started_at, stopped_at) VALUES (1, '2025-09-01T08:00:00.000Z', '2025-09-01T10:00:00.000Z')`
-    ).run()
-    db.prepare(`UPDATE entries SET deleted_at = datetime('now') WHERE id = ?`).run(info.lastInsertRowid)
+    const info = db
+      .prepare(
+        `INSERT INTO entries (client_id, started_at, stopped_at) VALUES (1, '2025-09-01T08:00:00.000Z', '2025-09-01T10:00:00.000Z')`
+      )
+      .run()
+    db.prepare(`UPDATE entries SET deleted_at = datetime('now') WHERE id = ?`).run(
+      info.lastInsertRowid
+    )
 
     const res = buildAnalyticsSummary(db, { year: 2025, month: 9 })
     expect(res.ok).toBe(true)
@@ -312,7 +322,7 @@ describe('buildAnalyticsSummary', () => {
     addEntry(db, {
       client_id: 1,
       started_at: '2025-04-07T08:00:00.000Z', // Monday
-      stopped_at: '2025-04-07T10:00:00.000Z',
+      stopped_at: '2025-04-07T10:00:00.000Z'
     })
 
     const res = buildAnalyticsSummary(db, { year: 2025, month: 4 })
@@ -331,14 +341,14 @@ describe('buildAnalyticsSummary', () => {
       client_id: 1,
       started_at: '2025-10-01T08:00:00.000Z',
       stopped_at: '2025-10-01T10:00:00.000Z',
-      billable: 1,
+      billable: 1
     })
     // 3 hours non-billable — must NOT contribute to revenue
     addEntry(db, {
       client_id: 1,
       started_at: '2025-10-01T11:00:00.000Z',
       stopped_at: '2025-10-01T14:00:00.000Z',
-      billable: 0,
+      billable: 0
     })
 
     const res = buildAnalyticsSummary(db, { year: 2025, month: 10 })
@@ -359,14 +369,14 @@ describe('buildAnalyticsSummary', () => {
       client_id: 1,
       started_at: '2025-11-01T08:00:00.000Z',
       stopped_at: '2025-11-01T09:00:00.000Z',
-      billable: 1,
+      billable: 1
     })
     // 2 hours non-billable for Acme — must NOT add to rev
     addEntry(db, {
       client_id: 1,
       started_at: '2025-11-01T10:00:00.000Z',
       stopped_at: '2025-11-01T12:00:00.000Z',
-      billable: 0,
+      billable: 0
     })
 
     const res = buildAnalyticsSummary(db, { year: 2025, month: 11 })

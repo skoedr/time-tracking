@@ -31,8 +31,8 @@ export function ClientBars({ clients }: ClientBarsProps): React.JSX.Element {
             color: 'var(--text3)',
             h: restH,
             rev: restRev,
-            rest: true,
-          },
+            rest: true
+          }
         ]
       : top
 
@@ -55,13 +55,13 @@ export function ClientBars({ clients }: ClientBarsProps): React.JSX.Element {
         const color = it.color.startsWith('var(') ? it.color : it.color
 
         return (
-          <div key={it.rest ? 'rest' : it.client_id ?? i} className="flex flex-col gap-1">
+          <div key={it.rest ? 'rest' : (it.client_id ?? i)} className="flex flex-col gap-1">
             <div className="flex items-center gap-2 text-xs">
               <span
                 className="w-2 h-2 rounded-full shrink-0"
                 style={{
                   background: color,
-                  opacity: it.rest ? 0.5 : 1,
+                  opacity: it.rest ? 0.5 : 1
                 }}
               />
               <span
@@ -69,7 +69,7 @@ export function ClientBars({ clients }: ClientBarsProps): React.JSX.Element {
                 style={{
                   color: 'var(--text)',
                   fontWeight: it.rest ? 400 : 500,
-                  fontStyle: it.rest ? 'italic' : 'normal',
+                  fontStyle: it.rest ? 'italic' : 'normal'
                 }}
               >
                 {it.name}
@@ -79,7 +79,7 @@ export function ClientBars({ clients }: ClientBarsProps): React.JSX.Element {
                 style={{
                   fontFamily: 'var(--font-mono, monospace)',
                   fontSize: '11.5px',
-                  color: 'var(--text2)',
+                  color: 'var(--text2)'
                 }}
               >
                 {fmtHours(it.h)}
@@ -90,7 +90,7 @@ export function ClientBars({ clients }: ClientBarsProps): React.JSX.Element {
                   fontFamily: 'var(--font-mono, monospace)',
                   fontSize: '11px',
                   color: 'var(--text3)',
-                  minWidth: 36,
+                  minWidth: 36
                 }}
               >
                 {sharePct.toFixed(0)}%
@@ -106,7 +106,7 @@ export function ClientBars({ clients }: ClientBarsProps): React.JSX.Element {
                   width: `${pct}%`,
                   background: it.rest
                     ? 'var(--text3)'
-                    : `linear-gradient(90deg, ${color}, ${color}cc)`,
+                    : `linear-gradient(90deg, ${color}, ${color}cc)`
                 }}
               />
             </div>

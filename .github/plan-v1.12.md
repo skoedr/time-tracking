@@ -45,7 +45,7 @@ Migration nötig — rein strukturell.
    `rounding_minutes` existieren in der `settings`-Tabelle, werden aber nirgends
    mehr gelesen (seit Rundung über eigenen Mechanismus läuft). Migration 014
    löscht diese Zeilen via `DELETE FROM settings WHERE key IN ('rounding_mode',
-   'rounding_minutes')`. Keine Auswirkung auf bestehende Nutzer.
+'rounding_minutes')`. Keine Auswirkung auf bestehende Nutzer.
 
 3. **Tests** — Bestehende Handler-Tests in `pdfMergeHandlers.test.ts` (bereits
    vorhanden, ggf. Pfad-Anpassung). Neue Regression-Tests für den DB-Cleanup.
@@ -78,9 +78,11 @@ greift der Kunden-Ansprechpartner als Fallback.
 
 5. **`pdf.ts` — Fallback-Logik** — Der Empfängerblock liest den Ansprechpartner
    nach Priorität:
+
    ```
    effective_contact = project.contact_person ?? client.contact_person
    ```
+
    Wenn `effective_contact` gesetzt: `z. Hd. {name}` im Adressblock.
    Keine sichtbare Änderung wenn weder Projekt noch Kunde einen AP haben.
 
@@ -129,7 +131,7 @@ Kein neuer DB-Speicher für gerundete Werte. Kein neues Settings-Feld.
    (= kein Runden, pass-through).
 
 6. **`duration.ts`** — Neue Export-Funktion `roundDuration(seconds: number,
-   roundMinutes: number): number`. Rundet Sekunden via **Ceiling** auf das
+roundMinutes: number): number`. Rundet Sekunden via **Ceiling** auf das
    nächste Intervall (Einheit: Minuten). Wenn `roundMinutes <= 0`: unverändert
    zurück. Signatur konsistent mit `formatDuration(seconds)`. Pure function,
    testbar.
@@ -214,7 +216,7 @@ erlaubt: umbenennen, zusammenführen, löschen (wenn ungenutzt oder force).
      **„+ 'foo' erstellen"** erscheint als letzter Eintrag. Auswahl legt
      Tag in der `tags`-Tabelle an (`tags:create` IPC) und fügt ihn sofort
      zum Eintrag hinzu. Kein extra Dialog, kein Navigations-Bruch.
-   Link „Tag verwalten →" erscheint wenn Tag-Liste leer oder zur Verwaltung.
+     Link „Tag verwalten →" erscheint wenn Tag-Liste leer oder zur Verwaltung.
 
    **Merge Confirmation:** Das Zusammenführen-Dropdown in `TagManagementView`
    öffnet nach Tag-Auswahl den bestehenden `ConfirmDialog` mit Zähler:
@@ -294,11 +296,11 @@ Geschätzter Mehraufwand: +0,5 Tage (M → M+).
 
 ## Migration-Plan
 
-| Migration | Inhalt                                          | Timing              |
-|-----------|------------------------------------------------|---------------------|
-| 014       | DELETE toter `rounding_mode`/`rounding_minutes` Settings | Housekeeping-PR |
-| 015       | `projects.contact_person TEXT DEFAULT NULL`     | PR 1/3 (#105)       |
-| 016       | CREATE TABLE `tags` (id, name UNIQUE, created_at) + INSERT OR IGNORE alle einzigartigen Tags aus `entries.tags` CSV | PR 3/3 (#107) |
+| Migration | Inhalt                                                                                                              | Timing          |
+| --------- | ------------------------------------------------------------------------------------------------------------------- | --------------- |
+| 014       | DELETE toter `rounding_mode`/`rounding_minutes` Settings                                                            | Housekeeping-PR |
+| 015       | `projects.contact_person TEXT DEFAULT NULL`                                                                         | PR 1/3 (#105)   |
+| 016       | CREATE TABLE `tags` (id, name UNIQUE, created_at) + INSERT OR IGNORE alle einzigartigen Tags aus `entries.tags` CSV | PR 3/3 (#107)   |
 
 Keine Migration für #106 (reine Darstellungsebene).
 
@@ -325,9 +327,9 @@ erhalten bleibt. In v2.0 kann die Normalisierung in eine Junction-Tabelle erfolg
 
 ## GSTACK REVIEW REPORT
 
-| Run | Verdict | Findings |
-|-----|---------|----------|
+| Run                        | Verdict                                         | Findings                                                                                                                                                                                                                                                                                                                                                                                        |
+| -------------------------- | ----------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | plan-ceo-review 2026-05-04 | SELECTIVE EXPANSION — 10 findings, all approved | Migration 016 added; SettingsContext + Tag-Autocomplete added to scope; roundDuration API corrected (pdf_round_minutes/ceiling); tags:rename collision check; Migration 015+016 tests; get-all-with-count single-scan; ConfirmDialog for merge; Tag-Analytics deferred to v1.13; tags:create + Inline-Create in TagInput (außenstimme); setRoundMinutes setter in RoundingContext (außenstimme) |
-| — | — | — |
-| — | — | — |
-| — | — | — |
+| —                          | —                                               | —                                                                                                                                                                                                                                                                                                                                                                                               |
+| —                          | —                                               | —                                                                                                                                                                                                                                                                                                                                                                                               |
+| —                          | —                                               | —                                                                                                                                                                                                                                                                                                                                                                                               |

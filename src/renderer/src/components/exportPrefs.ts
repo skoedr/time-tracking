@@ -46,9 +46,7 @@ export function parsePrefs(raw: string | null | undefined): ExportPrefs {
       tab: parsed.tab === 'csv' ? 'csv' : 'pdf',
       includeSignatures: parsed.includeSignatures === true,
       groupBy:
-        parsed.groupBy === 'tag' ||
-        parsed.groupBy === 'project' ||
-        parsed.groupBy === 'reference'
+        parsed.groupBy === 'tag' || parsed.groupBy === 'project' || parsed.groupBy === 'reference'
           ? parsed.groupBy
           : 'none',
       hideFeeColumn: parsed.hideFeeColumn === true,

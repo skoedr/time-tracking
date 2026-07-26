@@ -25,8 +25,17 @@ function App(): React.JSX.Element {
   const [view, setView] = useState<View>('today')
   const [showOnboarding, setShowOnboarding] = useState(false)
   const [showTimerModal, setShowTimerModal] = useState(false)
-  const { idleEvent, idleKeep, idleStopAtIdle, idleMarkPause, quickNoteEntry, setQuickNoteEntry, runningEntry, clients, stop } =
-    useTimer()
+  const {
+    idleEvent,
+    idleKeep,
+    idleStopAtIdle,
+    idleMarkPause,
+    quickNoteEntry,
+    setQuickNoteEntry,
+    runningEntry,
+    clients,
+    stop
+  } = useTimer()
   const projectsVersion = useProjectsStore((s) => s.version)
   const [runningProjectColor, setRunningProjectColor] = useState<string | undefined>(undefined)
 
@@ -126,18 +135,19 @@ function App(): React.JSX.Element {
         )}
 
         {/* Running timer pill */}
-        {runningEntry && (() => {
-          const client = clients.find((c) => c.id === runningEntry.client_id)
-          return (
-            <RunningPill
-              startedAt={runningEntry.started_at}
-              clientName={client?.name}
-              clientColor={client?.color}
-              projectColor={runningProjectColor}
-              onStop={() => void stop()}
-            />
-          )
-        })()}
+        {runningEntry &&
+          (() => {
+            const client = clients.find((c) => c.id === runningEntry.client_id)
+            return (
+              <RunningPill
+                startedAt={runningEntry.started_at}
+                clientName={client?.name}
+                clientColor={client?.color}
+                projectColor={runningProjectColor}
+                onStop={() => void stop()}
+              />
+            )
+          })()}
       </nav>
 
       {/* Content */}
@@ -226,8 +236,14 @@ function RunningPill({
         className="h-2 w-2 animate-pulse rounded-full"
         style={{ backgroundColor: projectColor || (clientColor ?? 'var(--green)') }}
       />
-      {clientName && <span className="font-medium" style={{ color: 'var(--text)' }}>{clientName}</span>}
-      <span className="tabular-nums" style={{ fontFamily: "'JetBrains Mono', monospace" }}>{label}</span>
+      {clientName && (
+        <span className="font-medium" style={{ color: 'var(--text)' }}>
+          {clientName}
+        </span>
+      )}
+      <span className="tabular-nums" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+        {label}
+      </span>
       <button
         type="button"
         onClick={onStop}

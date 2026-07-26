@@ -213,9 +213,9 @@ export function toggleMini(): void {
 function isMiniEnabledInDb(): boolean {
   try {
     const db = getDb()
-    const row = db
-      .prepare(`SELECT value FROM settings WHERE key = 'mini_enabled'`)
-      .get() as { value: string } | undefined
+    const row = db.prepare(`SELECT value FROM settings WHERE key = 'mini_enabled'`).get() as
+      | { value: string }
+      | undefined
     return row?.value === '1'
   } catch {
     return false

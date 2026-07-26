@@ -110,10 +110,7 @@ export function ChevronDown(p: IconProps): React.JSX.Element {
 }
 
 export function Play(p: IconProps): React.JSX.Element {
-  return base(
-    <path d="M5 3.5l8 4.5-8 4.5V3.5Z" fill="currentColor" stroke="none" />,
-    p
-  )
+  return base(<path d="M5 3.5l8 4.5-8 4.5V3.5Z" fill="currentColor" stroke="none" />, p)
 }
 
 export function Stop(p: IconProps): React.JSX.Element {

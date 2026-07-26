@@ -42,7 +42,7 @@ a self-contained doc that gets written to `os.tmpdir()` and loaded via
    `webSecurity: false` to load the logo. By embedding the logo as a
    base64 `data:` URL, the PDF window keeps `webSecurity: true` AND a
    strict CSP meta tag (`default-src 'none'; img-src data:; style-src
-   'unsafe-inline'`).
+'unsafe-inline'`).
 2. **R5 eliminated** — no Vite multi-entry build config gymnastics; the
    PDF code path doesn't need Tailwind, React, or hot-reload.
 
@@ -55,6 +55,7 @@ template ever grows complex.
 ## Files
 
 **New:**
+
 - `src/shared/currency.ts` + `.test.ts` (14 tests)
 - `src/main/pdf.ts` (`buildPdfPayload` + `buildPdfHtml`, pure)
 - `src/main/pdf.test.ts` (8 unskipped + 10 DB-skipped pattern matches `jsonExport.test.ts`)
@@ -64,6 +65,7 @@ template ever grows complex.
 - `src/renderer/src/components/PdfExportModal.tsx`
 
 **Modified:**
+
 - `src/main/ipc.ts` — three new handlers: `pdf:export`, `logo:set`, `logo:clear`
 - `src/preload/index.ts` + `index.d.ts` — `window.api.pdf.*` and `window.api.logo.*` namespaces
 - `src/shared/types.ts` — `Settings` extended with `pdf_logo_path`, `pdf_sender_address`, `pdf_tax_id`, `pdf_accent_color`, `pdf_footer_text`, `pdf_round_minutes` (no migration needed; Migration 004 from PR A already seeded them and `settings:getAll` returns the full key-value bag)
@@ -97,8 +99,8 @@ template ever grows complex.
 ## Deferred to PR D (intentionally out of scope)
 
 - **Icon assets** from `timetrack_icon_glass_final.svg` → `build/icon.png`
-  + `resources/tray-running.png` + `resources/tray-stopped.png` (the SVG is
-  in the working tree but not committed in this PR)
+  - `resources/tray-running.png` + `resources/tray-stopped.png` (the SVG is
+    in the working tree but not committed in this PR)
 - **Live PDF preview iframe** in the Settings → PDF-Vorlage section
 - **Drag-and-drop logo upload** (currently file-picker only)
 - **Entry-count preview** in the export modal ("X Einträge, Y Stunden")
