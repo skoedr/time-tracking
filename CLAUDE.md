@@ -19,6 +19,11 @@ und **kein** Kommando meldet einen Fehler. Der Marker lügt.
   weiterzumachen.
 - Ist die Binary doch einmal falsch: `pnpm exec electron-rebuild -f -w better-sqlite3`.
   Das `-f` ist zwingend — ohne erzwungenen Rebuild gewinnt der lügende Marker.
+- Dasselbe gilt in der CI, und zwar nicht theoretisch: pnpm hebt native
+  Build-Ergebnisse in seinem Store über Läufe hinweg auf, weshalb dort ein
+  vergiftetes Paar aus Node-Binary und Electron-Marker überleben kann. Die
+  Workflows erzwingen den Rebuild deshalb direkt nach dem Install. Diesen Schritt
+  bitte nicht als überflüssig wegkürzen.
 
 Hintergrund und Fehlersuche: CONTRIBUTING.md → „Tests und die native SQLite-ABI"
 ([#151](https://github.com/skoedr/time-tracking/issues/151)).
