@@ -142,12 +142,12 @@ export function ExportModal(props: Props): React.JSX.Element {
 
   // Sync prefill props if they change after mount (e.g. CalendarView quick-filters).
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- #142: React-Compiler-Regel, Aufarbeitung im Folge-PR
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- #142: dauerhaft — unerreichbar: CalendarView remountet per key; Prop hat zudem keinen Aufrufer
     if (prefilledClientId != null) setClientId(prefilledClientId)
   }, [prefilledClientId])
   useEffect(() => {
     if (prefilledRange) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- #142: React-Compiler-Regel, Aufarbeitung im Folge-PR
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- #142: dauerhaft — unerreichbar: CalendarView remountet per key statt neu zu rendern
       setFromIso(prefilledRange.fromIso)
       setToIso(prefilledRange.toIso)
     }
@@ -155,14 +155,14 @@ export function ExportModal(props: Props): React.JSX.Element {
 
   // v1.13 #118: grouping by project is meaningless with a single project filter.
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- #142: React-Compiler-Regel, Aufarbeitung im Folge-PR
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- #142: dauerhaft — Ableitung würde Dropdown-Anzeige und tatsächlichen Export auseinanderlaufen lassen
     if (projectId != null && groupBy === 'project') setGroupBy('none')
   }, [projectId, groupBy])
 
   // Load active projects when a client is selected; reset project filter on change.
   useEffect(() => {
     if (clientId == null) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- #142: React-Compiler-Regel, Aufarbeitung im Folge-PR
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- #142: dauerhaft — Teilfix möglich, der asynchrone Zweig bleibt Effect
       setProjects([])
       setProjectId(null)
       return

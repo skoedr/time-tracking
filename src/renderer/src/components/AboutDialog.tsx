@@ -39,7 +39,7 @@ export function AboutDialog({ open, onClose, version }: Props): React.JSX.Elemen
 
   useEffect(() => {
     if (!open || licenses.length > 0) return
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- #142: React-Compiler-Regel, Aufarbeitung im Folge-PR
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- #142: dauerhaft — asynchroner IPC-Abruf der Lizenzliste
     setLoading(true)
     void window.api.app.getLicenses().then((res) => {
       if (res.ok) setLicenses(res.data)

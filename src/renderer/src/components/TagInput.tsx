@@ -69,7 +69,7 @@ export function TagInput({
 
   // Load master registry on mount
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- #142: React-Compiler-Regel, Aufarbeitung im Folge-PR
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- #142: dauerhaft — asynchroner Abruf beim Mount
     void reloadKnown()
   }, [reloadKnown])
 

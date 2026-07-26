@@ -20,7 +20,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }): Reac
 
   // Sync theme mode once settings are loaded.
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- #142: React-Compiler-Regel, Aufarbeitung im Folge-PR
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- #142: dauerhaft — ruft rohes window.api.settings.set, und settings:set sendet kein Push-Update — lokaler State ist die einzige Stelle, die von der Änderung erfährt
     if (themeMode) setMode((themeMode as ThemeMode) ?? 'system')
   }, [themeMode])
 

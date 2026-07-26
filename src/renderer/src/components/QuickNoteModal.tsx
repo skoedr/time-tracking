@@ -15,7 +15,7 @@ export function QuickNoteModal({ entry, onDone }: Props): React.JSX.Element {
   const [text, setText] = useState('')
   const [remaining, setRemaining] = useState(TIMEOUT_S)
   const inputRef = useRef<HTMLInputElement>(null)
-  // eslint-disable-next-line react-hooks/purity -- #142: React-Compiler-Regel, Aufarbeitung im Folge-PR
+  // eslint-disable-next-line react-hooks/purity -- #142: dauerhaft — useRef-Initialwert, Umbau ohne beobachtbaren Effekt
   const deadlineRef = useRef(Date.now() + TIMEOUT_S * 1000)
   const bumpVersion = useEntriesStore((s) => s.bumpVersion)
 
