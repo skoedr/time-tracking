@@ -17,6 +17,12 @@
  * The server entry lives next to the app bundle (`out/mcp/mcp/server.js`
  * relative to `app.getAppPath()`), which is inside `app.asar` in a packaged
  * install — Electron's fs patch reads it transparently.
+ *
+ * Hardening caveat: this design depends on the Electron **RunAsNode** fuse
+ * staying enabled. The project sets no fuses today, so it works. If fuses are
+ * ever enabled (see the note in `electron-builder.yml`), `runAsNode` must stay
+ * on — otherwise `ELECTRON_RUN_AS_NODE=1` is ignored and the MCP server fails
+ * to launch with no visible error.
  */
 import { existsSync } from 'fs'
 import { join } from 'path'

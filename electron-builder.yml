@@ -38,6 +38,12 @@ nsis:
   uninstallDisplayName: ${productName}
   createDesktopShortcut: always
   createStartMenuShortcut: true
+# Electron fuses hardening — currently NOT configured (no `electronFuses:`
+# block, no @electron/fuses afterPack hook). If you ever add one to harden the
+# packaged binary, the RunAsNode fuse MUST stay enabled: since v1.14.2 the
+# bundled MCP server runs the app binary in Node mode (ELECTRON_RUN_AS_NODE=1,
+# see src/main/mcpLaunch.ts). Disabling RunAsNode silently breaks the MCP
+# integration — the server would refuse to launch with no visible error.
 npmRebuild: false
 publish:
   provider: github

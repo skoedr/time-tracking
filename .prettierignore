@@ -4,3 +4,8 @@ pnpm-lock.yaml
 LICENSE.md
 tsconfig.json
 tsconfig.*.json
+
+# Generiert von scripts/generate-licenses.mjs und per CI gegen den Generator
+# geprüft (#144). Prettier hängt eine abschließende Newline an, die der
+# Generator nicht schreibt — das Gate wäre danach dauerhaft rot.
+resources/licenses.json
