@@ -137,7 +137,9 @@ describe('migration SQL execution', () => {
       { key: 'pdf_sender_address', value: '' },
       { key: 'pdf_tax_id', value: '' },
       // Migration 011 — Light/Dark/System theme (v1.8 #76)
-      { key: 'theme_mode', value: 'system' }
+      { key: 'theme_mode', value: 'system' },
+      // Migration 020 — Outbound-Webhooks (v1.15 #134)
+      { key: 'webhook_targets', value: '[]' }
       // rounding_mode and rounding_minutes removed by Migration 014
     ])
   })

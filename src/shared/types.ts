@@ -197,6 +197,9 @@ export interface Settings {
   // v1.14 #127 — MCP write-mode confirmation (seeded by migration 019):
   // 'per-write' (default) | 'session' | 'silent'.
   mcp_write_confirm_mode?: string
+  // v1.15 #134 — Outbound-webhook targets as a JSON blob (see shared/webhooks.ts).
+  // One settings row like export_prefs; seeded '[]' by migration 020.
+  webhook_targets?: string
 }
 
 export interface CreateClientInput {

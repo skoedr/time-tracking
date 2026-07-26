@@ -22,6 +22,8 @@ import { getDbPath } from './db'
 import { createBackup } from './backup'
 import { auditWrite } from './mcpAudit'
 import { handleRequest, type BridgeCtx, type BridgeRequest } from './mcpBridgeCore'
+import { emitWebhooks, eventForWriteOp } from './webhooks'
+import { logWebhookDelivery } from './webhookLog'
 import { socketPathForDir, tokenPathForDir } from '../mcp/socketPath'
 
 export interface BridgeDeps {
@@ -142,7 +144,10 @@ function buildCtx(): BridgeCtx {
     onChange: () => {
       deps!.broadcast('data:changed')
       deps!.refreshTray()
-    }
+    },
+    // Outbound webhooks for writes coming through the MCP bridge (#134).
+    emitWebhook: (op, entry) =>
+      emitWebhooks(deps!.getDb(), eventForWriteOp(op), entry, { log: logWebhookDelivery })
   }
 }
 

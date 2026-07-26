@@ -65,6 +65,12 @@ export interface BridgeCtx {
   audit: (entry: McpAuditEntry) => void
   /** Broadcast + tray refresh after a committed change. */
   onChange: () => void
+  /**
+   * Fire outbound webhooks for the committed op (#134). Fire-and-forget, wired
+   * in mcpBridge.ts; optional so tests can omit it. Kept out of this core so
+   * the module stays Electron- and network-free.
+   */
+  emitWebhook?: (op: WriteOp, entry: Entry | null) => void
 }
 
 function err(code: BridgeErrorCode, error: string): BridgeResponse {
@@ -291,5 +297,7 @@ export async function handleRequest(ctx: BridgeCtx, req: BridgeRequest): Promise
 
   ctx.onChange()
   ctx.audit(plan.audit(result.data))
+  // Same emission point as the IPC handlers, one level up from the mutation.
+  ctx.emitWebhook?.(req.op as WriteOp, result.data)
   return { ok: true, data: result.data }
 }
