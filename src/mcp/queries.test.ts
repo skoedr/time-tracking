@@ -2,12 +2,11 @@
  * Unit tests for the read-only MCP query layer.
  *
  * Same approach as ipc.test.ts: seed an in-memory DB with the real migrations
- * and exercise the query functions directly. Skips gracefully when
- * better-sqlite3 cannot load under the current Node ABI.
+ * and exercise the query functions directly.
  */
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest'
 import type Database from 'better-sqlite3'
-import { migrations } from '../main/migrations'
+import { applyMigrations, loadSqlite, type DatabaseCtor } from '../test/sqlite'
 import {
   durationSeconds,
   monthWindow,
@@ -25,37 +24,15 @@ import { resolvePrivacy, type PrivacyConfig } from './privacy'
 const HIDE: PrivacyConfig = { exposeRates: false, exposePrivateNotes: false }
 const SHOW: PrivacyConfig = { exposeRates: true, exposePrivateNotes: true }
 
-type DatabaseCtor = new (path: string) => Database.Database
-let DatabaseImpl: DatabaseCtor | null = null
+let DatabaseImpl: DatabaseCtor
 
 beforeAll(async () => {
-  try {
-    const mod = await import('better-sqlite3')
-    const Ctor = mod.default as unknown as DatabaseCtor
-    const probe = new Ctor(':memory:')
-    probe.close()
-    DatabaseImpl = Ctor
-  } catch {
-    DatabaseImpl = null
-  }
+  DatabaseImpl = await loadSqlite()
 })
 
 function seed(db: Database.Database): void {
   db.pragma('foreign_keys = ON')
-  db.exec(
-    `CREATE TABLE schema_version (
-       version INTEGER PRIMARY KEY,
-       name TEXT NOT NULL,
-       applied_at TEXT NOT NULL DEFAULT (datetime('now'))
-     )`
-  )
-  for (const m of migrations) {
-    const tx = db.transaction(() => {
-      db.exec(m.up)
-      db.prepare('INSERT INTO schema_version (version, name) VALUES (?, ?)').run(m.version, m.name)
-    })
-    tx()
-  }
+  applyMigrations(db)
 
   // Clients: 1 active (with rate), 2 archived.
   db.prepare(
@@ -164,11 +141,7 @@ describe('query layer', () => {
   let db: Database.Database
   let sdb: SqliteDb
 
-  beforeEach((ctx) => {
-    if (!DatabaseImpl) {
-      ctx.skip()
-      return
-    }
+  beforeEach(() => {
     db = new DatabaseImpl(':memory:')
     seed(db)
     sdb = db

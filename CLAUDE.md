@@ -1,3 +1,33 @@
+## Native SQLite-ABI — eine Regel, die du nicht umgehen darfst
+
+**Führe niemals `pnpm rebuild better-sqlite3` aus.** Auch nicht „nur kurz für die Tests",
+auch nicht, wenn ein Testlauf `ERR_DLOPEN_FAILED` oder `NODE_MODULE_VERSION` meldet.
+
+`better-sqlite3` wird gegen die **Electron**-ABI gebaut, weil die App das zur Laufzeit
+braucht. `pnpm rebuild` ersetzt die Binary durch einen Node-ABI-Build und lässt dabei den
+Cache-Marker `node_modules/better-sqlite3/build/Release/.forge-meta` unverändert. Da
+`electron-builder install-app-deps` nur diesen Marker liest, wird jedes spätere
+`pnpm install` zum stillen No-op: die App kann ihre eigene Datenbank nicht mehr öffnen,
+und **kein** Kommando meldet einen Fehler. Der Marker lügt.
+
+- Tests laufen mit `pnpm test`. Das startet Vitest über `scripts/run-vitest.mjs` auf der
+  Electron-Binary im Node-Modus — dieselbe Lösung wie beim MCP-Server
+  (`src/main/mcpLaunch.ts`). Ein grüner Lauf ist **596 passed, 0 skipped**.
+- `pnpm exec vitest` direkt aufzurufen kann nicht funktionieren und scheitert mit einer
+  Anleitung. Das ist kein Umgebungsproblem, das du „reparieren" sollst.
+- Dreistellige Skip-Zahlen bedeuten kaputte Umgebung, nie „grün". Melde das, statt
+  weiterzumachen.
+- Ist die Binary doch einmal falsch: `pnpm exec electron-rebuild -f -w better-sqlite3`.
+  Das `-f` ist zwingend — ohne erzwungenen Rebuild gewinnt der lügende Marker.
+- Dasselbe gilt in der CI, und zwar nicht theoretisch: pnpm hebt native
+  Build-Ergebnisse in seinem Store über Läufe hinweg auf, weshalb dort ein
+  vergiftetes Paar aus Node-Binary und Electron-Marker überleben kann. Die
+  Workflows erzwingen den Rebuild deshalb direkt nach dem Install. Diesen Schritt
+  bitte nicht als überflüssig wegkürzen.
+
+Hintergrund und Fehlersuche: CONTRIBUTING.md → „Tests und die native SQLite-ABI"
+([#151](https://github.com/skoedr/time-tracking/issues/151)).
+
 ## Skill routing
 
 When the user's request matches an available skill, invoke it via the Skill tool. The

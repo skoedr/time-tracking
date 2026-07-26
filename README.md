@@ -74,6 +74,19 @@ pnpm test
 pnpm build:win
 ```
 
+> **Warum `pnpm test` und nicht `vitest`:** `better-sqlite3` wird gegen die
+> **Electron**-ABI gebaut (`postinstall` → `electron-builder install-app-deps`), weil
+> die App das zur Laufzeit braucht. Ein System-Node kann diese Binary nicht laden.
+> `pnpm test` startet Vitest deshalb über `scripts/run-vitest.mjs` auf der
+> Electron-Binary im Node-Modus (`ELECTRON_RUN_AS_NODE=1`) — dieselbe Antwort wie
+> beim MCP-Server, siehe unten. Damit laufen lokal und in CI dieselben Tests, ohne
+> zweite Binärkopie und ohne Rebuild-Hin-und-Her, das `pnpm dev` zerlegen würde.
+>
+> `pnpm exec vitest run` **direkt** aufzurufen schlägt entsprechend fehl — mit einem
+> Hinweis, der auf `pnpm test` zeigt. Das ist Absicht: früher haben sich die
+> DB-Tests in dem Fall stillschweigend übersprungen und ein Drittel der Abdeckung
+> verschwand hinter einer grünen Zusammenfassung ([#151](https://github.com/skoedr/time-tracking/issues/151)).
+
 ## MCP-Integration
 
 TimeTrack bringt einen **[MCP](https://modelcontextprotocol.io)-Server** mit, damit

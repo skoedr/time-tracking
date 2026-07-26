@@ -13,23 +13,15 @@ import { join } from 'path'
 import type Database from 'better-sqlite3'
 import { migrations } from './migrations'
 import { normaliseBudgetMinutes } from './ipc'
+import { applyMigrations, loadSqlite, type DatabaseCtor } from '../test/sqlite'
 
 const MAX_DESCRIPTION_LEN = 500
 const MAX_DURATION_SECONDS = 24 * 3600
 
-type DatabaseCtor = new (path: string) => Database.Database
-let DatabaseImpl: DatabaseCtor | null = null
+let DatabaseImpl: DatabaseCtor
 
 beforeAll(async () => {
-  try {
-    const mod = await import('better-sqlite3')
-    const Ctor = mod.default as unknown as DatabaseCtor
-    const probe = new Ctor(':memory:')
-    probe.close()
-    DatabaseImpl = Ctor
-  } catch {
-    DatabaseImpl = null
-  }
+  DatabaseImpl = await loadSqlite()
 })
 
 interface ManualInput {
@@ -85,31 +77,11 @@ describe('entries:create / entries:update validation contract', () => {
     return d.toISOString()
   }
 
-  beforeEach((ctx) => {
-    if (!DatabaseImpl) {
-      ctx.skip()
-      return
-    }
+  beforeEach(() => {
     tmpDir = mkdtempSync(join(tmpdir(), 'tt-ipc-'))
     db = new DatabaseImpl(join(tmpDir, 'test.sqlite'))
     db.pragma('foreign_keys = ON')
-    db.exec(
-      `CREATE TABLE schema_version (
-         version INTEGER PRIMARY KEY,
-         name TEXT NOT NULL,
-         applied_at TEXT NOT NULL DEFAULT (datetime('now'))
-       )`
-    )
-    for (const m of migrations) {
-      const tx = db.transaction(() => {
-        db.exec(m.up)
-        db.prepare('INSERT INTO schema_version (version, name) VALUES (?, ?)').run(
-          m.version,
-          m.name
-        )
-      })
-      tx()
-    }
+    applyMigrations(db)
     db.prepare(`INSERT INTO clients (id, name) VALUES (1, 'Acme')`).run()
     db.prepare(`INSERT INTO clients (id, name) VALUES (2, 'Other')`).run()
   })
@@ -413,31 +385,11 @@ describe('reference field — insertEntrySegments round-trip', () => {
     return d.toISOString()
   }
 
-  beforeEach((ctx) => {
-    if (!DatabaseImpl) {
-      ctx.skip()
-      return
-    }
+  beforeEach(() => {
     tmpDir = mkdtempSync(join(tmpdir(), 'tt-ref-'))
     db = new DatabaseImpl(join(tmpDir, 'test.sqlite'))
     db.pragma('foreign_keys = ON')
-    db.exec(
-      `CREATE TABLE schema_version (
-         version INTEGER PRIMARY KEY,
-         name TEXT NOT NULL,
-         applied_at TEXT NOT NULL DEFAULT (datetime('now'))
-       )`
-    )
-    for (const m of migrations) {
-      const tx = db.transaction(() => {
-        db.exec(m.up)
-        db.prepare('INSERT INTO schema_version (version, name) VALUES (?, ?)').run(
-          m.version,
-          m.name
-        )
-      })
-      tx()
-    }
+    applyMigrations(db)
     db.prepare(`INSERT INTO clients (id, name) VALUES (1, 'Acme')`).run()
   })
 
@@ -504,31 +456,11 @@ describe('billable + private_note — DB round-trip', () => {
     return d.toISOString()
   }
 
-  beforeEach((ctx) => {
-    if (!DatabaseImpl) {
-      ctx.skip()
-      return
-    }
+  beforeEach(() => {
     tmpDir = mkdtempSync(join(tmpdir(), 'tt-billable-'))
     db = new DatabaseImpl(join(tmpDir, 'test.sqlite'))
     db.pragma('foreign_keys = ON')
-    db.exec(
-      `CREATE TABLE schema_version (
-         version INTEGER PRIMARY KEY,
-         name TEXT NOT NULL,
-         applied_at TEXT NOT NULL DEFAULT (datetime('now'))
-       )`
-    )
-    for (const m of migrations) {
-      const tx = db.transaction(() => {
-        db.exec(m.up)
-        db.prepare('INSERT INTO schema_version (version, name) VALUES (?, ?)').run(
-          m.version,
-          m.name
-        )
-      })
-      tx()
-    }
+    applyMigrations(db)
     db.prepare(`INSERT INTO clients (id, name) VALUES (1, 'Acme')`).run()
   })
 
@@ -640,31 +572,11 @@ describe('projects — validateProject', () => {
   let tmpDir: string
   let db: Database.Database
 
-  beforeEach((ctx) => {
-    if (!DatabaseImpl) {
-      ctx.skip()
-      return
-    }
+  beforeEach(() => {
     tmpDir = mkdtempSync(join(tmpdir(), 'tt-projects-'))
     db = new DatabaseImpl(join(tmpDir, 'test.sqlite'))
     db.pragma('foreign_keys = ON')
-    db.exec(
-      `CREATE TABLE schema_version (
-         version INTEGER PRIMARY KEY,
-         name TEXT NOT NULL,
-         applied_at TEXT NOT NULL DEFAULT (datetime('now'))
-       )`
-    )
-    for (const m of migrations) {
-      const tx = db.transaction(() => {
-        db.exec(m.up)
-        db.prepare('INSERT INTO schema_version (version, name) VALUES (?, ?)').run(
-          m.version,
-          m.name
-        )
-      })
-      tx()
-    }
+    applyMigrations(db)
     db.prepare(`INSERT INTO clients (id, name) VALUES (1, 'Acme')`).run()
     db.prepare(`INSERT INTO clients (id, name) VALUES (2, 'Other')`).run()
   })
@@ -720,31 +632,11 @@ describe('projects — SQL contract tests', () => {
   let tmpDir: string
   let db: Database.Database
 
-  beforeEach((ctx) => {
-    if (!DatabaseImpl) {
-      ctx.skip()
-      return
-    }
+  beforeEach(() => {
     tmpDir = mkdtempSync(join(tmpdir(), 'tt-projects-sql-'))
     db = new DatabaseImpl(join(tmpDir, 'test.sqlite'))
     db.pragma('foreign_keys = ON')
-    db.exec(
-      `CREATE TABLE schema_version (
-         version INTEGER PRIMARY KEY,
-         name TEXT NOT NULL,
-         applied_at TEXT NOT NULL DEFAULT (datetime('now'))
-       )`
-    )
-    for (const m of migrations) {
-      const tx = db.transaction(() => {
-        db.exec(m.up)
-        db.prepare('INSERT INTO schema_version (version, name) VALUES (?, ?)').run(
-          m.version,
-          m.name
-        )
-      })
-      tx()
-    }
+    applyMigrations(db)
     db.prepare(`INSERT INTO clients (id, name) VALUES (1, 'Acme')`).run()
     db.prepare(`INSERT INTO clients (id, name) VALUES (2, 'Other')`).run()
   })
@@ -900,8 +792,7 @@ describe('dashboard:summary — duration precision', () => {
   let db: Database.Database | null = null
   let tmpDir: string
 
-  beforeAll(async () => {
-    if (!DatabaseImpl) return
+  beforeAll(() => {
     tmpDir = mkdtempSync(join(tmpdir(), 'tt-duration-'))
     db = new DatabaseImpl(join(tmpDir, 'test.sqlite'))
     for (const m of migrations) {
@@ -914,7 +805,7 @@ describe('dashboard:summary — duration precision', () => {
     db.prepare('DELETE FROM entries').run()
   })
 
-  it.skipIf(!DatabaseImpl)('returns exactly 3600 seconds for a 1-hour entry (not 3599)', () => {
+  it('returns exactly 3600 seconds for a 1-hour entry (not 3599)', () => {
     const d = db!
     const clientId = (
       d
@@ -985,30 +876,11 @@ describe('projects status/active sync', () => {
   let tmpDir2: string
   let db2: Database.Database
 
-  beforeEach((ctx) => {
-    if (!DatabaseImpl) {
-      ctx.skip()
-      return
-    }
+  beforeEach(() => {
     tmpDir2 = mkdtempSync(join(tmpdir(), 'tt-status-'))
     db2 = new DatabaseImpl(join(tmpDir2, 'test.sqlite'))
     db2.pragma('foreign_keys = ON')
-    db2.exec(
-      `CREATE TABLE schema_version (
-           version INTEGER PRIMARY KEY,
-           name TEXT NOT NULL,
-           applied_at TEXT NOT NULL DEFAULT (datetime('now'))
-         )`
-    )
-    for (const m of migrations) {
-      const tx = db2.transaction(() => {
-        db2.exec(m.up)
-        db2
-          .prepare('INSERT INTO schema_version (version, name) VALUES (?, ?)')
-          .run(m.version, m.name)
-      })
-      tx()
-    }
+    applyMigrations(db2)
     db2.prepare(`INSERT INTO clients (id, name) VALUES (1, 'Test')`).run()
     db2
       .prepare(`INSERT INTO projects (id, client_id, name, status) VALUES (1, 1, 'App', 'active')`)

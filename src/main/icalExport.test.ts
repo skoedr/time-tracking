@@ -17,7 +17,7 @@ import { mkdtempSync, rmSync, readFileSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
 import type Database from 'better-sqlite3'
-import { migrations } from './migrations'
+import { applyMigrations, loadSqlite, type DatabaseCtor } from '../test/sqlite'
 
 // Save-Dialog mocken: liefert einen Pfad in einem Temp-Verzeichnis.
 let saveTargetPath: string
@@ -27,19 +27,10 @@ vi.mock('electron', () => ({
   }
 }))
 
-type DatabaseCtor = new (path: string) => Database.Database
-let DatabaseImpl: DatabaseCtor | null = null
+let DatabaseImpl: DatabaseCtor
 
 beforeAll(async () => {
-  try {
-    const mod = await import('better-sqlite3')
-    const Ctor = mod.default as unknown as DatabaseCtor
-    const probe = new Ctor(':memory:')
-    probe.close()
-    DatabaseImpl = Ctor
-  } catch {
-    DatabaseImpl = null
-  }
+  DatabaseImpl = await loadSqlite()
 })
 
 let tmpDir: string
@@ -53,15 +44,7 @@ afterEach(() => {
 
 function seed(db: Database.Database): void {
   db.pragma('foreign_keys = ON')
-  db.exec(
-    `CREATE TABLE schema_version (version INTEGER PRIMARY KEY, name TEXT NOT NULL, applied_at TEXT NOT NULL DEFAULT (datetime('now')))`
-  )
-  for (const m of migrations) {
-    db.transaction(() => {
-      db.exec(m.up)
-      db.prepare('INSERT INTO schema_version (version, name) VALUES (?, ?)').run(m.version, m.name)
-    })()
-  }
+  applyMigrations(db)
   // Kunde mit Honorar (darf NIE in den Feed) + zweiter Kunde für den Filtertest.
   db.prepare(
     `INSERT INTO clients (id, name, color, active, rate_cent) VALUES (1,'Acme','#111',1,7500)`
@@ -169,11 +152,7 @@ async function run(db: Database.Database, showClientName = true): Promise<string
 
 describe('handleIcalExport', () => {
   let db: Database.Database
-  beforeEach((ctx) => {
-    if (!DatabaseImpl) {
-      ctx.skip()
-      return
-    }
+  beforeEach(() => {
     db = new DatabaseImpl(':memory:')
     seed(db)
   })

@@ -1,47 +1,28 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import Database from 'better-sqlite3'
+import { describe, it, expect, beforeAll, beforeEach, afterEach } from 'vitest'
+import type Database from 'better-sqlite3'
 import { tmpdir } from 'os'
 import { join } from 'path'
 import { mkdirSync, rmSync } from 'fs'
-import { migrations } from './migrations/index'
 import { getAllTagsWithCount, createTag, renameTag, mergeTag, deleteTag } from './tagHandlers'
+import { applyMigrations, loadSqlite, type DatabaseCtor } from '../test/sqlite'
 
-// Skip if the native module isn't available (CI without electron rebuild)
-let available = true
-try {
-  new Database(':memory:').close()
-} catch {
-  available = false
-}
+let DatabaseImpl: DatabaseCtor
 
-function applyAll(db: Database.Database): void {
-  db.exec(
-    `CREATE TABLE IF NOT EXISTS schema_version (
-      version INTEGER PRIMARY KEY,
-      name TEXT NOT NULL,
-      applied_at TEXT NOT NULL DEFAULT (datetime('now'))
-    );`
-  )
-  for (const m of migrations) {
-    const tx = db.transaction(() => {
-      db.exec(m.up)
-      db.prepare('INSERT INTO schema_version (version, name) VALUES (?, ?)').run(m.version, m.name)
-    })
-    tx()
-  }
-}
+beforeAll(async () => {
+  DatabaseImpl = await loadSqlite()
+})
 
-describe.skipIf(!available)('tagHandlers', () => {
+describe('tagHandlers', () => {
   let tmpDir: string
   let db: Database.Database
 
   beforeEach(() => {
     tmpDir = join(tmpdir(), `tag-test-${Date.now()}-${Math.random().toString(36).slice(2)}`)
     mkdirSync(tmpDir, { recursive: true })
-    db = new Database(join(tmpDir, 'test.db'))
+    db = new DatabaseImpl(join(tmpDir, 'test.db'))
     db.pragma('journal_mode = WAL')
     db.pragma('foreign_keys = ON')
-    applyAll(db)
+    applyMigrations(db)
     db.prepare(`INSERT INTO clients (id, name) VALUES (1, 'Test Client')`).run()
   })
 
