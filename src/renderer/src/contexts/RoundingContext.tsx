@@ -30,6 +30,7 @@ export function RoundingProvider({ children }: { children: React.ReactNode }): R
   // Sync from the settings store once loaded (and whenever it changes).
   useEffect(() => {
     const v = parseInt(pdfRoundMinutes ?? '0', 10)
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- #142: React-Compiler-Regel, Aufarbeitung im Folge-PR
     setRoundMinutesState(Number.isFinite(v) && v > 0 ? v : 0)
   }, [pdfRoundMinutes])
 
@@ -46,6 +47,7 @@ export function RoundingProvider({ children }: { children: React.ReactNode }): R
 }
 
 /** Returns `{ roundMinutes, setRoundMinutes }`. Must be inside RoundingProvider. */
+// eslint-disable-next-line react-refresh/only-export-components -- Provider + Hook bewusst im selben Modul; Fast-Refresh-Split ohne Laufzeitnutzen.
 export function useRounding(): RoundingCtx {
   return useContext(RoundingContext)
 }

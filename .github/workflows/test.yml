@@ -44,6 +44,12 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
+      # #143: ESLint als CI-Gate. --max-warnings bewusst offen gelassen, solange
+      # die verbleibenden Warnungen react-hooks-Hinweise sind; Fehler lassen den
+      # Job ohnehin scheitern.
+      - name: Lint
+        run: pnpm lint
+
       - name: Rebuild native modules for Node (test runtime)
         run: pnpm rebuild better-sqlite3
 

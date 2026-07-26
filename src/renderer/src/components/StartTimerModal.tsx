@@ -31,6 +31,7 @@ export function StartTimerModal({ open, onClose }: StartTimerModalProps): React.
   // Load projects when client selection changes
   useEffect(() => {
     if (!selectedClientId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- #142: React-Compiler-Regel, Aufarbeitung im Folge-PR
       setProjects([])
       setSelectedProjectId(null)
       return

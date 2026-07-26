@@ -149,6 +149,7 @@ export default function AuswertungView(): React.JSX.Element {
   }, [])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- #142: React-Compiler-Regel, Aufarbeitung im Folge-PR
     void load(year, month)
   }, [year, month, load])
 

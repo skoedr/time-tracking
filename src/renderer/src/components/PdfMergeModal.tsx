@@ -82,6 +82,7 @@ export function PdfMergeModal({ open, onClose }: Props): React.JSX.Element {
   // Pre-fill from localStorage on open. Any failure = treat path as gone.
   useEffect(() => {
     if (!open) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- #142: React-Compiler-Regel, Aufarbeitung im Folge-PR
     setStatusMsg(null)
     setStatusKind('info')
     setBusy(false)

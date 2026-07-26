@@ -10,7 +10,13 @@ interface Props {
   onMarkPause: () => void
 }
 
-export function IdleModal({ idleSince, idleSeconds, onKeep, onStopAtIdle, onMarkPause }: Props) {
+export function IdleModal({
+  idleSince,
+  idleSeconds,
+  onKeep,
+  onStopAtIdle,
+  onMarkPause
+}: Props): React.JSX.Element {
   const t = useT()
   useEffect(() => {
     const handler = (e: KeyboardEvent): void => {

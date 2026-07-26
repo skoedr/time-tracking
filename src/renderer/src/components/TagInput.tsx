@@ -69,6 +69,7 @@ export function TagInput({
 
   // Load master registry on mount
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- #142: React-Compiler-Regel, Aufarbeitung im Folge-PR
     void reloadKnown()
   }, [reloadKnown])
 
@@ -83,6 +84,7 @@ export function TagInput({
     }
     // Append "create" sentinel if typed text is non-empty and not an exact match
     if (q && !allKnown.includes(q) && !tags.includes(q)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- #142: React-Compiler-Regel, Aufarbeitung im Folge-PR
       setSuggestions([...matches, CREATE_SENTINEL])
     } else {
       setSuggestions(matches)

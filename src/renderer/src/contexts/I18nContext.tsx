@@ -36,6 +36,7 @@ export function I18nProvider({ children }: { children: React.ReactNode }): React
 
   // Sync locale once settings are loaded.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- #142: React-Compiler-Regel, Aufarbeitung im Folge-PR
     if (language === 'en') setLocaleState('en')
   }, [language])
 
@@ -55,6 +56,7 @@ export function I18nProvider({ children }: { children: React.ReactNode }): React
  * Returns the `t()` translation function bound to the current locale.
  * Must be called within an `I18nProvider`.
  */
+// eslint-disable-next-line react-refresh/only-export-components -- Provider und Hooks liegen bewusst im selben Modul; ein Fast-Refresh-Split würde nur die ~26 Importpfade streuen, ohne Laufzeitnutzen.
 export function useT(): TFunction {
   const ctx = useContext(I18nContext)
   if (!ctx) throw new Error('useT must be used within an I18nProvider')
@@ -65,6 +67,7 @@ export function useT(): TFunction {
  * Returns the current locale and a setter that persists the change.
  * Must be called within an `I18nProvider`.
  */
+// eslint-disable-next-line react-refresh/only-export-components -- siehe useT: Provider + Hooks bewusst im selben Modul.
 export function useLocale(): { locale: Locale; setLocale: (l: Locale) => Promise<void> } {
   const ctx = useContext(I18nContext)
   if (!ctx) throw new Error('useLocale must be used within an I18nProvider')

@@ -20,6 +20,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }): Reac
 
   // Sync theme mode once settings are loaded.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- #142: React-Compiler-Regel, Aufarbeitung im Folge-PR
     if (themeMode) setMode((themeMode as ThemeMode) ?? 'system')
   }, [themeMode])
 
@@ -53,6 +54,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }): Reac
   )
 }
 
+// eslint-disable-next-line react-refresh/only-export-components -- Provider + Hook bewusst im selben Modul; Fast-Refresh-Split ohne Laufzeitnutzen.
 export function useTheme(): ThemeContextValue {
   return useContext(ThemeContext)
 }

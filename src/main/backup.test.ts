@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { mkdtempSync, rmSync, writeFileSync, existsSync, statSync } from 'fs'
+import { mkdtempSync, rmSync, writeFileSync, existsSync, statSync, readFileSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
 
@@ -139,10 +139,10 @@ describe('restoreBackup', () => {
     expect(existsSync(safetyBackupPath)).toBe(true)
     expect(safetyBackupPath).toContain('backup-pre-restore-')
     // Current DB now holds backup contents
-    const current = require('fs').readFileSync(currentDb, 'utf-8')
+    const current = readFileSync(currentDb, 'utf-8')
     expect(current).toBe('BACKUP')
     // Safety copy holds the prior contents
-    const safety = require('fs').readFileSync(safetyBackupPath, 'utf-8')
+    const safety = readFileSync(safetyBackupPath, 'utf-8')
     expect(safety).toBe('CURRENT')
     // Safety is listed (mtime-based, not classified as daily)
     const list = listBackups()
