@@ -237,14 +237,46 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          set -e
+          set -euo pipefail
           TAG="${{ steps.tag.outputs.name }}"
+          VERSION="${TAG#v}"
+          NOTES_FILE="$RUNNER_TEMP/release-notes.md"
+
+          # #137: Build the release body from the matching CHANGELOG.md section
+          # — everything between the "## [VERSION]" heading and the next "## ["
+          # heading, with the heading line and surrounding blank lines trimmed.
+          awk -v head="## [$VERSION]" '
+            index($0, head) == 1 { capture = 1; next }
+            capture && index($0, "## [") == 1 { exit }
+            capture { buf[++n] = $0 }
+            END {
+              first = 0; last = 0
+              for (i = 1; i <= n; i++)
+                if (buf[i] ~ /[^[:space:]]/) { if (!first) first = i; last = i }
+              for (i = first; i <= last && first > 0; i++) print buf[i]
+            }
+          ' CHANGELOG.md > "$NOTES_FILE"
+
+          # The body must never be empty: if there is no matching CHANGELOG
+          # section, fall back to GitHub's auto-generated notes. We use the REST
+          # endpoint (not the `--generate-notes` flag) so the update path below
+          # — `gh release edit`, which has no `--generate-notes` — can reuse the
+          # exact same notes file.
+          if [ -s "$NOTES_FILE" ]; then
+            echo "Release notes: CHANGELOG.md section [$VERSION] ($(wc -l < "$NOTES_FILE") lines)."
+          else
+            echo "Release notes: no CHANGELOG.md section for [$VERSION] — using GitHub auto-generated notes."
+            gh api "repos/${{ github.repository }}/releases/generate-notes" \
+              -f tag_name="$TAG" --jq '.body' > "$NOTES_FILE"
+          fi
+
           if gh release view "$TAG" >/dev/null 2>&1; then
-            echo "Release $TAG already exists — uploading assets."
+            echo "Release $TAG already exists — updating body and re-uploading assets."
+            gh release edit "$TAG" --notes-file "$NOTES_FILE"
             gh release upload "$TAG" dist/* --clobber
           else
             gh release create "$TAG" \
               --title "TimeTrack $TAG" \
-              --generate-notes \
+              --notes-file "$NOTES_FILE" \
               dist/*
           fi
