@@ -36,7 +36,7 @@ export function I18nProvider({ children }: { children: React.ReactNode }): React
 
   // Sync locale once settings are loaded.
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- #142: dauerhaft — wie ThemeContext
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- #142: dauerhaft — ruft rohes window.api.settings.set, und settings:set sendet kein Push-Update — lokaler State ist die einzige Stelle, die von der Änderung erfährt (wie ThemeContext)
     if (language === 'en') setLocaleState('en')
   }, [language])
 
