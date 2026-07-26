@@ -4,9 +4,29 @@ All notable changes to TimeTrack are documented here.
 
 ## [Unreleased]
 
+## [1.15.0] — 2026-07-26
+
 ### Added
 
+- **Outbound-Webhooks (#134)** — TimeTrack schickt bei vier Ereignissen eine HTTP-Nachricht an frei konfigurierbare Ziele: `timer.started`, `timer.stopped`, `entry.created`, `entry.updated`, pro Ziel einzeln abhakbar. Damit hängt sich die Zeiterfassung an n8n, Make, Zapier, Home Assistant oder alles andere, was eine URL entgegennimmt — ohne dass TimeTrack für jedes Zielsystem eine eigene Integration braucht. Einzurichten unter **Einstellungen → Integrationen**. Ist ein Secret gesetzt, wird jede Nachricht per HMAC-SHA256 signiert (`X-TimeTrack-Signature`), sodass der Empfänger die Echtheit prüfen kann. Die Zustellung läuft im Hintergrund mit Timeout und drei Versuchen; ein nicht erreichbares Ziel kann den Timer weder blockieren noch scheitern lassen. **Privacy:** Stundensätze und interne Notizen bleiben draußen, solange sie nicht ausdrücklich freigegeben sind — dieselben Schalter wie beim MCP-Server. Jede Zustellung wird in `webhooks.log` protokolliert, ohne Secret und ohne Signatur.
+
 - **iCal-Export der erfassten Zeit (#135)** — Das Export-Fenster hat einen dritten Tab **iCal — Kalender**: erfasste Einträge eines Zeitraums lassen sich als `.ics`-Datei speichern und in jeden Kalender (Outlook, Apple Kalender, Google Kalender) importieren — so liegen die tatsächlich geleisteten Blöcke als zweite Ebene neben den geplanten Terminen. Jeder Eintrag wird ein Termin (Titel = Kunde, optional Projekt, plus Beschreibung; Tags als Kategorien). Start- und Endzeiten stehen in UTC (`…Z`), damit der Import über Sommer-/Winterzeit hinweg korrekt bleibt; über Mitternacht laufende Einträge erscheinen wie in CSV/PDF als zwei Termine. **Privacy:** Honorare und interne Notizen tauchen nie in der Datei auf. Ein Schalter im Export-Fenster stellt wahlweise den Kundennamen oder nur ein generisches „Fokus" in den Titel — im „Fokus"-Modus bleiben auch Beschreibung und Tags außen vor. Der abonnierbare `webcal://`-Feed aus dem Issue ist bewusst noch nicht dabei (Stufe 2, braucht einen lokalen Server).
+
+### Changed
+
+- **Release-Seiten haben wieder einen Text (#137)** — Bisher setzte der Release-Workflow keine Beschreibung, weshalb v1.14.0 mit leerer Release-Seite veröffentlicht wurde. Jetzt zieht er den passenden Abschnitt aus diesem CHANGELOG; findet er keinen, greifen GitHubs automatische Notizen, damit die Seite nie leer bleibt. Der Text von v1.14.0 wurde nachgetragen.
+
+- **Releases lassen sich per Knopfdruck auslösen (#138)** — Der `workflow_dispatch`-Pfad erwartete bisher einen bereits existierenden Tag und brach beim Checkout ab, wenn keiner da war. Jetzt wählt man einen Branch und einen Tag-Namen, und der Workflow legt den Tag selbst an. Vorher prüft er, dass die Tag-Version zur `package.json` passt, und bricht bei Abweichung ab, bevor gebaut wird — statt ein Release zu veröffentlichen, das der Auto-Updater nicht erkennt.
+
+### Fixed
+
+- **Die Lizenzübersicht kann nicht mehr still veralten (#144)** — `resources/licenses.json` listet die Lizenzen aller ausgelieferten Pakete, wurde bisher aber nur aktualisiert, wenn zufällig jemand lokal baute und die Änderung mitcommittete. So ging v1.14.0 mit einer Übersicht raus, in der 87 tatsächlich ausgelieferte Pakete fehlten. Die CI prüft die Datei jetzt bei jedem Pull Request gegen den echten Abhängigkeitsbaum. Nebenbei fiel dabei auf, dass Prettier die generierte Datei mitformatierte und so gegen ihren eigenen Generator arbeitete — sie ist jetzt von der Formatierung ausgenommen.
+
+### Internal
+
+- **Zeilenenden repo-weit auf LF normalisiert (#141)** — `.editorconfig` und Prettier verlangten beide LF, auf der Platte lagen aber durchgehend CRLF: die Blobs im Repo waren längst LF, die CRLF entstanden erst beim Auschecken durch ein lokal gesetztes `core.autocrlf`. Ergebnis waren 28.067 Formatierungswarnungen, eine pro Zeile pro Datei — weshalb Lint in keinem Workflow lief. Eine `.gitattributes` stellt das jetzt für jeden Klon sicher, unabhängig von lokaler Konfiguration.
+
+- **Lint läuft wieder in der CI (#142, #143)** — Die 50 mechanisch behebbaren der 76 Lint-Fehler sind abgebaut und ESLint ist als Schritt im Test-Job verdrahtet. Die verbleibenden 26 Fehler betreffen das Renderverhalten (React-Compiler-Regeln) und sind je Fundstelle mit Verweis auf #142 stummgeschaltet — die Regeln bleiben scharf, sodass neue Verstöße die CI weiterhin scheitern lassen.
 
 ## [1.14.2] — 2026-07-25
 
