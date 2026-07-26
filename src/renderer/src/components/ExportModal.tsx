@@ -63,6 +63,9 @@ export function ExportModal(props: Props): React.JSX.Element {
   const [csvFormat, setCsvFormat] = useState<CsvFormat>(initialPrefs.csvFormat)
   const [csvGroupByTag, setCsvGroupByTag] = useState(initialPrefs.csvGroupByTag)
 
+  // iCal-specific (#135)
+  const [icalShowClientName, setIcalShowClientName] = useState(initialPrefs.icalShowClientName)
+
   const [busy, setBusy] = useState(false)
   const [statusMsg, setStatusMsg] = useState<string | null>(null)
   const [statusKind, setStatusKind] = useState<'info' | 'error' | 'success'>('info')
@@ -83,6 +86,7 @@ export function ExportModal(props: Props): React.JSX.Element {
       hideFeeColumn,
       csvFormat,
       csvGroupByTag,
+      icalShowClientName,
       ...patch
     }
     setSetting('export_prefs', JSON.stringify(prefs)).catch(() => {
@@ -230,6 +234,30 @@ export function ExportModal(props: Props): React.JSX.Element {
     }
   }
 
+  async function handleIcalExport(): Promise<void> {
+    if (!canExport || !validateRange()) return
+    setBusy(true)
+    setStatusMsg(t('export.status.icalCreating'))
+    setStatusKind('info')
+    const res = await window.api.ical.export({
+      clientId: clientId!,
+      fromIso,
+      toIso,
+      projectId: projectId ?? undefined,
+      showClientName: icalShowClientName
+    })
+    setBusy(false)
+    if (res.ok) {
+      setStatusKind('success')
+      setStatusMsg(t('export.status.icalSaved', { path: res.data.path }))
+    } else if (res.error === 'Export abgebrochen') {
+      setStatusMsg(null)
+    } else {
+      setStatusKind('error')
+      setStatusMsg(t('export.status.error', { error: res.error }))
+    }
+  }
+
   const inputClass =
     'rounded-lg border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400'
   const inputStyle = {
@@ -246,7 +274,7 @@ export function ExportModal(props: Props): React.JSX.Element {
           className="flex gap-1 rounded-lg p-1 border"
           style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)' }}
         >
-          {(['pdf', 'csv'] as Tab[]).map((tabKey) => (
+          {(['pdf', 'csv', 'ical'] as Tab[]).map((tabKey) => (
             <button
               key={tabKey}
               type="button"
@@ -256,7 +284,11 @@ export function ExportModal(props: Props): React.JSX.Element {
               }`}
               style={tab !== tabKey ? { color: 'var(--text2)' } : undefined}
             >
-              {tabKey === 'pdf' ? t('export.tab.pdf') : t('export.tab.csv')}
+              {tabKey === 'pdf'
+                ? t('export.tab.pdf')
+                : tabKey === 'csv'
+                  ? t('export.tab.csv')
+                  : t('export.tab.ical')}
             </button>
           ))}
         </div>
@@ -492,6 +524,33 @@ export function ExportModal(props: Props): React.JSX.Element {
           </div>
         )}
 
+        {/* iCal-specific options (#135) */}
+        {tab === 'ical' && (
+          <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center justify-between">
+                <span className="text-sm" style={{ color: 'var(--text)' }}>
+                  {t('export.ical.showClientName')}
+                </span>
+                <Toggle
+                  checked={icalShowClientName}
+                  onChange={(v) => {
+                    setIcalShowClientName(v)
+                    persistPrefs({ icalShowClientName: v })
+                  }}
+                  disabled={busy}
+                />
+              </div>
+              <span className="text-xs" style={{ color: 'var(--text3)' }}>
+                {t('export.ical.showClientNameHint')}
+              </span>
+            </div>
+            <p className="text-xs" style={{ color: 'var(--text3)' }}>
+              {t('export.ical.privacyNote')}
+            </p>
+          </div>
+        )}
+
         {/* Status message */}
         {statusMsg && (
           <div
@@ -516,8 +575,10 @@ export function ExportModal(props: Props): React.JSX.Element {
                 {t('export.footer.pdfHint')}{' '}
                 <span className="font-medium text-zinc-400">{t('export.footer.pdfHintPath')}</span>.
               </>
-            ) : (
+            ) : tab === 'csv' ? (
               t('export.footer.csvHint')
+            ) : (
+              t('export.footer.icalHint')
             )}
           </p>
           <div className="flex shrink-0 gap-2">
@@ -531,7 +592,13 @@ export function ExportModal(props: Props): React.JSX.Element {
             </button>
             <button
               type="button"
-              onClick={() => void (tab === 'pdf' ? handlePdfExport() : handleCsvExport())}
+              onClick={() =>
+                void (tab === 'pdf'
+                  ? handlePdfExport()
+                  : tab === 'csv'
+                    ? handleCsvExport()
+                    : handleIcalExport())
+              }
               disabled={!canExport}
               className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-300 disabled:cursor-not-allowed disabled:opacity-50"
             >
@@ -539,7 +606,9 @@ export function ExportModal(props: Props): React.JSX.Element {
                 ? t('export.button.busy')
                 : tab === 'pdf'
                   ? t('export.button.pdf')
-                  : t('export.button.csv')}
+                  : tab === 'csv'
+                    ? t('export.button.csv')
+                    : t('export.button.ical')}
             </button>
           </div>
         </div>

@@ -4,6 +4,10 @@ All notable changes to TimeTrack are documented here.
 
 ## [Unreleased]
 
+### Added
+
+- **iCal-Export der erfassten Zeit (#135)** — Das Export-Fenster hat einen dritten Tab **iCal — Kalender**: erfasste Einträge eines Zeitraums lassen sich als `.ics`-Datei speichern und in jeden Kalender (Outlook, Apple Kalender, Google Kalender) importieren — so liegen die tatsächlich geleisteten Blöcke als zweite Ebene neben den geplanten Terminen. Jeder Eintrag wird ein Termin (Titel = Kunde, optional Projekt, plus Beschreibung; Tags als Kategorien). Start- und Endzeiten stehen in UTC (`…Z`), damit der Import über Sommer-/Winterzeit hinweg korrekt bleibt; über Mitternacht laufende Einträge erscheinen wie in CSV/PDF als zwei Termine. **Privacy:** Honorare und interne Notizen tauchen nie in der Datei auf. Ein Schalter im Export-Fenster stellt wahlweise den Kundennamen oder nur ein generisches „Fokus" in den Titel — im „Fokus"-Modus bleiben auch Beschreibung und Tags außen vor. Der abonnierbare `webcal://`-Feed aus dem Issue ist bewusst noch nicht dabei (Stufe 2, braucht einen lokalen Server).
+
 ## [1.14.2] — 2026-07-25
 
 ### Added

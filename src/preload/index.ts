@@ -21,6 +21,7 @@ import type {
   AnalyticsSummary
 } from '../shared/types'
 import type { CsvRequest } from '../main/csvExport'
+import type { IcalRequest } from '../main/icalExport'
 
 // ── v1.8 #76: FOUC prevention ─────────────────────────────────────────────
 // document.documentElement is null when the preload runs (HTML not yet parsed).
@@ -218,6 +219,11 @@ const api = {
   csv: {
     export: (req: CsvRequest): Promise<IpcResult<{ path: string }>> =>
       ipcRenderer.invoke('csv:export', req)
+  },
+  // #135 — iCal export (Stufe 1: statischer .ics-Export)
+  ical: {
+    export: (req: IcalRequest): Promise<IpcResult<{ path: string }>> =>
+      ipcRenderer.invoke('ical:export', req)
   },
   // v1.9 #75 — Projects
   projects: {
