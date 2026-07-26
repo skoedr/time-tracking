@@ -45,7 +45,7 @@ function shiftColor(hex: string, lightnessShift = 18): string {
     }
   }
   const newL = Math.min(0.85, Math.max(0, l + lightnessShift / 100))
-  function hue2rgb(p: number, q: number, t: number) {
+  function hue2rgb(p: number, q: number, t: number): number {
     if (t < 0) t += 1
     if (t > 1) t -= 1
     if (t < 1 / 6) return p + (q - p) * 6 * t
@@ -63,7 +63,7 @@ function shiftColor(hex: string, lightnessShift = 18): string {
     ng = hue2rgb(p, q, h)
     nb = hue2rgb(p, q, h - 1 / 3)
   }
-  const toHex = (x: number) =>
+  const toHex = (x: number): string =>
     Math.round(x * 255)
       .toString(16)
       .padStart(2, '0')
@@ -107,7 +107,7 @@ const COLOR_NAMES_KEYS: Record<string, TranslationKey> = {
   '#84cc16': 'clients.color.lime'
 }
 
-export default function ClientsView() {
+export default function ClientsView(): React.JSX.Element {
   const t = useT()
   const [clients, setClients] = useState<Client[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -132,7 +132,7 @@ export default function ClientsView() {
     loadClients()
   }, [])
 
-  async function loadClients() {
+  async function loadClients(): Promise<void> {
     setIsLoading(true)
     const res = await window.api.clients.getAll()
     if (res.ok) setClients(res.data)
@@ -146,7 +146,7 @@ export default function ClientsView() {
     }
   }, [])
 
-  async function toggleClientExpanded(clientId: number) {
+  async function toggleClientExpanded(clientId: number): Promise<void> {
     setExpandedClientIds((prev) => {
       const next = new Set(prev)
       if (next.has(clientId)) {
@@ -159,21 +159,21 @@ export default function ClientsView() {
     })
   }
 
-  function openNew() {
+  function openNew(): void {
     setEditingClient(null)
     setShowForm(true)
   }
 
-  function openEdit(client: Client) {
+  function openEdit(client: Client): void {
     setEditingClient(client)
     setShowForm(true)
   }
 
-  async function handleDelete(client: Client) {
+  async function handleDelete(client: Client): Promise<void> {
     setPendingDeleteClient(client)
   }
 
-  async function doDeleteClient() {
+  async function doDeleteClient(): Promise<void> {
     if (!pendingDeleteClient) return
     await window.api.clients.delete(pendingDeleteClient.id)
     setPendingDeleteClient(null)
@@ -181,7 +181,7 @@ export default function ClientsView() {
     bumpClientsVersion()
   }
 
-  async function handleToggleActive(client: Client) {
+  async function handleToggleActive(client: Client): Promise<void> {
     await window.api.clients.update({ ...client, active: client.active ? 0 : 1 })
     await loadClients()
     bumpClientsVersion()
@@ -198,7 +198,7 @@ export default function ClientsView() {
     vat_id: string | null
     contact_person: string | null
     contact_email: string | null
-  }) {
+  }): Promise<void> {
     if (editingClient) {
       const input: UpdateClientInput = { ...editingClient, ...data }
       await window.api.clients.update(input)
@@ -212,13 +212,13 @@ export default function ClientsView() {
     setEditingClient(null)
   }
 
-  function openNewProject(clientId: number) {
+  function openNewProject(clientId: number): void {
     setEditingProject(null)
     setProjectFormClientId(clientId)
     setShowProjectForm(true)
   }
 
-  function openEditProject(project: Project) {
+  function openEditProject(project: Project): void {
     setEditingProject(project)
     setProjectFormClientId(project.client_id)
     setShowProjectForm(true)
@@ -234,7 +234,7 @@ export default function ClientsView() {
     budget_minutes: number | null
     status: 'active' | 'paused' | 'archived'
     contact_person: string | null
-  }) {
+  }): Promise<void> {
     if (!projectFormClientId && projectFormClientId !== 0) return
     if (editingProject) {
       const input: UpdateProjectInput = {
@@ -254,17 +254,17 @@ export default function ClientsView() {
     setProjectFormClientId(null)
   }
 
-  async function handleProjectArchive(project: Project) {
+  async function handleProjectArchive(project: Project): Promise<void> {
     await window.api.projects.archive(project.id)
     if (project.client_id !== null) await loadProjectsForClient(project.client_id)
     bumpProjectsVersion()
   }
 
-  async function handleProjectDelete(project: ProjectWithCount) {
+  async function handleProjectDelete(project: ProjectWithCount): Promise<void> {
     setPendingDeleteProject(project)
   }
 
-  async function doDeleteProject() {
+  async function doDeleteProject(): Promise<void> {
     if (!pendingDeleteProject) return
     const res = await window.api.projects.delete(pendingDeleteProject.id)
     const clientId = pendingDeleteProject.client_id
@@ -449,7 +449,7 @@ function ClientList({
   onArchiveProject: (p: Project) => void
   onDeleteProject: (p: ProjectWithCount) => void
   dimmed?: boolean
-}) {
+}): React.JSX.Element {
   return (
     <ul className="flex flex-col gap-2">
       {clients.map((c) => (
@@ -499,7 +499,7 @@ function ClientItem({
   onArchiveProject: (p: Project) => void
   onDeleteProject: (p: ProjectWithCount) => void
   dimmed?: boolean
-}) {
+}): React.JSX.Element {
   const t = useT()
   const activeProjects =
     projects?.filter((p) => p.status === 'active' || (!p.status && p.active)) ?? []
@@ -684,7 +684,7 @@ function ProjectItem({
   onEdit: (p: Project) => void
   onArchive: (p: Project) => void
   onDelete: (p: ProjectWithCount) => void
-}) {
+}): React.JSX.Element {
   const t = useT()
   const { locale } = useLocale()
   const showProjectNumber = useUiPrefsStore((s) => s.showProjectNumber)
@@ -826,7 +826,7 @@ function ArchivedProjectsSection({
   onEdit: (p: Project) => void
   onArchive: (p: Project) => void
   onDelete: (p: ProjectWithCount) => void
-}) {
+}): React.JSX.Element {
   const t = useT()
   const [expanded, setExpanded] = useState(false)
 
@@ -888,7 +888,7 @@ function ClientFormModal({
     contact_email: string | null
   }) => Promise<void>
   onClose: () => void
-}) {
+}): React.JSX.Element {
   const t = useT()
   const [name, setName] = useState(client?.name ?? '')
   const [color, setColor] = useState(client?.color ?? COLORS[0])
@@ -919,7 +919,7 @@ function ClientFormModal({
     return v.trim() === '' ? null : v.trim()
   }
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent): Promise<void> {
     e.preventDefault()
     const trimmed = name.trim()
     if (!trimmed) {
@@ -1252,7 +1252,7 @@ function ProjectFormModal({
     contact_person: string | null
   }) => Promise<void>
   onClose: () => void
-}) {
+}): React.JSX.Element {
   const t = useT()
   const [name, setName] = useState(project?.name ?? '')
   const [color, setColor] = useState(() =>
@@ -1285,7 +1285,7 @@ function ProjectFormModal({
     return v.trim() === '' ? null : v.trim()
   }
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent): Promise<void> {
     e.preventDefault()
     const trimmed = name.trim()
     if (!trimmed) {

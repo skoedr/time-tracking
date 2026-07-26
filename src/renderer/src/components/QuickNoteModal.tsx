@@ -10,7 +10,7 @@ interface Props {
   onDone: () => void
 }
 
-export function QuickNoteModal({ entry, onDone }: Props) {
+export function QuickNoteModal({ entry, onDone }: Props): React.JSX.Element {
   const t = useT()
   const [text, setText] = useState('')
   const [remaining, setRemaining] = useState(TIMEOUT_S)

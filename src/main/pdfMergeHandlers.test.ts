@@ -3,6 +3,7 @@ import { resolve } from 'path'
 import { PDFDocument } from 'pdf-lib'
 import { mergeExportHandler, mergeOnlyHandler, pdfInfoHandler } from './pdfMergeHandlers'
 import type { FsDeps, DialogDeps, MergeExportPdfDeps } from './pdfMergeHandlers'
+import type { PdfPayload } from './pdf'
 import type { IpcResult } from '../shared/types'
 import type Database from 'better-sqlite3'
 
@@ -59,7 +60,8 @@ function mockFs(files: Record<string, Buffer | 'EBUSY' | 'EPERM'>): FsDeps {
 }
 
 const noDialog: DialogDeps = {
-  showSaveDialog: async () => ({ canceled: true, filePath: undefined }) as any
+  // Electron liefert bei Abbruch einen leeren `filePath` (nicht undefined).
+  showSaveDialog: async () => ({ canceled: true, filePath: '' })
 }
 
 // ── mergeOnlyHandler tests ────────────────────────────────────────────────────
@@ -199,7 +201,7 @@ describe('mergeOnlyHandler', () => {
       }
     }
     const mockDialog: DialogDeps = {
-      showSaveDialog: async () => ({ canceled: false, filePath: 'C:/fallback_merged.pdf' }) as any
+      showSaveDialog: async () => ({ canceled: false, filePath: 'C:/fallback_merged.pdf' })
     }
     const res = await mergeOnlyHandler(
       { stundennachweisPath: 'C:/sn.pdf', invoicePath: 'C:/inv.pdf' },
@@ -409,7 +411,10 @@ function mockDb(): Database.Database {
 function mockPdfDeps(snBuffer: Buffer, mergedBuffer: Buffer): MergeExportPdfDeps {
   return {
     readLogoAsDataUrl: () => '',
-    buildPdfPayload: () => ({}) as any,
+    // Throwaway payload: buildPdfHtml is mocked to ignore it, so the value is
+    // never read — cast a bare object to the real type rather than build a full
+    // PdfPayload just to satisfy the stub.
+    buildPdfPayload: () => ({}) as unknown as PdfPayload,
     buildPdfHtml: () => '<html/>',
     renderPdfBuffer: async () => snBuffer,
     mergePdfs: async () => mergedBuffer
@@ -567,7 +572,7 @@ describe('mergeExportHandler — successful merge', () => {
       existsSync: (p) => p === resolve('C:/invoices/rechnung.pdf'),
       statSync: () => ({ size: pdf1.length }),
       readFileSync: () => pdf1,
-      writeFileSync: (_p, _d) => {
+      writeFileSync: () => {
         if (firstWrite) {
           firstWrite = false
           throw Object.assign(new Error('EPERM'), { code: 'EPERM' })
@@ -575,7 +580,7 @@ describe('mergeExportHandler — successful merge', () => {
       }
     }
     const dialogDeps: DialogDeps = {
-      showSaveDialog: async () => ({ canceled: false, filePath: fallbackPath }) as any
+      showSaveDialog: async () => ({ canceled: false, filePath: fallbackPath })
     }
     const res = await mergeExportHandler(
       mockDb(),

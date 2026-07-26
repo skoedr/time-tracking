@@ -18,6 +18,16 @@ import type { IpcResult, Settings } from '../shared/types'
 
 const MAX_PDF_BYTES = 50 * 1024 * 1024 // 50 MB
 
+/**
+ * Node fs-Fehler tragen einen `code` (z. B. 'EBUSY', 'EPERM', 'EACCES'). Ein
+ * `catch`-Wert ist in TS `unknown`; dieser Guard grenzt auf die tatsächliche
+ * Node-Fehlerform ein, statt den Wert blind zu casten — so bleibt der
+ * `code`-Zugriff typsicher.
+ */
+function isErrnoException(e: unknown): e is NodeJS.ErrnoException {
+  return e instanceof Error && 'code' in e
+}
+
 // ── Injectable deps (real implementations are the defaults) ──────────────────
 // Injecting deps makes the core logic testable without an Electron runtime.
 
@@ -95,8 +105,8 @@ export async function mergeOnlyHandler(
     for (let i = 0; i < resolvedSnPaths.length; i++) {
       try {
         snBuffers.push(fsDeps.readFileSync(resolvedSnPaths[i]))
-      } catch (e: any) {
-        if (e.code === 'EBUSY' || e.code === 'EPERM') {
+      } catch (e) {
+        if (isErrnoException(e) && (e.code === 'EBUSY' || e.code === 'EPERM')) {
           const label = snPaths.length === 1 ? 'Stundennachweis' : `Stundennachweis ${i + 1}`
           return {
             ok: false,
@@ -110,8 +120,8 @@ export async function mergeOnlyHandler(
     let invBuffer: Buffer
     try {
       invBuffer = fsDeps.readFileSync(resolvedInv)
-    } catch (e: any) {
-      if (e.code === 'EBUSY' || e.code === 'EPERM') {
+    } catch (e) {
+      if (isErrnoException(e) && (e.code === 'EBUSY' || e.code === 'EPERM')) {
         return {
           ok: false,
           error: `Rechnung ist durch ein anderes Programm gesperrt: ${parse(resolvedInv).base}`
@@ -145,9 +155,9 @@ export async function mergeOnlyHandler(
     try {
       fsDeps.writeFileSync(outputPath, merged)
       return { ok: true, data: { path: outputPath } }
-    } catch (writeErr: any) {
+    } catch (writeErr) {
       // Target directory is read-only — fall back to a user-chosen path.
-      if (writeErr.code === 'EPERM' || writeErr.code === 'EACCES') {
+      if (isErrnoException(writeErr) && (writeErr.code === 'EPERM' || writeErr.code === 'EACCES')) {
         const fallback = await dialogDeps.showSaveDialog({
           title: 'Zusammengeführte PDF speichern',
           defaultPath: `${name}_inkl_Stundennachweis.pdf`,
@@ -188,8 +198,8 @@ export async function pdfInfoHandler(
     let buf: Buffer
     try {
       buf = fsDeps.readFileSync(resolved)
-    } catch (e: any) {
-      if (e.code === 'EBUSY' || e.code === 'EPERM') {
+    } catch (e) {
+      if (isErrnoException(e) && (e.code === 'EBUSY' || e.code === 'EPERM')) {
         return {
           ok: false,
           error: `Datei ist durch ein anderes Programm gesperrt: ${parse(resolved).base}`
@@ -255,8 +265,8 @@ export async function mergeExportHandler(
     let invoiceBuffer: Buffer
     try {
       invoiceBuffer = fsDeps.readFileSync(resolvedInvoice)
-    } catch (e: any) {
-      if (e.code === 'EBUSY' || e.code === 'EPERM') {
+    } catch (e) {
+      if (isErrnoException(e) && (e.code === 'EBUSY' || e.code === 'EPERM')) {
         return {
           ok: false,
           error: `Datei ist durch ein anderes Programm gesperrt: ${parse(resolvedInvoice).base}`
@@ -294,9 +304,9 @@ export async function mergeExportHandler(
     try {
       fsDeps.writeFileSync(outputPath, merged)
       return { ok: true, data: { path: outputPath } }
-    } catch (writeErr: any) {
+    } catch (writeErr) {
       // Target directory is read-only — fall back to a user-chosen path.
-      if (writeErr.code === 'EPERM' || writeErr.code === 'EACCES') {
+      if (isErrnoException(writeErr) && (writeErr.code === 'EPERM' || writeErr.code === 'EACCES')) {
         const fallback = await dialogDeps.showSaveDialog({
           title: 'Zusammengeführte PDF speichern',
           defaultPath: `${name}_inkl_Stundennachweis.pdf`,

@@ -53,6 +53,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }): Reac
   )
 }
 
+// eslint-disable-next-line react-refresh/only-export-components -- Provider + Hook bewusst im selben Modul; Fast-Refresh-Split ohne Laufzeitnutzen.
 export function useTheme(): ThemeContextValue {
   return useContext(ThemeContext)
 }

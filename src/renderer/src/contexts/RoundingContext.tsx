@@ -46,6 +46,7 @@ export function RoundingProvider({ children }: { children: React.ReactNode }): R
 }
 
 /** Returns `{ roundMinutes, setRoundMinutes }`. Must be inside RoundingProvider. */
+// eslint-disable-next-line react-refresh/only-export-components -- Provider + Hook bewusst im selben Modul; Fast-Refresh-Split ohne Laufzeitnutzen.
 export function useRounding(): RoundingCtx {
   return useContext(RoundingContext)
 }

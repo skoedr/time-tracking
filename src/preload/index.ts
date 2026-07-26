@@ -68,7 +68,7 @@ const api = {
     end: (): void => ipcRenderer.send('hotkey:endCapture')
   },
   onHotkeyToggle: (callback: () => void): (() => void) => {
-    const handler = () => callback()
+    const handler = (): void => callback()
     ipcRenderer.on('timer:hotkey-toggle', handler)
     return () => ipcRenderer.removeListener('timer:hotkey-toggle', handler)
   },

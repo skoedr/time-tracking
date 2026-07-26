@@ -1,7 +1,35 @@
 import { useEffect, useRef, useCallback } from 'react'
+import type { Client, Entry } from '../../../shared/types'
 import { useTimerStore } from '../store/timerStore'
 import { useClientsStore } from '../store/clientsStore'
 import { formatDuration as _formatDuration } from '../../../shared/duration'
+
+/**
+ * Shape returned by {@link useTimer}. Named explicitly (rather than inferred)
+ * so the public hook contract is stated in one place and satisfies
+ * `explicit-function-return-type`. Field types mirror `timerStore`.
+ */
+export interface UseTimerResult {
+  clients: Client[]
+  runningEntry: Entry | null
+  selectedClientId: number | null
+  selectedProjectId: number | null
+  description: string
+  elapsedSeconds: number
+  isLoading: boolean
+  idleEvent: { idleSince: string; idleSeconds: number } | null
+  quickNoteEntry: Entry | null
+  setSelectedClientId: (id: number | null) => void
+  setSelectedProjectId: (id: number | null) => void
+  setDescription: (desc: string) => void
+  setQuickNoteEntry: (entry: Entry | null) => void
+  start: () => Promise<void>
+  stop: () => Promise<void>
+  startWithClient: (clientId: number, projectId?: number | null) => Promise<void>
+  idleKeep: () => void
+  idleStopAtIdle: () => Promise<void>
+  idleMarkPause: () => Promise<void>
+}
 
 /**
  * Fetch today's total seconds from main and push it to the tray together with
@@ -46,7 +74,7 @@ function installGlobalListenersOnce(
 
 let initRan = false
 
-export function useTimer() {
+export function useTimer(): UseTimerResult {
   const {
     clients,
     runningEntry,
@@ -87,7 +115,7 @@ export function useTimer() {
   useEffect(() => {
     if (initRan) return
     initRan = true
-    async function init() {
+    async function init(): Promise<void> {
       const [clientsRes, runningRes] = await Promise.all([
         window.api.clients.getAll(),
         window.api.entries.getRunning()
