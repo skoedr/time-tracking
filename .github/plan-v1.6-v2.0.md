@@ -26,14 +26,14 @@ prerequisite, not a feature.
 
 ## Confirmed premises
 
-| # | Premise | Status |
-|---|---|---|
-| P1 | License hygiene is pre-roadmap, not part of v1.6 | ✅ accepted, executed 2026-04-26 |
-| P2 | User stays solo maintainer, no SLA, support best-effort via GH Issues | ✅ accepted |
-| P3 | No fundamental rewrite UNLESS explicit upside (modified from original „no rewrite" to allow surprise wins) | ✅ accepted with modification |
-| P4 | „Open source ready" ≠ „marketing ready". Two phases. v1.6 = repo hygiene, no HN/Reddit push yet. | ✅ accepted, voluntary adoption preferred |
-| P5 | Outlook integration is v2.0, not v1.6 | ✅ accepted |
-| ~~P6~~ | ~~Time → Invoice as next hero feature~~ | ❌ **rejected** by user. „Maintainer uses Lexware in parallel, only attaches Stundennachweis to invoice. Don't bloat with bookkeeping." → **PDF-Merge** proposed as replacement, accepted. |
+| #      | Premise                                                                                                    | Status                                                                                                                                                                                     |
+| ------ | ---------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| P1     | License hygiene is pre-roadmap, not part of v1.6                                                           | ✅ accepted, executed 2026-04-26                                                                                                                                                           |
+| P2     | User stays solo maintainer, no SLA, support best-effort via GH Issues                                      | ✅ accepted                                                                                                                                                                                |
+| P3     | No fundamental rewrite UNLESS explicit upside (modified from original „no rewrite" to allow surprise wins) | ✅ accepted with modification                                                                                                                                                              |
+| P4     | „Open source ready" ≠ „marketing ready". Two phases. v1.6 = repo hygiene, no HN/Reddit push yet.           | ✅ accepted, voluntary adoption preferred                                                                                                                                                  |
+| P5     | Outlook integration is v2.0, not v1.6                                                                      | ✅ accepted                                                                                                                                                                                |
+| ~~P6~~ | ~~Time → Invoice as next hero feature~~                                                                    | ❌ **rejected** by user. „Maintainer uses Lexware in parallel, only attaches Stundennachweis to invoice. Don't bloat with bookkeeping." → **PDF-Merge** proposed as replacement, accepted. |
 
 ## Decision: Approach B chosen
 
@@ -44,6 +44,7 @@ Three approaches presented:
 - **C — Outlook as v1.7, everything else after.** Bold. Risk-concentrated in 10–12 weeks of Outlook work without OSS feedback. Violates P5.
 
 **Chosen: B.** Reasons:
+
 1. PDF-Merge is the only one-sentence OSS pitch that hits every DE freelancer with Lexware/sevDesk/Billomat — and matches maintainer's actual daily workflow (currently manual Smallpdf/Acrobat).
 2. Outlook UX in v2.0 will be better with prior OSS feedback (mapping rules, conflict resolution).
 3. PDF-Merge is small (S–M, 2 weeks, no schema change).
@@ -57,14 +58,14 @@ Approach C explicitly considered and rejected — user wasn't waiting for Outloo
 
 Executed in this session before any v1.6 PR is opened:
 
-| Step | What | Commit |
-|------|------|--------|
-| 1 | `LICENSE` file + `"license": "MIT"` in package.json + repository/bugs fields + README License section rewritten | `d6f23fc` |
-| 2 | Backup mirror created at `..\time-tracking-backup-20260426-095117.git` | n/a |
-| 3 | `git filter-repo --invert-paths` removed three PII files (`templates/Rechnung_RE26001.pdf`, `templates/wald-it-logo.png`, `templates/Stundennachweis-Lingua Masters GmbH-2026-04.pdf`) from every commit | history rewrite |
-| 4 | Force-push of cleaned main + tags v1.1.0–v1.5.2 | force-push |
-| 5 | 13 obsolete stage branches deleted from origin (all squash-merged into main, all contained the original `5c78d91` commit with PII blobs) | branch deletes |
-| 6 | Local `git gc --prune=now --aggressive` + `git reflog expire` | local gc |
+| Step | What                                                                                                                                                                                                     | Commit          |
+| ---- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------- |
+| 1    | `LICENSE` file + `"license": "MIT"` in package.json + repository/bugs fields + README License section rewritten                                                                                          | `d6f23fc`       |
+| 2    | Backup mirror created at `..\time-tracking-backup-20260426-095117.git`                                                                                                                                   | n/a             |
+| 3    | `git filter-repo --invert-paths` removed three PII files (`templates/Rechnung_RE26001.pdf`, `templates/wald-it-logo.png`, `templates/Stundennachweis-Lingua Masters GmbH-2026-04.pdf`) from every commit | history rewrite |
+| 4    | Force-push of cleaned main + tags v1.1.0–v1.5.2                                                                                                                                                          | force-push      |
+| 5    | 13 obsolete stage branches deleted from origin (all squash-merged into main, all contained the original `5c78d91` commit with PII blobs)                                                                 | branch deletes  |
+| 6    | Local `git gc --prune=now --aggressive` + `git reflog expire`                                                                                                                                            | local gc        |
 
 **Residual risk:** Original commit `5c78d91` is still reachable on GitHub via direct SHA URL until GH's internal GC runs (typically days). Not reachable via clone/fetch (no ref points to it). Web branch history doesn't show it. For maximum protection, file a GitHub Support request to expedite cached-view purge — deferred unless threat model changes.
 
@@ -74,13 +75,14 @@ Executed in this session before any v1.6 PR is opened:
 
 Drei PRs in dieser Reihenfolge — kleiner Scope, keine Abhängigkeiten zwischen ihnen, alle parallel mergebar:
 
-| PR | Branch | Inhalt | Größe | Risiko |
-|----|--------|--------|-------|--------|
-| A | `feat/v1.6-contributing-docs` | `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `SECURITY.md`, `PRIVACY.md`, Issue-Templates unter `.github/ISSUE_TEMPLATE/` | S | sehr niedrig |
-| B | `feat/v1.6-readme-en` | `README.en.md` (englischer Counterpart, „what + why + install + quickstart"), Cross-Link im DE-README | S | niedrig |
-| C | `feat/v1.6-macos-build` | `release.yml` zweiter Job für macOS (`pnpm build:mac` → `.dmg`), Smoke-Test analog Windows | M | mittel (CI auf macOS-runner ist neu) |
+| PR  | Branch                        | Inhalt                                                                                                                | Größe | Risiko                               |
+| --- | ----------------------------- | --------------------------------------------------------------------------------------------------------------------- | ----- | ------------------------------------ |
+| A   | `feat/v1.6-contributing-docs` | `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `SECURITY.md`, `PRIVACY.md`, Issue-Templates unter `.github/ISSUE_TEMPLATE/` | S     | sehr niedrig                         |
+| B   | `feat/v1.6-readme-en`         | `README.en.md` (englischer Counterpart, „what + why + install + quickstart"), Cross-Link im DE-README                 | S     | niedrig                              |
+| C   | `feat/v1.6-macos-build`       | `release.yml` zweiter Job für macOS (`pnpm build:mac` → `.dmg`), Smoke-Test analog Windows                            | M     | mittel (CI auf macOS-runner ist neu) |
 
 **Manuelle Out-of-Band-Schritte (kein PR, GitHub-Settings UI):**
+
 - GitHub Discussions aktivieren (Categories: Q&A, Ideas, Show & Tell, General).
 - Repo-Description auf GitHub setzen + Tags (`electron`, `time-tracking`, `freelance`, `windows`, `german`).
 - Optional: README-Badges (Build-Status, Latest-Release, License) in PR A oder B.
@@ -134,16 +136,16 @@ Damit später kein Scope-Creep kommt:
 
 ## Decision Audit Trail (diese Session)
 
-| # | Entscheidung | Klassifikation | Begründung |
-|---|---|---|---|
-| 1 | Goal: OSS-Release für Freelancer-Community | User Direktive | Antwort auf Phase-1-Frage |
-| 2 | LICENSE-Hygiene VOR jedem v1.6-PR | Mechanical (P1) | One-way-door, ohne LICENSE keine MIT-Wirkung |
-| 3 | Git-history-rewrite ausgeführt (statt verschoben) | User Approval | „darfst gerne A) ausführen" |
-| 4 | Backup-Mirror vor filter-repo | Mechanical | Best-Practice für destruktive History-Operations |
-| 5 | 13 Stage-Branches gelöscht | Mechanical | Inhaltlich in main via Squash, enthielten PII via 5c78d91 |
-| 6 | P3 modifiziert: „kein Rewrite" → „kein Rewrite ohne expliziten Vorteil" | User Direktive | „nur wenn sich explizit Vorteile ergeben" |
-| 7 | P6 (Time→Invoice) gekippt, ersetzt durch PDF-Merge | User Direktive | Lexware-Parallelnutzung, kein Bookkeeping-Bloat gewünscht |
-| 8 | Approach B (PDF-Merge als Hero) | User Choice | Aus 3 Alternativen gewählt |
-| 9 | Outlook bleibt v2.0 | Mechanical (P5) | XL-Feature verdient eigenes Major-Release |
-| 10 | macOS-Build OHNE Apple-Notarization | User Taste | Konsistent mit Windows-SmartScreen-Direktive |
-| 11 | GH-Support-Request für GC-Expedite skipped | User Risk-Tolerance | Threat-Model erlaubt es |
+| #   | Entscheidung                                                            | Klassifikation      | Begründung                                                |
+| --- | ----------------------------------------------------------------------- | ------------------- | --------------------------------------------------------- |
+| 1   | Goal: OSS-Release für Freelancer-Community                              | User Direktive      | Antwort auf Phase-1-Frage                                 |
+| 2   | LICENSE-Hygiene VOR jedem v1.6-PR                                       | Mechanical (P1)     | One-way-door, ohne LICENSE keine MIT-Wirkung              |
+| 3   | Git-history-rewrite ausgeführt (statt verschoben)                       | User Approval       | „darfst gerne A) ausführen"                               |
+| 4   | Backup-Mirror vor filter-repo                                           | Mechanical          | Best-Practice für destruktive History-Operations          |
+| 5   | 13 Stage-Branches gelöscht                                              | Mechanical          | Inhaltlich in main via Squash, enthielten PII via 5c78d91 |
+| 6   | P3 modifiziert: „kein Rewrite" → „kein Rewrite ohne expliziten Vorteil" | User Direktive      | „nur wenn sich explizit Vorteile ergeben"                 |
+| 7   | P6 (Time→Invoice) gekippt, ersetzt durch PDF-Merge                      | User Direktive      | Lexware-Parallelnutzung, kein Bookkeeping-Bloat gewünscht |
+| 8   | Approach B (PDF-Merge als Hero)                                         | User Choice         | Aus 3 Alternativen gewählt                                |
+| 9   | Outlook bleibt v2.0                                                     | Mechanical (P5)     | XL-Feature verdient eigenes Major-Release                 |
+| 10  | macOS-Build OHNE Apple-Notarization                                     | User Taste          | Konsistent mit Windows-SmartScreen-Direktive              |
+| 11  | GH-Support-Request für GC-Expedite skipped                              | User Risk-Tolerance | Threat-Model erlaubt es                                   |

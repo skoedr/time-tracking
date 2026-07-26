@@ -21,7 +21,9 @@ async function pushTrayUpdate(running: boolean, label: string): Promise<void> {
 // Refs shared across all useTimer() instances so listeners are registered ONCE
 // globally and always invoke the latest callback.
 const globalToggleRef: { current: () => void } = { current: () => {} }
-const globalQuickStartRef: { current: (clientId: number, projectId?: number | null) => void } = { current: () => {} }
+const globalQuickStartRef: { current: (clientId: number, projectId?: number | null) => void } = {
+  current: () => {}
+}
 const globalStopRef: { current: () => void } = { current: () => {} }
 let listenersInstalled = false
 

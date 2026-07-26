@@ -22,6 +22,7 @@ E-Rechnungs-PDF mehr**.
 ### Aufbau eines factur-X / ZUGFeRD PDFs
 
 Ein konformes E-Rechnungs-PDF enthält:
+
 1. Ein eingebettetes XML-Attachment mit festem Namen (z. B. `factur-x.xml`,
    `ZUGFeRD-invoice.xml`, `xrechnung.xml`)
 2. Dieses Attachment sitzt im PDF-Catalog unter `/Names → /EmbeddedFiles`
@@ -33,21 +34,25 @@ Ein konformes E-Rechnungs-PDF enthält:
 ### Was `pdf-lib` kann und nicht kann
 
 `pdf-lib` **kann:**
+
 - Low-level PDF-Dictionary-Objekte lesen (`PDFDict`, `PDFName`, `PDFRef`)
 - Rohe PDF-Bytes extrahieren
 - Neue Attachment-Einträge in ein `PDFDocument` schreiben via
   `doc.catalog.set(PDFName.of('Names'), ...)` + manuelle Dict-Konstruktion
 
 `pdf-lib` **kann nicht** (kein High-Level-API):
+
 - `embedFile()` im Sinne von "nimm dieses File-Spec-Objekt aus Doc A und kopiere
   es 1:1 in Doc B" — das muss manuell über `PDFRef` und `PDFDict` passieren
 
 ### Lösungsansatz: Parse-Extract-Re-embed in `mergePdfs()`
 
 **Phase 1 — Extrahieren aus der Invoice-PDF:**
+
 ```
 invoiceDoc.catalog → /Names → /EmbeddedFiles → /Names → Array[name, fileSpecRef]
 ```
+
 Für jeden Eintrag: `fileSpecRef` → `PDFDict` → `/EF` → `/F` (= embedded stream ref)
 → rohe Bytes via `invoiceDoc.context.lookup(streamRef)` → `PDFRawStream.contents`
 
@@ -56,7 +61,7 @@ Neue `PDFDict` für das File-Spec-Object mit identischen Metadaten-Keys anlegen.
 Den Raw-Stream in den neuen Dokument-Context via `mergedDoc.context.register()`
 aufnehmen. Namen-Tree und `/AF`-Array im neuen Catalog setzen.
 
-**Phase 3 — XMP-Metadaten:** *out of scope für v1.12.5.*
+**Phase 3 — XMP-Metadaten:** _out of scope für v1.12.5._
 Ein Wholesale-Copy des `/Metadata`-Streams würde die Metadaten der gemergten PDF
 korrumpieren (Seitenzahl, Erstellungsdatum). Ein selektiver XMP-Namespace-Merge
 (`fx:`, `rsm:`) wäre korrekt, ist aber XML-Parsing auf einem eigenen Fehlerpfad.
@@ -120,13 +125,13 @@ Keine UI-Änderung — reine Backend-Logik.
 
 ## Risiken & Mitigationen
 
-| Risiko | Mitigation |
-|--------|------------|
-| `pdf-lib` Names-Tree-Struktur variiert je nach Ursprungsprogramm | `extractEmbeddedFiles()` gibt bei unbekannter Struktur leeres Array zurück — Merge geht ohne Attachment durch, kein Crash |
-| Stream-Bytes korrekt kopieren ohne Dekomprimierung | `PDFRawStream.contents` liefert rohe Bytes (ggf. komprimiert) — beim Re-embed identisch übernehmen, Kompressionsfilter-Dict mitkopieren |
-| Sehr große Attachments (>5 MB XML) | Keine Sonderbehandlung — der bestehende 50-MB-Limit-Check für die Eingabe-PDFs ist ausreichend |
-| XMP-Metadaten (konformance Level) fehlen in merged PDF | Akzeptiertes Tradeoff für v1.12.5 — TODO für XMP-Namespace-Merge in v1.13 |
-| B-Tree Names-Struktur in großen PDFs | Rekursive `traverseNameTree()` Funktion traversiert sowohl flat als auch B-Tree Nodes |
+| Risiko                                                           | Mitigation                                                                                                                              |
+| ---------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `pdf-lib` Names-Tree-Struktur variiert je nach Ursprungsprogramm | `extractEmbeddedFiles()` gibt bei unbekannter Struktur leeres Array zurück — Merge geht ohne Attachment durch, kein Crash               |
+| Stream-Bytes korrekt kopieren ohne Dekomprimierung               | `PDFRawStream.contents` liefert rohe Bytes (ggf. komprimiert) — beim Re-embed identisch übernehmen, Kompressionsfilter-Dict mitkopieren |
+| Sehr große Attachments (>5 MB XML)                               | Keine Sonderbehandlung — der bestehende 50-MB-Limit-Check für die Eingabe-PDFs ist ausreichend                                          |
+| XMP-Metadaten (konformance Level) fehlen in merged PDF           | Akzeptiertes Tradeoff für v1.12.5 — TODO für XMP-Namespace-Merge in v1.13                                                               |
+| B-Tree Names-Struktur in großen PDFs                             | Rekursive `traverseNameTree()` Funktion traversiert sowohl flat als auch B-Tree Nodes                                                   |
 
 ---
 

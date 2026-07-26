@@ -68,7 +68,9 @@ describe('locale completeness', () => {
       const deSlots = [...de[key].matchAll(SLOT_RE)].map((m) => m[1]).sort()
       const enSlots = [...en[key].matchAll(SLOT_RE)].map((m) => m[1]).sort()
       if (JSON.stringify(deSlots) !== JSON.stringify(enSlots)) {
-        mismatches.push(`${key}: DE has {${deSlots.join('}, {')}}, EN has {${enSlots.join('}, {')}}`)
+        mismatches.push(
+          `${key}: DE has {${deSlots.join('}, {')}}, EN has {${enSlots.join('}, {')}}`
+        )
       }
     }
     expect(mismatches).toEqual([])

@@ -101,7 +101,12 @@ export default function TodayView(): React.JSX.Element {
 
   return (
     <div className="mx-auto w-full max-w-3xl flex flex-col gap-6">
-      <ActiveTimerPill runningEntry={runningEntry} clientsById={clientsById} projectsById={projectsById} onStop={() => void stop()} />
+      <ActiveTimerPill
+        runningEntry={runningEntry}
+        clientsById={clientsById}
+        projectsById={projectsById}
+        onStop={() => void stop()}
+      />
 
       {status === 'loading' && <SummarySkeleton />}
       {status === 'error' && (
@@ -120,8 +125,18 @@ export default function TodayView(): React.JSX.Element {
       {status === 'ready' && summary && (
         <>
           <div className="grid grid-cols-2 gap-4">
-            <StatCard label={t('today.stats.today')} seconds={roundDuration(summary.todaySeconds, roundMinutes)} rawSeconds={summary.todaySeconds} accentColor="var(--accent)" />
-            <StatCard label={t('today.stats.week')} seconds={roundDuration(summary.weekSeconds, roundMinutes)} rawSeconds={summary.weekSeconds} accentColor="var(--green)" />
+            <StatCard
+              label={t('today.stats.today')}
+              seconds={roundDuration(summary.todaySeconds, roundMinutes)}
+              rawSeconds={summary.todaySeconds}
+              accentColor="var(--accent)"
+            />
+            <StatCard
+              label={t('today.stats.week')}
+              seconds={roundDuration(summary.weekSeconds, roundMinutes)}
+              rawSeconds={summary.weekSeconds}
+              accentColor="var(--green)"
+            />
           </div>
 
           <QuickStartRow
@@ -148,7 +163,7 @@ export default function TodayView(): React.JSX.Element {
         onClick={() => setCreateOpen(true)}
         disabled={clients.length === 0}
         className="self-start flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium text-white hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-indigo-400 disabled:cursor-not-allowed disabled:opacity-50"
-          style={{ background: 'var(--accent)' }}
+        style={{ background: 'var(--accent)' }}
       >
         <Icons.Plus />
         {t('today.addEntry')}
@@ -235,14 +250,19 @@ function ActiveTimerPill({
     return (
       <div
         className="rounded-[14px] border px-4 py-2 text-sm backdrop-blur-xl"
-        style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)', color: 'var(--text3)' }}
+        style={{
+          background: 'var(--card-bg)',
+          borderColor: 'var(--card-border)',
+          color: 'var(--text3)'
+        }}
       >
         {t('today.noTimer')}
       </div>
     )
   }
   const client = clientsById.get(runningEntry.client_id)
-  const runningProject = runningEntry.project_id != null ? projectsById.get(runningEntry.project_id) : undefined
+  const runningProject =
+    runningEntry.project_id != null ? projectsById.get(runningEntry.project_id) : undefined
   return (
     <div
       className="flex items-center gap-3 rounded-[14px] border px-4 py-2 text-sm backdrop-blur-xl"
@@ -256,14 +276,26 @@ function ActiveTimerPill({
         className="h-2.5 w-2.5 animate-pulse rounded-full"
         style={{ backgroundColor: runningProject?.color || (client?.color ?? '#10b981') }}
       />
-      <span className="font-medium" style={{ color: 'var(--text)' }}>{client?.name ?? t('common.unknown')}</span>
+      <span className="font-medium" style={{ color: 'var(--text)' }}>
+        {client?.name ?? t('common.unknown')}
+      </span>
       {runningProject && (
-        <span style={{ color: 'var(--text3)' }}>· {runningProject.name}{showProjectNumber && runningProject.external_project_number ? ` [${runningProject.external_project_number}]` : ''}</span>
+        <span style={{ color: 'var(--text3)' }}>
+          · {runningProject.name}
+          {showProjectNumber && runningProject.external_project_number
+            ? ` [${runningProject.external_project_number}]`
+            : ''}
+        </span>
       )}
       {runningEntry.description && (
-        <span className="truncate" style={{ color: 'var(--text2)' }}>— {runningEntry.description}</span>
+        <span className="truncate" style={{ color: 'var(--text2)' }}>
+          — {runningEntry.description}
+        </span>
       )}
-      <span className="ml-auto tabular-nums" style={{ color: 'var(--green)', fontFamily: "'JetBrains Mono', monospace" }}>
+      <span
+        className="ml-auto tabular-nums"
+        style={{ color: 'var(--green)', fontFamily: "'JetBrains Mono', monospace" }}
+      >
         {formatDuration(tickSeconds)}
       </span>
       <button
@@ -296,11 +328,25 @@ function StatCard({
       className="rounded-[14px] border p-4 backdrop-blur-xl"
       style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)' }}
     >
-      <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text3)' }}>{label}</p>
+      <p
+        className="text-xs font-semibold uppercase tracking-wide"
+        style={{ color: 'var(--text3)' }}
+      >
+        {label}
+      </p>
       <p
         className="mt-2 tabular-nums"
-        style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 40, fontWeight: 700, lineHeight: 1, letterSpacing: 2, color: accentColor }}
-        title={rawSeconds !== undefined && rawSeconds !== seconds ? formatHHMM(rawSeconds) : undefined}
+        style={{
+          fontFamily: "'JetBrains Mono', monospace",
+          fontSize: 40,
+          fontWeight: 700,
+          lineHeight: 1,
+          letterSpacing: 2,
+          color: accentColor
+        }}
+        title={
+          rawSeconds !== undefined && rawSeconds !== seconds ? formatHHMM(rawSeconds) : undefined
+        }
       >
         {formatHHMM(seconds)}
       </p>
@@ -325,21 +371,23 @@ function QuickStartRow({
   if (topClients.length === 0) return null
   return (
     <div className="flex flex-col gap-2">
-      <span className="text-xs uppercase tracking-wide" style={{ color: 'var(--text3)' }}>{t('today.quickstart.label')}</span>
+      <span className="text-xs uppercase tracking-wide" style={{ color: 'var(--text3)' }}>
+        {t('today.quickstart.label')}
+      </span>
       <div className="flex flex-wrap gap-2">
-      {topClients.map((c) => (
-        <QuickStartPill
-          key={c.client_id}
-          clientId={c.client_id}
-          name={c.name}
-          color={c.color}
-          lastProjectId={c.last_project_id}
-          projectsById={projectsById}
-          clientsById={clientsById}
-          disabled={disabled}
-          onStart={onStart}
-        />
-      ))}
+        {topClients.map((c) => (
+          <QuickStartPill
+            key={c.client_id}
+            clientId={c.client_id}
+            name={c.name}
+            color={c.color}
+            lastProjectId={c.last_project_id}
+            projectsById={projectsById}
+            clientsById={clientsById}
+            disabled={disabled}
+            onStart={onStart}
+          />
+        ))}
       </div>
     </div>
   )
@@ -409,12 +457,18 @@ function QuickStartPill({
   const lastProject = lastProjectId != null ? projectsById.get(lastProjectId) : undefined
 
   const clientProjects = useMemo(
-    () => Array.from(projectsById.values()).filter((p) => p.client_id === clientId && p.active === 1),
+    () =>
+      Array.from(projectsById.values()).filter((p) => p.client_id === clientId && p.active === 1),
     [projectsById, clientId]
   )
   const hasProjects = clientProjects.length > 0
 
-  const ring = useMemo<{ items: RingItem[]; R: number; projectCount: number; delays: Map<string, number> } | null>(() => {
+  const ring = useMemo<{
+    items: RingItem[]
+    R: number
+    projectCount: number
+    delays: Map<string, number>
+  } | null>(() => {
     const N = clientProjects.length
     if (N === 0) return null
     // Constant ring radius — gives every fan the generous spacing of the
@@ -453,8 +507,14 @@ function QuickStartPill({
   }, [clientProjects, color, t])
 
   function clearHoldTimer(): void {
-    if (holdTimerRef.current) { clearTimeout(holdTimerRef.current); holdTimerRef.current = null }
-    if (progressIntervalRef.current) { clearInterval(progressIntervalRef.current); progressIntervalRef.current = null }
+    if (holdTimerRef.current) {
+      clearTimeout(holdTimerRef.current)
+      holdTimerRef.current = null
+    }
+    if (progressIntervalRef.current) {
+      clearInterval(progressIntervalRef.current)
+      progressIntervalRef.current = null
+    }
   }
 
   function handlePointerDown(e: React.PointerEvent): void {
@@ -500,12 +560,12 @@ function QuickStartPill({
     const R = ring.R
     const projItems = ring.items.filter((it) => !it.isNoProject)
     const firstAngle = projItems[0].pos.angle
-    const lastAngle  = projItems[projItems.length - 1].pos.angle
-    const arcLen = R * ((lastAngle - firstAngle) * Math.PI) / 180
+    const lastAngle = projItems[projItems.length - 1].pos.angle
+    const arcLen = (R * ((lastAngle - firstAngle) * Math.PI)) / 180
     const x1 = (R * Math.sin((firstAngle * Math.PI) / 180)).toFixed(3)
     const y1 = (-R * Math.cos((firstAngle * Math.PI) / 180)).toFixed(3)
-    const x2 = (R * Math.sin((lastAngle  * Math.PI) / 180)).toFixed(3)
-    const y2 = (-R * Math.cos((lastAngle  * Math.PI) / 180)).toFixed(3)
+    const x2 = (R * Math.sin((lastAngle * Math.PI) / 180)).toFixed(3)
+    const y2 = (-R * Math.cos((lastAngle * Math.PI) / 180)).toFixed(3)
     return { d: `M ${x1} ${y1} A ${R} ${R} 0 0 1 ${x2} ${y2}`, arcLen }
   })()
   const svgPad = 24
@@ -516,7 +576,10 @@ function QuickStartPill({
         <div
           className="qs-backdrop"
           style={{ position: 'fixed', inset: 0, zIndex: 49 }}
-          onPointerDown={() => { setFanOpen(false); setHoveredKey(null) }}
+          onPointerDown={() => {
+            setFanOpen(false)
+            setHoveredKey(null)
+          }}
         />
       )}
       {fanOpen && ring && (
@@ -525,16 +588,18 @@ function QuickStartPill({
             width={2 * (ring.R + svgPad)}
             height={2 * (ring.R + svgPad)}
             viewBox={`${-(ring.R + svgPad)} ${-(ring.R + svgPad)} ${2 * (ring.R + svgPad)} ${2 * (ring.R + svgPad)}`}
-            style={{
-              position: 'absolute',
-              left: '50%',
-              top: '50%',
-              transform: 'translate(-50%, -50%)',
-              pointerEvents: 'none',
-              zIndex: 50,
-              overflow: 'visible',
-              ['--qs-ring-circ' as string]: `${arcInfo ? arcInfo.arcLen.toFixed(2) : '0'}`
-            } as React.CSSProperties}
+            style={
+              {
+                position: 'absolute',
+                left: '50%',
+                top: '50%',
+                transform: 'translate(-50%, -50%)',
+                pointerEvents: 'none',
+                zIndex: 50,
+                overflow: 'visible',
+                ['--qs-ring-circ' as string]: `${arcInfo ? arcInfo.arcLen.toFixed(2) : '0'}`
+              } as React.CSSProperties
+            }
             aria-hidden="true"
           >
             {arcInfo && (
@@ -554,10 +619,12 @@ function QuickStartPill({
                     key={`grad-${item.key}`}
                     id={`qs-beam-${item.key}`}
                     gradientUnits="userSpaceOnUse"
-                    x1={0} y1={0}
-                    x2={item.pos.x} y2={item.pos.y}
+                    x1={0}
+                    y1={0}
+                    x2={item.pos.x}
+                    y2={item.pos.y}
                   >
-                    <stop offset="0%"   stopColor={strokeColor} stopOpacity={0} />
+                    <stop offset="0%" stopColor={strokeColor} stopOpacity={0} />
                     <stop offset="100%" stopColor={strokeColor} stopOpacity={1} />
                   </linearGradient>
                 )
@@ -586,25 +653,31 @@ function QuickStartPill({
               <button
                 key={item.key}
                 type="button"
-                onClick={() => { setFanOpen(false); setHoveredKey(null); onStart(clientId, item.id) }}
+                onClick={() => {
+                  setFanOpen(false)
+                  setHoveredKey(null)
+                  onStart(clientId, item.id)
+                }}
                 onMouseEnter={() => setHoveredKey(item.key)}
                 onMouseLeave={() => setHoveredKey(null)}
                 className={`qs-fan-item flex items-center gap-1.5 rounded-full ${item.isNoProject ? 'border-dashed' : ''} border px-2.5 py-1 text-xs font-medium backdrop-blur-xl transition-colors hover:border-indigo-400`}
-                style={{
-                  position: 'absolute',
-                  left: `calc(50% + ${item.pos.x}px)`,
-                  top: `calc(50% + ${item.pos.y}px)`,
-                  zIndex: 51,
-                  whiteSpace: 'nowrap',
-                  background: 'var(--modal-bg)',
-                  backdropFilter: 'blur(20px)',
-                  borderColor: item.isNoProject ? 'var(--text3)' : 'var(--card-border)',
-                  color: item.isNoProject ? 'var(--text3)' : 'var(--text)',
-                  boxShadow: '0 4px 20px rgba(0,0,0,0.35)',
-                  animationDelay: `${delay}ms`,
-                  ['--qs-dx' as string]: `${(-item.pos.x).toFixed(2)}px`,
-                  ['--qs-dy' as string]: `${(-item.pos.y).toFixed(2)}px`
-                } as React.CSSProperties}
+                style={
+                  {
+                    position: 'absolute',
+                    left: `calc(50% + ${item.pos.x}px)`,
+                    top: `calc(50% + ${item.pos.y}px)`,
+                    zIndex: 51,
+                    whiteSpace: 'nowrap',
+                    background: 'var(--modal-bg)',
+                    backdropFilter: 'blur(20px)',
+                    borderColor: item.isNoProject ? 'var(--text3)' : 'var(--card-border)',
+                    color: item.isNoProject ? 'var(--text3)' : 'var(--text)',
+                    boxShadow: '0 4px 20px rgba(0,0,0,0.35)',
+                    animationDelay: `${delay}ms`,
+                    ['--qs-dx' as string]: `${(-item.pos.x).toFixed(2)}px`,
+                    ['--qs-dy' as string]: `${(-item.pos.y).toFixed(2)}px`
+                  } as React.CSSProperties
+                }
               >
                 {!item.isNoProject && (
                   <span
@@ -612,7 +685,10 @@ function QuickStartPill({
                     style={{ backgroundColor: item.color }}
                   />
                 )}
-                {item.name}{!item.isNoProject && showProjectNumber && item.externalNumber ? ` [${item.externalNumber}]` : ''}
+                {item.name}
+                {!item.isNoProject && showProjectNumber && item.externalNumber
+                  ? ` [${item.externalNumber}]`
+                  : ''}
               </button>
             )
           })}
@@ -631,21 +707,25 @@ function QuickStartPill({
           }
         }}
         className={`flex flex-col items-start rounded-[14px] border px-3 py-1.5 text-sm backdrop-blur-xl transition-colors hover:border-indigo-500 disabled:cursor-not-allowed disabled:opacity-50 ${fanOpen ? 'qs-pill-pulse-active' : ''}`}
-        style={{
-          background: 'var(--card-bg)',
-          borderColor: fanOpen ? color : holdProgress > 0 ? color : 'var(--card-border)',
-          color: 'var(--text)',
-          transform: holdProgress > 0 ? `scale(${(1 - holdProgress * 0.04).toFixed(4)})` : undefined,
-          boxShadow: !fanOpen && holdProgress > 0
-            ? `0 0 0 ${(holdProgress * 3).toFixed(1)}px ${color}50`
-            : undefined,
-          userSelect: 'none',
-          // When the fan is open, the backdrop sits at z-49 with backdrop-blur.
-          // Lift the pill above it so the pill itself stays crisp.
-          position: fanOpen ? 'relative' : undefined,
-          zIndex: fanOpen ? 51 : undefined,
-          ['--qs-pill-color' as string]: color
-        } as React.CSSProperties}
+        style={
+          {
+            background: 'var(--card-bg)',
+            borderColor: fanOpen ? color : holdProgress > 0 ? color : 'var(--card-border)',
+            color: 'var(--text)',
+            transform:
+              holdProgress > 0 ? `scale(${(1 - holdProgress * 0.04).toFixed(4)})` : undefined,
+            boxShadow:
+              !fanOpen && holdProgress > 0
+                ? `0 0 0 ${(holdProgress * 3).toFixed(1)}px ${color}50`
+                : undefined,
+            userSelect: 'none',
+            // When the fan is open, the backdrop sits at z-49 with backdrop-blur.
+            // Lift the pill above it so the pill itself stays crisp.
+            position: fanOpen ? 'relative' : undefined,
+            zIndex: fanOpen ? 51 : undefined,
+            ['--qs-pill-color' as string]: color
+          } as React.CSSProperties
+        }
         title={
           stillActive
             ? hasProjects
@@ -658,12 +738,25 @@ function QuickStartPill({
           <span className="h-2 w-2 flex-shrink-0 rounded-full" style={{ backgroundColor: color }} />
           <span className="font-medium">{name}</span>
           {hasProjects && (
-            <Icons.ChevronDown width={10} height={10} style={{ color: 'var(--text3)', opacity: 0.6 }} />
+            <Icons.ChevronDown
+              width={10}
+              height={10}
+              style={{ color: 'var(--text3)', opacity: 0.6 }}
+            />
           )}
           <Icons.Play width={11} height={11} style={{ color: 'var(--text3)' }} />
         </div>
-        <div className="pl-4 text-xs leading-tight" style={{ color: 'var(--text3)', marginTop: 2, visibility: lastProject ? 'visible' : 'hidden' }}>
-          {lastProject ? `${lastProject.name}${showProjectNumber && lastProject.external_project_number ? ` [${lastProject.external_project_number}]` : ''}` : '\u00A0'}
+        <div
+          className="pl-4 text-xs leading-tight"
+          style={{
+            color: 'var(--text3)',
+            marginTop: 2,
+            visibility: lastProject ? 'visible' : 'hidden'
+          }}
+        >
+          {lastProject
+            ? `${lastProject.name}${showProjectNumber && lastProject.external_project_number ? ` [${lastProject.external_project_number}]` : ''}`
+            : '\u00A0'}
         </div>
       </button>
     </div>
@@ -693,7 +786,9 @@ function RecentList({
         className="rounded-[14px] border border-dashed px-4 py-8 text-center backdrop-blur-xl"
         style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)' }}
       >
-        <p className="text-sm font-medium" style={{ color: 'var(--text)' }}>{t('today.recent.empty')}</p>
+        <p className="text-sm font-medium" style={{ color: 'var(--text)' }}>
+          {t('today.recent.empty')}
+        </p>
         <p className="mt-1 text-xs" style={{ color: 'var(--text3)' }}>
           {t('today.recent.emptyHint')}
         </p>
@@ -708,7 +803,11 @@ function RecentList({
       {/* Header */}
       <div
         className="grid px-3 py-2 text-xs font-medium uppercase tracking-wide"
-        style={{ gridTemplateColumns: '110px 1.5fr 1fr 70px 72px', background: 'var(--nav-bg)', color: 'var(--text2)' }}
+        style={{
+          gridTemplateColumns: '110px 1.5fr 1fr 70px 72px',
+          background: 'var(--nav-bg)',
+          color: 'var(--text2)'
+        }}
       >
         <span>{t('today.table.time')}</span>
         <span>{t('today.table.client')}</span>
@@ -724,18 +823,33 @@ function RecentList({
           <div
             key={e.id}
             className="grid items-center px-3 py-2.5 border-t transition-colors hover:bg-white/5"
-            style={{ gridTemplateColumns: '110px 1.5fr 1fr 70px 72px', borderColor: 'var(--card-border)' }}
+            style={{
+              gridTemplateColumns: '110px 1.5fr 1fr 70px 72px',
+              borderColor: 'var(--card-border)'
+            }}
           >
-            <span className="text-xs tabular-nums" style={{ color: 'var(--text2)', fontFamily: "'JetBrains Mono', monospace" }}>
+            <span
+              className="text-xs tabular-nums"
+              style={{ color: 'var(--text2)', fontFamily: "'JetBrains Mono', monospace" }}
+            >
               {formatTimeRange(e)}
             </span>
-            <span className="flex items-center gap-2 overflow-hidden" style={{ color: 'var(--text)' }}>
-              <span className="h-2 w-2 shrink-0 rounded-full self-start mt-1.5" style={{ backgroundColor: project?.color || (client?.color ?? '#64748b') }} />
+            <span
+              className="flex items-center gap-2 overflow-hidden"
+              style={{ color: 'var(--text)' }}
+            >
+              <span
+                className="h-2 w-2 shrink-0 rounded-full self-start mt-1.5"
+                style={{ backgroundColor: project?.color || (client?.color ?? '#64748b') }}
+              />
               <span className="flex flex-col min-w-0">
                 <span className="truncate font-medium">{client?.name ?? t('common.unknown')}</span>
                 {project && (
                   <span className="truncate text-xs" style={{ color: 'var(--text3)' }}>
-                    {project.name}{showProjectNumber && project.external_project_number ? ` [${project.external_project_number}]` : ''}
+                    {project.name}
+                    {showProjectNumber && project.external_project_number
+                      ? ` [${project.external_project_number}]`
+                      : ''}
                   </span>
                 )}
               </span>
@@ -743,8 +857,14 @@ function RecentList({
             <span className="truncate pr-2" style={{ color: 'var(--text2)' }} title={e.description}>
               {e.description || <span style={{ color: 'var(--text3)' }}>—</span>}
             </span>
-            <span className="text-right text-xs tabular-nums" style={{ color: 'var(--text2)', fontFamily: "'JetBrains Mono', monospace" }}
-              title={(() => { const raw = durationSeconds(e); const disp = roundDuration(raw, roundMinutes); return disp !== raw ? formatHHMM(raw) : undefined })()}
+            <span
+              className="text-right text-xs tabular-nums"
+              style={{ color: 'var(--text2)', fontFamily: "'JetBrains Mono', monospace" }}
+              title={(() => {
+                const raw = durationSeconds(e)
+                const disp = roundDuration(raw, roundMinutes)
+                return disp !== raw ? formatHHMM(raw) : undefined
+              })()}
             >
               {formatHHMM(roundDuration(durationSeconds(e), roundMinutes))}
             </span>
@@ -787,7 +907,11 @@ function SummarySkeleton(): React.JSX.Element {
       </div>
       <div className="space-y-2">
         {[0, 1, 2, 3, 4].map((i) => (
-          <div key={i} className="h-10 animate-pulse rounded" style={{ background: 'var(--card-bg)' }} />
+          <div
+            key={i}
+            className="h-10 animate-pulse rounded"
+            style={{ background: 'var(--card-bg)' }}
+          />
         ))}
       </div>
     </div>
@@ -831,11 +955,7 @@ function defaultBackfillStart(): Date {
   return new Date(Date.now() - 60 * 60 * 1000)
 }
 
-function buildDeleteMessage(
-  entry: Entry,
-  client: Client | undefined,
-  t: TFunction
-): string {
+function buildDeleteMessage(entry: Entry, client: Client | undefined, t: TFunction): string {
   const dur = formatHHMM(durationSeconds(entry))
   const date = new Date(entry.started_at)
   const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`

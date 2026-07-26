@@ -65,13 +65,7 @@ describe('listBackups', () => {
 
     const list = listBackups()
     const reasons = list.map((b) => b.reason).sort()
-    expect(reasons).toEqual([
-      'daily',
-      'daily',
-      'manual',
-      'pre-migration',
-      'pre-migration'
-    ])
+    expect(reasons).toEqual(['daily', 'daily', 'manual', 'pre-migration', 'pre-migration'])
     // Newest first
     const dailies = list.filter((b) => b.reason === 'daily')
     expect(dailies[0].filename).toContain('2026-04-21')

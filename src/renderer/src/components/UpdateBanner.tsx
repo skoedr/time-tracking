@@ -31,9 +31,7 @@ export function UpdateBanner(): React.JSX.Element | null {
       break
     case 'available':
       content = (
-        <span className="text-sm">
-          {t('update.available', { version: status.version ?? '' })}
-        </span>
+        <span className="text-sm">{t('update.available', { version: status.version ?? '' })}</span>
       )
       break
     case 'downloading':
@@ -86,15 +84,19 @@ export function UpdateBanner(): React.JSX.Element | null {
 
   const toneStyle =
     tone === 'warn'
-      ? { background: 'rgba(180,120,0,0.15)', color: 'var(--text)', borderColor: 'rgba(180,120,0,0.35)' }
-      : { background: 'var(--accent-bg)', color: 'var(--text)', borderColor: 'rgba(139,124,248,0.30)' }
+      ? {
+          background: 'rgba(180,120,0,0.15)',
+          color: 'var(--text)',
+          borderColor: 'rgba(180,120,0,0.35)'
+        }
+      : {
+          background: 'var(--accent-bg)',
+          color: 'var(--text)',
+          borderColor: 'rgba(139,124,248,0.30)'
+        }
 
   return (
-    <div
-      role="status"
-      className="flex items-center px-4 py-2 border-b"
-      style={toneStyle}
-    >
+    <div role="status" className="flex items-center px-4 py-2 border-b" style={toneStyle}>
       {content}
     </div>
   )

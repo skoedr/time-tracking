@@ -63,7 +63,13 @@ export async function handleCsvExport(
            AND stopped_at IS NOT NULL
          ORDER BY started_at ASC`
       )
-      .all(req.clientId, req.fromIso, req.toIso, req.projectId ?? null, req.projectId ?? null) as Entry[]
+      .all(
+        req.clientId,
+        req.fromIso,
+        req.toIso,
+        req.projectId ?? null,
+        req.projectId ?? null
+      ) as Entry[]
 
     const rangeHint = `${req.fromIso.slice(0, 7)}`
     const safeName = client.name.replace(/[\\/:*?"<>|]/g, '_').trim() || 'Kunde'
@@ -71,9 +77,9 @@ export async function handleCsvExport(
     // When filtered by project, append the project name to the filename.
     let projectSuffix = ''
     if (req.projectId != null) {
-      const proj = db
-        .prepare(`SELECT name FROM projects WHERE id = ?`)
-        .get(req.projectId) as { name: string } | undefined
+      const proj = db.prepare(`SELECT name FROM projects WHERE id = ?`).get(req.projectId) as
+        | { name: string }
+        | undefined
       if (proj) {
         projectSuffix = `-${proj.name.replace(/[\\/:*?"<>|]/g, '_').trim()}`
       }

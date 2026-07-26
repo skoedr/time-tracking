@@ -150,19 +150,30 @@ export default function CalendarView(): React.JSX.Element {
           type="button"
           onClick={onPrev}
           className="grid h-9 w-9 place-items-center rounded-lg border backdrop-blur-xl hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-400"
-          style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)', color: 'var(--text2)' }}
+          style={{
+            background: 'var(--card-bg)',
+            borderColor: 'var(--card-border)',
+            color: 'var(--text2)'
+          }}
           aria-label={t('calendar.nav.prev')}
         >
           ‹
         </button>
-        <h2 className="min-w-[200px] text-center text-lg font-semibold" style={{ color: 'var(--text)' }}>
+        <h2
+          className="min-w-[200px] text-center text-lg font-semibold"
+          style={{ color: 'var(--text)' }}
+        >
           {formatMonthHeader(cursor, months)}
         </h2>
         <button
           type="button"
           onClick={onNext}
           className="grid h-9 w-9 place-items-center rounded-lg border backdrop-blur-xl hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-400"
-          style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)', color: 'var(--text2)' }}
+          style={{
+            background: 'var(--card-bg)',
+            borderColor: 'var(--card-border)',
+            color: 'var(--text2)'
+          }}
           aria-label={t('calendar.nav.next')}
         >
           ›
@@ -171,13 +182,25 @@ export default function CalendarView(): React.JSX.Element {
           type="button"
           onClick={onToday}
           className="ml-2 rounded-lg border px-3 py-1.5 text-sm font-medium backdrop-blur-xl hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-400"
-          style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)', color: 'var(--text)' }}
+          style={{
+            background: 'var(--card-bg)',
+            borderColor: 'var(--card-border)',
+            color: 'var(--text)'
+          }}
         >
           {t('calendar.nav.today')}
         </button>
-        {status === 'loading' && <span className="ml-auto text-xs" style={{ color: 'var(--text3)' }}>{t('calendar.status.loading')}</span>}
+        {status === 'loading' && (
+          <span className="ml-auto text-xs" style={{ color: 'var(--text3)' }}>
+            {t('calendar.status.loading')}
+          </span>
+        )}
         {status === 'error' && (
-          <span className="ml-auto text-xs" style={{ color: 'var(--danger)' }} title={errorMsg ?? ''}>
+          <span
+            className="ml-auto text-xs"
+            style={{ color: 'var(--danger)' }}
+            title={errorMsg ?? ''}
+          >
             {t('calendar.status.error')}
           </span>
         )}
@@ -195,14 +218,20 @@ export default function CalendarView(): React.JSX.Element {
         >
           {t('calendar.export.lastMonth')}
         </button>
-        <span className="ml-1 text-xs uppercase tracking-wide" style={{ color: 'var(--text3)' }}>{t('calendar.export.rangeLabel')}</span>
+        <span className="ml-1 text-xs uppercase tracking-wide" style={{ color: 'var(--text3)' }}>
+          {t('calendar.export.rangeLabel')}
+        </span>
         {(['thisWeek', 'lastWeek', 'thisMonth'] as const).map((k) => (
           <button
             key={k}
             type="button"
             onClick={() => onQuickRange(k)}
             className="rounded-full border px-3 py-1.5 text-xs font-medium backdrop-blur-xl hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-400"
-            style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)', color: 'var(--text)' }}
+            style={{
+              background: 'var(--card-bg)',
+              borderColor: 'var(--card-border)',
+              color: 'var(--text)'
+            }}
           >
             {t(('calendar.range.' + k) as TranslationKey)}
           </button>
@@ -211,7 +240,11 @@ export default function CalendarView(): React.JSX.Element {
           type="button"
           onClick={() => setMergeOpen(true)}
           className="ml-auto rounded-full border px-3 py-1.5 text-xs font-medium backdrop-blur-xl hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-400"
-          style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)', color: 'var(--text)' }}
+          style={{
+            background: 'var(--card-bg)',
+            borderColor: 'var(--card-border)',
+            color: 'var(--text)'
+          }}
           title={t('calendar.export.mergeTitle')}
         >
           {t('calendar.export.merge')}
@@ -229,7 +262,17 @@ export default function CalendarView(): React.JSX.Element {
         >
           {t('calendar.header.week')}
         </div>
-        {(['calendar.days.mon', 'calendar.days.tue', 'calendar.days.wed', 'calendar.days.thu', 'calendar.days.fri', 'calendar.days.sat', 'calendar.days.sun'] as TranslationKey[]).map((k) => (
+        {(
+          [
+            'calendar.days.mon',
+            'calendar.days.tue',
+            'calendar.days.wed',
+            'calendar.days.thu',
+            'calendar.days.fri',
+            'calendar.days.sat',
+            'calendar.days.sun'
+          ] as TranslationKey[]
+        ).map((k) => (
           <div
             key={k}
             className="px-2 py-1 text-center text-xs font-medium"
@@ -360,14 +403,21 @@ function Week({
                 {day.getDate()}
               </span>
               {dayEntries.length > 0 && (
-                <span className="text-[10px] tabular-nums" style={{ color: 'var(--text2)', fontFamily: "'JetBrains Mono', monospace" }}
+                <span
+                  className="text-[10px] tabular-nums"
+                  style={{ color: 'var(--text2)', fontFamily: "'JetBrains Mono', monospace" }}
                   title={displaySeconds !== totalSeconds ? formatHHMM(totalSeconds) : undefined}
                 >
                   {formatHHMM(displaySeconds)}
                 </span>
               )}
             </div>
-            <DayBars entries={dayEntries} clients={clients} projects={projects} roundMinutes={roundMinutes} />
+            <DayBars
+              entries={dayEntries}
+              clients={clients}
+              projects={projects}
+              roundMinutes={roundMinutes}
+            />
           </button>
         )
       })}
@@ -407,9 +457,10 @@ function DayBars({
         const label = e.description ? `${clientName} — ${e.description}` : clientName
         const rawSec = entryDurationSeconds(e)
         const dispSec = roundDuration(rawSec, roundMinutes)
-        const tooltip = rawSec !== dispSec
-          ? `${label} (${formatHHMM(dispSec)} · exakt: ${formatHHMM(rawSec)})`
-          : `${label} (${formatHHMM(rawSec)})`
+        const tooltip =
+          rawSec !== dispSec
+            ? `${label} (${formatHHMM(dispSec)} · exakt: ${formatHHMM(rawSec)})`
+            : `${label} (${formatHHMM(rawSec)})`
         return (
           <div
             key={e.id}
@@ -419,7 +470,11 @@ function DayBars({
           />
         )
       })}
-      {overflow > 0 && <span className="text-[10px]" style={{ color: 'var(--text3)' }}>+{overflow}</span>}
+      {overflow > 0 && (
+        <span className="text-[10px]" style={{ color: 'var(--text3)' }}>
+          +{overflow}
+        </span>
+      )}
     </div>
   )
 }
@@ -485,7 +540,7 @@ const MONTHS_KEYS = [
   'calendar.months.sep',
   'calendar.months.oct',
   'calendar.months.nov',
-  'calendar.months.dec',
+  'calendar.months.dec'
 ] as const
 
 function formatMonthHeader(d: Date, months: readonly string[]): string {

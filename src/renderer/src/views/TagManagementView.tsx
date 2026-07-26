@@ -144,11 +144,7 @@ export default function TagManagementView(): React.JSX.Element {
           maxLength={50}
           disabled={creating}
         />
-        <button
-          type="submit"
-          disabled={creating || !newName.trim()}
-          className={btnClass}
-        >
+        <button type="submit" disabled={creating || !newName.trim()} className={btnClass}>
           {t('settings.tags.add')}
         </button>
       </form>
@@ -170,119 +166,119 @@ export default function TagManagementView(): React.JSX.Element {
           </div>
         )}
 
-        {!loading && tags.map((tag, idx) => (
-          <div
-            key={tag.name}
-            className="flex items-center gap-3 px-4 py-3 border-t"
-            style={{
-              borderColor: idx === 0 ? 'transparent' : 'var(--card-border)',
-            }}
-          >
-            {/* Tag chip */}
-            <span
-              className="inline-flex items-center rounded border px-2 py-0.5 text-xs font-medium"
+        {!loading &&
+          tags.map((tag, idx) => (
+            <div
+              key={tag.name}
+              className="flex items-center gap-3 px-4 py-3 border-t"
               style={{
-                background: 'var(--nav-bg)',
-                borderColor: 'var(--card-border)',
-                color: 'var(--text)',
-                fontFamily: 'monospace',
-                minWidth: 80
+                borderColor: idx === 0 ? 'transparent' : 'var(--card-border)'
               }}
             >
-              #{tag.name}
-            </span>
+              {/* Tag chip */}
+              <span
+                className="inline-flex items-center rounded border px-2 py-0.5 text-xs font-medium"
+                style={{
+                  background: 'var(--nav-bg)',
+                  borderColor: 'var(--card-border)',
+                  color: 'var(--text)',
+                  fontFamily: 'monospace',
+                  minWidth: 80
+                }}
+              >
+                #{tag.name}
+              </span>
 
-            {/* Entry count */}
-            <span className="w-20 shrink-0 text-xs tabular-nums" style={{ color: 'var(--text3)' }}>
-              {entryLabel(tag.count)}
-            </span>
+              {/* Entry count */}
+              <span
+                className="w-20 shrink-0 text-xs tabular-nums"
+                style={{ color: 'var(--text3)' }}
+              >
+                {entryLabel(tag.count)}
+              </span>
 
-            {/* Rename inline */}
-            <div className="flex flex-1 items-center gap-2 min-w-0">
-              {renamingTag === tag.name ? (
-                <>
-                  <input
-                    type="text"
-                    value={renameValue}
-                    onChange={(e) => setRenameValue(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') void commitRename(tag.name)
-                      if (e.key === 'Escape') setRenamingTag(null)
-                    }}
-                    placeholder={t('settings.tags.renamePlaceholder')}
-                    className={`${inputClass} flex-1`}
-                    maxLength={50}
-                    autoFocus
-                  />
+              {/* Rename inline */}
+              <div className="flex flex-1 items-center gap-2 min-w-0">
+                {renamingTag === tag.name ? (
+                  <>
+                    <input
+                      type="text"
+                      value={renameValue}
+                      onChange={(e) => setRenameValue(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') void commitRename(tag.name)
+                        if (e.key === 'Escape') setRenamingTag(null)
+                      }}
+                      placeholder={t('settings.tags.renamePlaceholder')}
+                      className={`${inputClass} flex-1`}
+                      maxLength={50}
+                      autoFocus
+                    />
+                    <button
+                      type="button"
+                      onClick={() => void commitRename(tag.name)}
+                      disabled={!renameValue.trim() || renameValue.trim() === tag.name}
+                      className={btnClass}
+                    >
+                      {t('settings.tags.renameConfirm')}
+                    </button>
+                    <button type="button" onClick={() => setRenamingTag(null)} className={btnClass}>
+                      {t('settings.tags.renameCancel')}
+                    </button>
+                  </>
+                ) : (
                   <button
                     type="button"
-                    onClick={() => void commitRename(tag.name)}
-                    disabled={!renameValue.trim() || renameValue.trim() === tag.name}
-                    className={btnClass}
+                    onClick={() => startRename(tag.name)}
+                    className="rounded p-1 hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition-colors"
+                    style={{ color: 'var(--text2)' }}
+                    aria-label={t('settings.tags.rename')}
+                    title={t('settings.tags.rename')}
                   >
-                    {t('settings.tags.renameConfirm')}
+                    <Icons.Edit />
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => setRenamingTag(null)}
-                    className={btnClass}
-                  >
-                    {t('settings.tags.renameCancel')}
-                  </button>
-                </>
-              ) : (
+                )}
+              </div>
+
+              {/* Merge select */}
+              {renamingTag !== tag.name && (
+                <select
+                  className={`${inputClass} shrink-0`}
+                  value=""
+                  onChange={(e) => void handleMergeSelect(tag.name, e.target.value)}
+                  title={t('settings.tags.mergeLabel')}
+                >
+                  <option value="">{t('settings.tags.mergeLabel')}</option>
+                  {tags
+                    .filter((other) => other.name !== tag.name)
+                    .map((other) => (
+                      <option key={other.name} value={other.name}>
+                        {other.name}
+                      </option>
+                    ))}
+                </select>
+              )}
+
+              {/* Delete */}
+              {renamingTag !== tag.name && (
                 <button
                   type="button"
-                  onClick={() => startRename(tag.name)}
-                  className="rounded p-1 hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition-colors"
-                  style={{ color: 'var(--text2)' }}
-                  aria-label={t('settings.tags.rename')}
-                  title={t('settings.tags.rename')}
+                  disabled={tag.count > 0}
+                  onClick={() => void handleDelete(tag.name)}
+                  title={
+                    tag.count > 0
+                      ? t('settings.tags.deleteCannotHint', { count: String(tag.count) })
+                      : t('settings.tags.deleteTitle')
+                  }
+                  className="rounded p-1 hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-red-400 disabled:cursor-not-allowed disabled:opacity-30 transition-colors shrink-0"
+                  style={{ color: 'var(--danger)' }}
+                  aria-label={t('settings.tags.delete')}
                 >
-                  <Icons.Edit />
+                  <Icons.Trash />
                 </button>
               )}
             </div>
-
-            {/* Merge select */}
-            {renamingTag !== tag.name && (
-              <select
-                className={`${inputClass} shrink-0`}
-                value=""
-                onChange={(e) => void handleMergeSelect(tag.name, e.target.value)}
-                title={t('settings.tags.mergeLabel')}
-              >
-                <option value="">{t('settings.tags.mergeLabel')}</option>
-                {tags
-                  .filter((other) => other.name !== tag.name)
-                  .map((other) => (
-                    <option key={other.name} value={other.name}>
-                      {other.name}
-                    </option>
-                  ))}
-              </select>
-            )}
-
-            {/* Delete */}
-            {renamingTag !== tag.name && (
-              <button
-                type="button"
-                disabled={tag.count > 0}
-                onClick={() => void handleDelete(tag.name)}
-                title={
-                  tag.count > 0
-                    ? t('settings.tags.deleteCannotHint', { count: String(tag.count) })
-                    : t('settings.tags.deleteTitle')
-                }
-                className="rounded p-1 hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-red-400 disabled:cursor-not-allowed disabled:opacity-30 transition-colors shrink-0"
-                style={{ color: 'var(--danger)' }}
-                aria-label={t('settings.tags.delete')}
-              >
-                <Icons.Trash />
-              </button>
-            )}
-          </div>
-        ))}
+          ))}
       </div>
 
       {/* Merge confirm dialog */}

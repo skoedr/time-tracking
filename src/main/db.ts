@@ -21,9 +21,7 @@ export function getDb(): Database.Database {
 
   const result = runMigrations(db, _dbPath)
   if (result.applied.length > 0) {
-    console.log(
-      `[db] Applied ${result.applied.length} migration(s): ${result.applied.join(', ')}`
-    )
+    console.log(`[db] Applied ${result.applied.length} migration(s): ${result.applied.join(', ')}`)
   }
 
   // Daily backup is fire-and-forget — must not block startup or throw.
@@ -41,19 +39,23 @@ export { MigrationError }
 export function recoverZombieEntries(): void {
   const db = getDb()
   const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString()
-  db.prepare(`
+  db.prepare(
+    `
     UPDATE entries
     SET stopped_at = heartbeat_at
     WHERE stopped_at IS NULL
       AND heartbeat_at IS NOT NULL
       AND heartbeat_at < ?
-  `).run(fiveMinutesAgo)
+  `
+  ).run(fiveMinutesAgo)
   // Stop entries without any heartbeat (crashed before first heartbeat)
-  db.prepare(`
+  db.prepare(
+    `
     UPDATE entries
     SET stopped_at = started_at
     WHERE stopped_at IS NULL
       AND heartbeat_at IS NULL
       AND started_at < ?
-  `).run(fiveMinutesAgo)
+  `
+  ).run(fiveMinutesAgo)
 }

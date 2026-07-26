@@ -63,15 +63,15 @@ Entwickeln gefahrlos sichern oder löschen.
 
 Erlaubte Types:
 
-| Type       | Wofür                                                    |
-| ---------- | -------------------------------------------------------- |
-| `feat`     | Neues nutzersichtbares Feature                           |
-| `fix`      | Bugfix                                                   |
-| `docs`     | Doku, README, Plan-Files                                 |
-| `chore`    | Build, Dependencies, Tooling                             |
-| `refactor` | Code-Umbau ohne Verhaltensänderung                       |
-| `test`     | Tests hinzufügen oder verbessern                         |
-| `security` | Security-relevante Änderung                              |
+| Type       | Wofür                              |
+| ---------- | ---------------------------------- |
+| `feat`     | Neues nutzersichtbares Feature     |
+| `fix`      | Bugfix                             |
+| `docs`     | Doku, README, Plan-Files           |
+| `chore`    | Build, Dependencies, Tooling       |
+| `refactor` | Code-Umbau ohne Verhaltensänderung |
+| `test`     | Tests hinzufügen oder verbessern   |
+| `security` | Security-relevante Änderung        |
 
 Scope ist optional, aber willkommen (`csv`, `pdf`, `i18n`, `db`, `ipc`, …).
 
@@ -120,16 +120,16 @@ Neue Keys immer in **beiden** Dateien gleichzeitig ergänzen:
 export const de = {
   myFeature: {
     title: 'Mein Feature',
-    description: 'Beschreibung mit {name}',
-  },
+    description: 'Beschreibung mit {name}'
+  }
 }
 
 // src/shared/locales/en.ts  ← muss alle Keys aus de.ts spiegeln (TypeScript erzwingt es)
 export const en: typeof de = {
   myFeature: {
     title: 'My Feature',
-    description: 'Description with {name}',
-  },
+    description: 'Description with {name}'
+  }
 }
 ```
 

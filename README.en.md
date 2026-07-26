@@ -42,15 +42,15 @@ Full roadmap: [ROADMAP.md](ROADMAP.md) · Issues: [github.com/skoedr/time-tracki
 
 ## Tech Stack
 
-| Layer | Library |
-|---|---|
-| Shell | Electron 39 |
-| Build | electron-vite 5 |
-| UI | React 19 + TypeScript 5 |
-| Styling | Tailwind CSS 4 |
-| State | Zustand 5 |
-| Database | better-sqlite3 12 |
-| Dates | date-fns 4 |
+| Layer    | Library                 |
+| -------- | ----------------------- |
+| Shell    | Electron 39             |
+| Build    | electron-vite 5         |
+| UI       | React 19 + TypeScript 5 |
+| Styling  | Tailwind CSS 4          |
+| State    | Zustand 5               |
+| Database | better-sqlite3 12       |
+| Dates    | date-fns 4              |
 
 ## Development
 

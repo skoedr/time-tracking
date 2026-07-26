@@ -52,12 +52,14 @@ function mockFs(files: Record<string, Buffer | 'EBUSY' | 'EPERM'>): FsDeps {
       if (f === 'EPERM') throw Object.assign(new Error('EPERM'), { code: 'EPERM' })
       return f
     },
-    writeFileSync: () => { /* no-op by default; override per test */ }
+    writeFileSync: () => {
+      /* no-op by default; override per test */
+    }
   }
 }
 
 const noDialog: DialogDeps = {
-  showSaveDialog: async () => ({ canceled: true, filePath: undefined } as any)
+  showSaveDialog: async () => ({ canceled: true, filePath: undefined }) as any
 }
 
 // ── mergeOnlyHandler tests ────────────────────────────────────────────────────
@@ -197,7 +199,7 @@ describe('mergeOnlyHandler', () => {
       }
     }
     const mockDialog: DialogDeps = {
-      showSaveDialog: async () => ({ canceled: false, filePath: 'C:/fallback_merged.pdf' } as any)
+      showSaveDialog: async () => ({ canceled: false, filePath: 'C:/fallback_merged.pdf' }) as any
     }
     const res = await mergeOnlyHandler(
       { stundennachweisPath: 'C:/sn.pdf', invoicePath: 'C:/inv.pdf' },
@@ -213,7 +215,9 @@ describe('mergeOnlyHandler', () => {
       existsSync: (p) => p === resolve('C:/sn.pdf') || p === resolve('C:/inv.pdf'),
       statSync: () => ({ size: 1024 }),
       readFileSync: (p) => (p.includes('sn') ? pdf1 : pdf2),
-      writeFileSync: () => { throw Object.assign(new Error('EPERM'), { code: 'EPERM' }) }
+      writeFileSync: () => {
+        throw Object.assign(new Error('EPERM'), { code: 'EPERM' })
+      }
     }
     const res = await mergeOnlyHandler(
       { stundennachweisPath: 'C:/sn.pdf', invoicePath: 'C:/inv.pdf' },
@@ -264,7 +268,10 @@ describe('mergeOnlyHandler — stundennachweisPaths (multi)', () => {
       writeFileSync: (p, buf) => written.push({ path: p, buf })
     }
     const res = await mergeOnlyHandler(
-      { stundennachweisPaths: ['C:/sn1.pdf', 'C:/sn2.pdf', 'C:/sn3.pdf'], invoicePath: 'C:/inv.pdf' },
+      {
+        stundennachweisPaths: ['C:/sn1.pdf', 'C:/sn2.pdf', 'C:/sn3.pdf'],
+        invoicePath: 'C:/inv.pdf'
+      },
       fs,
       noDialog
     )
@@ -335,10 +342,7 @@ describe('pdfInfoHandler', () => {
   })
 
   it('rejects non-pdf extension', async () => {
-    const res = await pdfInfoHandler(
-      { filePath: 'C:/doc.txt' },
-      mockFs({ 'C:/doc.txt': pdf1 })
-    )
+    const res = await pdfInfoHandler({ filePath: 'C:/doc.txt' }, mockFs({ 'C:/doc.txt': pdf1 }))
     expect(res.ok).toBe(false)
     expect(unwrapErr(res)).toMatch(/keine PDF/)
   })
@@ -517,7 +521,13 @@ describe('mergeExportHandler — successful merge', () => {
         written = { path: p, data: d }
       }
     }
-    const res = await mergeExportHandler(mockDb(), validReq, fsDeps, noDialog, mockPdfDeps(pdf1, merged))
+    const res = await mergeExportHandler(
+      mockDb(),
+      validReq,
+      fsDeps,
+      noDialog,
+      mockPdfDeps(pdf1, merged)
+    )
     expect(res.ok).toBe(true)
     expect(unwrapData(res).path).toMatch(/rechnung_inkl_Stundennachweis\.pdf$/)
     expect(written).not.toBeNull()
@@ -529,13 +539,20 @@ describe('mergeExportHandler — successful merge', () => {
     const existingOutput = resolve('C:/invoices/rechnung_inkl_Stundennachweis.pdf')
     const writtenPaths: string[] = []
     const fsDeps: FsDeps = {
-      existsSync: (p) =>
-        p === resolve('C:/invoices/rechnung.pdf') || p === existingOutput,
+      existsSync: (p) => p === resolve('C:/invoices/rechnung.pdf') || p === existingOutput,
       statSync: () => ({ size: pdf1.length }),
       readFileSync: () => pdf1,
-      writeFileSync: (p) => { writtenPaths.push(p) }
+      writeFileSync: (p) => {
+        writtenPaths.push(p)
+      }
     }
-    const res = await mergeExportHandler(mockDb(), validReq, fsDeps, noDialog, mockPdfDeps(pdf1, merged))
+    const res = await mergeExportHandler(
+      mockDb(),
+      validReq,
+      fsDeps,
+      noDialog,
+      mockPdfDeps(pdf1, merged)
+    )
     expect(res.ok).toBe(true)
     // Should NOT overwrite the existing output — timestamp suffix appended.
     expect(writtenPaths[0]).not.toBe(existingOutput)
@@ -558,9 +575,15 @@ describe('mergeExportHandler — successful merge', () => {
       }
     }
     const dialogDeps: DialogDeps = {
-      showSaveDialog: async () => ({ canceled: false, filePath: fallbackPath } as any)
+      showSaveDialog: async () => ({ canceled: false, filePath: fallbackPath }) as any
     }
-    const res = await mergeExportHandler(mockDb(), validReq, fsDeps, dialogDeps, mockPdfDeps(pdf1, merged))
+    const res = await mergeExportHandler(
+      mockDb(),
+      validReq,
+      fsDeps,
+      dialogDeps,
+      mockPdfDeps(pdf1, merged)
+    )
     expect(res.ok).toBe(true)
     expect(unwrapData(res).path).toBe(fallbackPath)
   })
@@ -575,7 +598,13 @@ describe('mergeExportHandler — successful merge', () => {
         throw Object.assign(new Error('EPERM'), { code: 'EPERM' })
       }
     }
-    const res = await mergeExportHandler(mockDb(), validReq, fsDeps, noDialog, mockPdfDeps(pdf1, merged))
+    const res = await mergeExportHandler(
+      mockDb(),
+      validReq,
+      fsDeps,
+      noDialog,
+      mockPdfDeps(pdf1, merged)
+    )
     expect(res.ok).toBe(false)
     expect(unwrapErr(res)).toMatch(/abgebrochen/)
   })

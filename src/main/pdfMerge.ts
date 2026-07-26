@@ -133,9 +133,7 @@ export function extractEmbeddedFiles(doc: PDFDocument): EmbeddedFileEntry[] {
         const afRelationship = afRelVal instanceof PDFName ? afRelVal : undefined
 
         const hexName =
-          name instanceof PDFHexString
-            ? name
-            : PDFHexString.fromText(name.decodeText())
+          name instanceof PDFHexString ? name : PDFHexString.fromText(name.decodeText())
 
         entries.push({
           name: hexName,
@@ -215,10 +213,7 @@ export function reembedFiles(target: PDFDocument, entries: EmbeddedFileEntry[]):
   }
 
   // Set /AF array for PDF/A-3 machine-readable invoice conformance
-  target.catalog.set(
-    PDFName.of('AF'),
-    ctx.obj(afRefs as Parameters<typeof ctx.obj>[0])
-  )
+  target.catalog.set(PDFName.of('AF'), ctx.obj(afRefs as Parameters<typeof ctx.obj>[0]))
 }
 
 /**
@@ -375,10 +370,7 @@ export async function mergePdfs(
  * Throws if `stundennachweise` is empty — callers must use the single-merge
  * `mergePdfs()` path for that, or simply not call this at all.
  */
-export async function mergePdfsMulti(
-  invoice: Buffer,
-  stundennachweise: Buffer[]
-): Promise<Buffer> {
+export async function mergePdfsMulti(invoice: Buffer, stundennachweise: Buffer[]): Promise<Buffer> {
   if (stundennachweise.length === 0) {
     throw new Error('mergePdfsMulti requires at least one Stundennachweis')
   }

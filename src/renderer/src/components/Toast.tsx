@@ -19,7 +19,11 @@ export function ToastTray(): React.ReactElement | null {
           key={t.id}
           role="status"
           className="pointer-events-auto flex min-w-[280px] max-w-[420px] items-center gap-3 rounded-lg px-4 py-3 text-sm shadow-lg border backdrop-blur-xl"
-          style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)', color: 'var(--text)' }}
+          style={{
+            background: 'var(--card-bg)',
+            borderColor: 'var(--card-border)',
+            color: 'var(--text)'
+          }}
         >
           <span className="flex-1">{t.message}</span>
           {t.action && (
@@ -27,7 +31,7 @@ export function ToastTray(): React.ReactElement | null {
               type="button"
               onClick={() => void executeAction(t.id)}
               className="rounded px-2 py-1 text-sm font-medium hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-400"
-            style={{ color: 'var(--accent)' }}
+              style={{ color: 'var(--accent)' }}
             >
               {t.action.label}
             </button>

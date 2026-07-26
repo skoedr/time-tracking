@@ -46,7 +46,11 @@ export function ThemeProvider({ children }: { children: React.ReactNode }): Reac
     void window.api.settings.set('theme_mode', newMode)
   }
 
-  return <ThemeContext.Provider value={{ themeMode: mode, setThemeMode }}>{children}</ThemeContext.Provider>
+  return (
+    <ThemeContext.Provider value={{ themeMode: mode, setThemeMode }}>
+      {children}
+    </ThemeContext.Provider>
+  )
 }
 
 export function useTheme(): ThemeContextValue {

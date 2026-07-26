@@ -11,10 +11,10 @@
 
 ### Typografie
 
-| Rolle | Font | Verwendung |
-|-------|------|------------|
-| UI-Text | **Inter** (300–700) | Alle Labels, Buttons, Fließtext |
-| Zahlen / Zeiten | **JetBrains Mono** (400–700) | Timer, Dauern, Hotkeys, Pfade |
+| Rolle           | Font                         | Verwendung                      |
+| --------------- | ---------------------------- | ------------------------------- |
+| UI-Text         | **Inter** (300–700)          | Alle Labels, Buttons, Fließtext |
+| Zahlen / Zeiten | **JetBrains Mono** (400–700) | Timer, Dauern, Hotkeys, Pfade   |
 
 Beide Fonts via Google Fonts: `Inter` + `JetBrains Mono`. `font-variant-numeric: tabular-nums` + `letter-spacing: 1` auf allen Timer-Anzeigen.
 
@@ -24,32 +24,33 @@ Beide Fonts via Google Fonts: `Inter` + `JetBrains Mono`. `font-variant-numeric:
 
 Alle Farben als CSS Custom Properties in `src/renderer/src/assets/base.css`:
 
-| Token | Dark | Light | Verwendung |
-|-------|------|-------|------------|
-| `--page-bg` | `linear-gradient(145deg, #0d0f1e, #080c1a)` | `linear-gradient(145deg, #dde4f8, #e8edfb)` | Body-Hintergrund |
-| `--card-bg` | `rgba(255,255,255,0.045)` | `rgba(255,255,255,0.70)` | Glass-Karten |
-| `--card-hover` | `rgba(255,255,255,0.07)` | `rgba(255,255,255,0.88)` | Card Hover-State |
-| `--nav-bg` | `rgba(10,12,28,0.80)` | `rgba(255,255,255,0.75)` | Nav + Drawer-Hintergründe |
-| `--card-border` | `rgba(255,255,255,0.08)` | `rgba(0,0,0,0.07)` | Alle Kanten |
-| `--input-bg` | `rgba(0,0,0,0.30)` | `rgba(255,255,255,0.90)` | Inputs, Selects, Textareas |
-| `--text` | `#e8eaf6` | `#1a1c2e` | Primärtext |
-| `--text2` | `#8b93bc` | `#5b6080` | Sekundärtext, Labels |
-| `--text3` | `#4a5270` | `#9098b8` | Hinweistexte, Metadaten |
-| `--accent` | `#8b7cf8` | `#5b4ef0` | Primäre Aktionsfarbe (Indigo-Violett) |
-| `--accent-bg` | `rgba(139,124,248,0.12)` | `rgba(91,78,240,0.08)` | Subtile Akzent-Flächen |
-| `--accent-glow` | `rgba(139,124,248,0.25)` | `rgba(91,78,240,0.18)` | Box-Shadow auf primären Buttons |
-| `--green` | `#4ade80` | `#16a34a` | Laufender Timer, Erfolg |
-| `--green-bg` | `rgba(74,222,128,0.10)` | `rgba(22,163,74,0.07)` | ActiveTimerPill-Hintergrund |
-| `--danger` | `#f87171` | `#dc2626` | Delete, Stop-Button |
-| `--danger-bg` | `rgba(248,113,113,0.10)` | `rgba(220,38,38,0.07)` | Danger-Button Hover-Fläche |
-| `--shadow` | `0 8px 32px rgba(0,0,0,0.50)` | `0 8px 32px rgba(100,120,200,0.12)` | Card-Schatten |
-| `--blur` | `blur(20px)` | `blur(20px)` | `backdrop-filter` auf Glass-Elementen |
+| Token           | Dark                                        | Light                                       | Verwendung                            |
+| --------------- | ------------------------------------------- | ------------------------------------------- | ------------------------------------- |
+| `--page-bg`     | `linear-gradient(145deg, #0d0f1e, #080c1a)` | `linear-gradient(145deg, #dde4f8, #e8edfb)` | Body-Hintergrund                      |
+| `--card-bg`     | `rgba(255,255,255,0.045)`                   | `rgba(255,255,255,0.70)`                    | Glass-Karten                          |
+| `--card-hover`  | `rgba(255,255,255,0.07)`                    | `rgba(255,255,255,0.88)`                    | Card Hover-State                      |
+| `--nav-bg`      | `rgba(10,12,28,0.80)`                       | `rgba(255,255,255,0.75)`                    | Nav + Drawer-Hintergründe             |
+| `--card-border` | `rgba(255,255,255,0.08)`                    | `rgba(0,0,0,0.07)`                          | Alle Kanten                           |
+| `--input-bg`    | `rgba(0,0,0,0.30)`                          | `rgba(255,255,255,0.90)`                    | Inputs, Selects, Textareas            |
+| `--text`        | `#e8eaf6`                                   | `#1a1c2e`                                   | Primärtext                            |
+| `--text2`       | `#8b93bc`                                   | `#5b6080`                                   | Sekundärtext, Labels                  |
+| `--text3`       | `#4a5270`                                   | `#9098b8`                                   | Hinweistexte, Metadaten               |
+| `--accent`      | `#8b7cf8`                                   | `#5b4ef0`                                   | Primäre Aktionsfarbe (Indigo-Violett) |
+| `--accent-bg`   | `rgba(139,124,248,0.12)`                    | `rgba(91,78,240,0.08)`                      | Subtile Akzent-Flächen                |
+| `--accent-glow` | `rgba(139,124,248,0.25)`                    | `rgba(91,78,240,0.18)`                      | Box-Shadow auf primären Buttons       |
+| `--green`       | `#4ade80`                                   | `#16a34a`                                   | Laufender Timer, Erfolg               |
+| `--green-bg`    | `rgba(74,222,128,0.10)`                     | `rgba(22,163,74,0.07)`                      | ActiveTimerPill-Hintergrund           |
+| `--danger`      | `#f87171`                                   | `#dc2626`                                   | Delete, Stop-Button                   |
+| `--danger-bg`   | `rgba(248,113,113,0.10)`                    | `rgba(220,38,38,0.07)`                      | Danger-Button Hover-Fläche            |
+| `--shadow`      | `0 8px 32px rgba(0,0,0,0.50)`               | `0 8px 32px rgba(100,120,200,0.12)`         | Card-Schatten                         |
+| `--blur`        | `blur(20px)`                                | `blur(20px)`                                | `backdrop-filter` auf Glass-Elementen |
 
 ---
 
 ### Komponenten-Pattern
 
 #### Glass Card
+
 ```css
 background: var(--card-bg);
 backdrop-filter: blur(20px);
@@ -59,6 +60,7 @@ box-shadow: var(--shadow);
 ```
 
 #### Glass Input / Select
+
 ```css
 background: var(--input-bg);
 border: 1px solid var(--card-border);
@@ -70,15 +72,17 @@ font-size: 13px;
 ```
 
 #### Primärer Button (Accent)
+
 ```css
 background: var(--accent);
 color: #fff;
-border-radius: 12px;  /* oder 24px für Pill */
+border-radius: 12px; /* oder 24px für Pill */
 box-shadow: 0 8px 32px var(--accent-glow);
 font-weight: 700;
 ```
 
 #### Pill-Button (Outline / aktiv)
+
 ```css
 /* Inaktiv */
 border: 1px solid var(--card-border);
@@ -93,36 +97,43 @@ color: #fff;
 ```
 
 #### Icon-Button (30×30)
+
 ```css
-width: 30px; height: 30px;
+width: 30px;
+height: 30px;
 border-radius: 8px;
-border: 1px solid transparent;  /* hover: var(--card-border) */
-background: transparent;         /* hover: var(--accent-bg) oder var(--danger-bg) */
-color: var(--text3);             /* hover: var(--accent) oder var(--danger) */
+border: 1px solid transparent; /* hover: var(--card-border) */
+background: transparent; /* hover: var(--accent-bg) oder var(--danger-bg) */
+color: var(--text3); /* hover: var(--accent) oder var(--danger) */
 ```
 
 #### Toggle (Boolean-Einstellung)
+
 ```css
 /* Wrapper */
-width: 40px; height: 22px;
+width: 40px;
+height: 22px;
 border-radius: 11px;
-background: var(--accent);  /* an: accent, aus: card-bg */
+background: var(--accent); /* an: accent, aus: card-bg */
 border: 1px solid var(--accent);
-box-shadow: 0 0 12px var(--accent-glow);  /* nur wenn an */
+box-shadow: 0 0 12px var(--accent-glow); /* nur wenn an */
 
 /* Thumb */
-width: 16px; height: 16px;
+width: 16px;
+height: 16px;
 border-radius: 50%;
 background: #fff;
-left: 20px (an) / 2px (aus);  /* transition: left .2s */
+left: 20px (an) / 2px (aus); /* transition: left .2s */
 ```
 
 #### Segmented Control (Single-Pick)
+
 ```css
 /* Wrapper */
 border: 1px solid var(--card-border);
-border-radius: 8px;  /* oder 24px */
-display: flex; gap: 4px;
+border-radius: 8px; /* oder 24px */
+display: flex;
+gap: 4px;
 
 /* Button aktiv */
 background: var(--accent-bg);
@@ -154,6 +165,7 @@ color: var(--text2);
 ### Ambient-Blobs (Hintergrund-Glühen)
 
 Zwei `position: fixed`, `pointer-events: none`, `z-index: 0` Divs:
+
 - Oben-rechts: `var(--accent-bg)`, `filter: blur(80px)`, `400×400px`, `border-radius: 50%`
 - Unten-links: `var(--green-bg)`, `filter: blur(80px)`, `300×300px`, `border-radius: 50%`
 
@@ -164,13 +176,13 @@ Zwei `position: fixed`, `pointer-events: none`, `z-index: 0` Divs:
 Jede Sektion: `Section` = Überschrift (11px, uppercase, `--text3`) + `GlassCard` darunter.  
 Jede Zeile: `Row` = Label links (`--text`, 13px, 500) + optionaler Hint (`--text3`, 11px) + Control rechts.
 
-| Setting-Typ | Control |
-|-------------|---------|
-| Boolean (An/Aus) | **Toggle** (siehe oben) |
-| Single-Pick aus wenigen Optionen | **Segmented Control** (`border-radius: 8px`) |
-| Text-Eingabe | **Glass Input** inline-Darstellung |
-| Datei-Picker | Kleiner `border`-Button „Datei auswählen…" |
-| Info/Pfad | `JetBrains Mono`, `--text3`, `overflow: ellipsis` |
+| Setting-Typ                      | Control                                           |
+| -------------------------------- | ------------------------------------------------- |
+| Boolean (An/Aus)                 | **Toggle** (siehe oben)                           |
+| Single-Pick aus wenigen Optionen | **Segmented Control** (`border-radius: 8px`)      |
+| Text-Eingabe                     | **Glass Input** inline-Darstellung                |
+| Datei-Picker                     | Kleiner `border`-Button „Datei auswählen…"        |
+| Info/Pfad                        | `JetBrains Mono`, `--text3`, `overflow: ellipsis` |
 
 ---
 
@@ -178,22 +190,22 @@ Jede Zeile: `Row` = Label links (`--text`, 13px, 500) + optionaler Hint (`--text
 
 Alle Icons als inline SVG, `stroke="currentColor"`, `strokeWidth="1.6"`, `strokeLinecap="round"`:
 
-| Name | Verwendung |
-|------|------------|
-| Edit (Stift) | Eintrag / Kunde bearbeiten |
-| Trash (Mülleimer) | Löschen (danger-Farbe) |
-| Archive / Unarchive (Box) | Kunde archivieren / reaktivieren |
-| Plus (Kreuz) | Neuer Eintrag / Neuer Kunde |
-| ChevLeft / ChevRight | Kalender-Navigation |
-| ChevDown | Select-Pfeil |
-| Play (gefüllt) | Timer Start |
-| Stop (Quadrat, gefüllt) | Timer Stop |
-| Clock | Logo-Mark in Nav |
-| File | PDF / Export |
-| X | Modal schließen |
-| Check | Bestätigung |
-| Sun / Moon | Theme-Toggle |
-| Dot (8px Kreis) | Client-Farbe, pulsierend beim aktiven Timer |
+| Name                      | Verwendung                                  |
+| ------------------------- | ------------------------------------------- |
+| Edit (Stift)              | Eintrag / Kunde bearbeiten                  |
+| Trash (Mülleimer)         | Löschen (danger-Farbe)                      |
+| Archive / Unarchive (Box) | Kunde archivieren / reaktivieren            |
+| Plus (Kreuz)              | Neuer Eintrag / Neuer Kunde                 |
+| ChevLeft / ChevRight      | Kalender-Navigation                         |
+| ChevDown                  | Select-Pfeil                                |
+| Play (gefüllt)            | Timer Start                                 |
+| Stop (Quadrat, gefüllt)   | Timer Stop                                  |
+| Clock                     | Logo-Mark in Nav                            |
+| File                      | PDF / Export                                |
+| X                         | Modal schließen                             |
+| Check                     | Bestätigung                                 |
+| Sun / Moon                | Theme-Toggle                                |
+| Dot (8px Kreis)           | Client-Farbe, pulsierend beim aktiven Timer |
 
 ---
 
@@ -210,9 +222,35 @@ Alle Icons als inline SVG, `stroke="currentColor"`, `strokeWidth="1.6"`, `stroke
 ### Animationen
 
 ```css
-@keyframes fadeIn { from { opacity:0; transform:translateY(4px) } to { opacity:1; transform:translateY(0) } }
-@keyframes pulse-dot { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(.85)} }
-@keyframes slideIn { from{transform:translateX(100%)} to{transform:translateX(0)} }
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes pulse-dot {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(0.85);
+  }
+}
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
 ```
 
 - Views beim Mounten: `animation: fadeIn .2s ease`
@@ -225,9 +263,16 @@ Alle Icons als inline SVG, `stroke="currentColor"`, `strokeWidth="1.6"`, `stroke
 ### Scrollbar
 
 ```css
-::-webkit-scrollbar { width: 5px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(255,255,255,.12); border-radius: 3px; }
+::-webkit-scrollbar {
+  width: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 3px;
+}
 ```
 
 ---

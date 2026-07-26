@@ -5,10 +5,10 @@ and adds three missing sections + a language banner to `README.md`.
 
 ### Changes
 
-| File | What changed |
-| ---- | ------------ |
-| `README.en.md` | **New.** Full English translation of all sections (Features, Tech Stack, Dev, Releases, Project Structure, Data Storage, Security, Contributing, Privacy, License). "Coming soon" updated to match DE. |
-| `README.md` | Language banner `> 🌐 English version → README.en.md` added at top. New sections: **Contributing** (link to CONTRIBUTING.md), **Privacy** (one-liner + link to PRIVACY.md), **Security** extended with link to SECURITY.md. |
+| File           | What changed                                                                                                                                                                                                                |
+| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `README.en.md` | **New.** Full English translation of all sections (Features, Tech Stack, Dev, Releases, Project Structure, Data Storage, Security, Contributing, Privacy, License). "Coming soon" updated to match DE.                      |
+| `README.md`    | Language banner `> 🌐 English version → README.en.md` added at top. New sections: **Contributing** (link to CONTRIBUTING.md), **Privacy** (one-liner + link to PRIVACY.md), **Security** extended with link to SECURITY.md. |
 
 ### Why
 

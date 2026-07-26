@@ -62,10 +62,7 @@ export function buildBudgetStatus(
  * handler, to avoid N round-trips per render.
  */
 export function registerBudgetHandlers(db: Database.Database): void {
-  ipcMain.handle(
-    'projects:getBudgetStatus',
-    (_e, projectId: number): IpcResult<BudgetStatus> => {
-      return buildBudgetStatus(db, projectId)
-    }
-  )
+  ipcMain.handle('projects:getBudgetStatus', (_e, projectId: number): IpcResult<BudgetStatus> => {
+    return buildBudgetStatus(db, projectId)
+  })
 }

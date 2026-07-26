@@ -113,8 +113,7 @@ function buildEntryRow(
   const rateCent = client?.rate_cent ?? 0
 
   const rateStr = rateCent > 0 ? formatDecimal(rateCent / 100, dec) : ''
-  const betragStr =
-    rateCent > 0 ? formatDecimal((durationSec / 3600) * (rateCent / 100), dec) : ''
+  const betragStr = rateCent > 0 ? formatDecimal((durationSec / 3600) * (rateCent / 100), dec) : ''
 
   const tags = deserializeTags(entry.tags).join('|')
   const reference = entry.reference ?? ''

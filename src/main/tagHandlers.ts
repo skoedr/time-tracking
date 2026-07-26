@@ -38,9 +38,9 @@ function validateTagName(name: string): string | null {
  */
 export function getAllTagsWithCount(db: Database.Database): IpcResult<TagWithCount[]> {
   try {
-    const masterRows = db
-      .prepare('SELECT name FROM tags ORDER BY name ASC')
-      .all() as Array<{ name: string }>
+    const masterRows = db.prepare('SELECT name FROM tags ORDER BY name ASC').all() as Array<{
+      name: string
+    }>
 
     const entryRows = db
       .prepare(`SELECT tags FROM entries WHERE deleted_at IS NULL AND tags != ''`)
@@ -138,11 +138,7 @@ export function renameTag(
  *
  * Exported for unit testing.
  */
-export function mergeTag(
-  db: Database.Database,
-  source: string,
-  target: string
-): IpcResult<void> {
+export function mergeTag(db: Database.Database, source: string, target: string): IpcResult<void> {
   const trimmedSource = source.trim().toLowerCase()
   const trimmedTarget = target.trim().toLowerCase()
 
@@ -179,11 +175,15 @@ export function deleteTag(db: Database.Database, name: string): IpcResult<void> 
 
   try {
     const rows = db
-      .prepare(`SELECT COUNT(*) AS cnt FROM entries WHERE deleted_at IS NULL AND tags LIKE '%,' || ? || ',%'`)
+      .prepare(
+        `SELECT COUNT(*) AS cnt FROM entries WHERE deleted_at IS NULL AND tags LIKE '%,' || ? || ',%'`
+      )
       .get(trimmed) as { cnt: number }
 
     if (rows.cnt > 0) {
-      return fail(`Tag '${trimmed}' hat noch ${rows.cnt} Eintrag/Einträge und kann nicht gelöscht werden`)
+      return fail(
+        `Tag '${trimmed}' hat noch ${rows.cnt} Eintrag/Einträge und kann nicht gelöscht werden`
+      )
     }
 
     db.prepare('DELETE FROM tags WHERE name = ?').run(trimmed)

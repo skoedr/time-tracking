@@ -91,9 +91,7 @@ export function AboutDialog({ open, onClose, version }: Props): React.JSX.Elemen
             {t('about.thirdParty')} ({licenses.length})
           </p>
 
-          {loading && (
-            <p className="text-xs text-slate-500">{t('about.loading')}</p>
-          )}
+          {loading && <p className="text-xs text-slate-500">{t('about.loading')}</p>}
 
           <div className="max-h-64 overflow-y-auto flex flex-col gap-1">
             {licenses.map((pkg) => (

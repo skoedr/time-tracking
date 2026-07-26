@@ -7,7 +7,9 @@ v1.1.0 and v1.1.1 shipped a `better-sqlite3` binary built for the wrong ABI (Nod
 ## What's in here
 
 ### 1. `--smoke-test=<path>` mode in `src/main/index.ts`
+
 Early-exit code path inside `app.whenReady`:
+
 1. Parse `--smoke-test=<outPath>` from `process.argv`.
 2. Call `getDb()` — opens the SQLite file and runs every migration against the **actual Electron-ABI** `better-sqlite3` binary.
 3. Read `MAX(version)` from `schema_version`.
@@ -17,6 +19,7 @@ Early-exit code path inside `app.whenReady`:
 No window, no tray, no IPC handlers, no idle watcher. Pure DB-open + migrate + exit.
 
 JSON payload on success:
+
 ```json
 {
   "ok": true,
@@ -28,7 +31,9 @@ JSON payload on success:
 ```
 
 ### 2. CI smoke step in `.github/workflows/release.yml`
+
 Inserted between `build:win` and `upload-artifact`:
+
 - Locates `dist/win-unpacked/*.exe` (filters out `uninstall*`, `crashpad*`, `elevate*`).
 - Launches it with `--smoke-test=$RUNNER_TEMP/smoke.json`, `WaitForExit(60000)`.
 - Fails the release if:
@@ -41,7 +46,9 @@ Inserted between `build:win` and `upload-artifact`:
 So a future `better-sqlite3` ABI mismatch, a broken migration, or a runtime regression in the main process initialization will block the release at the CI step instead of crashing on user machines.
 
 ### 3. CHANGELOG.md
+
 Added the `[Unreleased] — v1.2` section consolidating PR A–D:
+
 - TodayView, CalendarView + Drawer, manual create/edit, soft-delete + Rückgängig
 - Tray today-total tooltip, DESIGN.md stub
 - Migration 003 (rate_cent, deleted_at, idx, backfill, post-apply assertion)
@@ -52,11 +59,11 @@ Plus `### Notes` documenting the v1.2 cross-midnight limitation and the rounding
 
 ## Verification
 
-| Check | Result |
-| --- | --- |
-| `pnpm typecheck` | ✅ green |
-| `pnpm test` | ✅ 51/51 (unchanged) |
-| `pnpm lint` | ✅ baseline 21 errors, **0 new** |
+| Check            | Result                           |
+| ---------------- | -------------------------------- |
+| `pnpm typecheck` | ✅ green                         |
+| `pnpm test`      | ✅ 51/51 (unchanged)             |
+| `pnpm lint`      | ✅ baseline 21 errors, **0 new** |
 
 The smoke step itself can only be exercised in the actual release pipeline on a tag push — cannot be simulated from a feature-branch push (no `dist/win-unpacked/*.exe` is produced for branch CI). The first real run will be the v1.2.0 tag.
 

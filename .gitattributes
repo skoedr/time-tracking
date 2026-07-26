@@ -1,0 +1,29 @@
+# Zeilenenden — die einzige Quelle der Wahrheit (#141).
+#
+# .editorconfig und Prettier sagen beide LF, die Dateien auf der Platte waren
+# aber durchgehend CRLF: ohne .gitattributes normalisiert git nichts, also
+# bekam jeder Windows-Checkout CRLF und Prettier meckerte jede Zeile einzeln
+# an (28.070 `Delete ␍`-Warnungen). Deshalb steht Lint bis heute in keinem
+# Workflow.
+#
+# `text=auto eol=lf` heißt: git erkennt Textdateien selbst, speichert sie im
+# Repo mit LF und checkt sie auch mit LF aus — auf jeder Plattform.
+* text=auto eol=lf
+
+# Binärdateien nie anfassen. git erkennt die meisten selbst; hier explizit,
+# damit eine Fehlerkennung sie nicht zerschießt.
+*.png   -text
+*.ico   -text
+*.icns  -text
+*.pdf   -text
+*.node  -text
+*.woff  -text
+*.woff2 -text
+*.ttf   -text
+*.otf   -text
+
+# Skripte, die zur Laufzeit CRLF brauchen bzw. explizit LF sein müssen.
+*.ps1   text eol=crlf
+*.cmd   text eol=crlf
+*.bat   text eol=crlf
+*.sh    text eol=lf

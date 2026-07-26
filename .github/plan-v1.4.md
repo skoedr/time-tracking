@@ -5,14 +5,15 @@
 
 **Branch-Strategie:** 4 PRs in dieser Reihenfolge. CI zuerst, weil Juni-Deadline.
 
-| PR | Branch | Issues | Risiko | Größe | Status |
-|----|--------|--------|--------|-------|--------|
-| A | `chore/v1.4-ci-node24` | #41 | sehr niedrig | XS (1 Datei, 2 Zeilen) | ✅ merged |
-| B | `feat/v1.4-mini-widget` | #22 | hoch | L (zweites BrowserWindow + Hotkey + Migration + timerStore-Refactor) | ✅ merged |
-| C | `feat/v1.4-tags` | #24 | mittel | M (Schema + Form + Filter + PDF-Group) | ⏳ |
-| D | `feat/v1.4-quicknote-window` | #25 + Backlog | niedrig | S (Toast-Hook + Window-Persist + 1 kombi-Migration) | ⏳ |
+| PR  | Branch                       | Issues        | Risiko       | Größe                                                                | Status    |
+| --- | ---------------------------- | ------------- | ------------ | -------------------------------------------------------------------- | --------- |
+| A   | `chore/v1.4-ci-node24`       | #41           | sehr niedrig | XS (1 Datei, 2 Zeilen)                                               | ✅ merged |
+| B   | `feat/v1.4-mini-widget`      | #22           | hoch         | L (zweites BrowserWindow + Hotkey + Migration + timerStore-Refactor) | ✅ merged |
+| C   | `feat/v1.4-tags`             | #24           | mittel       | M (Schema + Form + Filter + PDF-Group)                               | ⏳        |
+| D   | `feat/v1.4-quicknote-window` | #25 + Backlog | niedrig      | S (Toast-Hook + Window-Persist + 1 kombi-Migration)                  | ⏳        |
 
 **Verschoben (NICHT in v1.4):**
+
 - #18 (CSV-Export) → v1.5 (JSON deckt Trust ab, Steuerberater-Pull fehlt)
 - #23 (Pomodoro) → v1.5 (Mini-Widget + Quicknote liefern mehr Daily-Trust)
 - Backlog: PDF-Overlap-Merge → v1.5 (kosmetisch, keine Daten-Korrektheit)
@@ -203,6 +204,7 @@ Vollständige Test-Coverage: leerer Input, Whitespace-only, Duplikate, Sonderzei
 #### C.4 UI: EntryEditForm
 
 Tag-Input-Komponente:
+
 - Chip-Liste der bereits gesetzten Tags
 - Input-Feld; Tab/Enter/Komma fügt Tag hinzu, Backspace bei leerem Feld entfernt letzten Chip
 - Autocomplete-Dropdown aus `tags:recent`-Ergebnis, gefiltert per Substring
@@ -216,6 +218,7 @@ Tag-Input-Komponente:
 #### C.6 PDF-Group-by-Tag
 
 Neuer Checkbox im PDF-Modal: „Nach Tag gruppieren":
+
 - Wenn aktiviert + mind. ein Eintrag hat Tags: Tabelle wird gruppiert mit Subtotals pro Tag (alphabetisch sortiert), Einträge ohne Tag in Sektion „Ohne Tag" am Ende.
 - Wenn aktiviert + niemand hat Tags: silent fallback auf normales Layout (kein Error).
 
@@ -286,13 +289,13 @@ Quality-of-Life ohne Schema-Risiko. Heute: 900×670 Default, kein Min, keine Per
 
 View-Container-Audit:
 
-| View | Aktuell | Vorschlag |
-|------|---------|-----------|
-| TimerView | `max-w-md` | `max-w-md` (bewusst schmal, Form-Layout) |
-| TodayView | `max-w-3xl` | `max-w-5xl` (Stat-Cards + Quick-Start atmen lassen) |
-| CalendarView | `max-w-5xl` | `max-w-7xl` (Monatsraster braucht Platz) |
-| ClientsView | `max-w-3xl` | `max-w-3xl` (bleibt) |
-| SettingsView | `max-w-3xl` | `max-w-5xl` (2-Spalten-Refactor v1.5+) |
+| View         | Aktuell     | Vorschlag                                           |
+| ------------ | ----------- | --------------------------------------------------- |
+| TimerView    | `max-w-md`  | `max-w-md` (bewusst schmal, Form-Layout)            |
+| TodayView    | `max-w-3xl` | `max-w-5xl` (Stat-Cards + Quick-Start atmen lassen) |
+| CalendarView | `max-w-5xl` | `max-w-7xl` (Monatsraster braucht Platz)            |
+| ClientsView  | `max-w-3xl` | `max-w-3xl` (bleibt)                                |
+| SettingsView | `max-w-3xl` | `max-w-5xl` (2-Spalten-Refactor v1.5+)              |
 
 v1.4: nur Container-Werte, keine 2-Spalten-Refactors.
 
@@ -330,6 +333,7 @@ Checkbox „Schnell-Notiz nach Stop anzeigen" in SettingsView → Allgemein.
 ### Acceptance
 
 **Quicknote:**
+
 - [ ] Toast erscheint NUR wenn Beschreibung leer war UND Setting aktiv
 - [ ] Eingabe wird in den gestoppten Eintrag geschrieben (per ID, nicht in einen neuen)
 - [ ] Race-Test: User startet sofort einen neuen Timer — die Schnell-Notiz schreibt trotzdem in den richtigen alten Eintrag
@@ -337,12 +341,14 @@ Checkbox „Schnell-Notiz nach Stop anzeigen" in SettingsView → Allgemein.
 - [ ] Progress-Bar läuft sichtbar von voll auf leer in 30 s
 
 **Window:**
+
 - [ ] Window-Position roundtrip funktioniert (close → reopen)
 - [ ] Min-Size verhindert kaputte Layouts
 - [ ] Off-Screen-Schutz aktiv
 - [ ] Container-Werte in Tests/Snapshot wie geplant
 
 **Schema:**
+
 - [ ] Migration 008 idempotent + backward-compatible
 
 ### Risk
@@ -380,6 +386,7 @@ main ──── PR A (CI) ─── PR B (Mini-Widget) ─── PR C (Tags) �
 ```
 
 PRs sequenziell, nicht parallel:
+
 - B touched `index.ts`, `preload`, neue Renderer → konflikt-anfällig wenn parallel zu D.
 - C ist auch Schema-touch; wenn parallel zu B, Migrations-Nummerierung kollidiert.
 - D ist klein und kombi; geht schnell nach C.
@@ -394,6 +401,7 @@ PRs sequenziell, nicht parallel:
 ### Migrations-Nummerierung
 
 PR-Reihenfolge bestimmt Nummer:
+
 - 006 = Mini-Widget (PR B)
 - 007 = Tags (PR C)
 - 008 = Quicknote + Window-Size kombi (PR D)
@@ -421,6 +429,7 @@ Wenn die Reihenfolge sich beim Mergen ändert, muss umnummeriert werden. Lieber 
 **Premise:** v1.4-Theme „App soll im Workflow verschwinden". Nordstern-Ausrichtung: Trust + Friction-Removal. ✅
 
 **6-Monats-Regret-Test:**
+
 1. Fehlt Mini-Widget (#22) → User vergisst, dass Timer läuft → falsche Stunden → Trust kaputt. **Hoch-Wert.**
 2. Fehlt Quicknote (#25) → Eintrag mit `description=''` landet im PDF als „—" → User schämt sich vor Auftraggeber. **Hoch-Wert.**
 3. Fehlt Tags (#24) → User googlet stundenlang „was war das letzte Woche". **Mittel.**
@@ -433,6 +442,7 @@ Wenn die Reihenfolge sich beim Mergen ändert, muss umnummeriert werden. Lieber 
 ### Eng-Sicht
 
 **Top-Risiken adressiert:**
+
 1. Two-Window State-Sync: Push-Pattern + timerStore-Refactor explizit als Sub-Task in PR B.
 2. Transparent Window Win11: Fallback `transparent:false` + dunkles Halbtransparent-Background dokumentiert.
 3. Tags `LIKE`-Performance: Index gedroppt, Kommentar im Migration-Code.
@@ -469,9 +479,9 @@ Wenn die Reihenfolge sich beim Mergen ändert, muss umnummeriert werden. Lieber 
 
 ## GSTACK REVIEW REPORT
 
-| Review | Runs | Status | Findings | Verdict |
-|--------|------|--------|----------|---------|
-| CEO | 1 | ✅ | Migrations 008+009 zusammenlegen → angenommen | PASS — Scope solide, Friction-Removal-Theme korrekt |
-| Eng | 1 | ✅ | timerStore-Refactor explizit, transparent-Fallback dokumentiert, Tags-Index droppen, Smoke-Test scope-down → alle angenommen | PASS — Risiken adressiert |
-| Design | 1 | ✅ | Tag-Hash-Farben angenommen, Mini hover-state + native Font in PR-B-Issue, Quicknote-Progress-Bar in PR D | PASS — visual conventions klar |
-| DX | 1 | ✅ | electron.vite.config-Update als erster B-Commit, Suite-Wachstum +15 Tests akzeptabel | PASS — Build-Time-Impact tolerierbar |
+| Review | Runs | Status | Findings                                                                                                                     | Verdict                                             |
+| ------ | ---- | ------ | ---------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------- |
+| CEO    | 1    | ✅     | Migrations 008+009 zusammenlegen → angenommen                                                                                | PASS — Scope solide, Friction-Removal-Theme korrekt |
+| Eng    | 1    | ✅     | timerStore-Refactor explizit, transparent-Fallback dokumentiert, Tags-Index droppen, Smoke-Test scope-down → alle angenommen | PASS — Risiken adressiert                           |
+| Design | 1    | ✅     | Tag-Hash-Farben angenommen, Mini hover-state + native Font in PR-B-Issue, Quicknote-Progress-Bar in PR D                     | PASS — visual conventions klar                      |
+| DX     | 1    | ✅     | electron.vite.config-Update als erster B-Commit, Suite-Wachstum +15 Tests akzeptabel                                         | PASS — Build-Time-Impact tolerierbar                |

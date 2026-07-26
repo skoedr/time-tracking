@@ -5,15 +5,15 @@ Es gibt keine Cloud-Synchronisation, keine Konten und keinen eigenen Server.
 
 ## Wo liegen die Daten?
 
-| Typ | Pfad (Windows) | Pfad (macOS) |
-| --- | -------------- | ------------ |
-| Datenbank | `%AppData%\time-tracking\timetrack.sqlite` | `~/Library/Application Support/time-tracking/timetrack.sqlite` |
-| Einstellungen | `%AppData%\time-tracking\timetrack.sqlite` | (selbe DB) |
-| Log-Dateien | `%AppData%\time-tracking\logs\` | `~/Library/Logs/time-tracking/` |
-| PDF-Exporte | Frei wählbarer Speicherort | Frei wählbarer Speicherort |
+| Typ           | Pfad (Windows)                             | Pfad (macOS)                                                   |
+| ------------- | ------------------------------------------ | -------------------------------------------------------------- |
+| Datenbank     | `%AppData%\time-tracking\timetrack.sqlite` | `~/Library/Application Support/time-tracking/timetrack.sqlite` |
+| Einstellungen | `%AppData%\time-tracking\timetrack.sqlite` | (selbe DB)                                                     |
+| Log-Dateien   | `%AppData%\time-tracking\logs\`            | `~/Library/Logs/time-tracking/`                                |
+| PDF-Exporte   | Frei wählbarer Speicherort                 | Frei wählbarer Speicherort                                     |
 
 Du kannst die Datenbank jederzeit sichern oder löschen. Ein Backup-Export
-ist über *Einstellungen → Backup* möglich.
+ist über _Einstellungen → Backup_ möglich.
 
 ## Netzwerk-Kommunikation
 
@@ -38,7 +38,7 @@ Auto-Updaters in den Einstellungen unterbunden werden.
 ## Drittanbieter-Abhängigkeiten
 
 Alle eingesetzten Open-Source-Bibliotheken und ihre Lizenzen sind in
-`resources/licenses.json` aufgeführt (erreichbar über *Hilfe → Lizenzen*).
+`resources/licenses.json` aufgeführt (erreichbar über _Hilfe → Lizenzen_).
 Keine dieser Bibliotheken stellt selbst Netzwerkverbindungen her.
 
 ## Kontakt

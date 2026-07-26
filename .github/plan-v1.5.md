@@ -9,16 +9,17 @@ zweitens, weil v1.5.0 selbst noch manuell installiert werden muss — ab v1.5.1
 läuft's automatisch. i18n-Foundation kommt vor Onboarding, weil der Wizard gleich
 mit echten `t()`-Strings gebaut wird.
 
-| PR | Branch | Issues | Risiko | Größe | Status |
-|----|--------|--------|--------|-------|--------|
-| A | `feat/v1.5-crash-logging` | #34 | niedrig | S (electron-log + Renderer-Spy + 1 Settings-Button) | ⏳ |
-| B | `feat/v1.5-auto-update` | #33 | hoch | M (electron-updater + Banner-UI + Builder-Config) | ⏳ |
-| C | `feat/v1.5-csv-export` | #18 | mittel | M (Export-Format + Modal-Erweiterung + Tests) | ⏳ |
-| D | `feat/v1.5-i18n-foundation` | (neu) | niedrig | M (i18n-Infrastruktur + DE-Locale + erste Views migrieren) | ⏳ |
-| E | `feat/v1.5-onboarding` | #32 | niedrig | S (3-Schritte-Modal mit echtem Sprach-Switch) | ⏳ |
-| F | `feat/v1.5-licenses` | #35 | sehr niedrig | XS (About-Dialog + license-Bundle) | ⏳ |
+| PR  | Branch                      | Issues | Risiko       | Größe                                                      | Status |
+| --- | --------------------------- | ------ | ------------ | ---------------------------------------------------------- | ------ |
+| A   | `feat/v1.5-crash-logging`   | #34    | niedrig      | S (electron-log + Renderer-Spy + 1 Settings-Button)        | ⏳     |
+| B   | `feat/v1.5-auto-update`     | #33    | hoch         | M (electron-updater + Banner-UI + Builder-Config)          | ⏳     |
+| C   | `feat/v1.5-csv-export`      | #18    | mittel       | M (Export-Format + Modal-Erweiterung + Tests)              | ⏳     |
+| D   | `feat/v1.5-i18n-foundation` | (neu)  | niedrig      | M (i18n-Infrastruktur + DE-Locale + erste Views migrieren) | ⏳     |
+| E   | `feat/v1.5-onboarding`      | #32    | niedrig      | S (3-Schritte-Modal mit echtem Sprach-Switch)              | ⏳     |
+| F   | `feat/v1.5-licenses`        | #35    | sehr niedrig | XS (About-Dialog + license-Bundle)                         | ⏳     |
 
 **Verschoben / gestrichen (NICHT in v1.5):**
+
 - ❌ #23 (Pomodoro) — **gestrichen.** Maintainer nutzt es selbst nicht; Daily-Trust
   liefert Mini-Widget + Quicknote bereits. Issue wird mit `wontfix` geschlossen.
 - 🚫 Code-Signing — bewusst nicht. SmartScreen-Warnung bleibt; bricht keine
@@ -45,9 +46,9 @@ schiefläuft, willst du Logs haben, nicht Telemetrie raten.
 - In `src/main/index.ts` (ganz oben, vor allen anderen Imports die loggen könnten):
   ```ts
   import log from 'electron-log/main'
-  log.initialize({ preload: true, spyRendererConsole: true })  // spielt Renderer-Logs in dieselbe Datei
+  log.initialize({ preload: true, spyRendererConsole: true }) // spielt Renderer-Logs in dieselbe Datei
   log.transports.file.level = 'info'
-  log.transports.file.maxSize = 5 * 1024 * 1024  // 5 MB
+  log.transports.file.maxSize = 5 * 1024 * 1024 // 5 MB
   Object.assign(console, log.functions)
   ```
 - `console.error`, `console.warn`, `console.info` werden ab da automatisch
@@ -139,7 +140,7 @@ Bug-Fixes ausliefern kannst, ohne den User zu nerven.
 - In `src/main/index.ts` (nach App-Ready, nicht im Dev-Mode):
   ```ts
   import { autoUpdater } from 'electron-updater'
-  autoUpdater.logger = log  // aus PR A
+  autoUpdater.logger = log // aus PR A
   if (!is.dev) {
     autoUpdater.checkForUpdatesAndNotify().catch((err) => {
       log.warn('Update-Check fehlgeschlagen (ggf. offline):', err.message)
@@ -246,6 +247,7 @@ universal.
 
 Spalten (Excel-DE-kompatibel: Komma als Dezimal, Semikolon als Separator,
 UTF-8-BOM):
+
 ```
 Datum;Start;Ende;Dauer;Kunde;Kunden-ID;Beschreibung;Tags;Stundensatz;Betrag
 25.04.2026;09:00;10:30;01:30:00;Acme GmbH;C-001;Meeting;wichtig|kunde;75,00;112,50
@@ -323,8 +325,7 @@ M — 1-2 Sessions.
 
 **Why:** Der Onboarding-Wizard soll "Sprache: Deutsch (weitere folgen)" zeigen.
 Das ist nur ehrlich, wenn der Code auch wirklich locale-aware ist. Präferierter
-Weg: kleine eigene Implementation, keine schwere Library, damit es auch beim
-2. Locale (EN) nicht weh tut.
+Weg: kleine eigene Implementation, keine schwere Library, damit es auch beim 2. Locale (EN) nicht weh tut.
 
 ### Scope
 
@@ -427,15 +428,18 @@ Wo ist der Hotkey?
 #### E.2 Zwei Schritte (CEO-Cut: Sprach-Schritt durch i18n echt gemacht)
 
 **Schritt 1 — Willkommen + Sprache (echt):**
+
 - Begrüßungs-Text, App-Logo, kurze 2-Zeilen-Erklärung was TimeTrack macht.
 - Sprach-Toggle DE/EN (nutzt PR D — echte Auswahl, kein Fake).
 
 **Schritt 2 — Erster Kunde:**
+
 - Inline-Form: Name, Stundensatz (optional), Farbe.
 - "Später anlegen"-Button überspringt → leerer Zustand mit Hinweis-Button
   in TodayView.
 
 **Schritt 3 — Hotkey:**
+
 - "Du kannst Timer mit `Strg+Shift+T` (Default) starten/stoppen, ohne die App
   in den Vordergrund zu holen. Konfigurierbar in Einstellungen."
 - Mini-Widget-Hinweis: "Mini-Widget einblenden mit `Alt+Shift+M` — immer
@@ -594,14 +598,14 @@ Alternativ könnten B/C/D parallel laufen — sequenziell ist einfacher.
 
 ## Risiken zusammengefasst
 
-| Risiko | Wahrscheinlichkeit | Impact | Mitigation |
-|--------|--------------------|--------|------------|
-| Auto-Update bricht silently | mittel | hoch | PR A liefert Logs; Settings zeigt Fehler; Offline = silent |
-| Auto-Update v1.5.0→v1.5.1-Pfad ungetestet | niedrig | hoch | Doku: User kann manuell `.exe` ziehen wenn nötig |
-| CSV-Encoding Excel-DE | niedrig | mittel | UTF-8-BOM + manueller Test mit Excel/LibreOffice |
-| Onboarding nervt Bestandsuser | niedrig | mittel | Migration setzt Flag=1 wenn entries vorhanden |
-| i18n-Stub bricht bestehende Komponenten | niedrig | mittel | Bestehende Strings bleiben hardcoded — nur neue + ausgewählte verwenden t() |
-| License-Bundle aufgebläht | niedrig | niedrig | nur production-deps, ist eh Pflicht |
+| Risiko                                    | Wahrscheinlichkeit | Impact  | Mitigation                                                                  |
+| ----------------------------------------- | ------------------ | ------- | --------------------------------------------------------------------------- |
+| Auto-Update bricht silently               | mittel             | hoch    | PR A liefert Logs; Settings zeigt Fehler; Offline = silent                  |
+| Auto-Update v1.5.0→v1.5.1-Pfad ungetestet | niedrig            | hoch    | Doku: User kann manuell `.exe` ziehen wenn nötig                            |
+| CSV-Encoding Excel-DE                     | niedrig            | mittel  | UTF-8-BOM + manueller Test mit Excel/LibreOffice                            |
+| Onboarding nervt Bestandsuser             | niedrig            | mittel  | Migration setzt Flag=1 wenn entries vorhanden                               |
+| i18n-Stub bricht bestehende Komponenten   | niedrig            | mittel  | Bestehende Strings bleiben hardcoded — nur neue + ausgewählte verwenden t() |
+| License-Bundle aufgebläht                 | niedrig            | niedrig | nur production-deps, ist eh Pflicht                                         |
 
 ## Definition of Done v1.5.0
 

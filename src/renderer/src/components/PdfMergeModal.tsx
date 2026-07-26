@@ -91,7 +91,11 @@ export function PdfMergeModal({ open, onClose }: Props): React.JSX.Element {
     const storedInv = localStorage.getItem(LS_INV_KEY)
 
     if (storedSnPaths.length > 0) {
-      const initial: SnEntry[] = storedSnPaths.map((path) => ({ id: nextSnId(), path, pages: null }))
+      const initial: SnEntry[] = storedSnPaths.map((path) => ({
+        id: nextSnId(),
+        path,
+        pages: null
+      }))
       setSnEntries(initial)
 
       initial.forEach(({ id, path }) => {
@@ -298,24 +302,21 @@ export function PdfMergeModal({ open, onClose }: Props): React.JSX.Element {
 
   const allSnPagesLoaded = snEntries.every((e) => e.pages !== null)
   const canMerge =
-    snEntries.length > 0 &&
-    invPath !== null &&
-    allSnPagesLoaded &&
-    invPages !== null &&
-    !busy
+    snEntries.length > 0 && invPath !== null && allSnPagesLoaded && invPages !== null && !busy
 
   const successPath = statusKind === 'success' ? statusMsg : null
 
   const snPagesTotal = snEntries.reduce((sum, e) => sum + (e.pages ?? 0), 0)
-  const totalPages =
-    invPages !== null && allSnPagesLoaded ? invPages + snPagesTotal : null
+  const totalPages = invPages !== null && allSnPagesLoaded ? invPages + snPagesTotal : null
 
   return (
     <Dialog open={open} onClose={onClose} title={t('merge.title')} widthClass="w-[520px]">
       <div className="flex flex-col gap-4">
         {/* Stundennachweis slots */}
         <div className="flex flex-col gap-2">
-          <span className="text-sm font-medium" style={{ color: 'var(--text2)' }}>{t('merge.sn.label')}</span>
+          <span className="text-sm font-medium" style={{ color: 'var(--text2)' }}>
+            {t('merge.sn.label')}
+          </span>
           {snEntries.map((entry, idx) => {
             const isOnlyEntry = snEntries.length === 1
             return (
@@ -326,9 +327,14 @@ export function PdfMergeModal({ open, onClose }: Props): React.JSX.Element {
               >
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-medium" style={{ color: 'var(--text2)' }}>
-                    {isOnlyEntry ? t('merge.sn.slotSingle') : t('merge.sn.slot', { n: String(idx + 1) })}
+                    {isOnlyEntry
+                      ? t('merge.sn.slotSingle')
+                      : t('merge.sn.slot', { n: String(idx + 1) })}
                   </span>
-                  <span className="flex-1 max-w-[280px] truncate text-xs" style={{ color: 'var(--text3)' }}>
+                  <span
+                    className="flex-1 max-w-[280px] truncate text-xs"
+                    style={{ color: 'var(--text3)' }}
+                  >
                     {basename(entry.path)}
                   </span>
                   <button
@@ -371,26 +377,38 @@ export function PdfMergeModal({ open, onClose }: Props): React.JSX.Element {
               onClick={() => void handlePickFile('sn')}
               disabled={busy}
               className="rounded-lg border px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-400 disabled:opacity-50 hover:opacity-80"
-              style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)', color: 'var(--text2)' }}
+              style={{
+                background: 'var(--card-bg)',
+                borderColor: 'var(--card-border)',
+                color: 'var(--text2)'
+              }}
             >
               {snEntries.length === 0 ? t('merge.sn.pick') : t('merge.sn.add')}
             </button>
             {snEntries.length === 0 && (
-              <span className="text-xs" style={{ color: 'var(--text3)' }}>{t('merge.sn.noFile')}</span>
+              <span className="text-xs" style={{ color: 'var(--text3)' }}>
+                {t('merge.sn.noFile')}
+              </span>
             )}
           </div>
         </div>
 
         {/* Invoice slot */}
         <div className="flex flex-col gap-1">
-          <span className="text-sm font-medium" style={{ color: 'var(--text2)' }}>{t('merge.inv.label')}</span>
+          <span className="text-sm font-medium" style={{ color: 'var(--text2)' }}>
+            {t('merge.inv.label')}
+          </span>
           <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={() => void handlePickFile('invoice')}
               disabled={busy}
               className="rounded-lg border px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-400 disabled:opacity-50 hover:opacity-80"
-              style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)', color: 'var(--text2)' }}
+              style={{
+                background: 'var(--card-bg)',
+                borderColor: 'var(--card-border)',
+                color: 'var(--text2)'
+              }}
             >
               {invPath ? t('merge.sn.change') : t('merge.sn.pick')}
             </button>
@@ -400,7 +418,11 @@ export function PdfMergeModal({ open, onClose }: Props): React.JSX.Element {
           </div>
           {invPath && (
             <span className="text-xs" style={{ color: 'var(--text3)' }}>
-              {invPages === null ? t('merge.sn.loading') : (invPages === 1 ? t('merge.sn.pages.one') : t('merge.sn.pages.other', { count: String(invPages) }))}
+              {invPages === null
+                ? t('merge.sn.loading')
+                : invPages === 1
+                  ? t('merge.sn.pages.one')
+                  : t('merge.sn.pages.other', { count: String(invPages) })}
             </span>
           )}
           {swapOffer?.kind === 'sn' && (
@@ -419,10 +441,26 @@ export function PdfMergeModal({ open, onClose }: Props): React.JSX.Element {
 
         {/* Total page preview */}
         {totalPages !== null && (
-          <div className="rounded-lg px-3 py-2 text-sm border" style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)', color: 'var(--text2)' }}>
+          <div
+            className="rounded-lg px-3 py-2 text-sm border"
+            style={{
+              background: 'var(--card-bg)',
+              borderColor: 'var(--card-border)',
+              color: 'var(--text2)'
+            }}
+          >
             {snEntries.length === 1
-              ? t('merge.preview', { inv: String(invPages), sn: String(snPagesTotal), total: String(totalPages) })
-              : t('merge.preview.multi', { inv: String(invPages), count: String(snEntries.length), sn: String(snPagesTotal), total: String(totalPages) })}
+              ? t('merge.preview', {
+                  inv: String(invPages),
+                  sn: String(snPagesTotal),
+                  total: String(totalPages)
+                })
+              : t('merge.preview.multi', {
+                  inv: String(invPages),
+                  count: String(snEntries.length),
+                  sn: String(snPagesTotal),
+                  total: String(totalPages)
+                })}
           </div>
         )}
 
@@ -434,7 +472,15 @@ export function PdfMergeModal({ open, onClose }: Props): React.JSX.Element {
                 ? 'rounded-lg bg-red-900/40 px-3 py-2 text-sm text-red-200'
                 : 'rounded-lg px-3 py-2 text-sm border'
             }
-            style={statusKind !== 'error' ? { background: 'var(--card-bg)', borderColor: 'var(--card-border)', color: 'var(--text2)' } : undefined}
+            style={
+              statusKind !== 'error'
+                ? {
+                    background: 'var(--card-bg)',
+                    borderColor: 'var(--card-border)',
+                    color: 'var(--text2)'
+                  }
+                : undefined
+            }
             role={statusKind === 'error' ? 'alert' : undefined}
             aria-live="polite"
           >
@@ -446,7 +492,9 @@ export function PdfMergeModal({ open, onClose }: Props): React.JSX.Element {
         {successPath && (
           <div className="rounded-lg bg-emerald-900/40 px-3 py-2 text-sm text-emerald-200">
             <div className="font-medium">{t('merge.success.title')}</div>
-            <div className="mt-0.5 truncate text-xs text-emerald-300/80">{basename(successPath)}</div>
+            <div className="mt-0.5 truncate text-xs text-emerald-300/80">
+              {basename(successPath)}
+            </div>
             <button
               type="button"
               onClick={() => void window.api.shell.showItemInFolder(successPath)}
@@ -464,7 +512,11 @@ export function PdfMergeModal({ open, onClose }: Props): React.JSX.Element {
             onClick={onClose}
             disabled={busy}
             className="rounded-lg border px-4 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-400 disabled:opacity-50 hover:opacity-80"
-            style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)', color: 'var(--text2)' }}
+            style={{
+              background: 'var(--card-bg)',
+              borderColor: 'var(--card-border)',
+              color: 'var(--text2)'
+            }}
           >
             {t('common.close')}
           </button>
@@ -475,7 +527,7 @@ export function PdfMergeModal({ open, onClose }: Props): React.JSX.Element {
             className="rounded-lg px-4 py-2 text-sm font-semibold text-white focus:outline-none focus:ring-2 focus:ring-indigo-300 disabled:cursor-not-allowed disabled:opacity-50 hover:opacity-90"
             style={{ background: 'var(--accent)' }}
           >
-              {busy ? t('merge.button.merging') : t('merge.button.merge')}
+            {busy ? t('merge.button.merging') : t('merge.button.merge')}
           </button>
         </div>
       </div>

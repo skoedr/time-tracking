@@ -100,15 +100,15 @@ export async function mergePdfs(
 ): Promise<Buffer> {
   const [sDoc, iDoc] = await Promise.all([
     PDFDocument.load(stundennachweis),
-    PDFDocument.load(invoice)   // throws if not valid PDF
+    PDFDocument.load(invoice) // throws if not valid PDF
   ])
   const merged = await PDFDocument.create()
   const first = order === 'append' ? iDoc : sDoc
   const second = order === 'append' ? sDoc : iDoc
   const firstPages = await merged.copyPages(first, first.getPageIndices())
   const secondPages = await merged.copyPages(second, second.getPageIndices())
-  firstPages.forEach(p => merged.addPage(p))
-  secondPages.forEach(p => merged.addPage(p))
+  firstPages.forEach((p) => merged.addPage(p))
+  secondPages.forEach((p) => merged.addPage(p))
   const bytes = await merged.save()
   return Buffer.from(bytes)
 }
@@ -139,12 +139,14 @@ a modification. This avoids regressions in the existing PDF path.
 ### Modified: `src/renderer/src/components/PdfExportModal.tsx`
 
 State additions:
+
 ```typescript
-const [mergeEnabled, setMergeEnabled] = useState(false)   // from settings
+const [mergeEnabled, setMergeEnabled] = useState(false) // from settings
 const [invoicePath, setInvoicePath] = useState<string | null>(null)
 ```
 
 UI additions (only shown when `settings.pdf_merge_enabled === '1'`):
+
 ```tsx
 <label className="flex items-start gap-2 text-sm text-zinc-300">
   <input type="checkbox" checked={mergeEnabled} onChange={...} />
@@ -189,8 +191,12 @@ export const migration009 = {
   version: 9,
   description: 'Seed pdf_merge_enabled and pdf_merge_order settings',
   up(db: Database.Database): void {
-    db.prepare(`INSERT OR IGNORE INTO settings (key, value) VALUES ('pdf_merge_enabled', '0')`).run()
-    db.prepare(`INSERT OR IGNORE INTO settings (key, value) VALUES ('pdf_merge_order', 'append')`).run()
+    db.prepare(
+      `INSERT OR IGNORE INTO settings (key, value) VALUES ('pdf_merge_enabled', '0')`
+    ).run()
+    db.prepare(
+      `INSERT OR IGNORE INTO settings (key, value) VALUES ('pdf_merge_order', 'append')`
+    ).run()
   }
 }
 ```
@@ -231,23 +237,24 @@ Single PR: `feat/v1.7-pdf-merge`
 One PR is correct here. The merge logic, IPC handler, UI change, settings, and
 migration are all tightly coupled. Splitting artificially would mean PR A has a
 settings toggle that toggles nothing. The full feature is ~4 files + 1 migration
-+ tests — well within "one logical change, one PR" guideline.
+
+- tests — well within "one logical change, one PR" guideline.
 
 ---
 
 ## Test Plan
 
-| Test | File | Type | Priority |
-|------|------|------|----------|
-| `mergePdfs`: two valid PDFs → output has sum of pages | `pdfMerge.test.ts` | Unit | P1 |
-| `mergePdfs`: order='append' → invoice pages first | `pdfMerge.test.ts` | Unit | P1 |
-| `mergePdfs`: order='prepend' → stundennachweis pages first | `pdfMerge.test.ts` | Unit | P1 |
-| `mergePdfs`: invalid PDF buffer → throws | `pdfMerge.test.ts` | Unit | P1 |
-| `pdf:merge-export` IPC: valid request → merged file written | `ipc.test.ts` | Integration | P1 |
-| `pdf:merge-export` IPC: invoicePath not found → IpcResult.error | `ipc.test.ts` | Integration | P1 |
-| `pdf:merge-export` IPC: invoicePath is not a PDF → IpcResult.error | `ipc.test.ts` | Integration | P1 |
-| `pdf:export` IPC: unchanged behaviour (regression) | `ipc.test.ts` | Integration | P1 |
-| Migration 009: seeds both keys idempotently | `migrations/` | Unit | P2 |
+| Test                                                               | File               | Type        | Priority |
+| ------------------------------------------------------------------ | ------------------ | ----------- | -------- |
+| `mergePdfs`: two valid PDFs → output has sum of pages              | `pdfMerge.test.ts` | Unit        | P1       |
+| `mergePdfs`: order='append' → invoice pages first                  | `pdfMerge.test.ts` | Unit        | P1       |
+| `mergePdfs`: order='prepend' → stundennachweis pages first         | `pdfMerge.test.ts` | Unit        | P1       |
+| `mergePdfs`: invalid PDF buffer → throws                           | `pdfMerge.test.ts` | Unit        | P1       |
+| `pdf:merge-export` IPC: valid request → merged file written        | `ipc.test.ts`      | Integration | P1       |
+| `pdf:merge-export` IPC: invoicePath not found → IpcResult.error    | `ipc.test.ts`      | Integration | P1       |
+| `pdf:merge-export` IPC: invoicePath is not a PDF → IpcResult.error | `ipc.test.ts`      | Integration | P1       |
+| `pdf:export` IPC: unchanged behaviour (regression)                 | `ipc.test.ts`      | Integration | P1       |
+| Migration 009: seeds both keys idempotently                        | `migrations/`      | Unit        | P2       |
 
 Fixture: generate a minimal 1-page PDF buffer in tests using `pdf-lib` itself
 (avoids binary test fixtures in the repo).
@@ -256,14 +263,14 @@ Fixture: generate a minimal 1-page PDF buffer in tests using `pdf-lib` itself
 
 ## Failure Modes
 
-| Scenario | Behaviour |
-|----------|-----------|
-| Invoice PDF is password-protected | pdf-lib throws → Toast "Datei ist passwortgeschützt oder beschädigt" |
-| Invoice PDF is corrupt/truncated | pdf-lib throws → Toast "Datei ist keine gültige PDF" |
-| Invoice PDF path no longer exists at merge time | `existsSync` check → fail before loading |
-| Output path not writable (OneDrive sync lock) | writeFileSync throws → Toast "Konnte Datei nicht speichern: <reason>" |
-| Invoice has 0 pages (valid PDF, no content) | Merge proceeds, output = stundennachweis only |
-| Stundennachweis has 0 entries | Merge proceeds (renderPdfBuffer returns valid empty-state PDF) |
+| Scenario                                        | Behaviour                                                             |
+| ----------------------------------------------- | --------------------------------------------------------------------- |
+| Invoice PDF is password-protected               | pdf-lib throws → Toast "Datei ist passwortgeschützt oder beschädigt"  |
+| Invoice PDF is corrupt/truncated                | pdf-lib throws → Toast "Datei ist keine gültige PDF"                  |
+| Invoice PDF path no longer exists at merge time | `existsSync` check → fail before loading                              |
+| Output path not writable (OneDrive sync lock)   | writeFileSync throws → Toast "Konnte Datei nicht speichern: <reason>" |
+| Invoice has 0 pages (valid PDF, no content)     | Merge proceeds, output = stundennachweis only                         |
+| Stundennachweis has 0 entries                   | Merge proceeds (renderPdfBuffer returns valid empty-state PDF)        |
 
 ---
 
@@ -287,6 +294,7 @@ Total: ~330 lines new/changed. One week is conservative.
 ## Key Changes from /autoplan Review
 
 ### CEO Review decisions
+
 - **Settings toggle removed.** Checkbox always-visible in PdfExportModal (like `includeSignatures`). No SettingsView changes. No migration needed.
 - **Migration 009 dropped.** No settings keys → no schema change at all.
 - **Merge-order setting cut.** Default: Stundennachweis appended at end (industry norm). No radio buttons.
@@ -294,16 +302,19 @@ Total: ~330 lines new/changed. One week is conservative.
 - **Scope change to `PdfMerge` UI:** Settings section removed from scope. SettingsView changes removed.
 
 ### Security fixes (from Eng Review)
+
 - **Path traversal guard:** `validateInvoicePath()` must check `path.resolve(p)` and ensure extension is `.pdf` (case-insensitive via `.toLowerCase()`). Pattern from existing `backup:restore` handler.
 - **File size cap:** validate `invoiceBuffer.length < 50 * 1024 * 1024` before loading into pdf-lib.
 - **Input file lock:** wrap `readFileSync(invoicePath)` in try/catch, surface EBUSY/EPERM clearly.
 - **Output collision on read-only dir:** if `writeFileSync` throws EPERM, fall back to `showSaveDialog` with derived filename pre-filled.
 
 ### Architecture fixes
+
 - **Migration format:** `migration009` removed entirely (no settings to seed).
 - **Extension-agnostic stem:** use `path.parse(invoicePath).name` not `path.basename(f, '.pdf')` — handles `.PDF` uppercase on Windows.
 
 ### Design additions
+
 - **Missing interaction states:** busy=merge state ("Erstellt zusammengeführte PDF …"), picker-cancelled state (silent reset), no-file-selected hint text ("keine Datei gewählt").
 - **Error messages include filename** for actionable context.
 
@@ -325,15 +336,15 @@ export async function mergePdfs(
 ): Promise<Buffer> {
   const [sDoc, iDoc] = await Promise.all([
     PDFDocument.load(stundennachweis),
-    PDFDocument.load(invoice)  // throws if invalid PDF
+    PDFDocument.load(invoice) // throws if invalid PDF
   ])
   const merged = await PDFDocument.create()
   const first = order === 'append' ? iDoc : sDoc
   const second = order === 'append' ? sDoc : iDoc
   const firstPages = await merged.copyPages(first, first.getPageIndices())
   const secondPages = await merged.copyPages(second, second.getPageIndices())
-  firstPages.forEach(p => merged.addPage(p))
-  secondPages.forEach(p => merged.addPage(p))
+  firstPages.forEach((p) => merged.addPage(p))
+  secondPages.forEach((p) => merged.addPage(p))
   return Buffer.from(await merged.save())
 }
 ```
@@ -398,18 +409,23 @@ ipcMain.handle(
 ### Modified: `src/renderer/src/components/PdfExportModal.tsx`
 
 Additional state:
+
 ```typescript
 const [mergeInvoice, setMergeInvoice] = useState(false)
 const [invoicePath, setInvoicePath] = useState<string | null>(null)
 ```
 
 New UI block (after existing checkboxes, before status message):
+
 ```tsx
-<label className="flex items-start gap-2 text-sm text-zinc-300">
+;<label className="flex items-start gap-2 text-sm text-zinc-300">
   <input
     type="checkbox"
     checked={mergeInvoice}
-    onChange={(e) => { setMergeInvoice(e.target.checked); if (!e.target.checked) setInvoicePath(null) }}
+    onChange={(e) => {
+      setMergeInvoice(e.target.checked)
+      if (!e.target.checked) setInvoicePath(null)
+    }}
     disabled={busy}
     className="mt-0.5 h-4 w-4 rounded border-zinc-600 bg-zinc-800 text-indigo-500 focus:ring-indigo-400 focus:ring-offset-0"
   />
@@ -420,35 +436,41 @@ New UI block (after existing checkboxes, before status message):
     </span>
   </span>
 </label>
-{mergeInvoice && (
-  <div className="ml-6 flex items-center gap-2">
-    <button
-      type="button"
-      onClick={handlePickInvoice}
-      disabled={busy}
-      aria-label="Rechnung-PDF auswählen"
-      className="rounded-lg border border-zinc-600 bg-zinc-800 px-3 py-1.5 text-xs text-zinc-200 hover:bg-zinc-700 focus:outline-none focus:ring-2 focus:ring-indigo-400 disabled:opacity-50"
-    >
-      {invoicePath ? 'Rechnung wechseln …' : 'Rechnung wählen …'}
-    </button>
-    <span className="truncate text-xs text-zinc-500 max-w-[200px]">
-      {invoicePath ? path.basename(invoicePath) : 'keine Datei gewählt'}
-    </span>
-  </div>
-)}
+{
+  mergeInvoice && (
+    <div className="ml-6 flex items-center gap-2">
+      <button
+        type="button"
+        onClick={handlePickInvoice}
+        disabled={busy}
+        aria-label="Rechnung-PDF auswählen"
+        className="rounded-lg border border-zinc-600 bg-zinc-800 px-3 py-1.5 text-xs text-zinc-200 hover:bg-zinc-700 focus:outline-none focus:ring-2 focus:ring-indigo-400 disabled:opacity-50"
+      >
+        {invoicePath ? 'Rechnung wechseln …' : 'Rechnung wählen …'}
+      </button>
+      <span className="truncate text-xs text-zinc-500 max-w-[200px]">
+        {invoicePath ? path.basename(invoicePath) : 'keine Datei gewählt'}
+      </span>
+    </div>
+  )
+}
 ```
 
 Export button logic:
+
 ```typescript
 async function handleExport(): Promise<void> {
   // ...existing validation...
   if (mergeInvoice && !invoicePath) {
-    setStatusKind('error'); setStatusMsg('Bitte eine Rechnung-PDF auswählen.'); return
+    setStatusKind('error')
+    setStatusMsg('Bitte eine Rechnung-PDF auswählen.')
+    return
   }
   const req = { clientId, fromIso, toIso, includeSignatures, groupByTag }
-  const res = mergeInvoice && invoicePath
-    ? await window.api.pdf.mergeExport({ ...req, invoicePath })
-    : await window.api.pdf.export(req)
+  const res =
+    mergeInvoice && invoicePath
+      ? await window.api.pdf.mergeExport({ ...req, invoicePath })
+      : await window.api.pdf.export(req)
   // ...existing status handling...
 }
 ```
@@ -458,9 +480,11 @@ async function handleExport(): Promise<void> {
 No migration. No new settings keys. Cleanest possible diff.
 
 ### Modified: `src/shared/types.ts`
+
 No changes. (Settings keys removed from scope.)
 
 ### Modified: `src/preload/index.d.ts`
+
 ```typescript
 pdf: {
   export(req: { clientId: number; fromIso: string; toIso: string; includeSignatures?: boolean; groupByTag?: boolean }): Promise<IpcResult<{ path: string }>>
@@ -472,17 +496,17 @@ pdf: {
 
 ## Updated Failure Modes
 
-| Scenario | Behaviour |
-|----------|-----------|
-| Invoice PDF password-protected | pdf-lib throws → Toast "Datei ist passwortgeschützt: [filename]" |
-| Invoice PDF corrupt/truncated | pdf-lib throws → Toast "Datei ist keine gültige PDF: [filename]" |
-| Invoice PDF path not found | `existsSync` check → Toast "Datei nicht gefunden" |
+| Scenario                                 | Behaviour                                                                     |
+| ---------------------------------------- | ----------------------------------------------------------------------------- |
+| Invoice PDF password-protected           | pdf-lib throws → Toast "Datei ist passwortgeschützt: [filename]"              |
+| Invoice PDF corrupt/truncated            | pdf-lib throws → Toast "Datei ist keine gültige PDF: [filename]"              |
+| Invoice PDF path not found               | `existsSync` check → Toast "Datei nicht gefunden"                             |
 | Invoice PDF locked (EBUSY/EPERM on read) | try/catch → Toast "Datei ist durch ein anderes Programm gesperrt: [filename]" |
-| Invoice file >50MB | size check → Toast "Rechnungs-PDF zu groß (max. 50 MB)" |
-| Path traversal attempt | extension + resolve check → Toast "Datei ist keine PDF" |
-| Output dir read-only (EPERM on write) | fallback to showSaveDialog with pre-filled name |
-| Picker cancelled | Silent — `setInvoicePath(null)`, no error |
-| Invoice has 0 pages | Merge proceeds, output = stundennachweis only |
+| Invoice file >50MB                       | size check → Toast "Rechnungs-PDF zu groß (max. 50 MB)"                       |
+| Path traversal attempt                   | extension + resolve check → Toast "Datei ist keine PDF"                       |
+| Output dir read-only (EPERM on write)    | fallback to showSaveDialog with pre-filled name                               |
+| Picker cancelled                         | Silent — `setInvoicePath(null)`, no error                                     |
+| Invoice has 0 pages                      | Merge proceeds, output = stundennachweis only                                 |
 
 ---
 
@@ -491,6 +515,7 @@ pdf: {
 Single PR: `feat/v1.7-pdf-merge`
 
 Files touched:
+
 1. `src/main/pdfMerge.ts` — NEW (~60 lines)
 2. `src/main/pdfMerge.test.ts` — NEW (~80 lines)
 3. `src/main/ipc.ts` — EXTEND (~60 lines added)
@@ -505,20 +530,20 @@ Total: ~7 files, ~355 lines new/changed. No schema change. No migration.
 
 ## Updated Test Plan
 
-| Test | File | Type | P |
-|------|------|------|---|
-| `mergePdfs` valid A+B append → page count = sum | `pdfMerge.test.ts` | Unit | P1 |
-| `mergePdfs` append → invoice pages first | `pdfMerge.test.ts` | Unit | P1 |
-| `mergePdfs` prepend → SN pages first | `pdfMerge.test.ts` | Unit | P1 |
-| `mergePdfs` corrupt invoice buffer → throws | `pdfMerge.test.ts` | Unit | P1 |
-| `pdf:merge-export` valid → file written, returns path | `ipc.test.ts` | Integration | P1 |
-| `pdf:merge-export` invoicePath not found → error | `ipc.test.ts` | Integration | P1 |
-| `pdf:merge-export` not `.pdf` extension → error | `ipc.test.ts` | Integration | P1 |
-| `pdf:merge-export` path traversal → error | `ipc.test.ts` | Integration | P1 |
-| `pdf:merge-export` file >50MB → error | `ipc.test.ts` | Integration | P1 |
-| `pdf:merge-export` locked invoice → EBUSY error | `ipc.test.ts` | Integration | P2 |
-| `pdf:merge-export` output EPERM → fallback dialog | `ipc.test.ts` | Integration | P2 |
-| `pdf:export` regression: unchanged behaviour | `ipc.test.ts` | Integration | P1 |
+| Test                                                  | File               | Type        | P   |
+| ----------------------------------------------------- | ------------------ | ----------- | --- |
+| `mergePdfs` valid A+B append → page count = sum       | `pdfMerge.test.ts` | Unit        | P1  |
+| `mergePdfs` append → invoice pages first              | `pdfMerge.test.ts` | Unit        | P1  |
+| `mergePdfs` prepend → SN pages first                  | `pdfMerge.test.ts` | Unit        | P1  |
+| `mergePdfs` corrupt invoice buffer → throws           | `pdfMerge.test.ts` | Unit        | P1  |
+| `pdf:merge-export` valid → file written, returns path | `ipc.test.ts`      | Integration | P1  |
+| `pdf:merge-export` invoicePath not found → error      | `ipc.test.ts`      | Integration | P1  |
+| `pdf:merge-export` not `.pdf` extension → error       | `ipc.test.ts`      | Integration | P1  |
+| `pdf:merge-export` path traversal → error             | `ipc.test.ts`      | Integration | P1  |
+| `pdf:merge-export` file >50MB → error                 | `ipc.test.ts`      | Integration | P1  |
+| `pdf:merge-export` locked invoice → EBUSY error       | `ipc.test.ts`      | Integration | P2  |
+| `pdf:merge-export` output EPERM → fallback dialog     | `ipc.test.ts`      | Integration | P2  |
+| `pdf:export` regression: unchanged behaviour          | `ipc.test.ts`      | Integration | P1  |
 
 Fixture strategy: generate minimal 1-page and 2-page PDFs via `pdf-lib` in test setup. No binary files in repo.
 
@@ -526,34 +551,34 @@ Fixture strategy: generate minimal 1-page and 2-page PDFs via `pdf-lib` in test 
 
 ## Decision Audit Trail
 
-| # | Phase | Decision | Classification | Principle | Rationale |
-|---|-------|----------|----------------|-----------|-----------|
-| 1 | CEO | Remove settings toggle + settings keys | Mechanical (user confirmed) | P5+P3 | Both models agreed, user confirmed in premise gate. Simpler code, better discoverability. |
-| 2 | CEO | Remove merge-order setting (default: append) | Mechanical | P5 | Cut unnecessary scope. Append is industry norm. |
-| 3 | CEO | Neutral label "An Rechnung anhängen" | Mechanical | P3 | Workflow varies, neutral framing works for all. |
-| 4 | CEO | No Migration 009 (settings gate removed = no settings keys) | Mechanical | P5 | Zero schema change. Cleaner diff. |
-| 5 | CEO | Create TODOS.md with deferred items | Mechanical | P1 | Vague intentions are lies. |
-| 6 | Eng | Add path traversal guard (resolve + ext check) | Mechanical | P1+P5 | Existing backup:restore pattern already in codebase. |
-| 7 | Eng | Add 50MB file size cap before readFileSync | Mechanical | P1 | Prevents OOM on malicious/large PDFs. |
-| 8 | Eng | Add EBUSY/EPERM handling on invoice read | Mechanical | P1 | Plan only covered output locking, not input. |
-| 9 | Eng | EPERM on write → fallback showSaveDialog | Mechanical | P1 | Invoice in read-only corp dir = real scenario, user has no recovery otherwise. |
-| 10 | Eng | Fix migration format → raw SQL (migration removed anyway) | Mechanical | P5 | Would have caused crash-on-launch. Moot since migration dropped. |
-| 11 | Eng | Use path.parse().name for stem derivation | Mechanical | P5 | path.basename(.pdf) breaks on .PDF (Windows Explorer). |
-| 12 | Design | Add 4 missing interaction states | Mechanical | P1 | Completeness — missing states are user-visible failures. |
-| 13 | Design | Error messages include filename | Mechanical | P5 | Actionable context over generic message. |
-| 14 | Design | Add aria-label on file picker button | Mechanical | P1 | Accessibility — keyboard users need label. |
+| #   | Phase  | Decision                                                    | Classification              | Principle | Rationale                                                                                 |
+| --- | ------ | ----------------------------------------------------------- | --------------------------- | --------- | ----------------------------------------------------------------------------------------- |
+| 1   | CEO    | Remove settings toggle + settings keys                      | Mechanical (user confirmed) | P5+P3     | Both models agreed, user confirmed in premise gate. Simpler code, better discoverability. |
+| 2   | CEO    | Remove merge-order setting (default: append)                | Mechanical                  | P5        | Cut unnecessary scope. Append is industry norm.                                           |
+| 3   | CEO    | Neutral label "An Rechnung anhängen"                        | Mechanical                  | P3        | Workflow varies, neutral framing works for all.                                           |
+| 4   | CEO    | No Migration 009 (settings gate removed = no settings keys) | Mechanical                  | P5        | Zero schema change. Cleaner diff.                                                         |
+| 5   | CEO    | Create TODOS.md with deferred items                         | Mechanical                  | P1        | Vague intentions are lies.                                                                |
+| 6   | Eng    | Add path traversal guard (resolve + ext check)              | Mechanical                  | P1+P5     | Existing backup:restore pattern already in codebase.                                      |
+| 7   | Eng    | Add 50MB file size cap before readFileSync                  | Mechanical                  | P1        | Prevents OOM on malicious/large PDFs.                                                     |
+| 8   | Eng    | Add EBUSY/EPERM handling on invoice read                    | Mechanical                  | P1        | Plan only covered output locking, not input.                                              |
+| 9   | Eng    | EPERM on write → fallback showSaveDialog                    | Mechanical                  | P1        | Invoice in read-only corp dir = real scenario, user has no recovery otherwise.            |
+| 10  | Eng    | Fix migration format → raw SQL (migration removed anyway)   | Mechanical                  | P5        | Would have caused crash-on-launch. Moot since migration dropped.                          |
+| 11  | Eng    | Use path.parse().name for stem derivation                   | Mechanical                  | P5        | path.basename(.pdf) breaks on .PDF (Windows Explorer).                                    |
+| 12  | Design | Add 4 missing interaction states                            | Mechanical                  | P1        | Completeness — missing states are user-visible failures.                                  |
+| 13  | Design | Error messages include filename                             | Mechanical                  | P5        | Actionable context over generic message.                                                  |
+| 14  | Design | Add aria-label on file picker button                        | Mechanical                  | P1        | Accessibility — keyboard users need label.                                                |
 
 ---
 
 ## GSTACK REVIEW REPORT
 
-| Review | Status | Issues | Voices | Commit |
-|--------|--------|--------|--------|--------|
-| plan-ceo-review | ✅ clean | 0 unresolved | subagent-only | 92fd158 |
-| plan-design-review | ✅ clean | 0 unresolved | subagent-only | 92fd158 |
-| plan-eng-review | ✅ clean | 11 found, 0 unresolved | subagent-only | 92fd158 |
-| autoplan-voices (ceo) | ✅ clean | 2/6 confirmed, 4 resolved | subagent-only | 92fd158 |
-| autoplan-voices (design) | ✅ clean | 5/6 confirmed | subagent-only | 92fd158 |
-| autoplan-voices (eng) | ✅ clean | 4/6 confirmed | subagent-only | 92fd158 |
+| Review                   | Status   | Issues                    | Voices        | Commit  |
+| ------------------------ | -------- | ------------------------- | ------------- | ------- |
+| plan-ceo-review          | ✅ clean | 0 unresolved              | subagent-only | 92fd158 |
+| plan-design-review       | ✅ clean | 0 unresolved              | subagent-only | 92fd158 |
+| plan-eng-review          | ✅ clean | 11 found, 0 unresolved    | subagent-only | 92fd158 |
+| autoplan-voices (ceo)    | ✅ clean | 2/6 confirmed, 4 resolved | subagent-only | 92fd158 |
+| autoplan-voices (design) | ✅ clean | 5/6 confirmed             | subagent-only | 92fd158 |
+| autoplan-voices (eng)    | ✅ clean | 4/6 confirmed             | subagent-only | 92fd158 |
 
 **Verdict:** APPROVED 2026-04-26 — ready for /ship

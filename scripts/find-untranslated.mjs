@@ -25,13 +25,13 @@ const GERMAN_PATTERNS = [
   // German umlauts or ß in JSX text content (between > and <, or in strings)
   />[^<]*[äöüÄÖÜß][^<]*</u,
   // Common German stop-words in JSX text (not in imports/attributes)
-  />\s*(Einstellungen|Kunden|Timer|Backup|Fehler|Speichern|Abbrechen|Laden|Erstellen|Bearbeiten|Löschen)\s*</u,
+  />\s*(Einstellungen|Kunden|Timer|Backup|Fehler|Speichern|Abbrechen|Laden|Erstellen|Bearbeiten|Löschen)\s*</u
 ]
 
 // Files we know are already migrated or intentionally DE-only (skip).
 const SKIP_FILES = new Set([
   'UpdateBanner.tsx',
-  'SettingsView.tsx', // migrated sections
+  'SettingsView.tsx' // migrated sections
 ])
 
 // Migration status for v1.5: these components are partially migrated.

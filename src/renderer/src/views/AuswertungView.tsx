@@ -14,10 +14,12 @@ function fmtHours(sec: number): string {
 }
 
 function fmtEUR(cents: number): string {
-  return (cents / 100).toLocaleString('de-DE', {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }) + ' €'
+  return (
+    (cents / 100).toLocaleString('de-DE', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }) + ' €'
+  )
 }
 
 function fmtPct(ratio: number, sign = false): string {
@@ -36,16 +38,26 @@ function deltaRatio(cur: number, prev: number): number {
 }
 
 const DE_MONTHS = [
-  'Januar', 'Februar', 'März', 'April', 'Mai', 'Juni',
-  'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember',
+  'Januar',
+  'Februar',
+  'März',
+  'April',
+  'Mai',
+  'Juni',
+  'Juli',
+  'August',
+  'September',
+  'Oktober',
+  'November',
+  'Dezember'
 ]
 
 // ── Sub-components ─────────────────────────────────────────────────────────
 
 interface DeltaPillProps {
-  value: number    // ratio for revenue/hours, absolute diff for pp
+  value: number // ratio for revenue/hours, absolute diff for pp
   label: string
-  isPp?: boolean   // true for billable % (percentage points)
+  isPp?: boolean // true for billable % (percentage points)
 }
 
 function DeltaPill({ value, label, isPp = false }: DeltaPillProps): React.JSX.Element {
@@ -56,7 +68,7 @@ function DeltaPill({ value, label, isPp = false }: DeltaPillProps): React.JSX.El
       style={{
         background: up ? 'var(--green-bg)' : 'rgba(248,113,113,.1)',
         border: `1px solid ${up ? 'var(--green-border)' : 'rgba(248,113,113,.22)'}`,
-        color: up ? 'var(--green)' : 'var(--danger)',
+        color: up ? 'var(--green)' : 'var(--danger)'
       }}
     >
       <span>{up ? '↑' : '↓'}</span>
@@ -79,10 +91,13 @@ function StatCard({ label, value, accent, foot }: StatCardProps): React.JSX.Elem
       className="rounded-xl border p-4 flex flex-col gap-2 min-h-[120px]"
       style={{
         background: 'var(--card-bg)',
-        borderColor: 'var(--card-border)',
+        borderColor: 'var(--card-border)'
       }}
     >
-      <div className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text3)' }}>
+      <div
+        className="text-xs font-semibold uppercase tracking-wide"
+        style={{ color: 'var(--text3)' }}
+      >
         {label}
       </div>
       <div
@@ -90,7 +105,7 @@ function StatCard({ label, value, accent, foot }: StatCardProps): React.JSX.Elem
         style={{
           fontFamily: 'var(--font-mono, monospace)',
           color: accent ?? 'var(--text)',
-          letterSpacing: 1,
+          letterSpacing: 1
         }}
       >
         {value}
@@ -170,10 +185,7 @@ export default function AuswertungView(): React.JSX.Element {
     >
       {/* Header + month nav */}
       <header className="flex items-center gap-3 flex-wrap">
-        <h1
-          className="text-xl font-bold tracking-tight"
-          style={{ color: 'var(--text)' }}
-        >
+        <h1 className="text-xl font-bold tracking-tight" style={{ color: 'var(--text)' }}>
           {t('analytics.title')}
         </h1>
 
@@ -186,7 +198,7 @@ export default function AuswertungView(): React.JSX.Element {
               background: 'var(--card-bg)',
               borderColor: 'var(--card-border)',
               color: 'var(--text2)',
-              cursor: 'pointer',
+              cursor: 'pointer'
             }}
           >
             <ChevLeftIcon />
@@ -206,7 +218,7 @@ export default function AuswertungView(): React.JSX.Element {
               background: 'var(--card-bg)',
               borderColor: 'var(--card-border)',
               color: 'var(--text2)',
-              cursor: isCurrentMonth ? 'not-allowed' : 'pointer',
+              cursor: isCurrentMonth ? 'not-allowed' : 'pointer'
             }}
           >
             <ChevRightIcon />
@@ -249,7 +261,7 @@ export default function AuswertungView(): React.JSX.Element {
           style={{
             borderColor: 'var(--danger)',
             color: 'var(--danger)',
-            background: 'rgba(248,113,113,.08)',
+            background: 'rgba(248,113,113,.08)'
           }}
         >
           {error}
@@ -316,11 +328,7 @@ export default function AuswertungView(): React.JSX.Element {
               label={t('analytics.month.billable')}
               value={fmtPct(data.month.billable)}
               foot={
-                <DeltaPill
-                  value={data.month.billable - data.month.billablePrev}
-                  label="pp"
-                  isPp
-                />
+                <DeltaPill value={data.month.billable - data.month.billablePrev} label="pp" isPp />
               }
             />
           </div>
@@ -380,7 +388,16 @@ export default function AuswertungView(): React.JSX.Element {
 
 function ChevLeftIcon(): React.JSX.Element {
   return (
-    <svg width={14} height={14} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width={14}
+      height={14}
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <path d="M10 12L6 8l4-4" />
     </svg>
   )
@@ -388,7 +405,16 @@ function ChevLeftIcon(): React.JSX.Element {
 
 function ChevRightIcon(): React.JSX.Element {
   return (
-    <svg width={14} height={14} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width={14}
+      height={14}
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <path d="M6 4l4 4-4 4" />
     </svg>
   )
@@ -396,7 +422,17 @@ function ChevRightIcon(): React.JSX.Element {
 
 function EmptyIcon(): React.JSX.Element {
   return (
-    <svg width={56} height={56} viewBox="0 0 64 64" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text3)', opacity: 0.7 }}>
+    <svg
+      width={56}
+      height={56}
+      viewBox="0 0 64 64"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.4"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      style={{ color: 'var(--text3)', opacity: 0.7 }}
+    >
       <rect x="10" y="22" width="44" height="32" rx="4" />
       <path d="M18 44V36M26 44V32M34 44V38M42 44V30M50 44V34" />
       <circle cx="48" cy="16" r="6" />

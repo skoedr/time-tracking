@@ -134,7 +134,7 @@ All notable changes to TimeTrack are documented here.
 
 - **Einstellungen: Timer-Rundungs-Settings entfernt** — Die toten Einstellungen „Intervall“ und „Methode“ im Timer-Abschnitt wurden aus UI und Types entfernt (die DB-Rows bleiben bestehen und werden bei der nächsten Migration bereinigt). Maßgebliche Rundung für PDF und Auswertung ist ausschließlich „Stunden runden auf“ im PDF-Abschnitt. ([#94](https://github.com/skoedr/time-tracking/issues/94))
 
-- **Hint-Text für PDF-Rundung aktualisiert** — Der Hinweistext unter „Stunden runden auf“ macht jetzt deutlich, dass die Einstellung für PDF *und* Auswertung gilt. ([#94](https://github.com/skoedr/time-tracking/issues/94))
+- **Hint-Text für PDF-Rundung aktualisiert** — Der Hinweistext unter „Stunden runden auf“ macht jetzt deutlich, dass die Einstellung für PDF _und_ Auswertung gilt. ([#94](https://github.com/skoedr/time-tracking/issues/94))
 
 ## [1.10.0] — 2026-04-30
 
@@ -203,7 +203,6 @@ All notable changes to TimeTrack are documented here.
 Migration 012 (`v1.9-projects`) fügt einen Index `idx_entries_project_started` auf der `entries`-Tabelle hinzu. Bei sehr großen Datenbanken (50.000+ Einträge) kann der erste App-Start nach dem Update 2–5 Sekunden länger dauern, während der Index aufgebaut wird.
 
 ## [1.8.1] — 2026-04-28
-
 
 ### Fixed
 
@@ -368,7 +367,7 @@ Migration 012 (`v1.9-projects`) fügt einen Index `idx_entries_project_started` 
   Handler für `uncaughtException` und `unhandledRejection` erfassen Crashes,
   die sonst silent verschwinden würden. Log-Datei rotiert automatisch bei 5 MB.
   Settings → "Diagnose" zeigt den Pfad und bietet Buttons "Im Explorer zeigen"
-  + "Ordner öffnen" zum schnellen Anhängen an Issue-Reports.
+  - "Ordner öffnen" zum schnellen Anhängen an Issue-Reports.
 
 ## [1.3.0] — 2026-04-25
 
@@ -480,6 +479,7 @@ Migration 012 (`v1.9-projects`) fügt einen Index `idx_entries_project_started` 
 ## [1.4.1] — 2026-04-25
 
 ### Fixed
+
 - App-Fenster zeigte "Electron" statt "TimeTrack" als Titel
 
 ## [1.4.0] — 2026-04-25

@@ -15,8 +15,18 @@ function pad(n: number): string {
 
 /** German short month name for a 1-based month number. */
 const DE_MONTH_SHORT = [
-  'Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun',
-  'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez',
+  'Jan',
+  'Feb',
+  'Mär',
+  'Apr',
+  'Mai',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Okt',
+  'Nov',
+  'Dez'
 ]
 
 /**
@@ -30,8 +40,12 @@ export function buildAnalyticsSummary(
   try {
     const { year, month } = query
     if (
-      !Number.isInteger(year) || year < 2000 || year > 2100 ||
-      !Number.isInteger(month) || month < 1 || month > 12
+      !Number.isInteger(year) ||
+      year < 2000 ||
+      year > 2100 ||
+      !Number.isInteger(month) ||
+      month < 1 ||
+      month > 12
     ) {
       return fail('Ungültige Monatsangabe')
     }
@@ -56,9 +70,10 @@ export function buildAnalyticsSummary(
       // SQL helper: per-entry seconds, optionally rounded up to `roundStep` minutes.
       // Uses SQLite integer arithmetic for ceiling: (n + d - 1) / d * d
       const RAW_SEC = `(CAST(strftime('%s', e.stopped_at) AS INTEGER) - CAST(strftime('%s', e.started_at) AS INTEGER))`
-      const ENTRY_SEC = roundStep > 0
-        ? `(((${RAW_SEC} + 59) / 60 + ${roundStep} - 1) / ${roundStep} * ${roundStep} * 60)`
-        : RAW_SEC
+      const ENTRY_SEC =
+        roundStep > 0
+          ? `(((${RAW_SEC} + 59) / 60 + ${roundStep} - 1) / ${roundStep} * ${roundStep} * 60)`
+          : RAW_SEC
 
       // ── 1. Month stats ─────────────────────────────────────────────
       type MonthRow = {
@@ -96,8 +111,7 @@ export function buildAnalyticsSummary(
 
       // Days in selected month + days elapsed (for current month ETA)
       const today = new Date()
-      const isCurrentMonth =
-        today.getFullYear() === year && today.getMonth() + 1 === month
+      const isCurrentMonth = today.getFullYear() === year && today.getMonth() + 1 === month
       const daysInMonth = new Date(year, month, 0).getDate()
       const daysElapsed = isCurrentMonth ? today.getDate() : daysInMonth
 
@@ -155,7 +169,7 @@ export function buildAnalyticsSummary(
         name: r.name,
         color: r.color,
         h: Math.round(r.h ?? 0),
-        rev: Math.round(r.rev ?? 0),
+        rev: Math.round(r.rev ?? 0)
       }))
 
       // ── 3. 12 weeks trailing to end of selected month ─────────────
@@ -204,7 +218,7 @@ export function buildAnalyticsSummary(
         weeks.push({
           lbl: `KW${pad(weekNum)}`,
           b: Math.round(row?.b ?? 0),
-          n: Math.round(row?.n ?? 0),
+          n: Math.round(row?.n ?? 0)
         })
       }
 
@@ -239,13 +253,16 @@ export function buildAnalyticsSummary(
       for (let i = 11; i >= 0; i--) {
         let m = month - i
         let y = year
-        while (m <= 0) { m += 12; y -= 1 }
+        while (m <= 0) {
+          m += 12
+          y -= 1
+        }
         const key = `${y}-${pad(m)}`
         const row = monthTrendMap.get(key)
         months.push({
           lbl: DE_MONTH_SHORT[m - 1],
           h: Math.round(row?.h ?? 0),
-          r: Math.round(row?.r ?? 0),
+          r: Math.round(row?.r ?? 0)
         })
       }
 
@@ -270,10 +287,10 @@ export function buildAnalyticsSummary(
 
       // Map SQLite %w (0=Sun,1=Mon…6=Sat) to Mon-Sun order
       const DOW_LABELS = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']
-      const DOW_SQLITE  = [1,    2,    3,    4,    5,    6,    0]
+      const DOW_SQLITE = [1, 2, 3, 4, 5, 6, 0]
       const weekday: AnalyticsSummary['weekday'] = DOW_LABELS.map((d, i) => ({
         d,
-        h: Math.round((dowMap.get(DOW_SQLITE[i]) ?? 0)),
+        h: Math.round(dowMap.get(DOW_SQLITE[i]) ?? 0)
       }))
 
       return {
@@ -284,18 +301,16 @@ export function buildAnalyticsSummary(
           revenuePrev: Math.round(mPrev.revenue_cent ?? 0),
           billable: totalSec > 0 ? billableSec / totalSec : 0,
           billablePrev:
-            (mPrev.total_sec ?? 0) > 0
-              ? (mPrev.billable_sec ?? 0) / (mPrev.total_sec ?? 0)
-              : 0,
+            (mPrev.total_sec ?? 0) > 0 ? (mPrev.billable_sec ?? 0) / (mPrev.total_sec ?? 0) : 0,
           daysElapsed,
           daysInMonth,
           hasData,
-          hasRateConfigured,
+          hasRateConfigured
         },
         weeks,
         months,
         byClient,
-        weekday,
+        weekday
       }
     })
 
@@ -317,5 +332,5 @@ function getIsoWeek(date: Date): number {
   const dayNum = d.getUTCDay() || 7
   d.setUTCDate(d.getUTCDate() + 4 - dayNum)
   const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1))
-  return Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7)
+  return Math.ceil(((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7)
 }

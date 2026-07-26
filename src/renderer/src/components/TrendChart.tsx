@@ -13,7 +13,12 @@ const H = 220
 const P = { l: 36, r: 48, t: 16, b: 28 }
 const TICKS = 4
 
-export function TrendChart({ weeks, months, mode, onModeChange }: TrendChartProps): React.JSX.Element {
+export function TrendChart({
+  weeks,
+  months,
+  mode,
+  onModeChange
+}: TrendChartProps): React.JSX.Element {
   const t = useT()
 
   const data = mode === 'week' ? weeks : months
@@ -49,7 +54,7 @@ export function TrendChart({ weeks, months, mode, onModeChange }: TrendChartProp
           className="ml-auto inline-flex p-0.5 rounded-3xl border"
           style={{
             background: 'var(--input-bg)',
-            borderColor: 'var(--card-border)',
+            borderColor: 'var(--card-border)'
           }}
         >
           {(['week', 'month'] as const).map((v) => (
@@ -62,7 +67,7 @@ export function TrendChart({ weeks, months, mode, onModeChange }: TrendChartProp
                 color: mode === v ? '#fff' : 'var(--text2)',
                 border: 'none',
                 cursor: 'pointer',
-                fontWeight: mode === v ? 600 : 500,
+                fontWeight: mode === v ? 600 : 500
               }}
             >
               {v === 'week' ? t('analytics.chart.weeks') : t('analytics.chart.months')}
@@ -144,7 +149,14 @@ export function TrendChart({ weeks, months, mode, onModeChange }: TrendChartProp
             const yTotal = P.t + innerH - totalH
             return (
               <g key={i}>
-                <rect x={x} y={yTotal + billH} width={bw} height={nbillH} fill="url(#tt-barGradN)" rx="2" />
+                <rect
+                  x={x}
+                  y={yTotal + billH}
+                  width={bw}
+                  height={nbillH}
+                  fill="url(#tt-barGradN)"
+                  rx="2"
+                />
                 <rect x={x} y={yTotal} width={bw} height={billH} fill="url(#tt-barGrad)" rx="2" />
                 <text
                   x={x + bw / 2}
@@ -200,7 +212,8 @@ export function TrendChart({ weeks, months, mode, onModeChange }: TrendChartProp
               d={(data as AnalyticsSummary['months'])
                 .map((d, i) => {
                   const cx = P.l + step * i + step / 2
-                  const cy = P.t + innerH - ((d as AnalyticsSummary['months'][number]).r / maxR) * innerH
+                  const cy =
+                    P.t + innerH - ((d as AnalyticsSummary['months'][number]).r / maxR) * innerH
                   return `${i === 0 ? 'M' : 'L'} ${cx} ${cy}`
                 })
                 .join(' ')}
@@ -212,7 +225,8 @@ export function TrendChart({ weeks, months, mode, onModeChange }: TrendChartProp
             />
             {(data as AnalyticsSummary['months']).map((d, i) => {
               const cx = P.l + step * i + step / 2
-              const cy = P.t + innerH - ((d as AnalyticsSummary['months'][number]).r / maxR) * innerH
+              const cy =
+                P.t + innerH - ((d as AnalyticsSummary['months'][number]).r / maxR) * innerH
               return <circle key={i} cx={cx} cy={cy} r="2.6" fill="var(--green)" />
             })}
           </g>
@@ -224,10 +238,7 @@ export function TrendChart({ weeks, months, mode, onModeChange }: TrendChartProp
         {mode === 'week' ? (
           <>
             <span className="inline-flex items-center gap-1.5">
-              <span
-                className="w-2.5 h-2.5 rounded-sm"
-                style={{ background: 'var(--accent)' }}
-              />
+              <span className="w-2.5 h-2.5 rounded-sm" style={{ background: 'var(--accent)' }} />
               {t('analytics.chart.billable')}
             </span>
             <span className="inline-flex items-center gap-1.5">
@@ -241,10 +252,7 @@ export function TrendChart({ weeks, months, mode, onModeChange }: TrendChartProp
         ) : (
           <>
             <span className="inline-flex items-center gap-1.5">
-              <span
-                className="w-2.5 h-2.5 rounded-sm"
-                style={{ background: 'var(--accent)' }}
-              />
+              <span className="w-2.5 h-2.5 rounded-sm" style={{ background: 'var(--accent)' }} />
               {t('analytics.chart.hoursLabel')}
             </span>
             <span className="inline-flex items-center gap-1.5" style={{ color: 'var(--green)' }}>

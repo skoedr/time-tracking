@@ -47,7 +47,9 @@ describe('formatCsv', () => {
 
   it('outputs header row', () => {
     const csv = formatCsv([], CLIENT_MAP)
-    expect(csv).toContain('Datum;Start;Ende;Dauer;Kunde;Beschreibung;Tags;Referenz;Stundensatz;Betrag')
+    expect(csv).toContain(
+      'Datum;Start;Ende;Dauer;Kunde;Beschreibung;Tags;Referenz;Stundensatz;Betrag'
+    )
   })
 
   it('empty list → header only', () => {

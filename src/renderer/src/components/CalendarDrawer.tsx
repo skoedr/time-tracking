@@ -96,10 +96,7 @@ export function CalendarDrawer({
   }, [entries])
 
   const filteredEntries = useMemo(
-    () =>
-      tagFilter
-        ? entries.filter((e) => entryHasTag(e.tags, tagFilter))
-        : entries,
+    () => (tagFilter ? entries.filter((e) => entryHasTag(e.tags, tagFilter)) : entries),
     [entries, tagFilter]
   )
 
@@ -142,12 +139,19 @@ export function CalendarDrawer({
           style={{ background: 'var(--nav-bg)', borderColor: 'var(--card-border)' }}
         >
           <div>
-            <h2 className="text-base font-semibold" style={{ color: 'var(--text)' }}>{t('drawer.header.title', { date: dateLabel })}</h2>
+            <h2 className="text-base font-semibold" style={{ color: 'var(--text)' }}>
+              {t('drawer.header.title', { date: dateLabel })}
+            </h2>
             {entries.length > 0 && (
               <p className="mt-0.5 text-xs" style={{ color: 'var(--text2)' }}>
                 {filteredEntries.length !== entries.length
-                  ? t('drawer.entries.filtered', { count: String(filteredEntries.length), total: String(entries.length) })
-                  : entries.length === 1 ? t('drawer.entries.one') : t('drawer.entries.other', { count: String(entries.length) })}{' '}
+                  ? t('drawer.entries.filtered', {
+                      count: String(filteredEntries.length),
+                      total: String(entries.length)
+                    })
+                  : entries.length === 1
+                    ? t('drawer.entries.one')
+                    : t('drawer.entries.other', { count: String(entries.length) })}{' '}
                 · {formatHHMM(totalSeconds)}
               </p>
             )}
@@ -163,9 +167,21 @@ export function CalendarDrawer({
                         ? 'border-indigo-500 bg-indigo-600 text-white'
                         : 'hover:border-indigo-400'
                     }`}
-                    style={tagFilter !== tag ? { borderColor: 'var(--card-border)', background: 'var(--card-bg)', color: 'var(--text2)' } : {}}
+                    style={
+                      tagFilter !== tag
+                        ? {
+                            borderColor: 'var(--card-border)',
+                            background: 'var(--card-bg)',
+                            color: 'var(--text2)'
+                          }
+                        : {}
+                    }
                     aria-pressed={tagFilter === tag}
-                    title={tagFilter === tag ? t('drawer.filter.remove') : t('drawer.filter.apply', { tag })}
+                    title={
+                      tagFilter === tag
+                        ? t('drawer.filter.remove')
+                        : t('drawer.filter.apply', { tag })
+                    }
                   >
                     #{tag}
                   </button>
@@ -214,8 +230,16 @@ export function CalendarDrawer({
                         style={{ backgroundColor: project?.color || (client?.color ?? '#64748b') }}
                       />
                       <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--text2)' }}>
-                          <span className="tabular-nums" style={{ fontFamily: "'JetBrains Mono', monospace" }}>{formatTimeRange(e)}</span>
+                        <div
+                          className="flex items-center gap-2 text-xs"
+                          style={{ color: 'var(--text2)' }}
+                        >
+                          <span
+                            className="tabular-nums"
+                            style={{ fontFamily: "'JetBrains Mono', monospace" }}
+                          >
+                            {formatTimeRange(e)}
+                          </span>
                           <span>·</span>
                           <span className="truncate" style={{ color: 'var(--text)' }}>
                             {client?.name ?? t('common.unknown')}
@@ -247,7 +271,10 @@ export function CalendarDrawer({
                           </div>
                         )}
                       </div>
-                      <span className="text-xs tabular-nums" style={{ color: 'var(--text)', fontFamily: "'JetBrains Mono', monospace" }}>
+                      <span
+                        className="text-xs tabular-nums"
+                        style={{ color: 'var(--text)', fontFamily: "'JetBrains Mono', monospace" }}
+                      >
                         {formatHHMM(durationSeconds(e))}
                       </span>
                       <button
@@ -267,7 +294,9 @@ export function CalendarDrawer({
                         className="rounded p-1 hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-red-400 disabled:cursor-not-allowed disabled:opacity-30"
                         style={{ color: 'var(--danger)' }}
                         aria-label={t('common.delete')}
-                        title={e.stopped_at === null ? t('common.stopRunningFirst') : t('common.delete')}
+                        title={
+                          e.stopped_at === null ? t('common.stopRunningFirst') : t('common.delete')
+                        }
                       >
                         <Icons.Trash width={15} height={15} />
                       </button>

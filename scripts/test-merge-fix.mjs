@@ -9,7 +9,7 @@ import { readFileSync, writeFileSync } from 'fs'
 import { createRequire } from 'module'
 import { register } from 'node:module'
 
-const [,, invoicePath, snPath, outPath] = process.argv
+const [, , invoicePath, snPath, outPath] = process.argv
 if (!invoicePath || !snPath || !outPath) {
   console.error('Usage: node scripts/test-merge-fix.mjs <invoice.pdf> <sn.pdf> <output.pdf>')
   process.exit(1)
@@ -18,7 +18,8 @@ if (!invoicePath || !snPath || !outPath) {
 // Load pdf-lib directly (it's a CJS module)
 const require = createRequire(import.meta.url)
 const pdfLib = require('pdf-lib')
-const { PDFDocument, PDFDict, PDFArray, PDFName, PDFRef, PDFHexString, PDFString, PDFRawStream } = pdfLib
+const { PDFDocument, PDFDict, PDFArray, PDFName, PDFRef, PDFHexString, PDFString, PDFRawStream } =
+  pdfLib
 
 // --- copy of extractEmbeddedFiles + reembedFiles logic ---
 
@@ -26,23 +27,36 @@ function traverseNameTree(doc, node) {
   const ctx = doc.context
   const namesVal = node.get(PDFName.of('Names'))
   if (namesVal) {
-    const arr = namesVal instanceof PDFRef ? ctx.lookup(namesVal, PDFArray) : namesVal instanceof PDFArray ? namesVal : undefined
+    const arr =
+      namesVal instanceof PDFRef
+        ? ctx.lookup(namesVal, PDFArray)
+        : namesVal instanceof PDFArray
+          ? namesVal
+          : undefined
     if (!arr) return []
     const result = []
     for (let i = 0; i + 1 < arr.size(); i += 2) {
-      const k = arr.get(i), v = arr.get(i + 1)
-      if ((k instanceof PDFHexString || k instanceof PDFString) && v instanceof PDFRef) result.push([k, v])
+      const k = arr.get(i),
+        v = arr.get(i + 1)
+      if ((k instanceof PDFHexString || k instanceof PDFString) && v instanceof PDFRef)
+        result.push([k, v])
     }
     return result
   }
   const kidsVal = node.get(PDFName.of('Kids'))
   if (kidsVal) {
-    const arr = kidsVal instanceof PDFRef ? ctx.lookup(kidsVal, PDFArray) : kidsVal instanceof PDFArray ? kidsVal : undefined
+    const arr =
+      kidsVal instanceof PDFRef
+        ? ctx.lookup(kidsVal, PDFArray)
+        : kidsVal instanceof PDFArray
+          ? kidsVal
+          : undefined
     if (!arr) return []
     const result = []
     for (let i = 0; i < arr.size(); i++) {
       const kid = arr.get(i)
-      const kidNode = kid instanceof PDFRef ? ctx.lookup(kid, PDFDict) : kid instanceof PDFDict ? kid : undefined
+      const kidNode =
+        kid instanceof PDFRef ? ctx.lookup(kid, PDFDict) : kid instanceof PDFDict ? kid : undefined
       if (kidNode) result.push(...traverseNameTree(doc, kidNode))
     }
     return result
@@ -57,7 +71,12 @@ function extractEmbeddedFiles(doc) {
     if (!namesDict) return []
     const efVal = namesDict.get(PDFName.of('EmbeddedFiles'))
     if (!efVal) return []
-    const efDict = efVal instanceof PDFRef ? ctx.lookup(efVal, PDFDict) : efVal instanceof PDFDict ? efVal : undefined
+    const efDict =
+      efVal instanceof PDFRef
+        ? ctx.lookup(efVal, PDFDict)
+        : efVal instanceof PDFDict
+          ? efVal
+          : undefined
     if (!efDict) return []
     const pairs = traverseNameTree(doc, efDict)
     const entries = []
@@ -81,18 +100,26 @@ function extractEmbeddedFiles(doc) {
       } catch {}
     }
     return entries
-  } catch { return [] }
+  } catch {
+    return []
+  }
 }
 
 function reembedFiles(target, entries) {
   if (!entries.length) return
   const ctx = target.context
-  const afRefs = [], pairs = []
+  const afRefs = [],
+    pairs = []
   for (const entry of entries) {
     const newStream = new PDFRawStream(entry.streamDict, entry.streamContents)
     const streamRef = ctx.register(newStream)
     const efDict = ctx.obj({ F: streamRef, UF: streamRef })
-    const fsDict = ctx.obj({ Type: PDFName.of('Filespec'), F: entry.name, UF: entry.name, EF: efDict })
+    const fsDict = ctx.obj({
+      Type: PDFName.of('Filespec'),
+      F: entry.name,
+      UF: entry.name,
+      EF: efDict
+    })
     if (entry.afRelationship) fsDict.set(PDFName.of('AFRelationship'), entry.afRelationship)
     const fsRef = ctx.register(fsDict)
     afRefs.push(fsRef)
@@ -100,7 +127,12 @@ function reembedFiles(target, entries) {
   }
   const efDict = ctx.obj({ Names: ctx.obj(pairs) })
   const namesVal = target.catalog.get(PDFName.of('Names'))
-  let namesDict = namesVal instanceof PDFRef ? ctx.lookup(namesVal, PDFDict) : namesVal instanceof PDFDict ? namesVal : undefined
+  let namesDict =
+    namesVal instanceof PDFRef
+      ? ctx.lookup(namesVal, PDFDict)
+      : namesVal instanceof PDFDict
+        ? namesVal
+        : undefined
   if (namesDict) namesDict.set(PDFName.of('EmbeddedFiles'), efDict)
   else target.catalog.set(PDFName.of('Names'), ctx.obj({ EmbeddedFiles: efDict }))
   target.catalog.set(PDFName.of('AF'), ctx.obj(afRefs))
@@ -110,7 +142,12 @@ function copyXmpMetadata(source, target) {
   const metaVal = source.catalog.get(PDFName.of('Metadata'))
   if (!metaVal) return
   const sourceCtx = source.context
-  let stream = metaVal instanceof PDFRef ? sourceCtx.lookup(metaVal, PDFRawStream) : metaVal instanceof PDFRawStream ? metaVal : undefined
+  let stream =
+    metaVal instanceof PDFRef
+      ? sourceCtx.lookup(metaVal, PDFRawStream)
+      : metaVal instanceof PDFRawStream
+        ? metaVal
+        : undefined
   if (!stream) return
   const newStream = new PDFRawStream(stream.dict, stream.contents)
   const newRef = target.context.register(newStream)
@@ -122,27 +159,41 @@ function copyOutputIntents(source, target) {
   if (!intentsVal) return
   const sourceCtx = source.context
   const targetCtx = target.context
-  let srcArray = intentsVal instanceof PDFRef ? sourceCtx.lookup(intentsVal, PDFArray) : intentsVal instanceof PDFArray ? intentsVal : undefined
+  let srcArray =
+    intentsVal instanceof PDFRef
+      ? sourceCtx.lookup(intentsVal, PDFArray)
+      : intentsVal instanceof PDFArray
+        ? intentsVal
+        : undefined
   if (!srcArray) return
   const newRefs = []
   for (let i = 0; i < srcArray.size(); i++) {
     try {
       const item = srcArray.get(i)
-      const intentDict = item instanceof PDFRef ? sourceCtx.lookup(item, PDFDict) : item instanceof PDFDict ? item : undefined
+      const intentDict =
+        item instanceof PDFRef
+          ? sourceCtx.lookup(item, PDFDict)
+          : item instanceof PDFDict
+            ? item
+            : undefined
       if (!intentDict) continue
       const profileVal = intentDict.get(PDFName.of('DestOutputProfile'))
       let newProfileRef
       if (profileVal instanceof PDFRef) {
         const profileStream = sourceCtx.lookup(profileVal, PDFRawStream)
         if (profileStream) {
-          newProfileRef = targetCtx.register(new PDFRawStream(profileStream.dict, profileStream.contents))
+          newProfileRef = targetCtx.register(
+            new PDFRawStream(profileStream.dict, profileStream.contents)
+          )
         }
       }
       const newDict = targetCtx.obj({})
       intentDict.entries().forEach(([key, val]) => {
-        if (key.toString() === '/DestOutputProfile') { if (newProfileRef) newDict.set(key, newProfileRef) }
-        else if (val instanceof PDFRef || val instanceof PDFDict || val instanceof PDFArray) { /* skip complex */ }
-        else newDict.set(key, val)
+        if (key.toString() === '/DestOutputProfile') {
+          if (newProfileRef) newDict.set(key, newProfileRef)
+        } else if (val instanceof PDFRef || val instanceof PDFDict || val instanceof PDFArray) {
+          /* skip complex */
+        } else newDict.set(key, val)
       })
       newRefs.push(targetCtx.register(newDict))
     } catch {}
@@ -161,7 +212,10 @@ const [invDoc, snDoc] = await Promise.all([PDFDocument.load(invoiceBuf), PDFDocu
 
 console.log('Extracting embedded files from invoice...')
 const entries = extractEmbeddedFiles(invDoc)
-console.log(`  Found ${entries.length} embedded file(s):`, entries.map(e => e.name.decodeText()))
+console.log(
+  `  Found ${entries.length} embedded file(s):`,
+  entries.map((e) => e.name.decodeText())
+)
 
 console.log('Merging pages...')
 const merged = await PDFDocument.create()
@@ -184,7 +238,8 @@ console.log('\nVerifying output...')
 const verify = await PDFDocument.load(outBuf)
 const verified = extractEmbeddedFiles(verify)
 console.log(`  Embedded files in output: ${verified.length}`)
-for (const e of verified) console.log(`    - "${e.name.decodeText()}" (${e.streamContents.length} bytes)`)
+for (const e of verified)
+  console.log(`    - "${e.name.decodeText()}" (${e.streamContents.length} bytes)`)
 console.log(`  /AF present: ${!!verify.catalog.get(PDFName.of('AF'))}`)
 console.log('\nDone. Now run:')
 console.log(`  java -jar Mustang-CLI-2.23.0.jar --action validate --source "${outPath}"`)
