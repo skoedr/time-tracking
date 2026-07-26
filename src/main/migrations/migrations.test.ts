@@ -5,23 +5,12 @@ import { join } from 'path'
 import { migrations } from './index'
 
 import type Database from 'better-sqlite3'
+import { loadSqlite, type DatabaseCtor } from '../../test/sqlite'
 
-// CI rebuilds better-sqlite3 for Node before running tests; locally the DB
-// suite is skipped when the binary cannot load.
-type DatabaseCtor = new (path: string) => Database.Database
-let DatabaseImpl: DatabaseCtor | null = null
+let DatabaseImpl: DatabaseCtor
 
 beforeAll(async () => {
-  try {
-    const mod = await import('better-sqlite3')
-    const Ctor = mod.default as unknown as DatabaseCtor
-    // The native binding only fails on actual instantiation, not on import.
-    const probe = new Ctor(':memory:')
-    probe.close()
-    DatabaseImpl = Ctor
-  } catch {
-    DatabaseImpl = null
-  }
+  DatabaseImpl = await loadSqlite()
 })
 
 describe('migrations registry', () => {
@@ -48,11 +37,7 @@ describe('migration SQL execution', () => {
   let tmpDir: string
   let db: Database.Database
 
-  beforeEach((ctx) => {
-    if (!DatabaseImpl) {
-      ctx.skip()
-      return
-    }
+  beforeEach(() => {
     tmpDir = mkdtempSync(join(tmpdir(), 'tt-migrations-'))
     const dbPath = join(tmpDir, 'test.sqlite')
     db = new DatabaseImpl(dbPath)

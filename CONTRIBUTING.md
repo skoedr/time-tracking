@@ -39,6 +39,39 @@ App-Daten landen lokal in `%AppData%\time-tracking\` (Windows) bzw.
 `~/Library/Application Support/time-tracking/` (macOS). Diese kannst du beim
 Entwickeln gefahrlos sichern oder löschen.
 
+### Tests und die native SQLite-ABI
+
+`better-sqlite3` ist ein natives Modul und wird beim `pnpm install` gegen die
+**Electron**-ABI gebaut, weil die App das zur Laufzeit braucht. Ein System-Node
+kann diese Binary nicht laden. `pnpm test` löst das, indem es Vitest über
+`scripts/run-vitest.mjs` auf der Electron-Binary im Node-Modus startet
+(`ELECTRON_RUN_AS_NODE=1`) — dieselbe Lösung wie beim MCP-Server
+(`src/main/mcpLaunch.ts`). Es gibt **keine** zweite Binärkopie und **keinen**
+Rebuild vor dem Testlauf; `pnpm dev` und die Paketbuilds bleiben dabei
+funktionsfähig.
+
+Ein grüner Lauf ist deshalb **596 passed, 0 skipped**. Wenn du stattdessen eine
+dreistellige Skip-Zahl siehst, ist die Umgebung kaputt — nicht der Code.
+
+**Wenn Tests mit `ERR_DLOPEN_FAILED` / `NODE_MODULE_VERSION` scheitern:**
+
+1. Rufst du Vitest direkt auf (`pnpm exec vitest`, IDE-Runner)? Dann nimm
+   `pnpm test`. Direkt unter System-Node kann es nicht funktionieren.
+2. Sonst ist die Binary veraltet — meist, weil irgendwann
+   `pnpm rebuild better-sqlite3` lief und sie durch einen Node-ABI-Build ersetzt
+   hat. **`pnpm install` repariert das nicht:** electron-builder merkt sich die
+   gebaute ABI in `node_modules/better-sqlite3/build/Release/.forge-meta` und
+   überspringt den Rebuild, wenn der Marker schon passt — die Datei lügt dann.
+   Erzwinge ihn:
+
+   ```powershell
+   pnpm exec electron-rebuild -f -w better-sqlite3
+   ```
+
+Kurz: `pnpm rebuild better-sqlite3` bitte **nicht** benutzen. Es hinterlässt eine
+App, die ihre eigene Datenbank nicht mehr öffnen kann, ohne dass ein Kommando
+darüber meckert.
+
 ## Pull-Request-Workflow
 
 1. **Issue zuerst** – außer für sehr kleine Fixes (Typo, ein-Zeilen-Bug).

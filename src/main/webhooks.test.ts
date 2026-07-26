@@ -5,7 +5,7 @@
  */
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest'
 import type Database from 'better-sqlite3'
-import { migrations } from './migrations'
+import { applyMigrations, loadSqlite, type DatabaseCtor } from '../test/sqlite'
 import { startTimer, createManualEntry } from './entryMutations'
 import {
   buildWebhookPayload,
@@ -17,32 +17,15 @@ import {
 import type { Entry } from '../shared/types'
 import type { WebhookTarget } from '../shared/webhooks'
 
-type DatabaseCtor = new (path: string) => Database.Database
-let DatabaseImpl: DatabaseCtor | null = null
+let DatabaseImpl: DatabaseCtor
 
 beforeAll(async () => {
-  try {
-    const mod = await import('better-sqlite3')
-    const Ctor = mod.default as unknown as DatabaseCtor
-    const probe = new Ctor(':memory:')
-    probe.close()
-    DatabaseImpl = Ctor
-  } catch {
-    DatabaseImpl = null
-  }
+  DatabaseImpl = await loadSqlite()
 })
 
 function seed(db: Database.Database): void {
   db.pragma('foreign_keys = ON')
-  db.exec(
-    `CREATE TABLE schema_version (version INTEGER PRIMARY KEY, name TEXT NOT NULL, applied_at TEXT NOT NULL DEFAULT (datetime('now')))`
-  )
-  for (const m of migrations) {
-    db.transaction(() => {
-      db.exec(m.up)
-      db.prepare('INSERT INTO schema_version (version, name) VALUES (?, ?)').run(m.version, m.name)
-    })()
-  }
+  applyMigrations(db)
   // Client rate 120 €/h, project rate 90 €/h (project overrides client).
   db.prepare(
     `INSERT INTO clients (id, name, color, active, rate_cent) VALUES (1,'Acme','#111',1,12000)`
@@ -104,11 +87,11 @@ function mockFetch(script: Array<number | 'throw'>): {
 const NOOP_SLEEP = (): Promise<void> => Promise.resolve()
 
 // ── Fake DB ────────────────────────────────────────────────────────────────
-// A structural stand-in for the better-sqlite3 handle so the payload/privacy/
-// emit logic runs everywhere — including where the native module is built for
-// Electron's ABI and can't load under node (the whole reason the migrated-DB
-// blocks below skip locally). Rows use the REAL column shapes the queries read,
-// so this can't go blind to a shape drift the way an invented shape would.
+// A structural stand-in for the better-sqlite3 handle, so the payload/privacy/
+// emit logic can be exercised without paying for a migrated DB per case. Rows
+// use the REAL column shapes the queries read, so this can't go blind to a
+// shape drift the way an invented shape would. The migrated-DB blocks below
+// cover the same logic against real SQL.
 interface FakeData {
   targetsRaw?: string
   client?: { id: number; name: string; rate_cent: number }
@@ -277,8 +260,7 @@ describe('emitWebhooks (fake DB, runs everywhere)', () => {
 
 describe('buildWebhookPayload', () => {
   let db: Database.Database
-  beforeEach((ctx) => {
-    if (!DatabaseImpl) return ctx.skip()
+  beforeEach(() => {
     db = new DatabaseImpl(':memory:')
     seed(db)
   })
@@ -447,8 +429,7 @@ describe('eventForWriteOp', () => {
 
 describe('emitWebhooks (fire-and-forget)', () => {
   let db: Database.Database
-  beforeEach((ctx) => {
-    if (!DatabaseImpl) return ctx.skip()
+  beforeEach(() => {
     db = new DatabaseImpl(':memory:')
     seed(db)
   })

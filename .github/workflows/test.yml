@@ -50,8 +50,12 @@ jobs:
       - name: Lint
         run: pnpm lint
 
-      - name: Rebuild native modules for Node (test runtime)
-        run: pnpm rebuild better-sqlite3
-
+      # #151: No native rebuild before the tests any more. `pnpm test` runs
+      # Vitest on the Electron binary in Node mode, so it loads the same
+      # better-sqlite3 build `install-app-deps` produced during install — the
+      # local run and this one now execute the identical set of tests.
+      # The old `pnpm rebuild better-sqlite3` step was also actively harmful:
+      # it swapped in a Node-ABI binary without updating electron-builder's
+      # .forge-meta cache marker, so a later install-app-deps silently no-oped.
       - name: Test
         run: pnpm test

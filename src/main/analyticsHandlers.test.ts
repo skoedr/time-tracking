@@ -9,22 +9,13 @@ import { mkdtempSync, rmSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
 import type Database from 'better-sqlite3'
-import { migrations } from './migrations'
 import { buildAnalyticsSummary } from './analyticsHandlers'
+import { applyMigrations, loadSqlite, type DatabaseCtor } from '../test/sqlite'
 
-type DatabaseCtor = new (path: string) => Database.Database
-let DatabaseImpl: DatabaseCtor | null = null
+let DatabaseImpl: DatabaseCtor
 
 beforeAll(async () => {
-  try {
-    const mod = await import('better-sqlite3')
-    const Ctor = mod.default as unknown as DatabaseCtor
-    const probe = new Ctor(':memory:')
-    probe.close()
-    DatabaseImpl = Ctor
-  } catch {
-    DatabaseImpl = null
-  }
+  DatabaseImpl = await loadSqlite()
 })
 
 // ── DB setup helpers ───────────────────────────────────────────────────────
@@ -32,20 +23,7 @@ beforeAll(async () => {
 function makeDb(Ctor: DatabaseCtor, dir: string): Database.Database {
   const db = new Ctor(join(dir, 'test.sqlite'))
   db.pragma('foreign_keys = ON')
-  db.exec(
-    `CREATE TABLE schema_version (
-       version INTEGER PRIMARY KEY,
-       name TEXT NOT NULL,
-       applied_at TEXT NOT NULL DEFAULT (datetime('now'))
-     )`
-  )
-  for (const m of migrations) {
-    const tx = db.transaction(() => {
-      db.exec(m.up)
-      db.prepare('INSERT INTO schema_version (version, name) VALUES (?, ?)').run(m.version, m.name)
-    })
-    tx()
-  }
+  applyMigrations(db)
   return db
 }
 
@@ -78,11 +56,7 @@ describe('buildAnalyticsSummary', () => {
   let tmpDir: string
   let db: Database.Database
 
-  beforeEach((ctx) => {
-    if (!DatabaseImpl) {
-      ctx.skip()
-      return
-    }
+  beforeEach(() => {
     tmpDir = mkdtempSync(join(tmpdir(), 'tt-analytics-'))
     db = makeDb(DatabaseImpl, tmpDir)
 

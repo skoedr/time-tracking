@@ -4,6 +4,14 @@ All notable changes to TimeTrack are documented here.
 
 ## [Unreleased]
 
+### Internal
+
+- **`pnpm test` überspringt keine Tests mehr still (#151)** — `better-sqlite3` wird gegen die Electron-ABI gebaut, Vitest lief unter System-Node: die zwölf DB-gestützten Testdateien haben sich daraufhin selbst übersprungen. Lokal stand dann `334 passed | 201 skipped` — eine unauffällige Zahl neben einer großen grünen, die niemand als „ein Drittel deiner Abdeckung existiert gerade nicht" liest. Beim v1.15.0-Release sind genau dadurch zwei Fehler erst in der CI aufgeschlagen. Vitest läuft jetzt auf der Electron-Binary im Node-Modus (`ELECTRON_RUN_AS_NODE=1`), also auf derselben Antwort, die der MCP-Server seit v1.14.2 nutzt: gleiche ABI, keine zweite Binärkopie, kein Rebuild-Hin-und-Her — `pnpm dev` und die Paketbuilds bleiben unangetastet funktionsfähig. Kann das Modul wider Erwarten doch nicht laden, **scheitert** der Lauf jetzt mit einer Anleitung, statt sich stillschweigend zu überspringen. Die Rebuild-Schritte um den Testlauf herum sind aus allen drei CI-Jobs entfernt.
+
+- **Ein Regressionstest lief nie — in keiner Umgebung (#151)** — `dashboard:summary — duration precision` sichert einen echten Bug ab (SQLites `julianday()` rechnet in Fließkomma und liefert für eine Stunde 3599,999… → Anzeige „00:59"). Der Test hing an `it.skipIf(!DatabaseImpl)`; `skipIf` wird aber beim Einsammeln der Tests ausgewertet, also **bevor** das `beforeAll` läuft, das `DatabaseImpl` setzt. Die Bedingung war damit immer wahr, der Test dauerhaft übersprungen — auch in der CI. Er läuft jetzt und ist grün.
+
+- **Gemeinsamer Test-Helfer für die DB-Suites (#151)** — Die Probe auf das native Modul und die Migrations-Schleife lagen in zwölf Dateien in drei verschiedenen Varianten dupliziert. Beides liegt jetzt in `src/test/sqlite.ts`; die testspezifischen Fixture-Daten bleiben, wo sie sind.
+
 ## [1.15.0] — 2026-07-26
 
 ### Added

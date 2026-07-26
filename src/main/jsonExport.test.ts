@@ -1,8 +1,6 @@
 /**
  * Unit tests for `buildJsonExportPayload`. Pure function over a live SQLite
- * handle — no Electron save-dialog involved. Skipped automatically when
- * the better-sqlite3 native binding can't load (matches the migrations
- * suite pattern).
+ * handle — no Electron save-dialog involved.
  */
 import { describe, it, expect, beforeAll, beforeEach, afterEach } from 'vitest'
 import { mkdtempSync, rmSync } from 'fs'
@@ -11,51 +9,23 @@ import { join } from 'path'
 import type Database from 'better-sqlite3'
 import { migrations } from './migrations'
 import { buildJsonExportPayload } from './jsonExport'
+import { applyMigrations, loadSqlite, type DatabaseCtor } from '../test/sqlite'
 
-type DatabaseCtor = new (path: string) => Database.Database
-let DatabaseImpl: DatabaseCtor | null = null
+let DatabaseImpl: DatabaseCtor
 
 beforeAll(async () => {
-  try {
-    const mod = await import('better-sqlite3')
-    const Ctor = mod.default as unknown as DatabaseCtor
-    const probe = new Ctor(':memory:')
-    probe.close()
-    DatabaseImpl = Ctor
-  } catch {
-    DatabaseImpl = null
-  }
+  DatabaseImpl = await loadSqlite()
 })
 
 describe('buildJsonExportPayload', () => {
   let tmpDir: string
   let db: Database.Database
 
-  beforeEach((ctx) => {
-    if (!DatabaseImpl) {
-      ctx.skip()
-      return
-    }
+  beforeEach(() => {
     tmpDir = mkdtempSync(join(tmpdir(), 'tt-export-'))
     db = new DatabaseImpl(join(tmpDir, 'test.sqlite'))
     db.pragma('foreign_keys = ON')
-    db.exec(
-      `CREATE TABLE schema_version (
-         version INTEGER PRIMARY KEY,
-         name TEXT NOT NULL,
-         applied_at TEXT NOT NULL DEFAULT (datetime('now'))
-       )`
-    )
-    for (const m of migrations) {
-      const tx = db.transaction(() => {
-        db.exec(m.up)
-        db.prepare('INSERT INTO schema_version (version, name) VALUES (?, ?)').run(
-          m.version,
-          m.name
-        )
-      })
-      tx()
-    }
+    applyMigrations(db)
   })
 
   afterEach(() => {

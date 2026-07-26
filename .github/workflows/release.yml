@@ -88,14 +88,13 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
-      - name: Rebuild native modules for Node (test runtime)
-        run: pnpm rebuild better-sqlite3
-
+      # #151: `pnpm test` runs Vitest on the Electron binary in Node mode, so
+      # it uses the Electron-ABI build `install-app-deps` already produced. The
+      # rebuild-for-Node / rebuild-back-for-Electron round-trip that used to
+      # bracket this step is gone — with it goes the risk of entering the
+      # packaging step on a Node-ABI binary if the second rebuild ever no-ops.
       - name: Test
         run: pnpm test
-
-      - name: Rebuild better-sqlite3 for Electron ABI
-        run: pnpm exec electron-rebuild -f -w better-sqlite3
 
       - name: Build installer (NSIS)
         run: |
@@ -181,14 +180,10 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
-      - name: Rebuild native modules for Node (test runtime)
-        run: pnpm rebuild better-sqlite3
-
+      # #151: see the note in the Windows job — Vitest runs on Electron now,
+      # so no native rebuild brackets the test step any more.
       - name: Test
         run: pnpm test
-
-      - name: Rebuild better-sqlite3 for Electron ABI
-        run: pnpm exec electron-rebuild -f -w better-sqlite3
 
       - name: Build app (DMG + ZIP, arm64)
         env:

@@ -1,38 +1,21 @@
 /**
  * Tests for the guarded MCP write-bridge core. In-memory migrated DB; stubs
- * for confirm/backup/audit/onChange. Skips when better-sqlite3 can't load.
+ * for confirm/backup/audit/onChange.
  */
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest'
 import type Database from 'better-sqlite3'
-import { migrations } from './migrations'
 import { handleRequest, type BridgeCtx, type BridgeRequest } from './mcpBridgeCore'
+import { applyMigrations, loadSqlite, type DatabaseCtor } from '../test/sqlite'
 
-type DatabaseCtor = new (path: string) => Database.Database
-let DatabaseImpl: DatabaseCtor | null = null
+let DatabaseImpl: DatabaseCtor
 
 beforeAll(async () => {
-  try {
-    const mod = await import('better-sqlite3')
-    const Ctor = mod.default as unknown as DatabaseCtor
-    const probe = new Ctor(':memory:')
-    probe.close()
-    DatabaseImpl = Ctor
-  } catch {
-    DatabaseImpl = null
-  }
+  DatabaseImpl = await loadSqlite()
 })
 
 function seed(db: Database.Database): void {
   db.pragma('foreign_keys = ON')
-  db.exec(
-    `CREATE TABLE schema_version (version INTEGER PRIMARY KEY, name TEXT NOT NULL, applied_at TEXT NOT NULL DEFAULT (datetime('now')))`
-  )
-  for (const m of migrations) {
-    db.transaction(() => {
-      db.exec(m.up)
-      db.prepare('INSERT INTO schema_version (version, name) VALUES (?, ?)').run(m.version, m.name)
-    })()
-  }
+  applyMigrations(db)
   db.prepare(
     `INSERT INTO clients (id, name, color, active, rate_cent) VALUES (1,'Acme','#111',1,0)`
   ).run()
@@ -93,11 +76,7 @@ function countEntries(db: Database.Database): number {
 
 describe('handleRequest', () => {
   let db: Database.Database
-  beforeEach((ctx) => {
-    if (!DatabaseImpl) {
-      ctx.skip()
-      return
-    }
+  beforeEach(() => {
     db = new DatabaseImpl(':memory:')
     seed(db)
   })

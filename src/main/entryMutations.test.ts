@@ -1,10 +1,10 @@
 /**
  * Tests for the extracted entry-mutation core. Same in-memory-DB approach as
- * ipc.test.ts / migrations.test.ts; skips when better-sqlite3 can't load.
+ * ipc.test.ts / migrations.test.ts.
  */
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest'
 import type Database from 'better-sqlite3'
-import { migrations } from './migrations'
+import { applyMigrations, loadSqlite, type DatabaseCtor } from '../test/sqlite'
 import {
   createManualEntry,
   updateManualEntry,
@@ -13,32 +13,15 @@ import {
   stopRunningTimer
 } from './entryMutations'
 
-type DatabaseCtor = new (path: string) => Database.Database
-let DatabaseImpl: DatabaseCtor | null = null
+let DatabaseImpl: DatabaseCtor
 
 beforeAll(async () => {
-  try {
-    const mod = await import('better-sqlite3')
-    const Ctor = mod.default as unknown as DatabaseCtor
-    const probe = new Ctor(':memory:')
-    probe.close()
-    DatabaseImpl = Ctor
-  } catch {
-    DatabaseImpl = null
-  }
+  DatabaseImpl = await loadSqlite()
 })
 
 function seed(db: Database.Database): void {
   db.pragma('foreign_keys = ON')
-  db.exec(
-    `CREATE TABLE schema_version (version INTEGER PRIMARY KEY, name TEXT NOT NULL, applied_at TEXT NOT NULL DEFAULT (datetime('now')))`
-  )
-  for (const m of migrations) {
-    db.transaction(() => {
-      db.exec(m.up)
-      db.prepare('INSERT INTO schema_version (version, name) VALUES (?, ?)').run(m.version, m.name)
-    })()
-  }
+  applyMigrations(db)
   db.prepare(
     `INSERT INTO clients (id, name, color, active, rate_cent) VALUES (1,'Acme','#111',1,0)`
   ).run()
@@ -47,11 +30,7 @@ function seed(db: Database.Database): void {
 describe('entryMutations', () => {
   let db: Database.Database
 
-  beforeEach((ctx) => {
-    if (!DatabaseImpl) {
-      ctx.skip()
-      return
-    }
+  beforeEach(() => {
     db = new DatabaseImpl(':memory:')
     seed(db)
   })
