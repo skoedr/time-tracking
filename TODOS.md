@@ -39,6 +39,12 @@ Deferred items from plan reviews. Items here have explicit decisions — they ar
 
 - **DB-Cleanup: tote Rounding-Settings** — `rounding_mode` und `rounding_minutes` wurden aus UI + Types entfernt (v1.11, 2026-04-30), stehen aber noch als Rows in der `settings`-Tabelle (gesät von Migration 001). Migration 014 ergänzt `DELETE FROM settings WHERE key IN ('rounding_mode', 'rounding_minutes')` als Cleanup-Statement.
 
+### Kleinkram (aus /ship-Review v1.14.2, 2026-07-25)
+
+- **Redundante `@electron/rebuild`-devDependency** — electron-builder warnt bei jedem Paketbuild: „@electron/rebuild already used by electron-builder, please consider to remove excess dependency from devDependencies". Der Release-Workflow ruft `electron-rebuild` allerdings direkt auf (`pnpm exec electron-rebuild -f -w better-sqlite3`), vor dem Entfernen also prüfen, ob der Aufruf über electron-builder mitkommt.
+
+- **RunAsNode-Fuse-Abhängigkeit dokumentieren** — Seit v1.14.2 startet der MCP-Server über `ELECTRON_RUN_AS_NODE=1`. Diese Electron-Fuse lässt sich zur Härtung abschalten; das Projekt setzt derzeit keine Fuses, also funktioniert es. Würde man Fuses jemals aktivieren, muss `runAsNode` an bleiben, sonst bricht die MCP-Integration wortlos. Steht bisher nur im PR-Body von #140, also faktisch unauffindbar — gehört als Kommentar an `electron-builder.yml` oder in `src/main/mcpLaunch.ts`.
+
 ### v1.12 Issues (aktiv geplant)
 
 ~~- **#105 — Projektspezifischer Ansprechpartner**~~ → Abgeschlossen (v1.12.0, 2026-05-04)
