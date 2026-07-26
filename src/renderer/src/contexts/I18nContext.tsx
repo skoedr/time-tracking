@@ -36,6 +36,7 @@ export function I18nProvider({ children }: { children: React.ReactNode }): React
 
   // Sync locale once settings are loaded.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- #142: React-Compiler-Regel, Aufarbeitung im Folge-PR
     if (language === 'en') setLocaleState('en')
   }, [language])
 

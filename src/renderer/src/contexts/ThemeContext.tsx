@@ -20,6 +20,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }): Reac
 
   // Sync theme mode once settings are loaded.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- #142: React-Compiler-Regel, Aufarbeitung im Folge-PR
     if (themeMode) setMode((themeMode as ThemeMode) ?? 'system')
   }, [themeMode])
 

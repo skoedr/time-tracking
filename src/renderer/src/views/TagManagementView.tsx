@@ -51,6 +51,7 @@ export default function TagManagementView(): React.JSX.Element {
   }, [])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- #142: React-Compiler-Regel, Aufarbeitung im Folge-PR
     void reload()
   }, [reload])
 

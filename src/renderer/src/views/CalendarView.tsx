@@ -99,6 +99,7 @@ export default function CalendarView(): React.JSX.Element {
 
   const onPrev = useCallback(() => setCursor((d) => addMonths(d, -1)), [])
   const onNext = useCallback(() => setCursor((d) => addMonths(d, 1)), [])
+  // eslint-disable-next-line react-hooks/preserve-manual-memoization -- #142: React-Compiler-Regel, Aufarbeitung im Folge-PR
   const onToday = useCallback(() => {
     const today = new Date()
     setCursor(startOfMonth(today))
@@ -110,6 +111,7 @@ export default function CalendarView(): React.JSX.Element {
   const [pdfRange, setPdfRange] = useState<{ fromIso: string; toIso: string } | null>(null)
   const [mergeOpen, setMergeOpen] = useState(false)
 
+  // eslint-disable-next-line react-hooks/preserve-manual-memoization -- #142: React-Compiler-Regel, Aufarbeitung im Folge-PR
   const onQuickRange = useCallback((kind: QuickRangeKind) => {
     const range = getQuickRange(kind, new Date())
     setPdfRange({ fromIso: localDateKey(range.from), toIso: localDateKey(range.to) })

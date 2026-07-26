@@ -42,6 +42,7 @@ function App(): React.JSX.Element {
   // Track the color of the currently running entry's project for the nav pill.
   useEffect(() => {
     if (runningEntry?.project_id == null) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- #142: React-Compiler-Regel, Aufarbeitung im Folge-PR
       setRunningProjectColor(undefined)
       return
     }
@@ -54,6 +55,7 @@ function App(): React.JSX.Element {
 
   // Check onboarding flag — show wizard only for fresh installs.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- #142: React-Compiler-Regel, Aufarbeitung im Folge-PR
     if (onboardingCompleted === '0') setShowOnboarding(true)
     void useUiPrefsStore.getState().load()
   }, [onboardingCompleted])
@@ -221,6 +223,7 @@ function RunningPill({
     return () => clearInterval(id)
   }, [startedAt])
 
+  // eslint-disable-next-line react-hooks/purity -- #142: React-Compiler-Regel, Aufarbeitung im Folge-PR
   const seconds = Math.max(0, Math.floor((Date.now() - new Date(startedAt).getTime()) / 1000))
   const h = Math.floor(seconds / 3600)
   const m = Math.floor((seconds % 3600) / 60)
