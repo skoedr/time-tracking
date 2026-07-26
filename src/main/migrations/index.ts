@@ -17,6 +17,7 @@ import { migration016 } from './016-v112-tags'
 import { migration017 } from './017-v113-tag-whitespace'
 import { migration018 } from './018-v114-mcp-integration'
 import { migration019 } from './019-v114-mcp-write-confirm'
+import { migration020 } from './020-v115-webhooks'
 
 export interface Migration {
   /** Monotonically increasing integer. Never reused, never reordered. */
@@ -50,5 +51,6 @@ export const migrations: Migration[] = [
   migration016,
   migration017,
   migration018,
-  migration019
+  migration019,
+  migration020
 ].sort((a, b) => a.version - b.version)

@@ -10,6 +10,15 @@ import { useRounding } from '../contexts/RoundingContext'
 import { Toggle } from '../components/Toggle'
 import { useUiPrefsStore } from '../store/uiPrefsStore'
 import TagManagementView from './TagManagementView'
+import {
+  WEBHOOK_EVENTS,
+  isValidWebhookUrl,
+  newWebhookTargetId,
+  parseWebhookTargets,
+  serializeWebhookTargets,
+  type WebhookEvent,
+  type WebhookTarget
+} from '../../../shared/webhooks'
 
 const DEFAULT_HOTKEY = 'Alt+Shift+S'
 const DEFAULT_MINI_HOTKEY = 'Alt+Shift+M'
@@ -913,6 +922,9 @@ export default function SettingsView(): React.JSX.Element {
                 </>
               )}
             </Section>
+
+            {/* Outbound-Webhooks (v1.15 #134) — own contiguous block below MCP */}
+            <WebhooksSection initialRaw={settings.webhook_targets} logsPath={paths.logs} />
           </>
         )}
 
@@ -988,6 +1000,167 @@ function Row({
       </div>
       <div className={stacked ? 'w-full' : 'shrink-0'}>{children}</div>
     </div>
+  )
+}
+
+/**
+ * Outbound-webhooks configuration (v1.15 #134). Self-contained: holds its own
+ * copy of the target list (parsed from the `webhook_targets` settings blob) and
+ * persists every change via `settings.set`, mirroring the local-state pattern
+ * of the surrounding SettingsView rather than the global settings store.
+ *
+ * An in-progress target with an empty/invalid URL is kept in the editor but is
+ * dropped by `parseWebhookTargets` on the delivery side, so it never fires.
+ */
+function WebhooksSection({
+  initialRaw,
+  logsPath
+}: {
+  initialRaw: string | undefined
+  logsPath: string
+}): React.JSX.Element {
+  const t = useT()
+  const [targets, setTargets] = useState<WebhookTarget[]>(() => parseWebhookTargets(initialRaw))
+
+  const eventLabels: Record<WebhookEvent, string> = {
+    'timer.started': t('settings.webhooks.event.timerStarted'),
+    'timer.stopped': t('settings.webhooks.event.timerStopped'),
+    'entry.created': t('settings.webhooks.event.entryCreated'),
+    'entry.updated': t('settings.webhooks.event.entryUpdated')
+  }
+
+  async function persist(next: WebhookTarget[]): Promise<void> {
+    setTargets(next)
+    await window.api.settings.set('webhook_targets', serializeWebhookTargets(next))
+  }
+
+  function patch(id: string, fields: Partial<WebhookTarget>): void {
+    void persist(targets.map((tg) => (tg.id === id ? { ...tg, ...fields } : tg)))
+  }
+
+  function toggleEvent(tg: WebhookTarget, ev: WebhookEvent, on: boolean): void {
+    const events = on ? [...tg.events, ev] : tg.events.filter((e) => e !== ev)
+    patch(tg.id, { events })
+  }
+
+  function addTarget(): void {
+    void persist([
+      ...targets,
+      { id: newWebhookTargetId(), url: '', secret: '', events: [...WEBHOOK_EVENTS], enabled: true }
+    ])
+  }
+
+  function removeTarget(id: string): void {
+    void persist(targets.filter((tg) => tg.id !== id))
+  }
+
+  return (
+    <Section title={t('settings.webhooks.section')}>
+      <Row label={t('settings.webhooks.section')} hint={t('settings.webhooks.desc')} stacked>
+        <div className="flex flex-col gap-4">
+          {targets.length === 0 && (
+            <p className="text-xs" style={{ color: 'var(--text3)' }}>
+              {t('settings.webhooks.empty')}
+            </p>
+          )}
+          {targets.map((tg, i) => {
+            const urlInvalid = tg.url !== '' && !isValidWebhookUrl(tg.url)
+            return (
+              <div
+                key={tg.id}
+                className="flex flex-col gap-2.5 rounded-xl border p-3"
+                style={{ borderColor: 'var(--card-border)', background: 'var(--input-bg)' }}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold" style={{ color: 'var(--text2)' }}>
+                    {t('settings.webhooks.target', { n: i + 1 })}
+                  </span>
+                  <div className="flex items-center gap-3">
+                    <label
+                      className="flex items-center gap-1.5 text-xs"
+                      style={{ color: 'var(--text2)' }}
+                    >
+                      {t('settings.webhooks.enabled')}
+                      <Toggle checked={tg.enabled} onChange={(v) => patch(tg.id, { enabled: v })} />
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => removeTarget(tg.id)}
+                      className={btnSecondaryClass}
+                    >
+                      {t('settings.webhooks.remove')}
+                    </button>
+                  </div>
+                </div>
+
+                <label className="flex flex-col gap-1 text-xs" style={{ color: 'var(--text3)' }}>
+                  {t('settings.webhooks.url')}
+                  <input
+                    type="url"
+                    value={tg.url}
+                    placeholder="https://…"
+                    onChange={(e) => patch(tg.id, { url: e.target.value })}
+                    className={inputClass}
+                  />
+                  {urlInvalid && (
+                    <span className="text-xs text-amber-300">
+                      {t('settings.webhooks.urlInvalid')}
+                    </span>
+                  )}
+                </label>
+
+                <label className="flex flex-col gap-1 text-xs" style={{ color: 'var(--text3)' }}>
+                  {t('settings.webhooks.secret')}
+                  <input
+                    type="password"
+                    value={tg.secret}
+                    autoComplete="off"
+                    onChange={(e) => patch(tg.id, { secret: e.target.value })}
+                    className={inputClass}
+                  />
+                  <span className="text-xs" style={{ color: 'var(--text3)' }}>
+                    {t('settings.webhooks.secretHint')}
+                  </span>
+                </label>
+
+                <div className="flex flex-col gap-1.5 text-xs" style={{ color: 'var(--text3)' }}>
+                  {t('settings.webhooks.events')}
+                  <div className="flex flex-wrap gap-x-4 gap-y-1.5">
+                    {WEBHOOK_EVENTS.map((ev) => (
+                      <label
+                        key={ev}
+                        className="flex items-center gap-1.5 text-sm"
+                        style={{ color: 'var(--text)' }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={tg.events.includes(ev)}
+                          onChange={(e) => toggleEvent(tg, ev, e.target.checked)}
+                        />
+                        {eventLabels[ev]}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+
+          <button type="button" onClick={addTarget} className={`${btnSecondaryClass} w-fit`}>
+            {t('settings.webhooks.addTarget')}
+          </button>
+        </div>
+      </Row>
+      <Row label={t('settings.webhooks.deliveryLog')} hint={t('settings.webhooks.deliveryLogHint')}>
+        <button
+          type="button"
+          onClick={() => window.api.shell.openPath(logsPath)}
+          className={btnSecondaryClass}
+        >
+          {t('settings.webhooks.openLog')}
+        </button>
+      </Row>
+    </Section>
   )
 }
 

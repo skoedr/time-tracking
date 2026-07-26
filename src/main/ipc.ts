@@ -8,6 +8,8 @@ import { getDb, getDbPath } from './db'
 import { getBackupsDir, getDefaultBackupsDir, readBackupPathSetting } from './backup'
 import { createBackup, listBackups, restoreBackup as restoreBackupFile } from './backup'
 import { createManualEntry, updateManualEntry, startTimer, stopEntry } from './entryMutations'
+import { emitWebhooks } from './webhooks'
+import { logWebhookDelivery } from './webhookLog'
 import { buildJsonExportPayload } from './jsonExport'
 import { buildPdfHtml, buildPdfPayload, type PdfRequest } from './pdf'
 import { renderPdfBuffer } from './pdfWindow'
@@ -173,7 +175,12 @@ export function registerIpcHandlers(hooks: IpcHooks): void {
   // ── Entries ───────────────────────────────────────────────────
   ipcMain.handle('entries:start', (_e, input: CreateEntryInput): IpcResult<Entry> => {
     try {
-      return startTimer(db, input)
+      const res = startTimer(db, input)
+      // Fire-and-forget outbound webhooks (#134). Never awaited, never throws —
+      // a broken webhook must not affect the timer. Covers tray/mini/hotkey too,
+      // since they all funnel through this handler.
+      if (res.ok) emitWebhooks(db, 'timer.started', res.data, { log: logWebhookDelivery })
+      return res
     } catch (e) {
       return fail(e)
     }
@@ -181,7 +188,9 @@ export function registerIpcHandlers(hooks: IpcHooks): void {
 
   ipcMain.handle('entries:stop', (_e, id: number): IpcResult<Entry> => {
     try {
-      return stopEntry(db, id)
+      const res = stopEntry(db, id)
+      if (res.ok) emitWebhooks(db, 'timer.stopped', res.data, { log: logWebhookDelivery })
+      return res
     } catch (e) {
       return fail(e)
     }
@@ -246,7 +255,9 @@ export function registerIpcHandlers(hooks: IpcHooks): void {
    */
   ipcMain.handle('entries:create', (_e, input: CreateManualEntryInput): IpcResult<Entry> => {
     try {
-      return createManualEntry(db, input)
+      const res = createManualEntry(db, input)
+      if (res.ok) emitWebhooks(db, 'entry.created', res.data, { log: logWebhookDelivery })
+      return res
     } catch (e) {
       return fail(e)
     }
@@ -254,7 +265,9 @@ export function registerIpcHandlers(hooks: IpcHooks): void {
 
   ipcMain.handle('entries:update', (_e, input: UpdateEntryInput): IpcResult<Entry> => {
     try {
-      return updateManualEntry(db, input)
+      const res = updateManualEntry(db, input)
+      if (res.ok) emitWebhooks(db, 'entry.updated', res.data, { log: logWebhookDelivery })
+      return res
     } catch (e) {
       return fail(e)
     }

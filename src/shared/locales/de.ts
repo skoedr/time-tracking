@@ -565,6 +565,30 @@ export const de = {
   'settings.mcp.auditLogHint':
     'Jede ausgeführte Schreibaktion wird in mcp-writes.log protokolliert.',
   'settings.mcp.openAuditLog': 'Log-Ordner öffnen',
+  // v1.15 #134 — Outbound-Webhooks
+  'settings.webhooks.section': 'Webhooks',
+  'settings.webhooks.desc':
+    'Sende bei Timer- und Eintrags-Ereignissen eine HTTP-POST-Nachricht an eine oder mehrere URLs — z. B. für eine Automatisierung oder ein anderes System. Zustellung erfolgt im Hintergrund und beeinflusst den Timer nie.',
+  'settings.webhooks.empty': 'Noch keine Webhook-Ziele konfiguriert.',
+  'settings.webhooks.addTarget': 'Ziel hinzufügen',
+  'settings.webhooks.target': 'Ziel {n}',
+  'settings.webhooks.url': 'URL',
+  'settings.webhooks.urlInvalid':
+    'Bitte eine gültige http(s)-URL angeben — sonst wird nicht gesendet.',
+  'settings.webhooks.secret': 'Secret (optional)',
+  'settings.webhooks.secretHint':
+    'Wenn gesetzt, wird jede Nachricht per HMAC-SHA256 signiert (Header X-TimeTrack-Signature). Liegt im Klartext in der lokalen Datenbank.',
+  'settings.webhooks.events': 'Ereignisse',
+  'settings.webhooks.enabled': 'Aktiv',
+  'settings.webhooks.remove': 'Entfernen',
+  'settings.webhooks.event.timerStarted': 'Timer gestartet',
+  'settings.webhooks.event.timerStopped': 'Timer gestoppt',
+  'settings.webhooks.event.entryCreated': 'Eintrag angelegt',
+  'settings.webhooks.event.entryUpdated': 'Eintrag geändert',
+  'settings.webhooks.deliveryLog': 'Zustellungs-Log',
+  'settings.webhooks.deliveryLogHint':
+    'Jede Zustellung wird in webhooks.log protokolliert — ohne Secret und ohne Signatur.',
+  'settings.webhooks.openLog': 'Log-Ordner öffnen',
   'settings.theme.title': 'Erscheinungsbild',
   'settings.theme.light': 'Hell',
   'settings.theme.dark': 'Dunkel',
