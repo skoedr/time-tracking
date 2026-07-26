@@ -41,9 +41,9 @@ Deferred items from plan reviews. Items here have explicit decisions — they ar
 
 ### Kleinkram (aus /ship-Review v1.14.2, 2026-07-25)
 
-- **Redundante `@electron/rebuild`-devDependency** — electron-builder warnt bei jedem Paketbuild: „@electron/rebuild already used by electron-builder, please consider to remove excess dependency from devDependencies". Der Release-Workflow ruft `electron-rebuild` allerdings direkt auf (`pnpm exec electron-rebuild -f -w better-sqlite3`), vor dem Entfernen also prüfen, ob der Aufruf über electron-builder mitkommt.
+~~- **Redundante `@electron/rebuild`-devDependency**~~ → Erledigt (2026-07-26, `chore/release-pipeline-v115`): Verifiziert, dass `pnpm exec electron-rebuild -f -w better-sqlite3` ohne die devDependency weiter auflöst — `@electron/rebuild@4.0.4` kommt transitiv über electron-builder (`app-builder-lib`) und wird dank `node-linker=hoisted` nach `node_modules/.bin` gehoistet. Danach aus `package.json` entfernt.
 
-- **RunAsNode-Fuse-Abhängigkeit dokumentieren** — Seit v1.14.2 startet der MCP-Server über `ELECTRON_RUN_AS_NODE=1`. Diese Electron-Fuse lässt sich zur Härtung abschalten; das Projekt setzt derzeit keine Fuses, also funktioniert es. Würde man Fuses jemals aktivieren, muss `runAsNode` an bleiben, sonst bricht die MCP-Integration wortlos. Steht bisher nur im PR-Body von #140, also faktisch unauffindbar — gehört als Kommentar an `electron-builder.yml` oder in `src/main/mcpLaunch.ts`.
+~~- **RunAsNode-Fuse-Abhängigkeit dokumentieren**~~ → Erledigt (2026-07-26, `chore/release-pipeline-v115`): Kommentar an der Fuse-Aktivierungsstelle in `electron-builder.yml` plus Querverweis im Kopfkommentar von `src/main/mcpLaunch.ts`.
 
 ### v1.12 Issues (aktiv geplant)
 
