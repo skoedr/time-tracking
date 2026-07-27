@@ -547,6 +547,30 @@ export const en: Record<TranslationKey, string> = {
   'settings.nav.about': 'About',
   'settings.nav.integrations': 'Integrations',
   // ── Integrations — MCP (v1.14 #128) ───────────────────────────────────────
+  // ── Microsoft account (#130) ────────────────────────────────────────────
+  'settings.graph.section': 'Microsoft account',
+  'settings.graph.desc':
+    'Connect your Microsoft account to turn Outlook events into draft entries. TimeTrack only reads the calendar — it never writes to it. Sign-in happens directly between this app and Microsoft.',
+  'settings.graph.connect': 'Connect Microsoft account',
+  'settings.graph.connecting': 'Waiting for sign-in …',
+  'settings.graph.browserHint': 'Sign-in has been opened in your browser.',
+  'settings.graph.cancel': 'Cancel',
+  'settings.graph.connected': 'Connected',
+  'settings.graph.disconnect': 'Disconnect',
+  'settings.graph.verify': 'Check connection',
+  'settings.graph.verifying': 'Checking …',
+  'settings.graph.verifyOk': 'Connection works — Microsoft reports {who}.',
+  'settings.graph.verifyOkRefreshed':
+    'Connection works — the access token was renewed in the process. Microsoft reports {who}.',
+  'settings.graph.personalAccountNote':
+    'Personal Microsoft account. Calendar import works; mirroring your Teams status does not — that is available for work and school accounts only.',
+  'settings.graph.storageUnavailable':
+    'The system keychain is unavailable, so no connection can be stored. On Linux this usually means a missing keyring (e.g. gnome-keyring).',
+  'settings.graph.advanced': 'Advanced: your own application ID',
+  'settings.graph.clientIdHint':
+    'Only needed if your tenant blocks third-party applications, or if you would rather use your own registration. Leave empty for the bundled one.',
+  'settings.graph.clientIdPlaceholder': 'Application (client) ID',
+  'settings.graph.clientIdSaved': 'Saved',
   'settings.mcp.section': 'Model Context Protocol (MCP)',
   'settings.mcp.desc':
     'Lets tools like Claude Code read your time tracking — e.g. summarise hours per client/project or prepare an invoice.',

@@ -20,6 +20,7 @@ import { mergeExportHandler, mergeOnlyHandler, pdfInfoHandler } from './pdfMerge
 import { registerAnalyticsHandlers } from './analyticsHandlers'
 import { registerBudgetHandlers } from './budgetHandlers'
 import { registerTagHandlers } from './tagHandlers'
+import { registerGraphHandlers } from './graphHandlers'
 import { buildMcpRegistration, type McpRegistration } from './mcpLaunch'
 import type {
   Client,
@@ -1041,6 +1042,9 @@ export function registerIpcHandlers(hooks: IpcHooks): void {
 
   // ── Tags (v1.12 #107) ────────────────────────────────────────────────
   registerTagHandlers(db)
+
+  // ── Microsoft Graph account (#130) ───────────────────────────
+  registerGraphHandlers(db)
 }
 
 /**

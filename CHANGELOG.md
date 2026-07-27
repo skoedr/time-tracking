@@ -4,6 +4,16 @@ All notable changes to TimeTrack are documented here.
 
 ## [Unreleased]
 
+### Added
+
+- **Microsoft-Konto verbinden (#130, Teil 1 von 3)** — Unter **Einstellungen → Integrationen** lässt sich ein Microsoft-Konto verbinden: Klick auf „Microsoft-Konto verbinden", Anmeldung im Browser, Zustimmung, fertig. Das ist die Grundlage für den Kalender-Import; **übernommen wird damit noch nichts** — dieser Teil richtet nur die Verbindung ein. Ein Knopf „Verbindung prüfen" fragt Microsoft, ob die Berechtigung wirklich noch trägt, statt nur zu behaupten, dass etwas gespeichert ist.
+
+  TimeTrack fragt ausschließlich **Lese**-Rechte am Kalender an (`Calendars.Read`) und schreibt nie hinein. Die Anmeldung läuft direkt zwischen der App und Microsoft — es gibt keinen Server dazwischen, und keine Zugangsdaten verlassen den Rechner. Funktioniert mit Geschäfts- und Schulkonten ebenso wie mit privaten Microsoft-Konten.
+
+  **Privacy:** Der Refresh-Token liegt verschlüsselt über die sichere Ablage des Betriebssystems (DPAPI unter Windows, Keychain unter macOS) in einer eigenen Datei neben der Datenbank — bewusst **nicht** in der Datenbank selbst, damit er nicht in jedes Backup wandert und beim Zurückspielen auf fremde Rechner landet. Steht keine sichere Ablage zur Verfügung (unter Linux typischerweise ein fehlender Schlüsselbund), verweigert TimeTrack das Speichern mit einer Erklärung, statt still im Klartext abzulegen.
+
+  **Bekannte Einschränkung, kein Fehler:** Solange wald-it kein von Microsoft verifizierter Herausgeber ist, dürfen Nutzer in **fremden** Firmen-Tenants der App nicht selbst zustimmen — dort erscheint „Genehmigung durch Administrator erforderlich". Das ist eine Entra-Richtlinie für Multi-Tenant-Apps, die mehr als die Basis-Anmeldung anfragen. Wer eine eigene App-Registrierung nutzen möchte, kann unter **Erweitert** eine eigene Anwendungs-ID hinterlegen.
+
 ### Changed
 
 - **Exportieren ist jetzt ein eigener Reiter (#153)** — Das Export-Fenster war ausschließlich über die Zeitraum-Knöpfe in der **Kalender**-Ansicht erreichbar, das Zusammenführen von PDFs über einen weiteren Knopf daneben. In der Navigation stand nirgends „Export": Wer danach suchte, fand nichts, und ein automatisierter Durchlauf von v1.15.0 fand ebenfalls nichts. Mit dem iCal-Export (#135) wog das schwerer als vorher, weil dessen ganzer Zweck ein dauerhafter zweiter Kalender-Layer ist — man sucht danach unter „Export", nicht unter „Dieser Monat". Es gibt jetzt einen Reiter **Export** zwischen _Auswertung_ und _Einstellungen_, der beide Wege beherbergt: Stundennachweis/CSV/iCal oben, PDFs zusammenführen darunter. Die Knöpfe selbst sind unverändert — gleiche Beschriftungen, gleiche Zeiträume, „Letzter Monat" weiterhin farblich hervorgehoben, weil das der häufigste Rechnungs-Weg ist.
@@ -15,6 +25,12 @@ All notable changes to TimeTrack are documented here.
   Der `TODOS`-Punkt „Merge modal Nav-Trigger" ist damit erledigt, das dort und in #153 angemahnte Design-Gespräch geführt.
 
 ### Internal
+
+- **Auth ohne neue Abhängigkeit (#130)** — Authorization Code + PKCE selbst implementiert statt `@azure/msal-node`. Die Bibliothek bringt über `jsonwebtoken` auch `jws`, `semver`, `ms` und sieben einzelne `lodash.*`-Pakete mit — bei zwölf Runtime-Abhängigkeiten ungefähr eine Verdopplung. Der Teil, der sie rechtfertigen würde, ist hier ungenutzt: als Public Client wird nichts signiert und kein Token für eine Sicherheitsentscheidung gelesen. Übrig bleiben zwei Form-POSTs, eine URL und eine Rotationsregel, über `fetch` + `AbortSignal.timeout` wie schon bei den Webhooks. Aufteilung wie dort: `shared/graphAuth.ts` ist reine Arithmetik und renderer-tauglich, die I/O liegt in `main/`.
+
+- **Der Handtest fand drei Fehler, die 763 grüne Tests nicht sahen (#130)** — Der Inhalt der neuen Sektion klebte am Kartenrand, weil `Section` kein Padding liefert (das steckt in `Row`); jsdom rechnet kein Layout, für diese Fehlerklasse ist die Suite grundsätzlich blind. Schwerer wogen zwei Pfad-Fehler: Der Token landete im **produktiven** `userData`-Verzeichnis, weil der Speicher den Pfad aus `mcp/socketPath.ts` nahm, der `%APPDATA%` Electron-frei rekonstruiert und ein überschriebenes `userData` nicht kennen kann. Der naheliegende Fix — ein lazy `require('./db')` — war schlimmer als der Fehler: electron-vite baut den Main-Prozess zu einer einzigen Datei, in der zur Laufzeit kein Modul `./db` existiert, sodass das Feature in **jedem** Build „sichere Ablage nicht verfügbar" meldete. Beides blieb unsichtbar, weil sämtliche Tests des Speichers das Verzeichnis injizieren und der Default-Pfad nie ausgeführt wurde. Deshalb gibt es jetzt keinen Default mehr: das Verzeichnis ist ein Pflichtfeld, der Compiler zeigt jede Stelle, die vorher still geraten hätte.
+
+- **Erneuerung gegen echtes Entra belegt (#130)** — Refresh-Token-Rotation ist die Stelle, an der selbst gebautes OAuth erfahrungsgemäß verrottet: Entra kann bei jeder Erneuerung einen neuen Refresh-Token ausgeben, und wer den verwirft, sperrt den Nutzer Stunden später aus. Neben Tests gegen Fakes wurde das einmal echt gemessen — mit vorübergehend angehobener Ablauf-Toleranz erzwungen, Erneuerung durchgeführt, vom Graph-Aufruf bestätigt, rotierter Token nachweislich auf die Platte geschrieben; die Gegenprobe mit normaler Toleranz erneuert erwartungsgemäß nicht.
 
 - **Charakterisierungstest für die Export-Einstiegspunkte (#153)** — `exportEntryPoints.test.tsx` sichert acht Verhaltensweisen ab (welcher Knopf welchen Zeitraum vorbelegt, welches Fenster aufgeht, dass ein zweites Öffnen den Zeitraum ersetzt) und wurde vor dem Umzug gegen den alten Code in `CalendarView` grün geschrieben; danach zeigt dieselbe Datei unverändert auf die neue `ExportView`. Das ist der Beleg, dass der Umzug nichts verloren hat, und nicht bloß eine Beschreibung des neuen Codes.
 

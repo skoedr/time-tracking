@@ -20,6 +20,7 @@ import type {
   AnalyticsSummary,
   BudgetStatus
 } from '../shared/types'
+import type { AccountStatus, VerifyResult } from '../main/graphAccount'
 
 declare global {
   interface Window {
@@ -190,6 +191,13 @@ declare global {
       }
       analytics: {
         getSummary(q: MonthQuery): Promise<IpcResult<AnalyticsSummary>>
+      }
+      graph: {
+        status(): Promise<IpcResult<AccountStatus>>
+        connect(): Promise<IpcResult<AccountStatus>>
+        cancelConnect(): Promise<IpcResult<void>>
+        verify(): Promise<IpcResult<VerifyResult>>
+        disconnect(): Promise<IpcResult<AccountStatus>>
       }
       update: {
         getStatus(): Promise<IpcResult<UpdateStatus>>

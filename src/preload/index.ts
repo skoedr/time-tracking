@@ -21,6 +21,7 @@ import type {
   AnalyticsSummary
 } from '../shared/types'
 import type { CsvRequest } from '../main/csvExport'
+import type { AccountStatus, VerifyResult } from '../main/graphAccount'
 import type { IcalRequest } from '../main/icalExport'
 
 // ── v1.8 #76: FOUC prevention ─────────────────────────────────────────────
@@ -240,6 +241,14 @@ const api = {
   analytics: {
     getSummary: (q: MonthQuery): Promise<IpcResult<AnalyticsSummary>> =>
       ipcRenderer.invoke('analytics:summary', q)
+  },
+  // #130 — Microsoft account (calendar import). `status` never carries tokens.
+  graph: {
+    status: (): Promise<IpcResult<AccountStatus>> => ipcRenderer.invoke('graph:status'),
+    connect: (): Promise<IpcResult<AccountStatus>> => ipcRenderer.invoke('graph:connect'),
+    cancelConnect: (): Promise<IpcResult<void>> => ipcRenderer.invoke('graph:cancelConnect'),
+    verify: (): Promise<IpcResult<VerifyResult>> => ipcRenderer.invoke('graph:verify'),
+    disconnect: (): Promise<IpcResult<AccountStatus>> => ipcRenderer.invoke('graph:disconnect')
   },
   // v1.5 PR B — auto-updater
   update: {
