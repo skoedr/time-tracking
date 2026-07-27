@@ -132,7 +132,13 @@ export default function CalendarView(): React.JSX.Element {
   const drawerEntries = selectedKey ? (byDay.get(selectedKey) ?? []) : []
 
   return (
-    <div className="mx-auto flex max-w-5xl flex-col gap-4">
+    // `w-full` is load-bearing, not decoration: this is a flex item in App's
+    // column layout, and `mx-auto` makes an item size to its content instead of
+    // stretching. Until #153 the export toolbar (five pills plus an `ml-auto`
+    // button) padded the content out to `max-w-5xl` by accident; with it gone
+    // the widest child is the grid, which shrink-wrapped to ~370px in an 886px
+    // pane. Every other view already carries `w-full` for this reason.
+    <div className="mx-auto flex w-full max-w-5xl flex-col gap-4">
       <div className="flex items-center gap-2">
         <button
           type="button"
