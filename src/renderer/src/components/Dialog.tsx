@@ -32,7 +32,7 @@ export function Dialog({
   // every time the parent re-renders (which would re-focus the close button
   // on every tick — e.g. Today's running-timer pill ticks once per second).
   const onCloseRef = useRef(onClose)
-  // eslint-disable-next-line react-hooks/refs -- #157: zurückgestellt bis zur Compiler-Entscheidung — Basis für sechs Modals, keine Testabdeckung
+  // eslint-disable-next-line react-hooks/refs -- #157: dauerhaft — hält onClose aktuell, ohne den Fokus-Effekt bei jedem Elternrender neu zu starten (siehe Kommentar darüber); der Compiler ist bewusst nicht aktiviert (Messung im Issue)
   onCloseRef.current = onClose
 
   useEffect(() => {
