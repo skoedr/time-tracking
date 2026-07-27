@@ -23,8 +23,7 @@
  * worse than one that says it cannot run here.
  */
 import { chmodSync, existsSync, readFileSync, renameSync, unlinkSync, writeFileSync } from 'node:fs'
-import { join } from 'node:path'
-import { userDataDir } from '../mcp/socketPath'
+import { dirname, join } from 'node:path'
 import type { StoredTokens } from '../shared/graphAuth'
 
 export const TOKEN_FILENAME = 'graph-account.enc'
@@ -37,9 +36,24 @@ export interface SecretBox {
 }
 
 export interface TokenStoreDeps {
+  /**
+   * Directory to keep the file in — **required, deliberately with no default**.
+   *
+   * There used to be one, and it caused two bugs in a row. First it came from
+   * `mcp/socketPath.ts`'s `userDataDir()`, which reconstructs `%APPDATA%` for
+   * the Electron-free MCP server and therefore cannot see an overridden
+   * userData location: the token landed next to a database the app was not
+   * using. The obvious repair — lazily `require('./db')` — was worse, because
+   * electron-vite bundles main into a single file where `require('./db')` has
+   * nothing to resolve at runtime; the whole feature reported "keychain
+   * unavailable" in every build.
+   *
+   * Neither was visible to the unit tests, which always inject `dir`. So the
+   * default is gone and the caller has to say where it goes; `graphHandlers.ts`
+   * takes it from the database the app actually opened.
+   */
+  dir: string
   secretBox?: SecretBox
-  /** Directory to keep the file in. Defaults to the userData dir beside the DB. */
-  dir?: string
   log?: (message: string) => void
 }
 
@@ -66,6 +80,16 @@ function electronSecretBox(): SecretBox {
   return safeStorage
 }
 
+/**
+ * Where the token belongs, given the path of the database the app opened.
+ *
+ * Same anchor as `mcpBridge.ts` (`dirname(getDbPath())`), and the reason it is
+ * a named function is so the rule can be tested without an Electron app.
+ */
+export function tokenDirForDbPath(dbPath: string): string {
+  return dirname(dbPath)
+}
+
 function resolve(deps: TokenStoreDeps): {
   box: SecretBox
   file: string
@@ -73,13 +97,13 @@ function resolve(deps: TokenStoreDeps): {
 } {
   return {
     box: deps.secretBox ?? electronSecretBox(),
-    file: join(deps.dir ?? userDataDir(), TOKEN_FILENAME),
+    file: join(deps.dir, TOKEN_FILENAME),
     log: deps.log ?? ((): void => {})
   }
 }
 
 /** Whether tokens can be stored at all on this machine. */
-export function isStorageAvailable(deps: TokenStoreDeps = {}): boolean {
+export function isStorageAvailable(deps: TokenStoreDeps): boolean {
   try {
     return resolve(deps).box.isEncryptionAvailable()
   } catch {
@@ -94,7 +118,7 @@ export function isStorageAvailable(deps: TokenStoreDeps = {}): boolean {
  * leave a half-written blob that decrypts to garbage and silently drops the
  * connection.
  */
-export function saveTokens(tokens: StoredTokens, deps: TokenStoreDeps = {}): void {
+export function saveTokens(tokens: StoredTokens, deps: TokenStoreDeps): void {
   const { box, file, log } = resolve(deps)
   if (!box.isEncryptionAvailable()) {
     throw new TokenStoreError(
@@ -150,7 +174,7 @@ function isStoredTokens(v: unknown): v is StoredTokens {
  * file. Throwing here would turn a restored backup on a new machine into a
  * crash on startup.
  */
-export function loadTokens(deps: TokenStoreDeps = {}): StoredTokens | null {
+export function loadTokens(deps: TokenStoreDeps): StoredTokens | null {
   const { box, file, log } = resolve(deps)
   if (!existsSync(file)) return null
   let parsed: unknown
@@ -170,12 +194,12 @@ export function loadTokens(deps: TokenStoreDeps = {}): StoredTokens | null {
 }
 
 /** True when a connection is stored and usable. */
-export function hasStoredTokens(deps: TokenStoreDeps = {}): boolean {
+export function hasStoredTokens(deps: TokenStoreDeps): boolean {
   return loadTokens(deps) !== null
 }
 
 /** Remove the stored connection. Idempotent — "disconnect" when nothing is stored is fine. */
-export function clearTokens(deps: TokenStoreDeps = {}): void {
+export function clearTokens(deps: TokenStoreDeps): void {
   const { file, log } = resolve(deps)
   try {
     if (existsSync(file)) {

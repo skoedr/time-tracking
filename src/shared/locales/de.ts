@@ -554,6 +554,30 @@ export const de = {
   'settings.nav.about': 'Über',
   'settings.nav.integrations': 'Integrationen',
   // ── Integrationen — MCP (v1.14 #128) ──────────────────────────────────────
+  // ── Microsoft-Konto (#130) ──────────────────────────────────────────────
+  'settings.graph.section': 'Microsoft-Konto',
+  'settings.graph.desc':
+    'Verbinde dein Microsoft-Konto, um Outlook-Termine als Eintrags-Entwürfe zu übernehmen. TimeTrack liest den Kalender nur — es schreibt nie hinein. Die Anmeldung läuft direkt zwischen dieser App und Microsoft.',
+  'settings.graph.connect': 'Microsoft-Konto verbinden',
+  'settings.graph.connecting': 'Warte auf Anmeldung …',
+  'settings.graph.browserHint': 'Die Anmeldung wurde im Browser geöffnet.',
+  'settings.graph.cancel': 'Abbrechen',
+  'settings.graph.connected': 'Verbunden',
+  'settings.graph.disconnect': 'Verbindung trennen',
+  'settings.graph.verify': 'Verbindung prüfen',
+  'settings.graph.verifying': 'Prüfe …',
+  'settings.graph.verifyOk': 'Verbindung funktioniert — Microsoft meldet {who}.',
+  'settings.graph.verifyOkRefreshed':
+    'Verbindung funktioniert — das Zugriffstoken wurde dabei erneuert. Microsoft meldet {who}.',
+  'settings.graph.personalAccountNote':
+    'Privates Microsoft-Konto. Der Kalender-Import funktioniert damit; die Teams-Status-Spiegelung nicht — die gibt es nur für Geschäfts- und Schulkonten.',
+  'settings.graph.storageUnavailable':
+    'Die sichere Ablage des Systems ist nicht verfügbar, deshalb kann keine Verbindung gespeichert werden. Unter Linux fehlt dafür meist ein Schlüsselbund (z. B. gnome-keyring).',
+  'settings.graph.advanced': 'Erweitert: eigene Anwendungs-ID',
+  'settings.graph.clientIdHint':
+    'Nur nötig, wenn dein Tenant fremde Anwendungen blockiert oder du eine eigene Registrierung verwenden willst. Leer lassen für die mitgelieferte.',
+  'settings.graph.clientIdPlaceholder': 'Application (client) ID',
+  'settings.graph.clientIdSaved': 'Gespeichert',
   'settings.mcp.section': 'Model Context Protocol (MCP)',
   'settings.mcp.desc':
     'Erlaubt Werkzeugen wie Claude Code, deine Zeiterfassung auszulesen — z. B. Stunden pro Kunde/Projekt auswerten oder eine Rechnung vorbereiten.',

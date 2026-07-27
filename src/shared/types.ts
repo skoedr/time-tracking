@@ -200,6 +200,10 @@ export interface Settings {
   // v1.15 #134 — Outbound-webhook targets as a JSON blob (see shared/webhooks.ts).
   // One settings row like export_prefs; seeded '[]' by migration 020.
   webhook_targets?: string
+  // v1.16 #130 — Optional override for the shipped Entra client id, for tenants
+  // that block third-party apps. Empty/absent means "use the bundled one".
+  // The tokens themselves are NOT here — see main/graphTokenStore.ts.
+  graph_client_id?: string
 }
 
 export interface CreateClientInput {

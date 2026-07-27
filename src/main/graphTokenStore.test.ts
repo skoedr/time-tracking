@@ -11,6 +11,7 @@ import {
   isStorageAvailable,
   loadTokens,
   saveTokens,
+  tokenDirForDbPath,
   type SecretBox
 } from './graphTokenStore'
 
@@ -185,6 +186,34 @@ describe('clearTokens', () => {
       clearTokens({ dir, secretBox: fakeBox() })
       clearTokens({ dir, secretBox: fakeBox() })
     }).not.toThrow()
+  })
+})
+
+describe('tokenDirForDbPath — where the file belongs when no dir is injected', () => {
+  /**
+   * Regression guard for a bug found in the first real handtest (#130).
+   *
+   * The default location used to come from `mcp/socketPath.ts`'s `userDataDir()`,
+   * which RECONSTRUCTS `%APPDATA%\time-tracking` without Electron so the
+   * standalone MCP server can find the DB. That resolver cannot know about an
+   * overridden userData location, while `main/db.ts` uses
+   * `app.getPath('userData')`, which does. Running the app with
+   * `--user-data-dir` therefore wrote the token next to a database the app was
+   * not using — in the production directory, during a supposedly isolated test.
+   *
+   * Every other test in this file injects `dir`, so none of them could see it.
+   * This one pins the rule itself: the token sits beside the DB that is open.
+   */
+  it('puts the token next to the database the app actually opened', () => {
+    expect(tokenDirForDbPath(join('X', 'custom-profile', 'timetrack.sqlite'))).toBe(
+      join('X', 'custom-profile')
+    )
+  })
+
+  it('follows an overridden location instead of a reconstructed default', () => {
+    const overridden = tokenDirForDbPath(join('D:', 'portable', 'tt', 'timetrack.sqlite'))
+    expect(overridden).toBe(join('D:', 'portable', 'tt'))
+    expect(overridden).not.toContain('AppData')
   })
 })
 

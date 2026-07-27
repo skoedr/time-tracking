@@ -1,0 +1,245 @@
+import { useCallback, useEffect, useState } from 'react'
+import { useT } from '../contexts/I18nContext'
+import type { AccountStatus } from '../../../main/graphAccount'
+
+/**
+ * "Connect a Microsoft account" (#130).
+ *
+ * Nothing here decides anything — the main process owns the flow and this only
+ * renders its outcome. Two behaviours are worth stating because they are easy
+ * to get wrong in a settings pane:
+ *
+ * - The connect button stays busy for as long as the browser is open, and the
+ *   cancel next to it really aborts the sign-in (it tears down the loopback
+ *   listener in main). A spinner that cannot be stopped would strand the user
+ *   whenever they close the browser tab instead of finishing.
+ * - The personal-account hint exists because Teams presence (#132) is not
+ *   available for those accounts at all. Better to say so where the account is
+ *   shown than to offer something later that cannot work.
+ */
+export function GraphAccountSection(): React.JSX.Element {
+  const t = useT()
+  const [status, setStatus] = useState<AccountStatus | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [clientId, setClientId] = useState('')
+  const [clientIdSaved, setClientIdSaved] = useState(false)
+  const [verifying, setVerifying] = useState(false)
+  const [verifyMsg, setVerifyMsg] = useState<string | null>(null)
+
+  const refresh = useCallback(async () => {
+    const res = await window.api.graph.status()
+    if (res.ok) setStatus(res.data)
+    else setError(res.error)
+  }, [])
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- #130: dauerhaft — asynchroner IPC-Abruf des Verbindungsstatus beim Mount, kein dedizierter Store
+    void refresh()
+    void window.api.settings.getAll().then((res) => {
+      if (res.ok) setClientId(res.data.graph_client_id ?? '')
+    })
+  }, [refresh])
+
+  async function onConnect(): Promise<void> {
+    setBusy(true)
+    setError(null)
+    const res = await window.api.graph.connect()
+    setBusy(false)
+    if (res.ok) setStatus(res.data)
+    else setError(res.error)
+  }
+
+  async function onCancel(): Promise<void> {
+    await window.api.graph.cancelConnect()
+    // The pending connect() settles on its own with a cancellation error; this
+    // just stops the browser-side wait from looking like it is still running.
+    setBusy(false)
+  }
+
+  async function onVerify(): Promise<void> {
+    setVerifying(true)
+    setError(null)
+    setVerifyMsg(null)
+    const res = await window.api.graph.verify()
+    setVerifying(false)
+    if (!res.ok) {
+      setError(res.error)
+      // A rejected grant means the main process already dropped the connection;
+      // re-reading the status is what turns the pane back to "not connected".
+      await refresh()
+      return
+    }
+    const who = res.data.mail ?? res.data.displayName ?? ''
+    setVerifyMsg(
+      res.data.refreshed
+        ? t('settings.graph.verifyOkRefreshed', { who })
+        : t('settings.graph.verifyOk', { who })
+    )
+  }
+
+  async function onDisconnect(): Promise<void> {
+    setError(null)
+    setVerifyMsg(null)
+    const res = await window.api.graph.disconnect()
+    if (res.ok) setStatus(res.data)
+    else setError(res.error)
+  }
+
+  async function onSaveClientId(): Promise<void> {
+    await window.api.settings.set('graph_client_id', clientId.trim())
+    setClientIdSaved(true)
+    await refresh()
+  }
+
+  const connected = status?.connected === true
+  const storageMissing = status !== null && !status.storageAvailable
+
+  return (
+    // Padding belongs here, not in `Section`: that wrapper is a bare card and
+    // every existing child supplies its own insets via `Row` (px-[18px]/py-[13px]).
+    // Without them the content sits flush against the border and the first
+    // character of each line is clipped.
+    <div className="flex min-w-0 flex-col gap-3 px-[18px] py-[13px]">
+      <p className="text-xs" style={{ color: 'var(--text3)' }}>
+        {t('settings.graph.desc')}
+      </p>
+
+      {storageMissing && (
+        <p className="text-xs text-amber-300">{t('settings.graph.storageUnavailable')}</p>
+      )}
+
+      {connected ? (
+        <div className="flex flex-col gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <span
+              className="inline-flex w-fit items-center rounded-full px-2.5 py-0.5 text-xs font-semibold"
+              style={{ background: 'var(--green-bg)', color: 'var(--green)' }}
+            >
+              {t('settings.graph.connected')}
+            </span>
+            <span className="text-sm" style={{ color: 'var(--text)' }}>
+              {status?.account?.displayName ?? status?.account?.username ?? ''}
+            </span>
+            {status?.account?.username && status.account.displayName && (
+              <span className="text-xs" style={{ color: 'var(--text3)' }}>
+                {status.account.username}
+              </span>
+            )}
+          </div>
+
+          {status?.personalAccount && (
+            <p className="text-xs" style={{ color: 'var(--text3)' }}>
+              {t('settings.graph.personalAccountNote')}
+            </p>
+          )}
+
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => void onVerify()}
+              disabled={verifying}
+              className="rounded-lg border px-3 py-1.5 text-xs font-medium hover:bg-white/10 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+              style={{ borderColor: 'var(--card-border)', color: 'var(--text)' }}
+            >
+              {verifying ? t('settings.graph.verifying') : t('settings.graph.verify')}
+            </button>
+            <button
+              type="button"
+              onClick={() => void onDisconnect()}
+              className="rounded-lg border px-3 py-1.5 text-xs font-medium hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+              style={{ borderColor: 'var(--card-border)', color: 'var(--text)' }}
+            >
+              {t('settings.graph.disconnect')}
+            </button>
+          </div>
+
+          {verifyMsg && (
+            <p className="text-xs" style={{ color: 'var(--green)' }}>
+              {verifyMsg}
+            </p>
+          )}
+        </div>
+      ) : (
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => void onConnect()}
+            disabled={busy || storageMissing}
+            className="rounded-lg px-3 py-1.5 text-xs font-semibold text-white hover:opacity-90 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+            style={{ background: 'var(--accent)' }}
+          >
+            {busy ? t('settings.graph.connecting') : t('settings.graph.connect')}
+          </button>
+          {busy && (
+            <>
+              <span className="text-xs" style={{ color: 'var(--text3)' }}>
+                {t('settings.graph.browserHint')}
+              </span>
+              <button
+                type="button"
+                onClick={() => void onCancel()}
+                className="rounded-lg border px-3 py-1.5 text-xs font-medium hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                style={{ borderColor: 'var(--card-border)', color: 'var(--text2)' }}
+              >
+                {t('settings.graph.cancel')}
+              </button>
+            </>
+          )}
+        </div>
+      )}
+
+      {error && (
+        <p className="text-xs" style={{ color: 'var(--danger)' }}>
+          {error}
+        </p>
+      )}
+
+      {/* Escape hatch for tenants that block third-party apps, and for anyone
+          who would rather use their own registration. */}
+      <details className="mt-1">
+        <summary className="cursor-pointer text-xs" style={{ color: 'var(--text3)' }}>
+          {t('settings.graph.advanced')}
+        </summary>
+        <div className="mt-2 flex flex-col gap-2">
+          <p className="text-xs" style={{ color: 'var(--text3)' }}>
+            {t('settings.graph.clientIdHint')}
+          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <input
+              type="text"
+              value={clientId}
+              onChange={(e) => {
+                setClientId(e.target.value)
+                setClientIdSaved(false)
+              }}
+              placeholder={t('settings.graph.clientIdPlaceholder')}
+              spellCheck={false}
+              // `min-w-0` so a long GUID shrinks instead of pushing the Save
+              // button out of the card in a narrow settings pane.
+              className="min-w-0 flex-1 rounded-lg border px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-400"
+              style={{
+                background: 'var(--card-bg)',
+                borderColor: 'var(--card-border)',
+                color: 'var(--text)'
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => void onSaveClientId()}
+              className="rounded-lg border px-3 py-1.5 text-xs font-medium hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+              style={{ borderColor: 'var(--card-border)', color: 'var(--text)' }}
+            >
+              {t('common.save')}
+            </button>
+            {clientIdSaved && (
+              <span className="text-xs" style={{ color: 'var(--green)' }}>
+                {t('settings.graph.clientIdSaved')}
+              </span>
+            )}
+          </div>
+        </div>
+      </details>
+    </div>
+  )
+}

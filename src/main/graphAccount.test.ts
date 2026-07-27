@@ -1,0 +1,257 @@
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { mkdtempSync, rmSync } from 'node:fs'
+import { join } from 'node:path'
+import { tmpdir } from 'node:os'
+import { DEFAULT_CLIENT_ID, MSA_TENANT_ID, type StoredTokens } from '../shared/graphAuth'
+import {
+  CLIENT_ID_SETTING,
+  disconnect,
+  effectiveClientId,
+  getAccessToken,
+  getStatus,
+  type GraphAccountDeps
+} from './graphAccount'
+import { loadTokens, saveTokens, type SecretBox } from './graphTokenStore'
+
+function fakeBox(available = true): SecretBox {
+  return {
+    isEncryptionAvailable: () => available,
+    encryptString: (plain) => Buffer.from(`enc:${Buffer.from(plain, 'utf8').toString('base64')}`),
+    decryptString: (cipher) => {
+      const s = cipher.toString('utf8')
+      if (!s.startsWith('enc:')) throw new Error('bad ciphertext')
+      return Buffer.from(s.slice(4), 'base64').toString('utf8')
+    }
+  }
+}
+
+let dir: string
+
+beforeEach(() => {
+  dir = mkdtempSync(join(tmpdir(), 'tt-graph-acct-'))
+})
+
+afterEach(() => {
+  rmSync(dir, { recursive: true, force: true })
+})
+
+const NOW = 1_800_000_000_000
+
+function tokens(over: Partial<StoredTokens> = {}): StoredTokens {
+  return {
+    accessToken: 'access-1',
+    refreshToken: 'refresh-1',
+    expiresAtMs: NOW + 3600_000,
+    grantedScopes: ['Calendars.Read', 'offline_access'],
+    account: { username: 'r@wald-it.com', displayName: 'Robin', tenantId: 'tid-1' },
+    ...over
+  }
+}
+
+function deps(over: Partial<GraphAccountDeps> = {}): GraphAccountDeps {
+  const settings: Record<string, string> = {}
+  return {
+    getSetting: (k) => settings[k],
+    openExternal: () => {},
+    store: { dir, secretBox: fakeBox() },
+    auth: { now: () => NOW },
+    ...over
+  }
+}
+
+function withSettings(
+  settings: Record<string, string>,
+  over: Partial<GraphAccountDeps> = {}
+): GraphAccountDeps {
+  return deps({ getSetting: (k) => settings[k], ...over })
+}
+
+describe('effectiveClientId', () => {
+  it('uses the shipped id when nothing is configured', () => {
+    expect(effectiveClientId(deps())).toBe(DEFAULT_CLIENT_ID)
+  })
+
+  it('prefers a user-supplied id — the escape hatch for locked-down tenants', () => {
+    expect(effectiveClientId(withSettings({ [CLIENT_ID_SETTING]: 'own-id' }))).toBe('own-id')
+  })
+
+  it('ignores a blank override rather than sending an empty client id', () => {
+    expect(effectiveClientId(withSettings({ [CLIENT_ID_SETTING]: '   ' }))).toBe(DEFAULT_CLIENT_ID)
+  })
+})
+
+describe('getStatus', () => {
+  it('reports disconnected before anything is stored', () => {
+    const s = getStatus(deps())
+    expect(s.connected).toBe(false)
+    expect(s.account).toBeNull()
+    expect(s.usingCustomClientId).toBe(false)
+  })
+
+  it('reports the connected account without leaking token material', () => {
+    const d = deps()
+    saveTokens(tokens(), d.store)
+    const s = getStatus(d)
+    expect(s.connected).toBe(true)
+    expect(s.account?.username).toBe('r@wald-it.com')
+    expect(JSON.stringify(s)).not.toContain('refresh-1')
+    expect(JSON.stringify(s)).not.toContain('access-1')
+  })
+
+  it('flags a personal account, because Teams presence (#132) cannot work there', () => {
+    const d = deps()
+    saveTokens(
+      tokens({ account: { username: 'a@outlook.com', displayName: 'A', tenantId: MSA_TENANT_ID } }),
+      d.store
+    )
+    expect(getStatus(d).personalAccount).toBe(true)
+  })
+
+  it('does not flag a work account as personal', () => {
+    const d = deps()
+    saveTokens(tokens(), d.store)
+    expect(getStatus(d).personalAccount).toBe(false)
+  })
+
+  it('reports storage as unavailable and stays disconnected without a keychain', () => {
+    const d = deps({ store: { dir, secretBox: fakeBox(false) } })
+    const s = getStatus(d)
+    expect(s.storageAvailable).toBe(false)
+    expect(s.connected).toBe(false)
+  })
+
+  it('says when a custom client id is in effect', () => {
+    expect(getStatus(withSettings({ [CLIENT_ID_SETTING]: 'own-id' })).usingCustomClientId).toBe(
+      true
+    )
+  })
+})
+
+describe('getAccessToken', () => {
+  it('returns null when nothing is connected', async () => {
+    await expect(getAccessToken(deps())).resolves.toBeNull()
+  })
+
+  it('returns the stored token without a network call while it is fresh', async () => {
+    const fetchFn = vi.fn()
+    const d = deps({ auth: { now: () => NOW, fetchFn: fetchFn as unknown as typeof fetch } })
+    saveTokens(tokens(), d.store)
+    await expect(getAccessToken(d)).resolves.toBe('access-1')
+    expect(fetchFn).not.toHaveBeenCalled()
+  })
+
+  it('refreshes when the token is near expiry and returns the new one', async () => {
+    const d = deps({
+      auth: {
+        now: () => NOW,
+        fetchFn: (async () =>
+          ({
+            ok: true,
+            status: 200,
+            json: async () => ({
+              access_token: 'access-2',
+              refresh_token: 'rt-2',
+              expires_in: 3600
+            })
+          }) as unknown as Response) as unknown as typeof fetch
+      }
+    })
+    saveTokens(tokens({ expiresAtMs: NOW + 1000 }), d.store)
+    await expect(getAccessToken(d)).resolves.toBe('access-2')
+  })
+
+  it('PERSISTS the rotated refresh token — otherwise the next refresh fails', async () => {
+    const d = deps({
+      auth: {
+        now: () => NOW,
+        fetchFn: (async () =>
+          ({
+            ok: true,
+            status: 200,
+            json: async () => ({
+              access_token: 'access-2',
+              refresh_token: 'rt-2',
+              expires_in: 3600
+            })
+          }) as unknown as Response) as unknown as typeof fetch
+      }
+    })
+    saveTokens(tokens({ expiresAtMs: NOW + 1000 }), d.store)
+    await getAccessToken(d)
+
+    // Read the file back rather than trusting the return value: the rotated
+    // token has to be ON DISK. Keeping it only in memory is exactly the bug
+    // that locks the user out after the old one is invalidated.
+    const onDisk = loadTokens(d.store)
+    expect(onDisk?.refreshToken).toBe('rt-2')
+    expect(onDisk?.accessToken).toBe('access-2')
+    expect(onDisk?.expiresAtMs).toBe(NOW + 3600_000)
+  })
+
+  it('persists the refreshed access token even when nothing rotated', async () => {
+    const d = deps({
+      auth: {
+        now: () => NOW,
+        fetchFn: (async () =>
+          ({
+            ok: true,
+            status: 200,
+            json: async () => ({ access_token: 'access-2', expires_in: 3600 })
+          }) as unknown as Response) as unknown as typeof fetch
+      }
+    })
+    saveTokens(tokens({ expiresAtMs: NOW + 1000 }), d.store)
+    await getAccessToken(d)
+    const onDisk = loadTokens(d.store)
+    expect(onDisk?.accessToken).toBe('access-2')
+    expect(onDisk?.refreshToken).toBe('refresh-1') // carried over, not blanked
+  })
+
+  it('drops the connection on invalid_grant instead of claiming it still works', async () => {
+    const d = deps({
+      auth: {
+        now: () => NOW,
+        fetchFn: (async () =>
+          ({
+            ok: false,
+            status: 400,
+            json: async () => ({ error: 'invalid_grant' })
+          }) as unknown as Response) as unknown as typeof fetch
+      }
+    })
+    saveTokens(tokens({ expiresAtMs: NOW + 1000 }), d.store)
+    await expect(getAccessToken(d)).resolves.toBeNull()
+    expect(getStatus(d).connected).toBe(false)
+  })
+
+  it('keeps the connection on a transient server error and propagates it', async () => {
+    const d = deps({
+      auth: {
+        now: () => NOW,
+        fetchFn: (async () =>
+          ({
+            ok: false,
+            status: 503,
+            json: async () => ({ error: 'temporarily_unavailable' })
+          }) as unknown as Response) as unknown as typeof fetch
+      }
+    })
+    saveTokens(tokens({ expiresAtMs: NOW + 1000 }), d.store)
+    await expect(getAccessToken(d)).rejects.toThrow()
+    // A blip must not sign the user out.
+    expect(getStatus(d).connected).toBe(true)
+  })
+})
+
+describe('disconnect', () => {
+  it('forgets the connection and reports it', () => {
+    const d = deps()
+    saveTokens(tokens(), d.store)
+    expect(getStatus(d).connected).toBe(true)
+    expect(disconnect(d).connected).toBe(false)
+  })
+
+  it('is safe when nothing is connected', () => {
+    expect(() => disconnect(deps())).not.toThrow()
+  })
+})

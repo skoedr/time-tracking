@@ -10,6 +10,7 @@ import { useRounding } from '../contexts/RoundingContext'
 import { Toggle } from '../components/Toggle'
 import { useUiPrefsStore } from '../store/uiPrefsStore'
 import TagManagementView from './TagManagementView'
+import { GraphAccountSection } from '../components/GraphAccountSection'
 import {
   WEBHOOK_EVENTS,
   isValidWebhookUrl,
@@ -814,9 +815,13 @@ export default function SettingsView(): React.JSX.Element {
         {/* Tags */}
         {tab === 'tags' && <TagManagementView />}
 
-        {/* Integrationen — MCP (v1.14 #128) */}
+        {/* Integrationen — Microsoft-Konto (#130) + MCP (v1.14 #128) */}
         {tab === 'integrations' && (
           <>
+            <Section title={t('settings.graph.section')}>
+              <GraphAccountSection />
+            </Section>
+
             <Section title={t('settings.mcp.section')}>
               <Row label={t('settings.mcp.section')} hint={t('settings.mcp.desc')} stacked>
                 <span

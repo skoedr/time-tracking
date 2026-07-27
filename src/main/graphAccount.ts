@@ -1,0 +1,221 @@
+/**
+ * The Microsoft account connection as the rest of the app sees it (#130).
+ *
+ * One place that owns: which client id is in effect, whether a connection
+ * exists, and how to get a usable access token. Everything above this — the IPC
+ * handlers, and later the calendar import (#130b) — goes through here rather
+ * than touching the flow or the store directly.
+ *
+ * The important piece is `getAccessToken`: callers must never have to think
+ * about expiry or rotation. It refreshes when needed and writes the result
+ * back, because Entra may hand out a new refresh token on every refresh and
+ * forgetting to persist that one locks the user out hours later.
+ */
+import {
+  DEFAULT_CLIENT_ID,
+  GraphAuthError,
+  isPersonalAccount,
+  needsRefresh
+} from '../shared/graphAuth'
+import type { AccountInfo, StoredTokens } from '../shared/graphAuth'
+import { refreshTokens } from './graphAuth'
+import type { GraphAuthConfig, GraphAuthDeps } from './graphAuth'
+import { connectAccount } from './graphConnect'
+import type { ConnectDeps } from './graphConnect'
+import {
+  clearTokens,
+  isStorageAvailable,
+  loadTokens,
+  saveTokens,
+  type TokenStoreDeps
+} from './graphTokenStore'
+
+/** Settings key holding a user-supplied client id that overrides the shipped one. */
+export const CLIENT_ID_SETTING = 'graph_client_id'
+
+export interface GraphAccountDeps {
+  /** Reads a value from the settings table. */
+  getSetting: (key: string) => string | undefined
+  /** Opens the system browser (Electron `shell.openExternal`). */
+  openExternal: (url: string) => Promise<void> | void
+  /** Required — the token store has no default location, see graphTokenStore.ts. */
+  store: TokenStoreDeps
+  auth?: GraphAuthDeps
+  log?: (message: string) => void
+}
+
+/** What the settings UI renders. Never contains token material. */
+export interface AccountStatus {
+  connected: boolean
+  account: AccountInfo | null
+  /** True for a personal Microsoft account — Teams presence (#132) is unavailable there. */
+  personalAccount: boolean
+  grantedScopes: string[]
+  /** False when the OS keychain is missing; connecting is refused in that case. */
+  storageAvailable: boolean
+  /** True when a user-supplied client id is in effect instead of the shipped one. */
+  usingCustomClientId: boolean
+}
+
+/**
+ * The client id in effect: a user override if set, otherwise the shipped one.
+ *
+ * The override exists for tenants that refuse third-party applications and for
+ * anyone who would rather use their own registration.
+ */
+export function effectiveClientId(deps: GraphAccountDeps): string {
+  const custom = deps.getSetting(CLIENT_ID_SETTING)?.trim()
+  return custom && custom.length > 0 ? custom : DEFAULT_CLIENT_ID
+}
+
+function configOf(deps: GraphAccountDeps): GraphAuthConfig {
+  return { clientId: effectiveClientId(deps) }
+}
+
+export function getStatus(deps: GraphAccountDeps): AccountStatus {
+  const storageAvailable = isStorageAvailable(deps.store)
+  const tokens = storageAvailable ? loadTokens(deps.store) : null
+  const custom = deps.getSetting(CLIENT_ID_SETTING)?.trim()
+  return {
+    connected: tokens !== null,
+    account: tokens?.account ?? null,
+    personalAccount: isPersonalAccount(tokens?.account ?? null),
+    grantedScopes: tokens?.grantedScopes ?? [],
+    storageAvailable,
+    usingCustomClientId: Boolean(custom && custom.length > 0)
+  }
+}
+
+/**
+ * Run the browser sign-in and persist the result.
+ *
+ * The storage check comes first on purpose: sending someone through a full
+ * sign-in only to discard the tokens afterwards would be the rudest possible
+ * ordering.
+ */
+export async function connect(
+  deps: GraphAccountDeps,
+  signal?: AbortSignal
+): Promise<AccountStatus> {
+  if (!isStorageAvailable(deps.store)) {
+    throw new GraphAuthError(
+      'Die sichere Ablage des Systems ist nicht verfügbar. Die Verbindung könnte nicht ' +
+        'gespeichert werden, deshalb wird die Anmeldung gar nicht erst gestartet.',
+      'storage_unavailable'
+    )
+  }
+  const connectDeps: ConnectDeps = {
+    openExternal: deps.openExternal,
+    log: deps.log,
+    ...deps.auth
+  }
+  const tokens = await connectAccount(configOf(deps), connectDeps, signal)
+  saveTokens(tokens, deps.store)
+  deps.log?.('graph account: connected')
+  return getStatus(deps)
+}
+
+/** Forget the connection. Does not revoke anything server-side — that is the user's own account page. */
+export function disconnect(deps: GraphAccountDeps): AccountStatus {
+  clearTokens(deps.store)
+  deps.log?.('graph account: disconnected')
+  return getStatus(deps)
+}
+
+/**
+ * A usable access token, refreshing first when the stored one is close to
+ * expiry. Returns `null` when nothing is connected.
+ *
+ * On `invalid_grant` the stored connection is dropped: the grant is gone for
+ * good (revoked, password changed, unused too long), and keeping a dead blob
+ * around would make the settings page claim a connection that cannot work.
+ */
+export async function getAccessToken(deps: GraphAccountDeps): Promise<string | null> {
+  const tokens = loadTokens(deps.store)
+  if (!tokens) return null
+
+  const now = deps.auth?.now?.() ?? Date.now()
+  if (!needsRefresh(tokens, now)) return tokens.accessToken
+
+  let refreshed: StoredTokens
+  try {
+    refreshed = await refreshTokens(configOf(deps), tokens, deps.auth)
+  } catch (err) {
+    if (err instanceof GraphAuthError && err.code === 'invalid_grant') {
+      deps.log?.('graph account: grant no longer valid, connection dropped')
+      clearTokens(deps.store)
+      return null
+    }
+    throw err
+  }
+  // Must be persisted even when only the access token changed — the refresh
+  // token may have rotated, and the old one stops working once it has.
+  saveTokens(refreshed, deps.store)
+  return refreshed.accessToken
+}
+
+/** Outcome of "check connection" — proves the stored token is accepted by Graph. */
+export interface VerifyResult {
+  /** From Graph's own `/me`, not from the id_token — a second, independent source. */
+  displayName: string | null
+  mail: string | null
+  /** True when this check had to renew the access token first. */
+  refreshed: boolean
+}
+
+const GRAPH_ME_URL = 'https://graph.microsoft.com/v1.0/me'
+const GRAPH_TIMEOUT_MS = 15_000
+
+/**
+ * Call Graph once with the stored credentials.
+ *
+ * Worth having as a button rather than only as an internal helper: until
+ * something actually calls Graph, "connected" only means "we hold a blob that
+ * decrypts". This turns that into a statement about the live grant — and it
+ * exercises the refresh path, which is otherwise only covered against fakes and
+ * would first be tried for real an hour into someone's workday.
+ */
+export async function verifyConnection(deps: GraphAccountDeps): Promise<VerifyResult> {
+  const before = loadTokens(deps.store)
+  if (!before) {
+    throw new GraphAuthError('Kein Microsoft-Konto verbunden.', 'not_connected')
+  }
+  const now = deps.auth?.now?.() ?? Date.now()
+  const willRefresh = needsRefresh(before, now)
+
+  const token = await getAccessToken(deps)
+  if (!token) {
+    throw new GraphAuthError(
+      'Die Verbindung ist nicht mehr gültig. Bitte das Microsoft-Konto erneut verbinden.',
+      'invalid_grant'
+    )
+  }
+
+  const fetchFn = deps.auth?.fetchFn ?? fetch
+  const res = await fetchFn(GRAPH_ME_URL, {
+    headers: { Authorization: `Bearer ${token}` },
+    signal: AbortSignal.timeout(GRAPH_TIMEOUT_MS)
+  })
+  if (!res.ok) {
+    // 401 here means the token was rejected despite looking fresh — worth
+    // saying plainly rather than dressing it up as a network hiccup.
+    throw new GraphAuthError(
+      res.status === 401
+        ? 'Microsoft hat das Zugriffstoken abgelehnt. Bitte erneut verbinden.'
+        : `Microsoft Graph antwortete mit HTTP ${res.status}.`,
+      `graph_${res.status}`
+    )
+  }
+  const body = (await res.json()) as Record<string, unknown>
+  deps.log?.(`graph account: verified via /me (refreshed=${willRefresh})`)
+  return {
+    displayName: typeof body.displayName === 'string' ? body.displayName : null,
+    mail:
+      typeof body.mail === 'string'
+        ? body.mail
+        : typeof body.userPrincipalName === 'string'
+          ? body.userPrincipalName
+          : null,
+    refreshed: willRefresh
+  }
+}
