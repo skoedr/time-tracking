@@ -4,6 +4,7 @@ import CalendarView from './views/CalendarView'
 import ClientsView from './views/ClientsView'
 import SettingsView from './views/SettingsView'
 import AuswertungView from './views/AuswertungView'
+import ExportView from './views/ExportView'
 import { IdleModal } from './components/IdleModal'
 import { QuickNoteModal } from './components/QuickNoteModal'
 import { StartTimerModal } from './components/StartTimerModal'
@@ -16,7 +17,7 @@ import { useSettingsStore } from './store/settingsStore'
 import { useProjectsStore } from './store/projectsStore'
 import { useUiPrefsStore } from './store/uiPrefsStore'
 
-type View = 'today' | 'calendar' | 'clients' | 'analytics' | 'settings'
+type View = 'today' | 'calendar' | 'clients' | 'analytics' | 'export' | 'settings'
 
 function App(): React.JSX.Element {
   const t = useT()
@@ -109,18 +110,20 @@ function App(): React.JSX.Element {
           borderColor: 'var(--card-border)'
         }}
       >
-        {(['today', 'calendar', 'clients', 'analytics', 'settings'] as View[]).map((v) => (
-          <button
-            key={v}
-            onClick={() => setView(v)}
-            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors
+        {(['today', 'calendar', 'clients', 'analytics', 'export', 'settings'] as View[]).map(
+          (v) => (
+            <button
+              key={v}
+              onClick={() => setView(v)}
+              className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors
               focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500
               ${view === v ? 'bg-indigo-600 text-white' : 'hover:bg-white/10'}`}
-            style={view !== v ? { color: 'var(--text2)' } : undefined}
-          >
-            {t(('nav.' + v) as `nav.${View}`)}
-          </button>
-        ))}
+              style={view !== v ? { color: 'var(--text2)' } : undefined}
+            >
+              {t(('nav.' + v) as `nav.${View}`)}
+            </button>
+          )
+        )}
 
         {/* Play button — only when no timer is running */}
         {!runningEntry && (
@@ -159,6 +162,7 @@ function App(): React.JSX.Element {
           {view === 'calendar' && <CalendarView />}
           {view === 'clients' && <ClientsView />}
           {view === 'analytics' && <AuswertungView />}
+          {view === 'export' && <ExportView />}
           {view === 'settings' && <SettingsView />}
         </div>
       </main>

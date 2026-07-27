@@ -177,11 +177,6 @@ export const de = {
   'calendar.nav.today': 'Heute',
   'calendar.status.loading': 'Lade…',
   'calendar.status.error': 'Fehler beim Laden',
-  'calendar.export.lastMonth': '📄 Letzter Monat als PDF',
-  'calendar.export.lastMonthTitle': 'Letzten Monat als PDF exportieren',
-  'calendar.export.rangeLabel': 'oder Zeitraum:',
-  'calendar.export.merge': 'PDFs zusammenführen',
-  'calendar.export.mergeTitle': 'Vorhandene PDFs zusammenführen',
   'calendar.header.week': 'KW',
   'calendar.days.mon': 'Mo',
   'calendar.days.tue': 'Di',
@@ -191,10 +186,6 @@ export const de = {
   'calendar.days.sat': 'Sa',
   'calendar.days.sun': 'So',
   'calendar.grid.aria': 'Kalender',
-  'calendar.range.thisWeek': 'Diese Woche',
-  'calendar.range.lastWeek': 'Letzte Woche',
-  'calendar.range.thisMonth': 'Dieser Monat',
-  'calendar.range.lastMonth': 'Letzter Monat',
   'calendar.months.jan': 'Januar',
   'calendar.months.feb': 'Februar',
   'calendar.months.mar': 'März',
@@ -348,6 +339,26 @@ export const de = {
   'quicknote.skip': 'Überspringen ({remaining}s)',
 
   // ── ExportModal ───────────────────────────────────────────────────────────
+  // ── ExportView (#153) — Einstiegspunkt, vorher in der Kalenderansicht ────
+  'export.view.title': 'Exportieren',
+  'export.view.timesTitle': 'Erfasste Zeiten exportieren',
+  'export.view.timesHint':
+    'Stundennachweis als PDF, Tabelle als CSV oder Kalenderdatei als iCal. Der gewählte Zeitraum lässt sich im Dialog noch anpassen.',
+  'export.view.lastMonth': '📄 Letzter Monat als PDF',
+  'export.view.lastMonthTitle': 'Letzten Monat als PDF exportieren',
+  'export.view.rangeLabel': 'oder Zeitraum:',
+  // Absichtlich nicht derselbe Text wie der Button darunter: die Überschrift
+  // benennt den Anlass, der Button die Aktion (und trägt denselben Wortlaut
+  // wie der Dialogtitel, damit der Klick vorhersagbar ist).
+  'export.view.mergeTitle': 'Stundennachweis und Rechnung',
+  'export.view.mergeHint':
+    'Stundennachweis und Rechnung zu einer PDF zusammenfassen, in der richtigen Reihenfolge.',
+  'export.view.merge': 'PDFs zusammenführen',
+  'export.view.mergeButtonTitle': 'Vorhandene PDFs zusammenführen',
+  'export.range.thisWeek': 'Diese Woche',
+  'export.range.lastWeek': 'Letzte Woche',
+  'export.range.thisMonth': 'Dieser Monat',
+  'export.range.lastMonth': 'Letzter Monat',
   'export.title': 'Exportieren',
   'export.tab.pdf': 'PDF — Stundennachweis',
   'export.tab.csv': 'CSV — Tabelle',
@@ -629,6 +640,7 @@ export const de = {
 
   // ── Auswertung (v1.10 #93) ────────────────────────────────────────────────
   'nav.analytics': 'Auswertung',
+  'nav.export': 'Export',
   'analytics.title': 'Auswertung',
   'analytics.month.hours': 'Stunden',
   'analytics.month.revenue': 'Umsatz',

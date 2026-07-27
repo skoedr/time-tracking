@@ -14,12 +14,10 @@ import {
 import type { Entry } from '../../../shared/types'
 import type { Client, Project } from '../../../shared/types'
 import { useProjectsStore } from '../store/projectsStore'
-import { getQuickRange, type QuickRangeKind } from '../../../shared/dateRanges'
+import { localDateKey } from '../../../shared/dateRanges'
 import { useEntriesStore } from '../store/entriesStore'
 import { useTimer } from '../hooks/useTimer'
 import { CalendarDrawer } from '../components/CalendarDrawer'
-import { ExportModal } from '../components/ExportModal'
-import { PdfMergeModal } from '../components/PdfMergeModal'
 import { useRounding } from '../contexts/RoundingContext'
 import { roundDuration } from '../../../shared/duration'
 
@@ -104,19 +102,6 @@ export default function CalendarView(): React.JSX.Element {
     setCursor(startOfMonth(today))
     setFocusDay(today)
   }, [setFocusDay])
-
-  // PDF export modal state — opened by the quick-filter pills with the
-  // selected range pre-filled (#21).
-  const [pdfRange, setPdfRange] = useState<{ fromIso: string; toIso: string } | null>(null)
-  const [mergeOpen, setMergeOpen] = useState(false)
-
-  const onQuickRange = useCallback(
-    (kind: QuickRangeKind) => {
-      const range = getQuickRange(kind, new Date())
-      setPdfRange({ fromIso: localDateKey(range.from), toIso: localDateKey(range.to) })
-    },
-    [setPdfRange]
-  )
 
   // Keyboard navigation on the grid.
   function handleKey(e: React.KeyboardEvent): void {
@@ -209,51 +194,6 @@ export default function CalendarView(): React.JSX.Element {
         )}
       </div>
 
-      {/* PDF quick-filter row (#21). Hero "Letzter Monat" gets the accent
-          colour to draw the eye on the most common rechnungs-flow. */}
-      <div className="flex flex-wrap items-center gap-2">
-        <button
-          type="button"
-          onClick={() => onQuickRange('lastMonth')}
-          className="rounded-full px-3 py-1.5 text-xs font-semibold text-white hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-indigo-300"
-          style={{ background: 'var(--accent)' }}
-          title={t('calendar.export.lastMonthTitle')}
-        >
-          {t('calendar.export.lastMonth')}
-        </button>
-        <span className="ml-1 text-xs uppercase tracking-wide" style={{ color: 'var(--text3)' }}>
-          {t('calendar.export.rangeLabel')}
-        </span>
-        {(['thisWeek', 'lastWeek', 'thisMonth'] as const).map((k) => (
-          <button
-            key={k}
-            type="button"
-            onClick={() => onQuickRange(k)}
-            className="rounded-full border px-3 py-1.5 text-xs font-medium backdrop-blur-xl hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-400"
-            style={{
-              background: 'var(--card-bg)',
-              borderColor: 'var(--card-border)',
-              color: 'var(--text)'
-            }}
-          >
-            {t(('calendar.range.' + k) as TranslationKey)}
-          </button>
-        ))}
-        <button
-          type="button"
-          onClick={() => setMergeOpen(true)}
-          className="ml-auto rounded-full border px-3 py-1.5 text-xs font-medium backdrop-blur-xl hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-400"
-          style={{
-            background: 'var(--card-bg)',
-            borderColor: 'var(--card-border)',
-            color: 'var(--text)'
-          }}
-          title={t('calendar.export.mergeTitle')}
-        >
-          {t('calendar.export.merge')}
-        </button>
-      </div>
-
       {/* Header row: KW + Mo–So */}
       <div
         className="grid grid-cols-[40px_repeat(7,minmax(0,1fr))] gap-px rounded-t-lg"
@@ -321,15 +261,6 @@ export default function CalendarView(): React.JSX.Element {
         clients={clients}
         onClose={() => setSelectedDay(null)}
       />
-
-      <ExportModal
-        key={pdfRange ? `${pdfRange.fromIso}-${pdfRange.toIso}` : 'closed'}
-        open={pdfRange !== null}
-        prefilledRange={pdfRange ?? undefined}
-        onClose={() => setPdfRange(null)}
-      />
-
-      <PdfMergeModal open={mergeOpen} onClose={() => setMergeOpen(false)} />
     </div>
   )
 }
@@ -503,13 +434,6 @@ function buildMonthWeeks(cursor: Date): WeekData[] {
     })
   }
   return weeks
-}
-
-function localDateKey(d: Date): string {
-  const y = d.getFullYear()
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  return `${y}-${m}-${day}`
 }
 
 function addDays(d: Date, n: number): Date {

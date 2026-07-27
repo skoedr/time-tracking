@@ -2,6 +2,24 @@
 
 All notable changes to TimeTrack are documented here.
 
+## [Unreleased]
+
+### Changed
+
+- **Exportieren ist jetzt ein eigener Reiter (#153)** — Das Export-Fenster war ausschließlich über die Zeitraum-Knöpfe in der **Kalender**-Ansicht erreichbar, das Zusammenführen von PDFs über einen weiteren Knopf daneben. In der Navigation stand nirgends „Export": Wer danach suchte, fand nichts, und ein automatisierter Durchlauf von v1.15.0 fand ebenfalls nichts. Mit dem iCal-Export (#135) wog das schwerer als vorher, weil dessen ganzer Zweck ein dauerhafter zweiter Kalender-Layer ist — man sucht danach unter „Export", nicht unter „Dieser Monat". Es gibt jetzt einen Reiter **Export** zwischen _Auswertung_ und _Einstellungen_, der beide Wege beherbergt: Stundennachweis/CSV/iCal oben, PDFs zusammenführen darunter. Die Knöpfe selbst sind unverändert — gleiche Beschriftungen, gleiche Zeiträume, „Letzter Monat" weiterhin farblich hervorgehoben, weil das der häufigste Rechnungs-Weg ist.
+
+  Bewusst **kein zweiter Einstiegspunkt neben dem alten**, was sowohl das Issue als auch der `TODOS`-Punkt zum PdfMergeModal wörtlich vorschlugen: Beide Fenster hingen an der Kalenderansicht, ohne kalenderspezifisch zu sein — die Zeitraum-Knöpfe haben nie den Kalender gefiltert, sie haben nur einen Zeitraum vorbelegt und ein Fenster geöffnet. Vier Einstiegspunkte über zwei Ansichten hätten die Oberfläche verdoppelt, ohne die Ursache anzufassen. Die Toolbar ist deshalb komplett umgezogen; der **Kalender ist wieder nur Kalender**. Wer den Export bisher aus dem Kalender heraus gestartet hat, klickt jetzt einen Reiter weiter links — aus der Standardansicht _Heute_ sind es unverändert zwei Klicks.
+
+  Der `TODOS`-Punkt „Merge modal Nav-Trigger" ist damit erledigt, das dort und in #153 angemahnte Design-Gespräch geführt.
+
+### Internal
+
+- **Charakterisierungstest für die Export-Einstiegspunkte (#153)** — `exportEntryPoints.test.tsx` sichert acht Verhaltensweisen ab (welcher Knopf welchen Zeitraum vorbelegt, welches Fenster aufgeht, dass ein zweites Öffnen den Zeitraum ersetzt) und wurde vor dem Umzug gegen den alten Code in `CalendarView` grün geschrieben; danach zeigt dieselbe Datei unverändert auf die neue `ExportView`. Das ist der Beleg, dass der Umzug nichts verloren hat, und nicht bloß eine Beschreibung des neuen Codes.
+
+  Bemerkenswert ist Fall 6. Der naheliegende Test — „ein zweites Öffnen zeigt den neuen Zeitraum" — bewacht die tragende Stelle **nicht**: Das Fenster wird per `key` bei jedem Öffnen neu aufgebaut, aber den Zeitraum bekommt es zusätzlich über einen Effekt, sodass dieser Fall auch mit gelöschtem `key` grün blieb (nachgemessen, nicht vermutet). Tragend ist der `key` für die gespeicherten Export-Einstellungen, die genau einmal pro Aufbau gelesen werden — ohne Neuaufbau bliebe der Stand vom ersten Mount stehen, und das ist beim App-Start der Stand _vor_ dem Laden der Einstellungen. Fall 6 prüft deshalb, dass ein zweites Öffnen die inzwischen geänderten Einstellungen liest; er fällt mit gelöschtem `key` um und ist damit der einzige Fall, der die Bedingung wirklich unterscheidet statt sie zu bestätigen.
+
+- **`localDateKey` liegt jetzt in `shared/dateRanges.ts`** — Die Funktion lag lokal in `CalendarView`, wurde für die Zeitraum-Übergabe aber in beiden Ansichten gebraucht. Sie ist verschoben statt kopiert und hat fünf eigene Tests bekommen (Nullen-Auffüllung, Mitternacht, Jahreswechsel) — sie darf nicht durch `toISOString()` ersetzt werden, das östlich von Greenwich vor dem UTC-Versatz den Vortag meldet.
+
 ## [1.15.1] — 2026-07-27
 
 ### Fixed
