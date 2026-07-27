@@ -188,3 +188,92 @@ describe('TagInput — keyboard commit paths', () => {
     expect(screen.queryByRole('listbox')).toBeNull()
   })
 })
+
+describe('TagInput — Dropdown gegen den Host-Dialog (#158)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('10 — Enter übernimmt den markierten Vorschlag auch bei leerem Eingabefeld', async () => {
+    const { input, onChange } = await setup()
+    // Kein Zeichen tippen — nur Pfeil-runter, dann Enter. Der Zweig lag hinter
+    // `&& inputValue.trim()`, griff also nie: die Auswahl wurde still verworfen
+    // und Enter sendete stattdessen das umschließende Formular ab.
+    fireEvent.keyDown(input, { key: 'ArrowDown' })
+    expect(highlightedText()).toBe('#bug')
+
+    fireEvent.keyDown(input, { key: 'Enter' })
+    await waitFor(() => expect(onChange).toHaveBeenCalledWith(serializeTags(['bug'])))
+  })
+
+  it('11 — Enter ohne Markierung und ohne Text bleibt beim Formular', async () => {
+    const { input, onChange } = await setup()
+    const onWindowKey = vi.fn()
+    window.addEventListener('keydown', onWindowKey)
+
+    // Nichts markiert, nichts getippt: TagInput darf das Event nicht
+    // abfangen, sonst lässt sich der Eintrag nicht mehr per Enter speichern.
+    fireEvent.keyDown(input, { key: 'Enter' })
+
+    window.removeEventListener('keydown', onWindowKey)
+    expect(onWindowKey).toHaveBeenCalled()
+    expect(onChange).not.toHaveBeenCalled()
+  })
+
+  it('12 — Escape bei offener Liste erreicht den Host-Dialog nicht', async () => {
+    const { input } = await setup()
+    // Dialog.tsx und CalendarDrawer.tsx hängen ihren Escape-Handler an
+    // `window`; ohne stopPropagation schließt die erste Escape-Taste den
+    // ganzen Dialog und die ungespeicherten Änderungen sind weg.
+    const onWindowKey = vi.fn()
+    window.addEventListener('keydown', onWindowKey)
+
+    fireEvent.keyDown(input, { key: 'Escape' })
+
+    window.removeEventListener('keydown', onWindowKey)
+    expect(screen.queryByRole('listbox')).toBeNull()
+    expect(onWindowKey).not.toHaveBeenCalled()
+  })
+
+  it('13 — Escape bei geschlossener Liste erreicht den Host-Dialog sehr wohl', async () => {
+    const { input } = await setup()
+    fireEvent.keyDown(input, { key: 'Escape' }) // schließt die Liste
+    const onWindowKey = vi.fn()
+    window.addEventListener('keydown', onWindowKey)
+
+    fireEvent.keyDown(input, { key: 'Escape' }) // zweite Taste → Dialog
+
+    window.removeEventListener('keydown', onWindowKey)
+    expect(onWindowKey).toHaveBeenCalled()
+  })
+
+  it('14 — ein Klick ins bereits fokussierte Feld öffnet die Liste erneut', async () => {
+    const { input } = await setup()
+    fireEvent.keyDown(input, { key: 'ArrowDown' })
+    fireEvent.keyDown(input, { key: 'Enter' })
+    await waitFor(() => expect(screen.queryByRole('listbox')).toBeNull())
+
+    // `onFocus` feuert nicht erneut, wenn der Cursor das Feld nie verlassen hat.
+    fireEvent.click(input)
+    expect(screen.queryByRole('listbox')).not.toBeNull()
+  })
+
+  it('15 — nach einer Übernahme ist die Markierung zurückgesetzt', async () => {
+    const { input } = await setup()
+    fireEvent.keyDown(input, { key: 'ArrowDown' }) // markiert '#bug'
+    fireEvent.keyDown(input, { key: 'Enter' }) // übernimmt, Liste schließt
+    await waitFor(() => expect(screen.queryByRole('listbox')).toBeNull())
+
+    // Regression aus #142 (nie veröffentlicht): der Reset hing am Effekt, der
+    // beim Umbau auf useMemo entfiel — dieser Pfad wurde übersehen. Sonst steht
+    // beim nächsten Öffnen ein Eintrag markiert, den niemand gewählt hat, und
+    // mit Fall 10 übernimmt Enter ihn.
+    //
+    // Gemessen statt behauptet über ArrowDown, das die Liste selbst öffnet und
+    // den Index um eins vorrückt — unabhängig von Fall 14:
+    //   zurückgesetzt (-1) → Index 0 → '#docs'
+    //   stale        ( 0) → Index 1 → '#ux'
+    fireEvent.keyDown(input, { key: 'ArrowDown' })
+    expect(highlightedText()).toBe('#docs')
+  })
+})
