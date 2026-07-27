@@ -30,7 +30,7 @@ export function RoundingProvider({ children }: { children: React.ReactNode }): R
   // Sync from the settings store once loaded (and whenever it changes).
   useEffect(() => {
     const v = parseInt(pdfRoundMinutes ?? '0', 10)
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- #142: React-Compiler-Regel, Aufarbeitung im Folge-PR
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- #142: zurückgestellt bis zur Compiler-Entscheidung — saubere Ableitung möglich, aber ohne Test nicht abgesichert
     setRoundMinutesState(Number.isFinite(v) && v > 0 ? v : 0)
   }, [pdfRoundMinutes])
 

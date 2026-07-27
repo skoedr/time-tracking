@@ -69,7 +69,7 @@ export function EntryEditForm({
   // Load projects when client changes; reset project if client changes
   useEffect(() => {
     if (!clientId) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- #142: React-Compiler-Regel, Aufarbeitung im Folge-PR
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- #142: dauerhaft — Teilfix möglich, der asynchrone Zweig bleibt Effect
       setProjects([])
       setProjectId(null)
       return

@@ -103,7 +103,7 @@ export default function SettingsView(): React.JSX.Element {
   }
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- #142: React-Compiler-Regel, Aufarbeitung im Folge-PR
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- #142: dauerhaft — fünf asynchrone Quellen beim Mount
     loadAll()
   }, [])
 

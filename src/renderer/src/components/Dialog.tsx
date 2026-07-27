@@ -32,7 +32,7 @@ export function Dialog({
   // every time the parent re-renders (which would re-focus the close button
   // on every tick — e.g. Today's running-timer pill ticks once per second).
   const onCloseRef = useRef(onClose)
-  // eslint-disable-next-line react-hooks/refs -- #142: React-Compiler-Regel, Aufarbeitung im Folge-PR
+  // eslint-disable-next-line react-hooks/refs -- #142: zurückgestellt bis zur Compiler-Entscheidung — Basis für sechs Modals, keine Testabdeckung
   onCloseRef.current = onClose
 
   useEffect(() => {
