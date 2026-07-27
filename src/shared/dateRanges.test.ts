@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { getQuickRange } from './dateRanges'
+import { getQuickRange, localDateKey } from './dateRanges'
 
 /**
  * Construct a Date in local time (Y/M/D/H/M). All assertions below also use
@@ -87,5 +87,37 @@ describe('getQuickRange', () => {
     const r = getQuickRange('lastWeek', now)
     expect(dayKey(r.from)).toBe('2026-03-30')
     expect(dayKey(r.to)).toBe('2026-04-05')
+  })
+})
+
+/**
+ * `localDateKey` moved here from `CalendarView` in #153, where the export view
+ * needed the same formatting to hand a range to the export modal. `dayKey`
+ * above is kept as an independent copy on purpose, so the `getQuickRange`
+ * assertions do not lean on the function under test here.
+ */
+describe('localDateKey', () => {
+  it('zero-pads single-digit months and days', () => {
+    expect(localDateKey(local(2026, 1, 5))).toBe('2026-01-05')
+  })
+
+  it('does not pad values that are already two digits', () => {
+    expect(localDateKey(local(2026, 12, 31))).toBe('2026-12-31')
+  })
+
+  it('reports the local calendar day at midnight, not the UTC one', () => {
+    // The reason this helper exists instead of `toISOString().slice(0, 10)`:
+    // east of Greenwich, 00:30 local is still the previous day in UTC. The
+    // Date is built from local components, so this holds in every timezone.
+    expect(localDateKey(local(2026, 3, 15, 0, 30))).toBe('2026-03-15')
+  })
+
+  it('reports the local calendar day just before midnight', () => {
+    expect(localDateKey(local(2026, 3, 15, 23, 59))).toBe('2026-03-15')
+  })
+
+  it('does not roll over across a year boundary', () => {
+    expect(localDateKey(local(2026, 1, 1, 0, 1))).toBe('2026-01-01')
+    expect(localDateKey(local(2025, 12, 31, 23, 59))).toBe('2025-12-31')
   })
 })

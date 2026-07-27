@@ -177,11 +177,6 @@ export const en: Record<TranslationKey, string> = {
   'calendar.nav.today': 'Today',
   'calendar.status.loading': 'Loading…',
   'calendar.status.error': 'Error loading',
-  'calendar.export.lastMonth': '📄 Last month as PDF',
-  'calendar.export.lastMonthTitle': 'Export last month as PDF',
-  'calendar.export.rangeLabel': 'or range:',
-  'calendar.export.merge': 'Merge PDFs',
-  'calendar.export.mergeTitle': 'Merge existing PDFs',
   'calendar.header.week': 'Wk',
   'calendar.days.mon': 'Mon',
   'calendar.days.tue': 'Tue',
@@ -191,10 +186,6 @@ export const en: Record<TranslationKey, string> = {
   'calendar.days.sat': 'Sat',
   'calendar.days.sun': 'Sun',
   'calendar.grid.aria': 'Calendar',
-  'calendar.range.thisWeek': 'This week',
-  'calendar.range.lastWeek': 'Last week',
-  'calendar.range.thisMonth': 'This month',
-  'calendar.range.lastMonth': 'Last month',
   'calendar.months.jan': 'January',
   'calendar.months.feb': 'February',
   'calendar.months.mar': 'March',
@@ -346,6 +337,26 @@ export const en: Record<TranslationKey, string> = {
   'quicknote.skip': 'Skip ({remaining}s)',
 
   // ── ExportModal ───────────────────────────────────────────────────────────
+  // ── ExportView (#153) — entry point, previously in the calendar view ──────
+  'export.view.title': 'Export',
+  'export.view.timesTitle': 'Export tracked time',
+  'export.view.timesHint':
+    'Timesheet as PDF, spreadsheet as CSV, or calendar file as iCal. You can still adjust the selected range in the dialog.',
+  'export.view.lastMonth': '📄 Last month as PDF',
+  'export.view.lastMonthTitle': 'Export last month as PDF',
+  'export.view.rangeLabel': 'or range:',
+  // Deliberately not the same text as the button below it: the heading names
+  // the occasion, the button the action (and matches the dialog title so the
+  // click is predictable).
+  'export.view.mergeTitle': 'Timesheet and invoice',
+  'export.view.mergeHint':
+    'Combine a timesheet and an invoice into a single PDF, in the right order.',
+  'export.view.merge': 'Merge PDFs',
+  'export.view.mergeButtonTitle': 'Merge existing PDFs',
+  'export.range.thisWeek': 'This week',
+  'export.range.lastWeek': 'Last week',
+  'export.range.thisMonth': 'This month',
+  'export.range.lastMonth': 'Last month',
   'export.title': 'Export',
   'export.tab.pdf': 'PDF — Time report',
   'export.tab.csv': 'CSV — Spreadsheet',
@@ -620,6 +631,7 @@ export const en: Record<TranslationKey, string> = {
 
   // ── Analytics (v1.10 #93) ─────────────────────────────────────────────────
   'nav.analytics': 'Analytics',
+  'nav.export': 'Export',
   'analytics.title': 'Analytics',
   'analytics.month.hours': 'Hours',
   'analytics.month.revenue': 'Revenue',

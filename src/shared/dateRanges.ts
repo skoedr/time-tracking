@@ -34,6 +34,21 @@ export function getQuickRange(kind: QuickRangeKind, now: Date): DateRange {
   }
 }
 
+/**
+ * `YYYY-MM-DD` for a Date's **local** calendar day.
+ *
+ * Deliberately not `toISOString().slice(0, 10)`, which converts to UTC first
+ * and therefore reports the previous day for any local time before the UTC
+ * offset (e.g. 00:30 in CEST). Used both for calendar grid keys and to hand a
+ * quick range to the export modal, which expects local day boundaries.
+ */
+export function localDateKey(d: Date): string {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
 export const QUICK_RANGE_LABELS: Record<QuickRangeKind, string> = {
   thisWeek: 'Diese Woche',
   lastWeek: 'Letzte Woche',
