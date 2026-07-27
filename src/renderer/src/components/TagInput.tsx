@@ -92,10 +92,25 @@ export function TagInput({
       : matches
   }, [inputValue, allKnown, value])
 
+  /**
+   * Clear the text input and drop the highlight together.
+   *
+   * They belong to each other: emptying the input rebuilds the suggestion
+   * list, so an index pointing into the old list is meaningless afterwards.
+   * Keeping the two calls in one place is what stops them drifting apart:
+   * when #142 moved the reset out of an effect and onto its triggers, this
+   * one was missed (#158) — caught before release, but only because someone
+   * reopened the list after picking a tag.
+   */
+  function clearInput(): void {
+    setInputValue('')
+    setHighlightedIndex(-1)
+  }
+
   async function addTag(tag: string): Promise<void> {
     if (!tag || tags.includes(tag) || tags.length >= 10) return
     onChange(serializeTags([...tags, tag]))
-    setInputValue('')
+    clearInput()
     setDropdownOpen(false)
   }
 
@@ -112,7 +127,7 @@ export function TagInput({
     }
     const parsed = parseTagInput(raw)
     if (parsed.length === 0) {
-      setInputValue('')
+      clearInput()
       return
     }
     const next = [...tags]
@@ -120,7 +135,7 @@ export function TagInput({
       if (!next.includes(t) && next.length < 10) next.push(t)
     }
     onChange(serializeTags(next))
-    setInputValue('')
+    clearInput()
     setDropdownOpen(false)
   }
 
@@ -143,22 +158,37 @@ export function TagInput({
       setHighlightedIndex((i) => Math.max(i - 1, -1))
       return
     }
-    if ((e.key === 'Enter' || e.key === 'Tab' || e.key === ',') && inputValue.trim()) {
-      e.preventDefault()
-      if (highlightedIndex >= 0 && suggestions[highlightedIndex]) {
+    if (e.key === 'Enter' || e.key === 'Tab' || e.key === ',') {
+      // A highlighted suggestion wins regardless of what is typed — including
+      // nothing at all (#158). This branch used to sit behind
+      // `&& inputValue.trim()`, so picking an entry with the arrow keys and
+      // pressing Enter without typing dropped the choice silently and let the
+      // event reach the surrounding <form>, which saved the entry without it.
+      if (dropdownOpen && highlightedIndex >= 0 && suggestions[highlightedIndex]) {
+        e.preventDefault()
         void commitInput(suggestions[highlightedIndex])
-      } else {
-        // In closed mode, Enter on free text: create if not known
-        const q = inputValue.trim().toLowerCase().replace(/^#/, '')
-        if (q && allKnown.includes(q)) {
-          void commitInput(q)
-        } else if (q) {
-          void commitInput(CREATE_SENTINEL)
-        }
+        return
+      }
+      // Nothing highlighted and nothing typed: Tab must still move focus and
+      // Enter must still submit the form. Return WITHOUT preventDefault.
+      if (!inputValue.trim()) return
+      e.preventDefault()
+      // In closed mode, Enter on free text: create if not known
+      const q = inputValue.trim().toLowerCase().replace(/^#/, '')
+      if (q && allKnown.includes(q)) {
+        void commitInput(q)
+      } else if (q) {
+        void commitInput(CREATE_SENTINEL)
       }
       return
     }
     if (e.key === 'Escape') {
+      // Only the dropdown is ours to close. Dialog.tsx and CalendarDrawer.tsx
+      // listen for Escape on `window`, so without stopping propagation the
+      // first Escape tore down the whole modal along with unsaved edits
+      // (#158). With the list closed the key belongs to the host again.
+      if (!dropdownOpen) return
+      e.stopPropagation()
       setDropdownOpen(false)
       setHighlightedIndex(-1)
       return
@@ -187,7 +217,13 @@ export function TagInput({
       <div
         className={`flex min-h-[36px] flex-wrap items-center gap-1 rounded border px-2 py-1.5 focus-within:border-indigo-500 transition-colors ${disabled ? 'opacity-50' : ''}`}
         style={{ background: 'var(--input-bg)', borderColor: 'var(--card-border)' }}
-        onClick={() => inputRef.current?.focus()}
+        onClick={() => {
+          inputRef.current?.focus()
+          // Reopening hangs off `onFocus` alone, which does not fire again
+          // when the cursor never left the field — after picking a tag you
+          // had to click away and back to see the list (#158).
+          setDropdownOpen(true)
+        }}
       >
         {tags.map((tag) => (
           <span
