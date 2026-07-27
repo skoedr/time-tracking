@@ -99,23 +99,24 @@ export default function CalendarView(): React.JSX.Element {
 
   const onPrev = useCallback(() => setCursor((d) => addMonths(d, -1)), [])
   const onNext = useCallback(() => setCursor((d) => addMonths(d, 1)), [])
-  // eslint-disable-next-line react-hooks/preserve-manual-memoization -- #142: React-Compiler-Regel, Aufarbeitung im Folge-PR
   const onToday = useCallback(() => {
     const today = new Date()
     setCursor(startOfMonth(today))
     setFocusDay(today)
-  }, [])
+  }, [setFocusDay])
 
   // PDF export modal state — opened by the quick-filter pills with the
   // selected range pre-filled (#21).
   const [pdfRange, setPdfRange] = useState<{ fromIso: string; toIso: string } | null>(null)
   const [mergeOpen, setMergeOpen] = useState(false)
 
-  // eslint-disable-next-line react-hooks/preserve-manual-memoization -- #142: React-Compiler-Regel, Aufarbeitung im Folge-PR
-  const onQuickRange = useCallback((kind: QuickRangeKind) => {
-    const range = getQuickRange(kind, new Date())
-    setPdfRange({ fromIso: localDateKey(range.from), toIso: localDateKey(range.to) })
-  }, [])
+  const onQuickRange = useCallback(
+    (kind: QuickRangeKind) => {
+      const range = getQuickRange(kind, new Date())
+      setPdfRange({ fromIso: localDateKey(range.from), toIso: localDateKey(range.to) })
+    },
+    [setPdfRange]
+  )
 
   // Keyboard navigation on the grid.
   function handleKey(e: React.KeyboardEvent): void {
