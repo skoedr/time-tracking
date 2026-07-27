@@ -319,11 +319,11 @@ export function useTimer(): UseTimerResult {
   }, [dismissIdle])
 
   // Keep refs current so listeners always call the latest fn
-  // eslint-disable-next-line react-hooks/immutability -- #142: zurückgestellt bis zur Compiler-Entscheidung — daran hängen die globalen Hotkeys, keine Testabdeckung
+  // eslint-disable-next-line react-hooks/immutability -- #157: zurückgestellt bis zur Compiler-Entscheidung — daran hängen die globalen Hotkeys, keine Testabdeckung
   globalToggleRef.current = runningEntry ? stop : start
-  // eslint-disable-next-line react-hooks/immutability -- #142: zurückgestellt bis zur Compiler-Entscheidung — daran hängen die globalen Hotkeys, keine Testabdeckung
+  // eslint-disable-next-line react-hooks/immutability -- #157: zurückgestellt bis zur Compiler-Entscheidung — daran hängen die globalen Hotkeys, keine Testabdeckung
   globalQuickStartRef.current = startWithClient
-  // eslint-disable-next-line react-hooks/immutability -- #142: zurückgestellt bis zur Compiler-Entscheidung — daran hängen die globalen Hotkeys, keine Testabdeckung
+  // eslint-disable-next-line react-hooks/immutability -- #157: zurückgestellt bis zur Compiler-Entscheidung — daran hängen die globalen Hotkeys, keine Testabdeckung
   globalStopRef.current = stop
 
   return {

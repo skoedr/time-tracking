@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { deserializeTags, parseTagInput, serializeTags } from '../../../shared/tags'
 import { useT } from '../contexts/I18nContext'
 
@@ -55,7 +55,6 @@ export function TagInput({
   const t = useT()
   const tags = deserializeTags(value)
   const [inputValue, setInputValue] = useState('')
-  const [suggestions, setSuggestions] = useState<string[]>([])
   const [allKnown, setAllKnown] = useState<string[]>([])
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const [highlightedIndex, setHighlightedIndex] = useState(-1)
@@ -73,24 +72,24 @@ export function TagInput({
     void reloadKnown()
   }, [reloadKnown])
 
-  // Filter suggestions based on current input
-  useEffect(() => {
+  // Suggestions follow purely from the typed text, the master registry and
+  // the already-selected tags — a derivation, not state (#142). `selected` is
+  // re-derived from `value` inside the memo because the outer `tags` const is
+  // a fresh array on every render and would defeat memoization.
+  //
+  // The highlight reset that used to share this effect is NOT a derivation;
+  // it lives at its two triggers instead: typing (input onChange) and
+  // removing a chip (removeTag).
+  const suggestions = useMemo(() => {
+    const selected = deserializeTags(value)
     const q = inputValue.trim().toLowerCase().replace(/^#/, '')
-    let matches: string[]
-    if (!q) {
-      matches = allKnown.filter((t) => !tags.includes(t)).slice(0, 8)
-    } else {
-      matches = allKnown.filter((t) => t.startsWith(q) && !tags.includes(t)).slice(0, 8)
-    }
+    const matches = allKnown
+      .filter((t) => (!q || t.startsWith(q)) && !selected.includes(t))
+      .slice(0, 8)
     // Append "create" sentinel if typed text is non-empty and not an exact match
-    if (q && !allKnown.includes(q) && !tags.includes(q)) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- #142: React-Compiler-Regel, Aufarbeitung im Folge-PR
-      setSuggestions([...matches, CREATE_SENTINEL])
-    } else {
-      setSuggestions(matches)
-    }
-    setHighlightedIndex(-1)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    return q && !allKnown.includes(q) && !selected.includes(q)
+      ? [...matches, CREATE_SENTINEL]
+      : matches
   }, [inputValue, allKnown, value])
 
   async function addTag(tag: string): Promise<void> {
@@ -127,6 +126,9 @@ export function TagInput({
 
   function removeTag(tag: string): void {
     onChange(serializeTags(tags.filter((t) => t !== tag)))
+    // The freed tag re-enters the suggestion list, so a kept index would now
+    // point at a different entry than the one the user saw highlighted.
+    setHighlightedIndex(-1)
   }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>): void {
@@ -214,6 +216,9 @@ export function TagInput({
           value={inputValue}
           onChange={(e) => {
             setInputValue(e.target.value)
+            // Typing rebuilds the suggestion list — drop the old highlight
+            // rather than let it survive onto an unrelated entry.
+            setHighlightedIndex(-1)
             setDropdownOpen(true)
           }}
           onFocus={() => setDropdownOpen(true)}
