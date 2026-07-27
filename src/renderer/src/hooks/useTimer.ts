@@ -319,11 +319,11 @@ export function useTimer(): UseTimerResult {
   }, [dismissIdle])
 
   // Keep refs current so listeners always call the latest fn
-  // eslint-disable-next-line react-hooks/immutability -- #157: zurückgestellt bis zur Compiler-Entscheidung — daran hängen die globalen Hotkeys, keine Testabdeckung
+  // eslint-disable-next-line react-hooks/immutability -- #157: dauerhaft — modulweite Singletons, damit die IPC-Listener nur einmal registriert werden und trotzdem die neueste Closure treffen; der Compiler ist bewusst nicht aktiviert (Messung im Issue)
   globalToggleRef.current = runningEntry ? stop : start
-  // eslint-disable-next-line react-hooks/immutability -- #157: zurückgestellt bis zur Compiler-Entscheidung — daran hängen die globalen Hotkeys, keine Testabdeckung
+  // eslint-disable-next-line react-hooks/immutability -- #157: dauerhaft — modulweite Singletons, damit die IPC-Listener nur einmal registriert werden und trotzdem die neueste Closure treffen; der Compiler ist bewusst nicht aktiviert (Messung im Issue)
   globalQuickStartRef.current = startWithClient
-  // eslint-disable-next-line react-hooks/immutability -- #157: zurückgestellt bis zur Compiler-Entscheidung — daran hängen die globalen Hotkeys, keine Testabdeckung
+  // eslint-disable-next-line react-hooks/immutability -- #157: dauerhaft — modulweite Singletons, damit die IPC-Listener nur einmal registriert werden und trotzdem die neueste Closure treffen; der Compiler ist bewusst nicht aktiviert (Messung im Issue)
   globalStopRef.current = stop
 
   return {
