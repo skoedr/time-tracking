@@ -10,6 +10,8 @@ All notable changes to TimeTrack are documented here.
 
   Bewusst **kein zweiter Einstiegspunkt neben dem alten**, was sowohl das Issue als auch der `TODOS`-Punkt zum PdfMergeModal wörtlich vorschlugen: Beide Fenster hingen an der Kalenderansicht, ohne kalenderspezifisch zu sein — die Zeitraum-Knöpfe haben nie den Kalender gefiltert, sie haben nur einen Zeitraum vorbelegt und ein Fenster geöffnet. Vier Einstiegspunkte über zwei Ansichten hätten die Oberfläche verdoppelt, ohne die Ursache anzufassen. Die Toolbar ist deshalb komplett umgezogen; der **Kalender ist wieder nur Kalender**. Wer den Export bisher aus dem Kalender heraus gestartet hat, klickt jetzt einen Reiter weiter links — aus der Standardansicht _Heute_ sind es unverändert zwei Klicks.
 
+  Nebeneffekt, der auffiel und mitbehoben ist: Das Monatsgitter richtet sich jetzt an der Fensterbreite aus. Vorher bestimmte die Breite der Export-Toolbar, wie breit die Kalenderansicht wurde — ein Nebenprodukt, keine Entscheidung; ohne sie wäre das Gitter auf seine Eigenbreite geschrumpft.
+
   Der `TODOS`-Punkt „Merge modal Nav-Trigger" ist damit erledigt, das dort und in #153 angemahnte Design-Gespräch geführt.
 
 ### Internal
