@@ -15,6 +15,7 @@ import streamDeck from '@elgato/streamdeck'
 import type { KeyDownEvent, SendToPluginEvent, WillAppearEvent } from '@elgato/streamdeck'
 import type { JsonValue } from '@elgato/utils'
 import { getTimerStatus, listTargets, toggleTimer, type RunningTimer } from '../bridge'
+import { keyImage, type KeyLabel } from '../keyImage'
 
 export type ToggleSettings = {
   clientId?: number
@@ -31,6 +32,12 @@ const POLL_MS = 2000
 @action({ UUID: 'com.timetrack.streamdeck.toggle' })
 export class ToggleTimer extends SingletonAction<ToggleSettings> {
   private pollTimer: NodeJS.Timeout | null = null
+  /**
+   * Per-key render cache (design handoff, "Rendern nur bei Änderung"): the
+   * face visibly changes only once per minute, so setImage() is skipped while
+   * the render key — state · minute · target · label — stays the same.
+   */
+  private lastKey = new Map<string, string>()
 
   override onWillAppear(_ev: WillAppearEvent<ToggleSettings>): void {
     this.ensurePolling()
@@ -44,9 +51,13 @@ export class ToggleTimer extends SingletonAction<ToggleSettings> {
       any = true
       break
     }
-    if (!any && this.pollTimer) {
-      clearInterval(this.pollTimer)
-      this.pollTimer = null
+    if (!any) {
+      if (this.pollTimer) {
+        clearInterval(this.pollTimer)
+        this.pollTimer = null
+      }
+      // Forget cached faces so a reappearing key always gets a fresh render.
+      this.lastKey.clear()
     }
   }
 
@@ -98,35 +109,50 @@ export class ToggleTimer extends SingletonAction<ToggleSettings> {
     status: RunningTimer | null | 'unavailable'
   ): Promise<void> {
     if (typeof settings.clientId !== 'number') {
-      await key.setImage(
-        svgImage('#374151', '#9ca3af', { header: '', lines: ['Set up', 'in the', 'inspector'] }, false)
-      )
+      await this.setImageCached(key, 'unset||', keyImage({ state: 'unset', label: EMPTY_LABEL }))
       return
     }
     const label = keyLabel(settings)
+    const target = `${settings.clientId}|${settings.projectId ?? ''}|${label.header}|${label.lines.join('·')}`
     if (status === 'unavailable') {
-      await key.setImage(svgImage('#374151', '#6b7280', label, false, true))
+      await this.setImageCached(key, `offline|${target}`, keyImage({ state: 'offline', label }))
       return
     }
     const active =
       status !== null &&
       status.client_id === settings.clientId &&
       (status.project_id ?? null) === (settings.projectId ?? null)
-    const accent = normalizeColor(settings.color)
-    await key.setImage(
-      active
-        ? svgImage(accent ?? '#16a34a', '#ffffff', label, true)
-        : svgImage('#1f2937', '#e5e7eb', label, false, false, accent ?? undefined)
+    if (active) {
+      const elapsedSec = Math.max(0, (Date.now() - Date.parse(status.started_at)) / 1000)
+      const minute = Math.floor(elapsedSec / 60)
+      await this.setImageCached(
+        key,
+        `running|${minute}|${target}`,
+        // Lazy: the face is only built when the cache misses.
+        () => keyImage({ state: 'running', label, color: settings.color, elapsedSec })
+      )
+      return
+    }
+    await this.setImageCached(
+      key,
+      `idle|${target}|${settings.color ?? ''}`,
+      () => keyImage({ state: 'idle', label, color: settings.color })
     )
+  }
+
+  /** setImage() only when the render key changed since the last call. */
+  private async setImageCached(
+    key: KeyAction<ToggleSettings>,
+    renderKey: string,
+    image: string | (() => string)
+  ): Promise<void> {
+    if (this.lastKey.get(key.id) === renderKey) return
+    this.lastKey.set(key.id, renderKey)
+    await key.setImage(typeof image === 'string' ? image : image())
   }
 }
 
-export interface KeyLabel {
-  /** Small header line (client when a project is set, empty otherwise). */
-  header: string
-  /** Prominent lines (project if set, client otherwise), max 3. */
-  lines: string[]
-}
+const EMPTY_LABEL: KeyLabel = { header: '', lines: [] }
 
 /**
  * With a project the project is the star of the key — the client shrinks to a
@@ -160,62 +186,3 @@ function wrap(text: string, width: number): string[] {
   return out.map((l) => (l.length > width ? l.slice(0, width - 1) + '…' : l))
 }
 
-function normalizeColor(c: string | undefined): string | null {
-  return c && /^#[0-9a-fA-F]{3,8}$/.test(c) ? c : null
-}
-
-function escapeXml(s: string): string {
-  return s
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-}
-
-/**
- * 144×144 key face. `running` shows a filled dot; `stale` greys the face when
- * TimeTrack is unreachable; `accentBar` paints the client color as a bottom
- * bar on idle keys (mirrors the app's client color coding). The header (client
- * name when a project is configured) renders small at the top, the main lines
- * bold in the middle.
- */
-function svgImage(
-  bg: string,
-  fg: string,
-  label: KeyLabel,
-  running: boolean,
-  stale = false,
-  accentBar?: string
-): string {
-  const { header, lines } = label
-  const startY = (header ? 82 : 76) - (lines.length - 1) * 12
-  const headerText = header
-    ? `<text x="72" y="30" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="14" fill="${fg}" opacity="0.75" text-anchor="middle">${escapeXml(header)}</text>`
-    : ''
-  const text =
-    headerText +
-    lines
-      .map(
-        (l, i) =>
-          `<text x="72" y="${startY + i * 24}" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="20" font-weight="600" fill="${fg}" text-anchor="middle">${escapeXml(l)}</text>`
-      )
-      .join('')
-  const dot = running
-    ? `<circle cx="72" cy="122" r="8" fill="#ffffff"><animate attributeName="opacity" values="1;0.4;1" dur="2s" repeatCount="indefinite"/></circle>`
-    : ''
-  const bar = accentBar
-    ? `<rect x="16" y="126" width="112" height="8" rx="4" fill="${accentBar}"/>`
-    : ''
-  const staleMark = stale
-    ? `<text x="72" y="126" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="16" fill="${fg}" text-anchor="middle">offline</text>`
-    : ''
-  const svg =
-    `<svg xmlns="http://www.w3.org/2000/svg" width="144" height="144" viewBox="0 0 144 144">` +
-    `<rect x="4" y="4" width="136" height="136" rx="20" fill="${bg}"/>` +
-    text +
-    dot +
-    bar +
-    staleMark +
-    `</svg>`
-  return `data:image/svg+xml,${encodeURIComponent(svg)}`
-}
