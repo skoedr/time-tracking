@@ -1,30 +1,32 @@
 # Contributing to TimeTrack
 
-Danke, dass du zu TimeTrack beitragen möchtest! Dieses Dokument beschreibt den
-Workflow für Issues, Pull Requests und lokale Entwicklung.
+Thank you for wanting to contribute to TimeTrack! This document describes the
+workflow for issues, pull requests, and local development.
 
-> Sprachen: Issues, PRs und Commit-Messages dürfen auf **Deutsch oder Englisch**
-> sein. Code-Kommentare und Variablennamen bitte **Englisch** halten.
+> **Languages:** Repository documentation is English — new docs and changelog
+> entries are written in English. Issues, PRs, and commit messages may be in
+> **German or English**. Please keep code comments and variable names in
+> **English**.
 
 ## Code of Conduct
 
-Mit deiner Mitwirkung akzeptierst du den [Code of Conduct](./CODE_OF_CONDUCT.md).
-Verstöße bitte an `robin.wald@hotmail.de` melden.
+By contributing you accept the [Code of Conduct](./CODE_OF_CONDUCT.md).
+Please report violations to `robin.wald@hotmail.de`.
 
-## Bug melden / Feature vorschlagen
+## Reporting a bug / proposing a feature
 
-- **Bug:** Nutze das [Bug-Report-Template](./.github/ISSUE_TEMPLATE/bug_report.yml).
-  Bitte Version, OS und reproduzierbare Schritte angeben.
-- **Feature:** Nutze das [Feature-Request-Template](./.github/ISSUE_TEMPLATE/feature_request.yml).
-  Beschreibe das Problem zuerst, dann den Lösungsvorschlag.
-- **Frage / Diskussion:** Bitte über
+- **Bug:** Use the [bug report template](./.github/ISSUE_TEMPLATE/bug_report.yml).
+  Please provide version, OS, and reproducible steps.
+- **Feature:** Use the [feature request template](./.github/ISSUE_TEMPLATE/feature_request.yml).
+  Describe the problem first, then the proposed solution.
+- **Question / discussion:** Please use
   [GitHub Discussions](https://github.com/skoedr/time-tracking/discussions)
-  statt Issue.
-- **Sicherheitslücke:** **Kein** öffentliches Issue. Siehe [SECURITY.md](./SECURITY.md).
+  instead of an issue.
+- **Security vulnerability:** **No** public issue. See [SECURITY.md](./SECURITY.md).
 
-## Lokale Entwicklung
+## Local development
 
-Voraussetzungen: **Node.js 20+**, **pnpm 10+**, Windows oder macOS.
+Requirements: **Node.js 20+**, **pnpm 10+**, Windows or macOS.
 
 ```powershell
 pnpm install        # Dependencies + native Module bauen
@@ -35,56 +37,56 @@ pnpm lint           # ESLint
 pnpm build          # Production-Build (electron-builder, ohne Publish)
 ```
 
-App-Daten landen lokal in `%AppData%\time-tracking\` (Windows) bzw.
-`~/Library/Application Support/time-tracking/` (macOS). Diese kannst du beim
-Entwickeln gefahrlos sichern oder löschen.
+App data lands locally in `%AppData%\time-tracking\` (Windows) or
+`~/Library/Application Support/time-tracking/` (macOS). You can safely back these
+up or delete them during development.
 
-### Tests und die native SQLite-ABI
+### Tests and the native SQLite ABI
 
-`better-sqlite3` ist ein natives Modul und wird beim `pnpm install` gegen die
-**Electron**-ABI gebaut, weil die App das zur Laufzeit braucht. Ein System-Node
-kann diese Binary nicht laden. `pnpm test` löst das, indem es Vitest über
-`scripts/run-vitest.mjs` auf der Electron-Binary im Node-Modus startet
-(`ELECTRON_RUN_AS_NODE=1`) — dieselbe Lösung wie beim MCP-Server
-(`src/main/mcpLaunch.ts`). Es gibt **keine** zweite Binärkopie und **keinen**
-Rebuild vor dem Testlauf; `pnpm dev` und die Paketbuilds bleiben dabei
-funktionsfähig.
+`better-sqlite3` is a native module and is built against the **Electron** ABI
+during `pnpm install`, because the app needs it at runtime. A system Node cannot
+load this binary. `pnpm test` solves this by starting Vitest via
+`scripts/run-vitest.mjs` on the Electron binary in Node mode
+(`ELECTRON_RUN_AS_NODE=1`) — the same solution as the MCP server
+(`src/main/mcpLaunch.ts`). There is **no** second binary copy and **no**
+rebuild before the test run; `pnpm dev` and the package builds keep
+working.
 
-Ein grüner Lauf ist deshalb **596 passed, 0 skipped**. Wenn du stattdessen eine
-dreistellige Skip-Zahl siehst, ist die Umgebung kaputt — nicht der Code.
+A green run is therefore **596 passed, 0 skipped**. If you instead see a
+three-digit skip count, the environment is broken — not the code.
 
-**Wenn Tests mit `ERR_DLOPEN_FAILED` / `NODE_MODULE_VERSION` scheitern:**
+**If tests fail with `ERR_DLOPEN_FAILED` / `NODE_MODULE_VERSION`:**
 
-1. Rufst du Vitest direkt auf (`pnpm exec vitest`, IDE-Runner)? Dann nimm
-   `pnpm test`. Direkt unter System-Node kann es nicht funktionieren.
-2. Sonst ist die Binary veraltet — meist, weil irgendwann
-   `pnpm rebuild better-sqlite3` lief und sie durch einen Node-ABI-Build ersetzt
-   hat. **`pnpm install` repariert das nicht:** electron-builder merkt sich die
-   gebaute ABI in `node_modules/better-sqlite3/build/Release/.forge-meta` und
-   überspringt den Rebuild, wenn der Marker schon passt — die Datei lügt dann.
-   Erzwinge ihn:
+1. Are you calling Vitest directly (`pnpm exec vitest`, IDE runner)? Then use
+   `pnpm test`. Directly under system Node it cannot work.
+2. Otherwise the binary is stale — usually because at some point
+   `pnpm rebuild better-sqlite3` ran and replaced it with a Node-ABI build.
+   **`pnpm install` does not fix this:** electron-builder remembers the
+   built ABI in `node_modules/better-sqlite3/build/Release/.forge-meta` and
+   skips the rebuild when the marker already matches — the file lies then.
+   Force it:
 
    ```powershell
    pnpm exec electron-rebuild -f -w better-sqlite3
    ```
 
-Kurz: `pnpm rebuild better-sqlite3` bitte **nicht** benutzen. Es hinterlässt eine
-App, die ihre eigene Datenbank nicht mehr öffnen kann, ohne dass ein Kommando
-darüber meckert.
+In short: please do **not** use `pnpm rebuild better-sqlite3`. It leaves an
+app that can no longer open its own database, without any command
+complaining about it.
 
-## Pull-Request-Workflow
+## Pull request workflow
 
-1. **Issue zuerst** – außer für sehr kleine Fixes (Typo, ein-Zeilen-Bug).
-   Bei größeren Features bitte im Issue Konsens herstellen, bevor du Code
-   schreibst, damit der PR nicht abgelehnt werden muss.
-2. **Branch-Konvention:** `feat/v{X.Y}-{kurzname}`, `fix/v{X.Y}-{kurzname}`
-   oder `docs/v{X.Y}-{kurzname}`. Beispiel: `feat/v1.7-pdf-merge`.
-3. **Kleine PRs.** Ein PR = ein Thema. Refactor und Feature trennen.
-4. **Tests.** Neue Logik in `src/main/` oder `src/shared/` braucht einen
-   Vitest-Test. Renderer-only-Änderungen (Layout, Styling) sind ohne Test okay.
-5. **Lokale Checks vor Push:** `pnpm typecheck && pnpm lint && pnpm test`.
-6. **Conventional Commits** (siehe unten).
-7. **PR-Beschreibung:** Was, Warum, Wie getestet, Screenshots/GIFs bei UI.
+1. **Issue first** – except for very small fixes (typo, one-line bug).
+   For larger features please reach consensus in the issue before you write
+   code, so the PR does not have to be rejected.
+2. **Branch convention:** `feat/v{X.Y}-{shortname}`, `fix/v{X.Y}-{shortname}`
+   or `docs/v{X.Y}-{shortname}`. Example: `feat/v1.7-pdf-merge`.
+3. **Small PRs.** One PR = one topic. Separate refactor and feature.
+4. **Tests.** New logic in `src/main/` or `src/shared/` needs a
+   Vitest test. Renderer-only changes (layout, styling) are fine without a test.
+5. **Local checks before push:** `pnpm typecheck && pnpm lint && pnpm test`.
+6. **Conventional Commits** (see below).
+7. **PR description:** What, why, how tested, screenshots/GIFs for UI.
 
 ### Conventional Commits
 
@@ -94,43 +96,43 @@ darüber meckert.
 [optionaler Body]
 ```
 
-Erlaubte Types:
+Allowed types:
 
-| Type       | Wofür                              |
-| ---------- | ---------------------------------- |
-| `feat`     | Neues nutzersichtbares Feature     |
-| `fix`      | Bugfix                             |
-| `docs`     | Doku, README, Plan-Files           |
-| `chore`    | Build, Dependencies, Tooling       |
-| `refactor` | Code-Umbau ohne Verhaltensänderung |
-| `test`     | Tests hinzufügen oder verbessern   |
-| `security` | Security-relevante Änderung        |
+| Type       | Purpose                             |
+| ---------- | ----------------------------------- |
+| `feat`     | New user-visible feature            |
+| `fix`      | Bug fix                             |
+| `docs`     | Docs, README, plan files            |
+| `chore`    | Build, dependencies, tooling        |
+| `refactor` | Code restructuring without behavior change |
+| `test`     | Add or improve tests                |
+| `security` | Security-relevant change            |
 
-Scope ist optional, aber willkommen (`csv`, `pdf`, `i18n`, `db`, `ipc`, …).
+Scope is optional but welcome (`csv`, `pdf`, `i18n`, `db`, `ipc`, …).
 
-Beispiele:
+Examples:
 
 - `feat(pdf): merge external timesheet pages into export (#42)`
 - `fix(timer): stop drift after suspend/resume`
 - `chore(deps): bump electron 39.0.1 -> 39.0.4`
 
-## Stil & Architektur
+## Style & architecture
 
-- **TypeScript strict.** Keine `any` ohne Begründung.
-- **Pure-Funktionen** in `src/shared/` – keine Electron- oder DOM-Imports dort.
-- **DB-Migrationen** sind unveränderlich. Neue Schemaänderung = neue
-  Migrationsdatei in `src/main/migrations/` + DB-Version hochzählen.
-- **i18n — Pflicht ab v1.8:** Jeder nutzersichtbare String **muss** über `useT()` /
-  `t(key)` laufen und einen Eintrag in **beiden** Locale-Dateien haben:
-  `src/shared/locales/de.ts` (Source of Truth) und `src/shared/locales/en.ts`.
-  Hardcodierte deutsche oder englische Strings im JSX/TSX sind ein Review-Blocker.
-  Prüfen mit: `pnpm exec node scripts/find-untranslated.mjs`
-- **Keine Telemetrie.** Siehe [PRIVACY.md](./PRIVACY.md).
+- **TypeScript strict.** No `any` without justification.
+- **Pure functions** in `src/shared/` – no Electron or DOM imports there.
+- **DB migrations** are immutable. A new schema change = a new
+  migration file in `src/main/migrations/` + bump the DB version.
+- **i18n — mandatory since v1.8:** Every user-visible string **must** go through `useT()` /
+  `t(key)` and have an entry in **both** locale files:
+  `src/shared/locales/de.ts` (source of truth) and `src/shared/locales/en.ts`.
+  Hardcoded German or English strings in JSX/TSX are a review blocker.
+  Check with: `pnpm exec node scripts/find-untranslated.mjs`
+- **No telemetry.** See [PRIVACY.md](./PRIVACY.md).
 
-## i18n-Workflow
+## i18n workflow
 
-Ab v1.8 sind alle nutzersichtbaren Strings zweisprachig (DE/EN). Dieses Muster ist
-**Pflicht** für jede neue UI-Änderung:
+Since v1.8 all user-visible strings are bilingual (DE/EN). This pattern is
+**mandatory** for every new UI change:
 
 ```typescript
 // In Components / Views — Hook holen:
@@ -146,7 +148,7 @@ import type { TFunction } from '../contexts/I18nContext'
 function helper(t: TFunction) { ... }
 ```
 
-Neue Keys immer in **beiden** Dateien gleichzeitig ergänzen:
+Always add new keys to **both** files at the same time:
 
 ```typescript
 // src/shared/locales/de.ts  ← Source of Truth
@@ -166,18 +168,18 @@ export const en: typeof de = {
 }
 ```
 
-Keys sind dot-namespaced und werden nach Feature-Bereich gruppiert
-(`nav.*`, `settings.*`, `entry.*` usw.). `pnpm exec node scripts/find-untranslated.mjs`
-findet vergessene Stellen.
+Keys are dot-namespaced and grouped by feature area
+(`nav.*`, `settings.*`, `entry.*`, etc.). `pnpm exec node scripts/find-untranslated.mjs`
+finds forgotten spots.
 
-## Release-Prozess (nur Maintainer)
+## Release process (maintainers only)
 
-1. Stage-PRs gegen `main` mergen (squash).
-2. Version in `package.json` bumpen, `CHANGELOG.md` ergänzen.
-3. Tag `v{X.Y.Z}` setzen, pushen → GitHub-Actions baut Release-Artefakte.
-4. Release-Notes auf GitHub freigeben → Auto-Updater zieht es.
+1. Merge stage PRs against `main` (squash).
+2. Bump the version in `package.json`, add to `CHANGELOG.md`.
+3. Set tag `v{X.Y.Z}`, push → GitHub Actions builds the release artifacts.
+4. Publish the release notes on GitHub → the auto-updater pulls it.
 
-## Lizenz
+## License
 
-Mit dem Einreichen eines PRs stimmst du zu, dass dein Beitrag unter der
-[MIT-Lizenz](./LICENSE) des Projekts veröffentlicht wird.
+By submitting a PR you agree that your contribution is published under the
+project's [MIT license](./LICENSE).
