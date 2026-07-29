@@ -28,14 +28,23 @@ export type ToggleSettings = {
 }
 
 const POLL_MS = 2000
+/**
+ * Render tick between bridge polls: the elapsed time is computed locally from
+ * started_at, so the minute ring can advance every second without extra
+ * bridge traffic. Well inside the SDK guideline of ≤10 setImage calls/s.
+ */
+const RENDER_TICK_MS = 1000
 
 @action({ UUID: 'com.timetrack.streamdeck.toggle' })
 export class ToggleTimer extends SingletonAction<ToggleSettings> {
   private pollTimer: NodeJS.Timeout | null = null
+  private renderTimer: NodeJS.Timeout | null = null
+  /** Last bridge answer — the 1 s render tick draws from this, poll refreshes it. */
+  private lastStatus: RunningTimer | null | 'unavailable' = 'unavailable'
   /**
-   * Per-key render cache (design handoff, "Rendern nur bei Änderung"): the
-   * face visibly changes only once per minute, so setImage() is skipped while
-   * the render key — state · minute · target · label — stays the same.
+   * Per-key render cache (design handoff, "Rendern nur bei Änderung"):
+   * setImage() is skipped while the render key — state · ring second · target
+   * · label — stays the same, so idle keys cost nothing per tick.
    */
   private lastKey = new Map<string, string>()
 
@@ -55,6 +64,10 @@ export class ToggleTimer extends SingletonAction<ToggleSettings> {
       if (this.pollTimer) {
         clearInterval(this.pollTimer)
         this.pollTimer = null
+      }
+      if (this.renderTimer) {
+        clearInterval(this.renderTimer)
+        this.renderTimer = null
       }
       // Forget cached faces so a reappearing key always gets a fresh render.
       this.lastKey.clear()
@@ -90,17 +103,26 @@ export class ToggleTimer extends SingletonAction<ToggleSettings> {
   }
 
   private ensurePolling(): void {
-    if (this.pollTimer) return
-    this.pollTimer = setInterval(() => void this.refreshAll(), POLL_MS)
+    if (!this.pollTimer) {
+      this.pollTimer = setInterval(() => void this.refreshAll(), POLL_MS)
+    }
+    if (!this.renderTimer) {
+      this.renderTimer = setInterval(() => void this.renderAll(), RENDER_TICK_MS)
+    }
   }
 
-  /** Re-render every visible key from one status read. */
+  /** Ask the bridge, then re-render every visible key. */
   private async refreshAll(): Promise<void> {
-    const status = await getTimerStatus()
+    this.lastStatus = await getTimerStatus()
+    await this.renderAll()
+  }
+
+  /** Re-render from the last known status — no bridge traffic. */
+  private async renderAll(): Promise<void> {
     for (const a of this.actions) {
       if (!a.isKey()) continue
       const settings = await a.getSettings()
-      await this.render(a, settings, status)
+      await this.render(a, settings, this.lastStatus)
     }
   }
 
@@ -125,10 +147,10 @@ export class ToggleTimer extends SingletonAction<ToggleSettings> {
       (status.project_id ?? null) === (settings.projectId ?? null)
     if (active) {
       const elapsedSec = Math.max(0, (Date.now() - Date.parse(status.started_at)) / 1000)
-      // The deck rasterizes a static frame, so the minute ring only moves when
-      // we re-render: a 5-second step advances it in 30° increments — 12 image
-      // transfers per minute, and only for the running key.
-      const ringStep = Math.floor(elapsedSec / 5)
+      // The deck rasterizes static frames (no SMIL, no pathLength) — the
+      // official animation path is frame-by-frame setImage, guideline ≤10/s.
+      // One frame per second advances the ring in 6° steps, running key only.
+      const ringStep = Math.floor(elapsedSec)
       await this.setImageCached(
         key,
         `running|${ringStep}|${target}`,
