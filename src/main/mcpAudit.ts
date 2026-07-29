@@ -15,6 +15,8 @@ mcpLog.transports.console.level = false
 
 export interface McpAuditEntry {
   op: string
+  /** Origin scope; 'controller' for hardware-key writes (#133), absent for MCP. */
+  source?: string
   /** Resulting/affected entry id, if any. */
   id?: number | null
   client_id?: number | null

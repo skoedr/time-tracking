@@ -1,0 +1,34 @@
+{
+  "$schema": "https://schemas.elgato.com/streamdeck/plugins/manifest.json",
+  "UUID": "com.timetrack.streamdeck",
+  "Name": "TimeTrack",
+  "Version": "0.1.0.0",
+  "Author": "wald-it",
+  "Description": "Start and stop TimeTrack timers per client and project with one key. Requires the TimeTrack app with hardware keys enabled (Settings → Integrations).",
+  "Category": "TimeTrack",
+  "CategoryIcon": "imgs/plugin",
+  "Icon": "imgs/plugin",
+  "CodePath": "bin/plugin.js",
+  "SDKVersion": 2,
+  "Nodejs": {
+    "Version": "20"
+  },
+  "Software": {
+    "MinimumVersion": "7.1"
+  },
+  "OS": [
+    { "Platform": "windows", "MinimumVersion": "10" },
+    { "Platform": "mac", "MinimumVersion": "10.15" }
+  ],
+  "Actions": [
+    {
+      "UUID": "com.timetrack.streamdeck.toggle",
+      "Name": "Toggle timer",
+      "Tooltip": "Toggle the TimeTrack timer for a client (and project).",
+      "Icon": "imgs/toggle",
+      "PropertyInspectorPath": "ui/toggle-timer.html",
+      "UserTitleEnabled": false,
+      "States": [{ "Image": "imgs/toggle" }]
+    }
+  ]
+}

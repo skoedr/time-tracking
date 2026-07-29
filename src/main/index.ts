@@ -23,6 +23,8 @@ import {
   stopMcpBridge,
   generateWriteToken,
   clearWriteToken,
+  generateControllerToken,
+  clearControllerToken,
   type BridgeDeps
 } from './mcpBridge'
 import { initAutoUpdater } from './updater'
@@ -518,8 +520,18 @@ app.whenReady().then(async () => {
         generateWriteToken()
         startMcpBridge(mcpBridgeDeps())
       } else {
-        stopMcpBridge()
         clearWriteToken()
+        // The bridge socket stays up while the controller scope needs it.
+        if (mcpBridgeDeps().getSetting('controller_enabled') !== '1') stopMcpBridge()
+      }
+    },
+    setControllerEnabled: (enabled) => {
+      if (enabled) {
+        generateControllerToken()
+        startMcpBridge(mcpBridgeDeps())
+      } else {
+        clearControllerToken()
+        if (mcpBridgeDeps().getSetting('mcp_write_enabled') !== '1') stopMcpBridge()
       }
     }
   })
@@ -533,13 +545,15 @@ app.whenReady().then(async () => {
   configureIdleWatcher({ getWindow: () => mainWindow })
   loadStartupSettings()
 
-  // v1.14 #127 — start the MCP write bridge only when opted in. A fresh token
-  // is minted per app run (rotation); the socket lives on the primary instance
-  // only (this code path is skipped for second-instance / smoke runs above).
-  if (mcpBridgeDeps().getSetting('mcp_write_enabled') === '1') {
-    generateWriteToken()
-    startMcpBridge(mcpBridgeDeps())
-  }
+  // v1.14 #127 / v1.17 #133 — start the local bridge only when at least one
+  // scope is opted in. Fresh tokens are minted per app run (rotation); the
+  // socket lives on the primary instance only (this code path is skipped for
+  // second-instance / smoke runs above).
+  const writeOn = mcpBridgeDeps().getSetting('mcp_write_enabled') === '1'
+  const controllerOn = mcpBridgeDeps().getSetting('controller_enabled') === '1'
+  if (writeOn) generateWriteToken()
+  if (controllerOn) generateControllerToken()
+  if (writeOn || controllerOn) startMcpBridge(mcpBridgeDeps())
 
   tray = new Tray(trayStoppedIcon)
   updateTray(false, '', 0)

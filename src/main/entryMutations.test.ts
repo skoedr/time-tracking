@@ -10,7 +10,8 @@ import {
   updateManualEntry,
   startTimer,
   stopEntry,
-  stopRunningTimer
+  stopRunningTimer,
+  validateProjectForClient
 } from './entryMutations'
 
 let DatabaseImpl: DatabaseCtor
@@ -24,6 +25,12 @@ function seed(db: Database.Database): void {
   applyMigrations(db)
   db.prepare(
     `INSERT INTO clients (id, name, color, active, rate_cent) VALUES (1,'Acme','#111',1,0)`
+  ).run()
+  db.prepare(
+    `INSERT INTO clients (id, name, color, active, rate_cent) VALUES (2,'Beta','#222',1,0)`
+  ).run()
+  db.prepare(
+    `INSERT INTO projects (id, client_id, name, status, active) VALUES (10, 1, 'Rollout', 'active', 1)`
   ).run()
 }
 
@@ -51,6 +58,36 @@ describe('entryMutations', () => {
     expect(r.data.link_id).toBeNull()
     expect(r.data.rounded_min).toBe(60)
     expect(r.data.tags).toBe(',bug,')
+  })
+
+  it('validateProjectForClient rejects foreign and unknown projects', () => {
+    expect(validateProjectForClient(db, 10, 1)).toBeNull()
+    expect(validateProjectForClient(db, 10, 2)).toBe('Projekt gehört nicht zu diesem Kunden')
+    expect(validateProjectForClient(db, 999, 1)).toBe('Projekt gehört nicht zu diesem Kunden')
+  })
+
+  it('createManualEntry rejects a project of another client (#133)', () => {
+    const r = createManualEntry(db, {
+      client_id: 2,
+      description: 'wrong project',
+      started_at: '2026-06-10T09:00:00.000Z',
+      stopped_at: '2026-06-10T10:00:00.000Z',
+      project_id: 10
+    })
+    expect(r.ok).toBe(false)
+    if (!r.ok) expect(r.error).toBe('Projekt gehört nicht zu diesem Kunden')
+  })
+
+  it('createManualEntry accepts a project of the same client', () => {
+    const r = createManualEntry(db, {
+      client_id: 1,
+      description: 'right project',
+      started_at: '2026-06-10T09:00:00.000Z',
+      stopped_at: '2026-06-10T10:00:00.000Z',
+      project_id: 10
+    })
+    expect(r.ok).toBe(true)
+    if (r.ok) expect(r.data.project_id).toBe(10)
   })
 
   it('createManualEntry splits across local midnight into linked halves', () => {

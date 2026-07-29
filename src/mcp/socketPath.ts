@@ -17,6 +17,7 @@ import { dirname, join } from 'path'
 import { resolveDbPath } from './dbPath'
 
 export const TOKEN_FILENAME = 'mcp-write.token'
+export const CONTROLLER_TOKEN_FILENAME = 'controller.token'
 export const SOCK_FILENAME = 'mcp.sock'
 export const WIN_PIPE = '\\\\.\\pipe\\timetrack-mcp'
 
@@ -31,6 +32,15 @@ export function socketPathForDir(
 /** Token file path for a given userData directory. */
 export function tokenPathForDir(dir: string): string {
   return join(dir, TOKEN_FILENAME)
+}
+
+/**
+ * Controller token file path (#133). Hardware-key clients (Stream Deck & co.)
+ * authenticate with this token and are limited to the controller ops — the
+ * MCP write token deliberately does not unlock them, and vice versa.
+ */
+export function controllerTokenPathForDir(dir: string): string {
+  return join(dir, CONTROLLER_TOKEN_FILENAME)
 }
 
 /** userData directory, inferred from the resolved DB path. */

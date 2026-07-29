@@ -52,6 +52,7 @@ export function validateManualEntry(
     stopped_at: string
     reference?: string
     private_note?: string
+    project_id?: number | null
   },
   excludeId?: number,
   excludeLinkId?: string
@@ -78,6 +79,10 @@ export function validateManualEntry(
     | { id: number }
     | undefined
   if (!clientRow) return 'Kunde existiert nicht'
+  if (input.project_id != null) {
+    const pErr = validateProjectForClient(db, input.project_id, input.client_id)
+    if (pErr) return pErr
+  }
   // Overlap: any non-deleted entry of the same client whose time range
   // intersects [start, stop). Two intervals overlap iff
   //   existing.started_at < stop AND COALESCE(existing.stopped_at, now) > start
@@ -97,6 +102,23 @@ export function validateManualEntry(
   const overlap = db.prepare(overlapSql).get(...params) as { id: number } | undefined
   if (overlap) return 'Eintrag überlappt mit einem bestehenden Eintrag desselben Kunden'
   return null
+}
+
+/**
+ * A project may only be attached to an entry of the client it belongs to
+ * (#133; same rule as clientDomains.learnDomain). Orphaned projects
+ * (client_id NULL) fail this on purpose. Returns a German error message
+ * string, or null when valid.
+ */
+export function validateProjectForClient(
+  db: Db,
+  project_id: number,
+  client_id: number
+): string | null {
+  const row = db
+    .prepare(`SELECT id FROM projects WHERE id = ? AND client_id = ?`)
+    .get(project_id, client_id) as { id: number } | undefined
+  return row ? null : 'Projekt gehört nicht zu diesem Kunden'
 }
 
 /**

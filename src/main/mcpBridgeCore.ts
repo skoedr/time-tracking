@@ -13,7 +13,8 @@ import {
   updateManualEntry,
   startTimer,
   stopRunningTimer,
-  validateManualEntry
+  validateManualEntry,
+  validateProjectForClient
 } from './entryMutations'
 import type {
   Entry,
@@ -32,6 +33,16 @@ export const WRITE_OPS = [
   'start_timer'
 ] as const
 export type WriteOp = (typeof WRITE_OPS)[number]
+
+/**
+ * Ops available to hardware-key controllers (#133 — Stream Deck & co.). The
+ * two scopes are strictly separated by token: the MCP token cannot call
+ * controller ops (they skip the confirm dialog — a physical key press IS the
+ * confirmation, but an AI agent must never get that shortcut), and the
+ * controller token cannot call the MCP write ops.
+ */
+export const CONTROLLER_OPS = ['toggle_timer', 'get_timer_status', 'list_targets'] as const
+export type ControllerOp = (typeof CONTROLLER_OPS)[number]
 
 export interface BridgeRequest {
   v?: number
@@ -58,6 +69,10 @@ export interface BridgeCtx {
   token: string | null
   /** Re-checked per request from the settings table. */
   isWriteEnabled: () => boolean
+  /** Controller-scope token (#133); null/undefined ⇒ controller scope unavailable. */
+  controllerToken?: string | null
+  /** Re-checked per request from the settings table. Absent ⇒ disabled. */
+  isControllerEnabled?: () => boolean
   /** Ask the user; encapsulates per-write/session/silent. Resolves to approval. */
   confirm: (summary: string) => Promise<boolean>
   /** Make the one-per-session pre-write backup (idempotent). */
@@ -226,6 +241,10 @@ function planOp(db: Db, op: WriteOp, args: Record<string, unknown>): Plan | { er
         | { id: number }
         | undefined
       if (!client) return { error: 'Kunde existiert nicht' }
+      if (input.project_id != null) {
+        const pErr = validateProjectForClient(db, input.project_id, input.client_id)
+        if (pErr) return { error: pErr }
+      }
       return {
         summary: `Timer starten — Kunde ${input.client_id}: "${input.description}"`,
         preview: {
@@ -262,16 +281,159 @@ function planOp(db: Db, op: WriteOp, args: Record<string, unknown>): Plan | { er
   }
 }
 
+// ── controller scope (#133) ─────────────────────────────────────────────────
+
+interface RunningStatus {
+  id: number
+  client_id: number
+  project_id: number | null
+  description: string
+  started_at: string
+  client_name: string
+  project_name: string | null
+}
+
+/** Current running timer with client/project names, or null. */
+function readRunning(db: Db): RunningStatus | null {
+  const row = db
+    .prepare(
+      `SELECT e.id, e.client_id, e.project_id, e.description, e.started_at,
+              c.name AS client_name, p.name AS project_name
+       FROM entries e
+       JOIN clients c ON c.id = e.client_id
+       LEFT JOIN projects p ON p.id = e.project_id
+       WHERE e.stopped_at IS NULL AND e.deleted_at IS NULL
+       ORDER BY e.started_at DESC LIMIT 1`
+    )
+    .get() as RunningStatus | undefined
+  return row ?? null
+}
+
+/**
+ * Controller ops run without the confirm dialog: the physical key press is the
+ * user's confirmation. Everything else from the write path stays — opt-in
+ * gate, one-per-session backup, audit (with `source: 'controller'`),
+ * broadcast/tray refresh and outbound webhooks.
+ */
+async function handleControllerRequest(
+  ctx: BridgeCtx,
+  req: BridgeRequest
+): Promise<BridgeResponse> {
+  if (!(ctx.isControllerEnabled?.() ?? false)) {
+    return err('write_disabled', 'Hardware-Tasten sind deaktiviert (Einstellungen → Integrationen)')
+  }
+  if (!(CONTROLLER_OPS as readonly string[]).includes(req.op!)) {
+    return err('not_allowed', `Operation nicht erlaubt: ${req.op}`)
+  }
+  const db = ctx.db
+  const op = req.op as ControllerOp
+  const args = req.args ?? {}
+
+  if (op === 'get_timer_status') {
+    return { ok: true, data: { running: readRunning(db) } }
+  }
+
+  if (op === 'list_targets') {
+    const clients = db
+      .prepare(`SELECT id, name, color FROM clients WHERE active = 1 ORDER BY name ASC`)
+      .all() as Array<{ id: number; name: string; color: string }>
+    const projStmt = db.prepare(
+      `SELECT id, name FROM projects WHERE client_id = ? AND status = 'active' ORDER BY name ASC`
+    )
+    return {
+      ok: true,
+      data: {
+        clients: clients.map((c) => ({ ...c, projects: projStmt.all(c.id) }))
+      }
+    }
+  }
+
+  // toggle_timer — target is (client_id, project_id|null); stop on exact
+  // match, otherwise start (startTimer stops any other running entry in the
+  // same transaction — same implicit-switch semantics as the MCP op).
+  const client_id = Number(args.client_id)
+  const project_id = asProjectId(args.project_id, null)
+  const description = asString(args.description)
+  const client = db.prepare(`SELECT id FROM clients WHERE id = ?`).get(client_id) as
+    | { id: number }
+    | undefined
+  if (!client) return err('invalid', 'Kunde existiert nicht')
+  if (project_id != null) {
+    const pErr = validateProjectForClient(db, project_id, client_id)
+    if (pErr) return err('invalid', pErr)
+  }
+
+  const running = readRunning(db)
+  const matches =
+    running !== null &&
+    running.client_id === client_id &&
+    (running.project_id ?? null) === project_id
+
+  if (req.preview) {
+    return {
+      ok: true,
+      data: {
+        preview: true,
+        action: matches ? 'stop' : running ? 'switch' : 'start',
+        client_id,
+        project_id,
+        running
+      }
+    }
+  }
+
+  await ctx.ensureBackup()
+
+  if (matches) {
+    const r = stopRunningTimer(db)
+    if (!r.ok) return err('invalid', r.error)
+    ctx.onChange()
+    ctx.audit({
+      op: 'toggle_timer',
+      source: 'controller',
+      id: r.data?.id ?? null,
+      client_id
+    })
+    ctx.emitWebhook?.('stop_running_timer', r.data)
+    return { ok: true, data: { action: 'stopped', entry: r.data } }
+  }
+
+  const r = startTimer(db, {
+    client_id,
+    description,
+    started_at: new Date().toISOString(),
+    project_id
+  })
+  if (!r.ok) return err('invalid', r.error)
+  ctx.onChange()
+  ctx.audit({
+    op: 'toggle_timer',
+    source: 'controller',
+    id: r.data?.id ?? null,
+    client_id,
+    started_at: r.data?.started_at ?? null
+  })
+  ctx.emitWebhook?.('start_timer', r.data)
+  return { ok: true, data: { action: running ? 'switched' : 'started', entry: r.data } }
+}
+
 /**
  * Guarded request handler. Order: shape → token → opt-in → allowlist → plan →
  * (preview short-circuits here) → confirm → backup → execute → broadcast + audit.
+ * Controller-token requests branch into `handleControllerRequest` after the
+ * token check; the two token scopes never unlock each other's ops.
  */
 export async function handleRequest(ctx: BridgeCtx, req: BridgeRequest): Promise<BridgeResponse> {
   if (!req || req.v !== 1 || typeof req.op !== 'string') {
     return err('invalid', 'Ungültige Anfrage')
   }
-  if (!ctx.token || req.token !== ctx.token) {
+  const mcpAuth = !!ctx.token && req.token === ctx.token
+  const controllerAuth = !!ctx.controllerToken && req.token === ctx.controllerToken
+  if (!mcpAuth && !controllerAuth) {
     return err('bad_token', 'Ungültiges oder fehlendes Token')
+  }
+  if (controllerAuth) {
+    return handleControllerRequest(ctx, req)
   }
   if (!ctx.isWriteEnabled()) {
     return err('write_disabled', 'Schreibzugriff ist deaktiviert (Einstellungen → Integrationen)')

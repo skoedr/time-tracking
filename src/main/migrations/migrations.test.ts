@@ -99,6 +99,8 @@ describe('migration SQL execution', () => {
       { key: 'auto_start', value: '0' },
       { key: 'backup_path', value: '' },
       { key: 'company_name', value: '' },
+      // Migration 023 — hardware-key controller scope (v1.17 #133)
+      { key: 'controller_enabled', value: '0' },
       { key: 'hotkey_toggle', value: 'Alt+Shift+S' },
       { key: 'idle_threshold_minutes', value: '5' },
       { key: 'language', value: 'de' },
