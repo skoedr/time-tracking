@@ -1,53 +1,53 @@
 # TimeTrack — Design Document
 
-**Datum:** 22. April 2026 (Design-System aktualisiert: 27. April 2026)  
-**Modus:** Builder (Eigenbedarf, ggf. später teilen)  
-**Phase:** v1.8 — Glass Design System implementiert  
-**Referenz:** `design/issue-76-glass-reference.html`
+**Date:** 22 April 2026 (design system updated: 27 April 2026)  
+**Mode:** Builder (personal use, possibly shared later)  
+**Phase:** v1.8 — Glass Design System implemented  
+**Reference:** `design/issue-76-glass-reference.html`
 
 ---
 
 ## Design System (v1.8 Glass)
 
-### Typografie
+### Typography
 
-| Rolle           | Font                         | Verwendung                      |
+| Role            | Font                         | Usage                           |
 | --------------- | ---------------------------- | ------------------------------- |
-| UI-Text         | **Inter** (300–700)          | Alle Labels, Buttons, Fließtext |
-| Zahlen / Zeiten | **JetBrains Mono** (400–700) | Timer, Dauern, Hotkeys, Pfade   |
+| UI text         | **Inter** (300–700)          | All labels, buttons, body text  |
+| Numbers / times | **JetBrains Mono** (400–700) | Timer, durations, hotkeys, paths |
 
-Beide Fonts via Google Fonts: `Inter` + `JetBrains Mono`. `font-variant-numeric: tabular-nums` + `letter-spacing: 1` auf allen Timer-Anzeigen.
+Both fonts via Google Fonts: `Inter` + `JetBrains Mono`. `font-variant-numeric: tabular-nums` + `letter-spacing: 1` on all timer displays.
 
 ---
 
-### Farb-Token (Dark / Light)
+### Color tokens (Dark / Light)
 
-Alle Farben als CSS Custom Properties in `src/renderer/src/assets/base.css`:
+All colors as CSS Custom Properties in `src/renderer/src/assets/base.css`:
 
-| Token           | Dark                                        | Light                                       | Verwendung                            |
+| Token           | Dark                                        | Light                                       | Usage                                 |
 | --------------- | ------------------------------------------- | ------------------------------------------- | ------------------------------------- |
-| `--page-bg`     | `linear-gradient(145deg, #0d0f1e, #080c1a)` | `linear-gradient(145deg, #dde4f8, #e8edfb)` | Body-Hintergrund                      |
-| `--card-bg`     | `rgba(255,255,255,0.045)`                   | `rgba(255,255,255,0.70)`                    | Glass-Karten                          |
-| `--card-hover`  | `rgba(255,255,255,0.07)`                    | `rgba(255,255,255,0.88)`                    | Card Hover-State                      |
-| `--nav-bg`      | `rgba(10,12,28,0.80)`                       | `rgba(255,255,255,0.75)`                    | Nav + Drawer-Hintergründe             |
-| `--card-border` | `rgba(255,255,255,0.08)`                    | `rgba(0,0,0,0.07)`                          | Alle Kanten                           |
-| `--input-bg`    | `rgba(0,0,0,0.30)`                          | `rgba(255,255,255,0.90)`                    | Inputs, Selects, Textareas            |
-| `--text`        | `#e8eaf6`                                   | `#1a1c2e`                                   | Primärtext                            |
-| `--text2`       | `#8b93bc`                                   | `#5b6080`                                   | Sekundärtext, Labels                  |
-| `--text3`       | `#4a5270`                                   | `#9098b8`                                   | Hinweistexte, Metadaten               |
-| `--accent`      | `#8b7cf8`                                   | `#5b4ef0`                                   | Primäre Aktionsfarbe (Indigo-Violett) |
-| `--accent-bg`   | `rgba(139,124,248,0.12)`                    | `rgba(91,78,240,0.08)`                      | Subtile Akzent-Flächen                |
-| `--accent-glow` | `rgba(139,124,248,0.25)`                    | `rgba(91,78,240,0.18)`                      | Box-Shadow auf primären Buttons       |
-| `--green`       | `#4ade80`                                   | `#16a34a`                                   | Laufender Timer, Erfolg               |
-| `--green-bg`    | `rgba(74,222,128,0.10)`                     | `rgba(22,163,74,0.07)`                      | ActiveTimerPill-Hintergrund           |
-| `--danger`      | `#f87171`                                   | `#dc2626`                                   | Delete, Stop-Button                   |
-| `--danger-bg`   | `rgba(248,113,113,0.10)`                    | `rgba(220,38,38,0.07)`                      | Danger-Button Hover-Fläche            |
-| `--shadow`      | `0 8px 32px rgba(0,0,0,0.50)`               | `0 8px 32px rgba(100,120,200,0.12)`         | Card-Schatten                         |
-| `--blur`        | `blur(20px)`                                | `blur(20px)`                                | `backdrop-filter` auf Glass-Elementen |
+| `--page-bg`     | `linear-gradient(145deg, #0d0f1e, #080c1a)` | `linear-gradient(145deg, #dde4f8, #e8edfb)` | Body background                       |
+| `--card-bg`     | `rgba(255,255,255,0.045)`                   | `rgba(255,255,255,0.70)`                    | Glass cards                           |
+| `--card-hover`  | `rgba(255,255,255,0.07)`                    | `rgba(255,255,255,0.88)`                    | Card hover state                      |
+| `--nav-bg`      | `rgba(10,12,28,0.80)`                       | `rgba(255,255,255,0.75)`                    | Nav + drawer backgrounds              |
+| `--card-border` | `rgba(255,255,255,0.08)`                    | `rgba(0,0,0,0.07)`                          | All edges                             |
+| `--input-bg`    | `rgba(0,0,0,0.30)`                          | `rgba(255,255,255,0.90)`                    | Inputs, selects, textareas            |
+| `--text`        | `#e8eaf6`                                   | `#1a1c2e`                                   | Primary text                          |
+| `--text2`       | `#8b93bc`                                   | `#5b6080`                                   | Secondary text, labels                |
+| `--text3`       | `#4a5270`                                   | `#9098b8`                                   | Hint text, metadata                   |
+| `--accent`      | `#8b7cf8`                                   | `#5b4ef0`                                   | Primary action color (indigo-violet)  |
+| `--accent-bg`   | `rgba(139,124,248,0.12)`                    | `rgba(91,78,240,0.08)`                      | Subtle accent surfaces                |
+| `--accent-glow` | `rgba(139,124,248,0.25)`                    | `rgba(91,78,240,0.18)`                      | Box-shadow on primary buttons         |
+| `--green`       | `#4ade80`                                   | `#16a34a`                                   | Running timer, success                |
+| `--green-bg`    | `rgba(74,222,128,0.10)`                     | `rgba(22,163,74,0.07)`                      | ActiveTimerPill background            |
+| `--danger`      | `#f87171`                                   | `#dc2626`                                   | Delete, stop button                   |
+| `--danger-bg`   | `rgba(248,113,113,0.10)`                    | `rgba(220,38,38,0.07)`                      | Danger-button hover surface           |
+| `--shadow`      | `0 8px 32px rgba(0,0,0,0.50)`               | `0 8px 32px rgba(100,120,200,0.12)`         | Card shadow                           |
+| `--blur`        | `blur(20px)`                                | `blur(20px)`                                | `backdrop-filter` on glass elements   |
 
 ---
 
-### Komponenten-Pattern
+### Component pattern
 
 #### Glass Card
 
@@ -71,7 +71,7 @@ font-family: Inter, sans-serif;
 font-size: 13px;
 ```
 
-#### Primärer Button (Accent)
+#### Primary button (Accent)
 
 ```css
 background: var(--accent);
@@ -81,7 +81,7 @@ box-shadow: 0 8px 32px var(--accent-glow);
 font-weight: 700;
 ```
 
-#### Pill-Button (Outline / aktiv)
+#### Pill button (Outline / active)
 
 ```css
 /* Inaktiv */
@@ -96,7 +96,7 @@ background: var(--accent);
 color: #fff;
 ```
 
-#### Icon-Button (30×30)
+#### Icon button (30×30)
 
 ```css
 width: 30px;
@@ -107,7 +107,7 @@ background: transparent; /* hover: var(--accent-bg) oder var(--danger-bg) */
 color: var(--text3); /* hover: var(--accent) oder var(--danger) */
 ```
 
-#### Toggle (Boolean-Einstellung)
+#### Toggle (boolean setting)
 
 ```css
 /* Wrapper */
@@ -126,7 +126,7 @@ background: #fff;
 left: 20px (an) / 2px (aus); /* transition: left .2s */
 ```
 
-#### Segmented Control (Single-Pick)
+#### Segmented Control (single-pick)
 
 ```css
 /* Wrapper */
@@ -154,72 +154,72 @@ color: var(--text2);
 [Logo-Mark] [Heute] [Timer] [Kalender] [Kunden] [Einstellungen]   →→   [● Kunde 01:23:47] [☾]
 ```
 
-- Nav-Hintergrund: `var(--nav-bg)` + `backdrop-filter: blur(20px)` + `border-bottom: 1px solid var(--card-border)`
-- Aktiver Tab: `background: var(--accent)`, `color: #fff`, `border-radius: 24px` (Pill)
-- Inaktiver Tab: `color: var(--text2)`, kein Hintergrund, `hover: rgba(255,255,255,0.10)`
-- **Laufender Timer im Nav:** Pill mit `var(--green-bg)` + `var(--green)` Farbe + pulsierender Dot + `JetBrains Mono` Zeit
-- Theme-Toggle: Icon-Button (☾ / ☀) rechts außen
+- Nav background: `var(--nav-bg)` + `backdrop-filter: blur(20px)` + `border-bottom: 1px solid var(--card-border)`
+- Active tab: `background: var(--accent)`, `color: #fff`, `border-radius: 24px` (pill)
+- Inactive tab: `color: var(--text2)`, no background, `hover: rgba(255,255,255,0.10)`
+- **Running timer in the nav:** pill with `var(--green-bg)` + `var(--green)` color + pulsing dot + `JetBrains Mono` time
+- Theme toggle: icon button (☾ / ☀) on the far right
 
 ---
 
-### Ambient-Blobs (Hintergrund-Glühen)
+### Ambient blobs (background glow)
 
-Zwei `position: fixed`, `pointer-events: none`, `z-index: 0` Divs:
+Two `position: fixed`, `pointer-events: none`, `z-index: 0` divs:
 
-- Oben-rechts: `var(--accent-bg)`, `filter: blur(80px)`, `400×400px`, `border-radius: 50%`
-- Unten-links: `var(--green-bg)`, `filter: blur(80px)`, `300×300px`, `border-radius: 50%`
+- Top-right: `var(--accent-bg)`, `filter: blur(80px)`, `400×400px`, `border-radius: 50%`
+- Bottom-left: `var(--green-bg)`, `filter: blur(80px)`, `300×300px`, `border-radius: 50%`
 
 ---
 
-### Einstellungen-View
+### Settings view
 
-Jede Sektion: `Section` = Überschrift (11px, uppercase, `--text3`) + `GlassCard` darunter.  
-Jede Zeile: `Row` = Label links (`--text`, 13px, 500) + optionaler Hint (`--text3`, 11px) + Control rechts.
+Each section: `Section` = heading (11px, uppercase, `--text3`) + `GlassCard` below.  
+Each row: `Row` = label on the left (`--text`, 13px, 500) + optional hint (`--text3`, 11px) + control on the right.
 
-| Setting-Typ                      | Control                                           |
+| Setting type                     | Control                                           |
 | -------------------------------- | ------------------------------------------------- |
-| Boolean (An/Aus)                 | **Toggle** (siehe oben)                           |
-| Single-Pick aus wenigen Optionen | **Segmented Control** (`border-radius: 8px`)      |
-| Text-Eingabe                     | **Glass Input** inline-Darstellung                |
-| Datei-Picker                     | Kleiner `border`-Button „Datei auswählen…"        |
-| Info/Pfad                        | `JetBrains Mono`, `--text3`, `overflow: ellipsis` |
+| Boolean (on/off)                 | **Toggle** (see above)                            |
+| Single-pick from a few options   | **Segmented Control** (`border-radius: 8px`)      |
+| Text input                       | **Glass Input** inline display                    |
+| File picker                      | Small `border` button "Datei auswählen…"          |
+| Info/path                        | `JetBrains Mono`, `--text3`, `overflow: ellipsis` |
 
 ---
 
-### Icons (inline SVG, kein Icon-Package)
+### Icons (inline SVG, no icon package)
 
-Alle Icons als inline SVG, `stroke="currentColor"`, `strokeWidth="1.6"`, `strokeLinecap="round"`:
+All icons as inline SVG, `stroke="currentColor"`, `strokeWidth="1.6"`, `strokeLinecap="round"`:
 
-| Name                      | Verwendung                                  |
+| Name                      | Usage                                       |
 | ------------------------- | ------------------------------------------- |
-| Edit (Stift)              | Eintrag / Kunde bearbeiten                  |
-| Trash (Mülleimer)         | Löschen (danger-Farbe)                      |
-| Archive / Unarchive (Box) | Kunde archivieren / reaktivieren            |
-| Plus (Kreuz)              | Neuer Eintrag / Neuer Kunde                 |
-| ChevLeft / ChevRight      | Kalender-Navigation                         |
-| ChevDown                  | Select-Pfeil                                |
-| Play (gefüllt)            | Timer Start                                 |
-| Stop (Quadrat, gefüllt)   | Timer Stop                                  |
-| Clock                     | Logo-Mark in Nav                            |
-| File                      | PDF / Export                                |
-| X                         | Modal schließen                             |
-| Check                     | Bestätigung                                 |
-| Sun / Moon                | Theme-Toggle                                |
-| Dot (8px Kreis)           | Client-Farbe, pulsierend beim aktiven Timer |
+| Edit (pencil)             | Edit entry / client                         |
+| Trash (bin)               | Delete (danger color)                       |
+| Archive / Unarchive (box) | Archive / reactivate client                 |
+| Plus (cross)              | New entry / new client                      |
+| ChevLeft / ChevRight      | Calendar navigation                         |
+| ChevDown                  | Select arrow                                |
+| Play (filled)             | Timer start                                 |
+| Stop (square, filled)     | Timer stop                                  |
+| Clock                     | Logo mark in nav                            |
+| File                      | PDF / export                                |
+| X                         | Close modal                                 |
+| Check                     | Confirmation                                |
+| Sun / Moon                | Theme toggle                                |
+| Dot (8px circle)          | Client color, pulsing on the active timer   |
 
 ---
 
-### Content-Layout
+### Content layout
 
-- Maximale Inhaltsbreite: `max-w-3xl` (ca. 740px) mit `margin: 0 auto`
-- Einstellungen-View: max `580px`
-- Kunden-View: max `600px`
-- Timer-View: zentriert (`align-items: center`, `justify-content: center`) mit großer Uhr
-- Padding: `22px 28px` im Haupt-Content-Bereich
+- Maximum content width: `max-w-3xl` (approx. 740px) with `margin: 0 auto`
+- Settings view: max `580px`
+- Clients view: max `600px`
+- Timer view: centered (`align-items: center`, `justify-content: center`) with a large clock
+- Padding: `22px 28px` in the main content area
 
 ---
 
-### Animationen
+### Animations
 
 ```css
 @keyframes fadeIn {
@@ -253,10 +253,10 @@ Alle Icons als inline SVG, `stroke="currentColor"`, `strokeWidth="1.6"`, `stroke
 }
 ```
 
-- Views beim Mounten: `animation: fadeIn .2s ease`
-- Laufender Timer-Dot: `animation: pulse-dot 2s infinite`
+- Views on mount: `animation: fadeIn .2s ease`
+- Running timer dot: `animation: pulse-dot 2s infinite`
 - Drawer (CalendarDrawer): `animation: slideIn .2s ease`
-- Alle interaktiven Elemente: `transition: all .15s` (Hover-States)
+- All interactive elements: `transition: all .15s` (hover states)
 
 ---
 
@@ -277,133 +277,132 @@ Alle Icons als inline SVG, `stroke="currentColor"`, `strokeWidth="1.6"`, `stroke
 
 ---
 
-## Das Problem
+## The problem
 
-Freelancer (ein Nutzer) möchte Projektzeiten tracken und daraus saubere
-Stundennachweise für Kunden erzeugen. Toggl Track ist zu viel (Cloud-Account,
-Subscription, Team-Features). Excel ist zu langsam. Es soll sich anfühlen wie
-ein kleines, professionelles Windows-Tool das man einfach nebenbei laufen lässt.
+A freelancer (single user) wants to track project time and produce clean
+timesheets for clients from it. Toggl Track is too much (cloud account,
+subscription, team features). Excel is too slow. It should feel like
+a small, professional Windows tool that you simply let run on the side.
 
 ---
 
 ## Vision
 
-Ein zweiteiliges Windows-Tool:
+A two-part Windows tool:
 
-1. **Mini-Modus** — Timer-Widget, immer im Vordergrund, ein Klick zum Starten.
-2. **Kalender-Modus** — Monatsansicht, Einträge nachtragen, Stundennachweis exportieren.
+1. **Mini mode** — timer widget, always in front, one click to start.
+2. **Calendar mode** — month view, add entries after the fact, export a timesheet.
 
-Das primäre Artefakt: ein PDF-Stundennachweis, der wie "Seite 2" der eigenen Rechnung
-aussieht.
+The primary artifact: a PDF timesheet that looks like "page 2" of your own invoice.
 
 ---
 
-## Prämissen (bestätigt)
+## Premises (confirmed)
 
-| #   | Prämisse                                                                                  |
+| #   | Premise                                                                                   |
 | --- | ----------------------------------------------------------------------------------------- |
-| 1   | Solo-Freelancer-Tool. Kein Team, keine Cloud, alles lokal.                                |
-| 2   | Mini-Modus ist der tägliche Workflow. Kalender ist für Nachtragen & Monatsabschluss.      |
-| 3   | Primäres Artefakt: PDF-Stundennachweis. Keine Rechnungsstellung, kein Buchhaltungsexport. |
-| 4   | Electron + React als Basis. Outlook-Integration (Graph API) kommt in Phase 2.             |
+| 1   | Solo-freelancer tool. No team, no cloud, everything local.                                |
+| 2   | Mini mode is the daily workflow. Calendar is for adding entries & month-end close.        |
+| 3   | Primary artifact: PDF timesheet. No invoicing, no accounting export.                      |
+| 4   | Electron + React as the base. Outlook integration (Graph API) comes in phase 2.           |
 
 ---
 
-## Tech-Stack
+## Tech stack
 
-| Schicht        | Technologie                                   | Begründung                                                                        |
+| Layer          | Technology                                    | Rationale                                                                          |
 | -------------- | --------------------------------------------- | --------------------------------------------------------------------------------- |
-| Shell          | **Electron**                                  | Native Windows-Fenster, System-Tray, kein Browser nötig                           |
-| UI             | **React** + Tailwind CSS                      | Nutzer kennt Web-Stack, schnelle Iteration                                        |
-| Datenbank      | **SQLite** (via `better-sqlite3`)             | Lokal, zero-config, kein Server                                                   |
-| PDF            | **Electron `webContents.printToPDF()`**       | Nutzt Chromium das Electron bereits eingebaut hat — kein Puppeteer (+300MB) nötig |
-| Build          | **electron-builder**                          | `.exe`-Installer für Windows, Auto-Update vorbereitet                             |
-| Paket-Manager  | **npm** / **pnpm**                            | Standard für Electron-Projekte                                                    |
-| IPC-Sicherheit | **Context Bridge** (`contextIsolation: true`) | HTML-Templates werden gerendert — nodeIntegration bleibt aus                      |
-| Datenpfad      | **`app.getPath('userData')`**                 | `%AppData%\TimeTrack\` — Updates überschreiben Daten nie                          |
+| Shell          | **Electron**                                  | Native Windows window, system tray, no browser needed                             |
+| UI             | **React** + Tailwind CSS                      | User knows the web stack, fast iteration                                          |
+| Database       | **SQLite** (via `better-sqlite3`)             | Local, zero-config, no server                                                     |
+| PDF            | **Electron `webContents.printToPDF()`**       | Uses the Chromium that Electron already ships — no Puppeteer (+300MB) needed      |
+| Build          | **electron-builder**                          | `.exe` installer for Windows, auto-update prepared                                |
+| Package manager | **npm** / **pnpm**                           | Standard for Electron projects                                                    |
+| IPC security   | **Context Bridge** (`contextIsolation: true`) | HTML templates are rendered — nodeIntegration stays off                           |
+| Data path      | **`app.getPath('userData')`**                 | `%AppData%\TimeTrack\` — updates never overwrite data                             |
 
-> **Warum nicht Tauri?** Rust-Lernkurve würde Phase 1 verlangsamen. Tauri bleibt
-> Option für Phase 3, wenn Executable-Größe wichtig wird.
+> **Why not Tauri?** The Rust learning curve would slow down phase 1. Tauri stays
+> an option for phase 3, when executable size becomes important.
 
-> **Warum nicht Web-App?** System-Tray, Always-on-top-Fenster und echter Windows-Feel
-> sind für den Mini-Modus entscheidend. Eine Web-App kann das nicht.
-
----
-
-## Feature-Scope
-
-### Phase 1 — Das Kernprodukt
-
-#### Mini-Modus (Timer-Widget)
-
-- **Always-on-top**, kleines Fenster (~300×150px)
-- **Start / Pause / Stop**-Buttons mit Tastenkürzel (`F5` / `F6`)
-- **Globaler Hotkey** (`F5`/`F6`) — funktioniert auch wenn das Fenster im Hintergrund ist (`globalShortcut`)
-- **Kunden-Dropdown** (schnell wechselbar)
-- **Tätigkeitsbeschreibung** (Freitextfeld, Pflicht vor Stop)
-- **Laufende Dauer** (HH:MM:SS, live)
-- **Rundungsmodus**-Indikator (zeigt gerundete Zeit an)
-- Klick auf Titel → wechselt zu Kalender-Modus
-- **Tray-Icon:** Grün = Timer läuft, Grau = gestoppt (via `nativeImage` + Electron Tray API)
-
-#### Kalender-Modus
-
-- **Monatsansicht** (Kalender-Grid, ein Block pro Eintrag)
-- **Farb-Kodierung** nach Kunde
-- **Eintrag erstellen/bearbeiten/löschen** (manuell, für Nachträge)
-- **Gesamtstunden pro Monat** je Kunde (Sidebar-Summary)
-- **PDF exportieren**-Button (öffnet Export-Dialog)
-- **Liste-Ansicht** alternativ zur Kalender-Ansicht
-
-#### Kunden-Verwaltung
-
-- Name, Farbe, Kurzbezeichnung (für den PDF-Header)
-- Stundensatz (optional, für spätere Berechnungen)
-- Archivieren (nicht löschen)
-
-#### Einstellungen
-
-- **Rundungsmodus:** 5 / 10 / 15 / 30 Minuten; Ceil / Floor / Round
-- **Branding:** Logo (PNG/SVG), Firmenname, Adresse, USt-Nr. (für PDF-Footer)
-- **Standard-Tätigkeiten:** vordefinierte Texte als Quickselect
-- **Startverhalten:** Autostart mit Windows (optional)
-- **Mini-Modus immer im Vordergrund:** An/Aus
-- **Auto-Backup:** Konfigurierbarer Zielordner (z.B. OneDrive); SQLite-DB wird täglich kopiert
-
-#### PDF-Export
-
-- **Zeitraum** wählen (Monat-Picker oder benutzerdefiniert)
-- **Kunde** wählen
-- **HTML-Template** (anpassbar, liegt im App-Datenordner)
-- **Standardlayout:**
-  - Header: Logo links, Kunden-Info rechts, Zeitraum
-  - Tabelle: Datum | Von | Bis | Tätigkeit | Dauer (gerundet)
-  - Footer: Gesamtstunden, Unterschriftszeile, Seitenangabe
-- PDF wird gespeichert und im Explorer geöffnet
+> **Why not a web app?** System tray, always-on-top window, and a real Windows feel
+> are decisive for mini mode. A web app cannot do that.
 
 ---
 
-### Phase 2 — Outlook-Integration
+## Feature scope
 
-- **Microsoft Graph API** (OAuth2, einmalige Anmeldung)
-- Office E1 Subscription wird unterstützt (delegated permissions: `Calendars.Read`)
-- Kalender-Ereignisse importieren → einem Kunden + Tätigkeit zuordnen
-- Duplikat-Erkennung (gleiches Ereignis nicht zweimal importieren)
-- Sync-Button im Kalender-Modus
+### Phase 1 — the core product
+
+#### Mini mode (timer widget)
+
+- **Always-on-top**, small window (~300×150px)
+- **Start / Pause / Stop** buttons with keyboard shortcut (`F5` / `F6`)
+- **Global hotkey** (`F5`/`F6`) — works even when the window is in the background (`globalShortcut`)
+- **Client dropdown** (quickly switchable)
+- **Activity description** (free-text field, required before stop)
+- **Running duration** (HH:MM:SS, live)
+- **Rounding-mode** indicator (shows the rounded time)
+- Click on the title → switches to calendar mode
+- **Tray icon:** green = timer running, gray = stopped (via `nativeImage` + Electron Tray API)
+
+#### Calendar mode
+
+- **Month view** (calendar grid, one block per entry)
+- **Color coding** by client
+- **Create/edit/delete entry** (manual, for retroactive entries)
+- **Total hours per month** by client (sidebar summary)
+- **Export PDF** button (opens the export dialog)
+- **List view** as an alternative to the calendar view
+
+#### Client management
+
+- Name, color, short label (for the PDF header)
+- Hourly rate (optional, for later calculations)
+- Archive (not delete)
+
+#### Settings
+
+- **Rounding mode:** 5 / 10 / 15 / 30 minutes; ceil / floor / round
+- **Branding:** logo (PNG/SVG), company name, address, VAT no. (for the PDF footer)
+- **Default activities:** predefined texts as quick-select
+- **Startup behavior:** autostart with Windows (optional)
+- **Mini mode always in front:** on/off
+- **Auto-backup:** configurable target folder (e.g. OneDrive); the SQLite DB is copied daily
+
+#### PDF export
+
+- Choose the **time range** (month picker or custom)
+- Choose the **client**
+- **HTML template** (customizable, lives in the app data folder)
+- **Default layout:**
+  - Header: logo on the left, client info on the right, time range
+  - Table: date | from | to | activity | duration (rounded)
+  - Footer: total hours, signature line, page number
+- The PDF is saved and opened in Explorer
 
 ---
 
-### Phase 3 — Nice-to-have (kein Commit)
+### Phase 2 — Outlook integration
 
-- Tauri-Rewrite für kleinere Executable-Größe
-- ~~Dark Mode~~ **✅ implementiert in v1.8**
-- Multi-Monitor-Unterstützung für Mini-Modus
-- CSV-Export (für Buchhaltung)
-- Statistik-View (Stunden pro Woche/Monat über Zeit)
+- **Microsoft Graph API** (OAuth2, one-time sign-in)
+- Office E1 subscription is supported (delegated permissions: `Calendars.Read`)
+- Import calendar events → map to a client + activity
+- Duplicate detection (do not import the same event twice)
+- Sync button in calendar mode
 
 ---
 
-## Datenmodell
+### Phase 3 — nice-to-have (no commitment)
+
+- Tauri rewrite for a smaller executable size
+- ~~Dark mode~~ **✅ implemented in v1.8**
+- Multi-monitor support for mini mode
+- CSV export (for accounting)
+- Statistics view (hours per week/month over time)
+
+---
+
+## Data model
 
 ```sql
 -- Kunden
@@ -444,9 +443,9 @@ CREATE TABLE settings (
 
 ---
 
-## UI-Skizzen
+## UI sketches
 
-### Mini-Modus
+### Mini mode
 
 ```
 ┌─────────────────────────────┐
@@ -456,7 +455,7 @@ CREATE TABLE settings (
 └─────────────────────────────┘
 ```
 
-### Kalender-Modus (Header)
+### Calendar mode (header)
 
 ```
 ┌──────────────────────────────────────────────────┐
@@ -470,7 +469,7 @@ CREATE TABLE settings (
 
 ---
 
-## App-Verzeichnisstruktur
+## App directory structure
 
 ```
 time-tracking/
@@ -498,76 +497,76 @@ time-tracking/
 
 ---
 
-## Schnellster Weg zu Phase 1 (Build Order)
+## Fastest path to phase 1 (build order)
 
-1. **Electron-Boilerplate** aufsetzen (`electron-vite` + React + TypeScript, `contextIsolation: true`)
-2. **Context Bridge** definieren (IPC-API zwischen Main + Renderer)
-3. **SQLite** anbinden, Schema anlegen (`userData`-Pfad), Index setzen
-4. **Mini-Modus** — Timer-Widget, Start/Stop, Client-Selector
-   - Heartbeat-Schreiber (setInterval 30s → `heartbeat_at` in DB)
-   - Crash-Recovery beim App-Start (offener Eintrag? → Auto-Stop)
-5. **Globaler Hotkey** (`globalShortcut` F5/F6)
-6. **Tray-Icon** — grün/grau, Tooltip mit aktueller Dauer
-7. **Kunden-Verwaltung** (CRUD in Settings)
-8. **Kalender-Modus** — Monatsansicht, Einträge anzeigen
-9. **Manueller Eintrag** — Dialog für Nachträge
-10. **Einstellungen** — Rundungsmodus, Branding, Auto-Backup-Pfad
-11. **Auto-Backup** — täglich SQLite-Datei in Backup-Ordner kopieren
-12. **PDF-Export** — HTML-Template + `webContents.printToPDF()`
+1. Set up **Electron boilerplate** (`electron-vite` + React + TypeScript, `contextIsolation: true`)
+2. Define the **Context Bridge** (IPC API between main + renderer)
+3. Wire up **SQLite**, create the schema (`userData` path), set the index
+4. **Mini mode** — timer widget, start/stop, client selector
+   - Heartbeat writer (setInterval 30s → `heartbeat_at` in the DB)
+   - Crash recovery on app start (open entry? → auto-stop)
+5. **Global hotkey** (`globalShortcut` F5/F6)
+6. **Tray icon** — green/gray, tooltip with the current duration
+7. **Client management** (CRUD in Settings)
+8. **Calendar mode** — month view, show entries
+9. **Manual entry** — dialog for retroactive entries
+10. **Settings** — rounding mode, branding, auto-backup path
+11. **Auto-backup** — copy the SQLite file to the backup folder daily
+12. **PDF export** — HTML template + `webContents.printToPDF()`
 13. **Installer** — electron-builder `.exe`
-14. **Phase 2:** Outlook-Integration (Graph API)
+14. **Phase 2:** Outlook integration (Graph API)
 
 ---
 
-## Offene Entscheidungen
+## Open decisions
 
-| Frage               | Empfehlung                                                | Alternative          |
+| Question            | Recommendation                                            | Alternative          |
 | ------------------- | --------------------------------------------------------- | -------------------- |
-| State-Management    | Zustand (minimal, kein Redux-Overhead)                    | Jotai                |
-| Datumslib           | `date-fns` (tree-shakeable)                               | `dayjs`              |
-| Kalender-Komponente | Eigenbau (simpler Grid)                                   | `react-big-calendar` |
-| PDF-Preview         | Browser-Vorschau-Fenster (BrowserWindow mit `printToPDF`) | direkt speichern     |
-| Update-Mechanismus  | electron-updater (GitHub Releases)                        | manuell              |
+| State management    | Zustand (minimal, no Redux overhead)                      | Jotai                |
+| Date library        | `date-fns` (tree-shakeable)                               | `dayjs`              |
+| Calendar component  | Custom-built (simple grid)                                | `react-big-calendar` |
+| PDF preview         | Browser preview window (BrowserWindow with `printToPDF`)  | save directly        |
+| Update mechanism    | electron-updater (GitHub Releases)                        | manual               |
 
-## Architektur-Entscheidungen (aus Reviews)
+## Architecture decisions (from reviews)
 
-| Entscheidung   | Gewählt                    | Begründung                                                    |
+| Decision       | Chosen                     | Rationale                                                     |
 | -------------- | -------------------------- | ------------------------------------------------------------- |
-| IPC-Sicherheit | Context Bridge             | HTML-Templates werden gerendert, nodeIntegration aus          |
-| PDF-Engine     | `webContents.printToPDF()` | Electron hat Chromium bereits — kein Puppeteer                |
-| Datenpfad      | `app.getPath('userData')`  | Updates-sicher, kein Datenverlust                             |
-| Crash-Recovery | Heartbeat + Auto-Stop      | `heartbeat_at` alle 30s, beim Start offene Einträge schließen |
+| IPC security   | Context Bridge             | HTML templates are rendered, nodeIntegration off              |
+| PDF engine     | `webContents.printToPDF()` | Electron already has Chromium — no Puppeteer                  |
+| Data path      | `app.getPath('userData')`  | Update-safe, no data loss                                     |
+| Crash recovery | Heartbeat + auto-stop      | `heartbeat_at` every 30s, close open entries on start         |
 
-## Pflicht-Tests (aus Eng-Review)
+## Mandatory tests (from eng review)
 
-| Test                                             | Typ         | Priorität |
+| Test                                             | Type        | Priority  |
 | ------------------------------------------------ | ----------- | --------- |
-| Rundungsmodus (alle 3 Modi × alle Intervalle)    | Unit        | P1        |
-| Crash-Recovery: App-Start mit offenem Eintrag    | Integration | P1        |
-| PDF-Export: korrekter Zeitraum, korrekte Stunden | Integration | P1        |
-| Auto-Backup: Zielordner nicht existent           | Unit        | P2        |
-| Zombie-Erkennung: heartbeat > 5 min alt          | Unit        | P1        |
+| Rounding mode (all 3 modes × all intervals)      | Unit        | P1        |
+| Crash recovery: app start with an open entry     | Integration | P1        |
+| PDF export: correct time range, correct hours    | Integration | P1        |
+| Auto-backup: target folder does not exist        | Unit        | P2        |
+| Zombie detection: heartbeat > 5 min old          | Unit        | P1        |
 
 ---
 
-## Deferred (nach erstem Release)
+## Deferred (after the first release)
 
-- Quick-Start via Tray-Kontextmenü (Start letzter Kunde, Stop)
-- Monats-Statistik (Balken-Chart Stunden pro Kunde)
-
----
-
-## Was wir bewusst NICHT bauen (Phase 1)
-
-- Kein Cloud-Sync, kein Account, kein Login
-- Keine Rechnungsstellung
-- Keine Teamfunktionen
-- Kein Mobile-Client
-- Keine Zeiterfassung per Screenshot/Activity-Tracking (kein Spy-Tool)
+- Quick-start via tray context menu (start last client, stop)
+- Monthly statistics (bar chart of hours per client)
 
 ---
 
-_Design-Status: REVIEWED — CEO + Eng Review abgeschlossen. Glass Design System v1.8 implementiert (issue #76)._
+## What we deliberately do NOT build (phase 1)
+
+- No cloud sync, no account, no login
+- No invoicing
+- No team features
+- No mobile client
+- No time tracking via screenshot/activity tracking (no spy tool)
+
+---
+
+_Design status: REVIEWED — CEO + eng review completed. Glass Design System v1.8 implemented (issue #76)._
 
 **Reviews:** /office-hours ✓ | /plan-ceo-review ✓ (SELECTIVE EXPANSION) | /plan-eng-review ✓
 

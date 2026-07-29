@@ -1,45 +1,43 @@
 # TimeTrack
 
-> 🌐 [English version available → README.en.md](README.en.md)
-
-A personal Windows desktop time-tracking app for freelancers. Lightweight Toggl alternative with a local SQLite database, calendar view, and PDF Stundennachweis export.
+A personal Windows desktop time-tracking app for freelancers. Lightweight Toggl alternative with a local SQLite database, calendar view, and PDF timesheet export.
 
 ## Features
 
-- **Heute-Ansicht** — Default-Tab mit aktivem Timer als Pille, Tages-/Wochensumme, Top-3-Kunden-Quick-Start und letzte 5 Einträge.
-- **Timer** — Start/Stop mit Kunden-Auswahl und Beschreibung. Crash-safe via Heartbeat.
-- **Kalender-Modus** — 7×N-Monatsraster mit KW-Spalte, Tagessumme, farbigen Mini-Bars pro Kunde, Tages-Drawer mit Inline-Edit.
-- **Quick-Filter + 1-Klick-PDF** — "Diese Woche / Letzte Woche / Diesen Monat / Letzter Monat" plus Hero-Button "📄 Letzter Monat als PDF".
-- **PDF-Stundennachweis** — Druckbares A4-PDF mit Datum / Von / Bis / Tätigkeit / Dauer (optional Honorar). Konfigurierbar in **Einstellungen → PDF-Vorlage**: Logo, Absender, Steuernummer, Akzentfarbe, Footer, Stunden-Rundung, optionale Unterschriftsfelder.
-- **PDF-Merge — An Rechnung anhängen** — Stundennachweis direkt an eine bestehende Lexware-/sevDesk-/Billomat-Rechnungs-PDF anhängen. Checkbox im Export-Modal aktivieren, Rechnung wählen, fertig. Kein Smallpdf, kein Acrobat. Output: `<Rechnungsname>_inkl_Stundennachweis.pdf` neben der Original-Datei. Original bleibt unverändert.
-- **Stundensatz pro Kunde** — Optionales Honorar-Feld, fließt als €-Spalte ins PDF.
-- **JSON-Vollexport** — Kunden + Einträge + Settings als lesbare JSON-Datei (Daten-Portabilität).
-- **Cross-Midnight Auto-Split** — Einträge über Mitternacht werden automatisch in zwei verlinkte Tageshalften gesplittet — DST-sicher.
-- **Kunden- & Projektverwaltung** — Kunden anlegen, bearbeiten, archivieren, löschen (Farbcode + Stundensatz). Pro Kunde beliebig viele **Projekte** mit eigenem Farbcode und optionalem Stundensatz-Override. Timer, Heute-Ansicht, Kalender und Eintrag-Bearbeitung zeigen den Projektnamen; Export (PDF + CSV) nach Projekt filterbar.
-- **Global Hotkey** — `Alt+Shift+S` (konfigurierbar) startet/stoppt den Timer aus jedem Tab.
-- **Tray Icon + Quick-Start** — Rechtsklick auf die Tray öffnet aktive Kunden direkt als Buttons. Tray-Glyph wechselt je nach Timer-State.
-- **Mini-Widget** — Always-on-top 200×40 Overlay (Hotkey `Alt+Shift+M`, konfigurierbar). Zeigt laufenden Timer + Kunde + Stop/Start-Buttons — kein Hauptfenster nötig. Draggable, sichtbar über Vollbild-Apps.
-- **Tags pro Eintrag** — Farbige Chips je Zeitblock. Filter im Kalender-Drawer per Tag-Klick. PDF-Export nach Tag gruppierbar.
-- **Schnell-Notiz nach Stop** — Kein Beschreibungsfeld ausgefüllt? 30s-Modal „Was war das?" erscheint nach dem Stoppen. Enter speichert, Escape überspringt.
-- **Idle-Detection** — PC inaktiv über Schwelle? Modal fragt: behalten, stoppen oder als Pause markieren.
-- **Auto-Backup** — Rollierende 7-Tage-SQLite-Snapshots unter `%AppData%\TimeTrack\backups\`. Manueller Backup + Restore aus Settings.
-- **DB Migrations** — Versioniertes Schema mit Pre-Migration-Backup, sodass Updates nie Daten verlieren.
-- **Auto-Update** — `electron-updater` prüft beim Start auf neue GitHub-Releases. UpdateBanner erscheint bei verfügbaren Updates; manueller Check + Installieren-Button in Einstellungen → Updates.
-- **Crash-Logging** — `electron-log` schreibt rotierende Logs in `%AppData%\TimeTrack\logs\`. Catch-all für Main- und Renderer-Process-Fehler. Log-Datei direkt aus Einstellungen → Diagnose öffnen.
-- **Onboarding-Wizard** — 3-stufiger Assistent beim ersten Start: Sprache wählen → ersten Kunden anlegen → Hotkey-Hinweis. Ein-mal gezeigt; Bestandsuser behalten das Flag automatisch.
-- **CSV-Export** — Unified ExportModal mit Kunden-/Zeitraum-Filter. Produkt: flache CSV-Datei mit allen Einträgen (DATEV-kompatibles Format).
-- **i18n DE/EN** — vollständige Übersetzung über typsichere Locale-Dateien. Sprache umschaltbar in Einstellungen → Allgemein (wirkt live ohne Neustart).
-- **Lizenz-Hinweise** — About-Dialog unter Einstellungen → Über. Zeigt die MIT-Lizenz von TimeTrack + aufklappbare Liste aller 95 gebündelten Drittanbieter-Pakete mit SPDX-Bezeichner und Lizenztext.
-- **Auto-Update Releases** — `v*`-Tag pushen baut den Windows-Installer und publishes ein GitHub Release automatisch (mit gepacktem Smoke-Test gegen DB **und** PDF-Pipeline).
-- **Local SQLite** — Alle Daten bleiben auf deiner Maschine unter `%AppData%\TimeTrack\`.
+- **Today View** — Default tab with the active timer as a pill, daily/weekly total, top-3 client quick-start, and last 5 entries.
+- **Timer** — Start/stop with client selection and description. Crash-safe via heartbeat.
+- **Calendar Mode** — 7×N monthly grid with calendar-week column, daily total, color-coded mini-bars per client, and day-drawer with inline edit.
+- **Quick-Filter + 1-Click PDF** — "This week / Last week / This month / Last month" plus hero button "📄 Last month as PDF".
+- **PDF Timesheet** — Printable A4 PDF with date / from / to / activity / duration (optionally with fee). Configurable in **Settings → PDF Template**: logo, sender address, tax number, accent color, footer, hour rounding, optional signature fields.
+- **PDF Merge — Attach to Invoice** — Attach the timesheet directly to an existing Lexware / sevDesk / Billomat invoice PDF. Enable the checkbox in the export modal, pick your invoice, done. No Smallpdf, no Acrobat. Output: `<invoice-name>_inkl_Stundennachweis.pdf` next to the original file. The original is never modified.
+- **Hourly Rate per Client** — Optional fee field, renders as a €-column in the PDF.
+- **Full JSON Export** — Clients + entries + settings as a readable JSON file (data portability).
+- **Cross-Midnight Auto-Split** — Entries spanning midnight are automatically split into two linked half-day entries — DST-safe.
+- **Client & Project Management** — Create, edit, archive, and delete clients (color code + hourly rate). Each client can have any number of **projects** with their own color and an optional hourly-rate override. Timer, Today View, Calendar, and entry editing all show the project name; export (PDF + CSV) can be filtered by project.
+- **Global Hotkey** — `Alt+Shift+S` (configurable) starts/stops the timer from any tab.
+- **Tray Icon + Quick-Start** — Right-click the tray to open active clients as direct buttons. Tray glyph changes with timer state.
+- **Mini Widget** — Always-on-top 200×40 overlay (hotkey `Alt+Shift+M`, configurable). Shows running timer + client + stop/start buttons — no main window needed. Draggable, visible over fullscreen apps.
+- **Tags per Entry** — Color chips per time block. Filter in the calendar drawer by tag click. PDF export groupable by tag.
+- **Quick Note after Stop** — Description field left empty? A 30 s "What was that?" modal appears after stopping. Enter saves, Escape skips.
+- **Idle Detection** — PC idle beyond the threshold? A modal asks: keep, stop, or mark as break.
+- **Auto-Backup** — Rolling 7-day SQLite snapshots under `%AppData%\TimeTrack\backups\`. Manual backup + restore from Settings.
+- **DB Migrations** — Versioned schema with pre-migration backup, so updates never lose data.
+- **Auto-Update** — `electron-updater` checks for new GitHub releases on startup. UpdateBanner appears when updates are available; manual check + install button in Settings → Updates.
+- **Crash Logging** — `electron-log` writes rotating logs to `%AppData%\TimeTrack\logs\`. Catch-all for main- and renderer-process errors. Log file can be opened directly from Settings → Diagnostics.
+- **Onboarding Wizard** — 3-step assistant on first start: choose language → create first client → hotkey hint. Shown once; existing users keep the flag automatically.
+- **CSV Export** — Unified ExportModal with client/date-range filter. Output: flat CSV file with all entries (DATEV-compatible format).
+- **i18n DE/EN** — Full translation via type-safe locale files. Language switchable in Settings → General (applies live, no restart needed).
+- **License Notices** — About dialog under Settings → About. Shows the MIT license of TimeTrack + an expandable list of all 95 bundled third-party packages with SPDX identifier and license text.
+- **Auto-Update Releases** — Pushing a `v*` tag builds the Windows installer and publishes a GitHub Release automatically (with a packaged smoke test against the DB **and** the PDF pipeline).
+- **Local SQLite** — All data stays on your machine under `%AppData%\TimeTrack\`.
 
 ### Coming soon
 
-- **Outlook-Integration** (v2.0) — Read-only-Import via Microsoft Graph
-  (Device-Code-Flow, kein Server, Office E1 + persönliche Konten).
-- Pomodoro-Modus (#23) — bedingt auf User-Demand verschoben nach v1.8.
+- **Outlook Integration** (v2.0) — Read-only import via Microsoft Graph
+  (Device Code Flow, no server, Office E1 + personal accounts).
+- Pomodoro mode (#23) — conditionally deferred to v1.8 based on user demand.
 
-Vollständige Roadmap: [ROADMAP.md](ROADMAP.md) · Issues: [github.com/skoedr/time-tracking/issues](https://github.com/skoedr/time-tracking/issues)
+Full roadmap: [ROADMAP.md](ROADMAP.md) · Issues: [github.com/skoedr/time-tracking/issues](https://github.com/skoedr/time-tracking/issues)
 
 ## Tech Stack
 
@@ -74,38 +72,39 @@ pnpm test
 pnpm build:win
 ```
 
-> **Warum `pnpm test` und nicht `vitest`:** `better-sqlite3` wird gegen die
-> **Electron**-ABI gebaut (`postinstall` → `electron-builder install-app-deps`), weil
-> die App das zur Laufzeit braucht. Ein System-Node kann diese Binary nicht laden.
-> `pnpm test` startet Vitest deshalb über `scripts/run-vitest.mjs` auf der
-> Electron-Binary im Node-Modus (`ELECTRON_RUN_AS_NODE=1`) — dieselbe Antwort wie
-> beim MCP-Server, siehe unten. Damit laufen lokal und in CI dieselben Tests, ohne
-> zweite Binärkopie und ohne Rebuild-Hin-und-Her, das `pnpm dev` zerlegen würde.
+> **Why `pnpm test` and not `vitest`:** `better-sqlite3` is built against the
+> **Electron** ABI (`postinstall` → `electron-builder install-app-deps`), because
+> the app needs it at runtime. A system Node cannot load this binary.
+> `pnpm test` therefore starts Vitest via `scripts/run-vitest.mjs` on the
+> Electron binary in Node mode (`ELECTRON_RUN_AS_NODE=1`) — the same answer as
+> the MCP server, see below. This way local and CI runs execute the same tests,
+> without a second binary copy and without the rebuild back-and-forth that would
+> break `pnpm dev`.
 >
-> `pnpm exec vitest run` **direkt** aufzurufen schlägt entsprechend fehl — mit einem
-> Hinweis, der auf `pnpm test` zeigt. Das ist Absicht: früher haben sich die
-> DB-Tests in dem Fall stillschweigend übersprungen und ein Drittel der Abdeckung
-> verschwand hinter einer grünen Zusammenfassung ([#151](https://github.com/skoedr/time-tracking/issues/151)).
+> Calling `pnpm exec vitest run` **directly** fails accordingly — with a hint
+> pointing to `pnpm test`. This is intentional: previously the DB tests would
+> silently skip themselves in that case and a third of the coverage disappeared
+> behind a green summary ([#151](https://github.com/skoedr/time-tracking/issues/151)).
 
-## MCP-Integration
+## MCP Integration
 
-TimeTrack bringt einen **[MCP](https://modelcontextprotocol.io)-Server** mit, damit
-Werkzeuge wie **Claude Code** die lokale Zeiterfassung nutzen können — z. B. „summiere
-meine Stunden für Kunde X im Juni nach Projekt" oder „trag den vergessenen Termin nach".
+TimeTrack ships an **[MCP](https://modelcontextprotocol.io) server** so that
+tools like **Claude Code** can use your local time tracking — e.g. "sum up my
+hours for client X in June by project" or "log the meeting I forgot".
 
-**Lese-Tools** (der Server öffnet die SQLite-DB **strikt schreibgeschützt**): `list_clients`,
-`list_projects`, `list_entries` (Monat oder Datumsspanne, Filter nach Kunde/Projekt/Tag),
-`get_running_timer`, `get_dashboard`, `get_analytics` (Monatsstunden, optional Umsatz).
+**Read tools** (the server opens the SQLite DB **strictly read-only**): `list_clients`,
+`list_projects`, `list_entries` (month or date range, filter by client/project/tag),
+`get_running_timer`, `get_dashboard`, `get_analytics` (monthly hours, optionally revenue).
 
-**Schreib-Tools** (opt-in, siehe unten): `create_manual_entry`, `update_entry_fields`,
-`start_timer`, `stop_running_timer` — jeweils mit `preview: true` für eine Vorschau ohne Commit.
+**Write tools** (opt-in, see below): `create_manual_entry`, `update_entry_fields`,
+`start_timer`, `stop_running_timer` — each with `preview: true` for a preview without a commit.
 
-**Der Server ist in der installierten App enthalten** — es braucht weder ein Checkout
-noch einen Build noch ein separat installiertes Node.
+**The server is included in the installed app** — no checkout, no build, and no
+separately installed Node required.
 
-**In Claude Code registrieren:** Den fertigen Block unter **Einstellungen → Integrationen**
-kopieren (die Pfade sind dort bereits für deine Installation eingesetzt) und in die
-`.mcp.json` des Projekts oder in `~/.claude.json` eintragen. Er sieht so aus:
+**Register in Claude Code:** Copy the ready-made block under **Settings → Integrations**
+(the paths are already filled in for your installation) and add it to the project's
+`.mcp.json` or to `~/.claude.json`. It looks like this:
 
 ```json
 {
@@ -119,61 +118,61 @@ kopieren (die Pfade sind dort bereits für deine Installation eingesetzt) und in
 }
 ```
 
-> **Warum die App sich selbst startet:** `better-sqlite3` wird gegen die **Electron**-ABI
-> gebaut (`electron-builder install-app-deps`), ein System-Node kann das Modul nicht laden.
-> `ELECTRON_RUN_AS_NODE=1` lässt die Electron-Binary als reines Node laufen — gleiche ABI
-> wie das mitgelieferte Modul, ohne zweite Binärkopie im Installer.
+> **Why the app starts itself:** `better-sqlite3` is built against the **Electron** ABI
+> (`electron-builder install-app-deps`); a system Node cannot load the module.
+> `ELECTRON_RUN_AS_NODE=1` runs the Electron binary as plain Node — same ABI
+> as the bundled module, without a second binary copy in the installer.
 
-**Aus dem Checkout (Entwicklung):**
+**From the checkout (development):**
 
 ```bash
-pnpm build:mcp   # kompiliert nach out/mcp/mcp/server.js
-pnpm mcp         # startet den Server über die Electron-Binary in Node-Modus
+pnpm build:mcp   # compiles to out/mcp/mcp/server.js
+pnpm mcp         # starts the server via the Electron binary in Node mode
 ```
 
-`pnpm build` zieht `build:mcp` automatisch mit, der Server landet also in jedem Paketbuild.
-Für die Registrierung eines Dev-Checkouts denselben Aufbau nutzen, mit
-`node_modules/electron/dist/electron.exe` als `command` — genau das zeigt auch
-**Einstellungen → Integrationen** an, wenn die App aus dem Checkout läuft.
+`pnpm build` pulls in `build:mcp` automatically, so the server lands in every package build.
+To register a dev checkout, use the same setup with
+`node_modules/electron/dist/electron.exe` as `command` — which is exactly what
+**Settings → Integrations** shows when the app runs from the checkout.
 
-Der DB-Pfad wird plattformübergreifend aufgelöst (Windows `%APPDATA%\time-tracking\`,
-macOS `~/Library/Application Support/time-tracking/`, Linux `~/.config/time-tracking/`) und
-lässt sich per `TIMETRACK_DB_PATH` überschreiben. Das Verzeichnis heißt `time-tracking`
-(package.json → `name`), nicht `TimeTrack` — der `productName` aus `electron-builder.yml`
-benennt nur die installierte App, nicht `app.getPath('userData')`.
+The DB path is resolved cross-platform (Windows `%APPDATA%\time-tracking\`,
+macOS `~/Library/Application Support/time-tracking/`, Linux `~/.config/time-tracking/`) and
+can be overridden via `TIMETRACK_DB_PATH`. The directory is called `time-tracking`
+(package.json → `name`), not `TimeTrack` — the `productName` from `electron-builder.yml`
+only names the installed app, not `app.getPath('userData')`.
 
-**Datenschutz:** Stundensätze/Umsätze und interne Notizen (`private_note`) sind **standardmäßig
-ausgeblendet**. Einschalten wahlweise in der App unter **Einstellungen → Integrationen** (die
-Schalter werden pro Anfrage frisch aus der DB gelesen) oder per Umgebungsvariable als Override:
+**Privacy:** Hourly rates/revenue and internal notes (`private_note`) are **hidden by
+default**. Enable them either in the app under **Settings → Integrations** (the toggles
+are read fresh from the DB on every request) or via an environment variable as an override:
 
-- `TIMETRACK_MCP_EXPOSE_RATES=1` — Stundensätze und Umsätze einblenden
-- `TIMETRACK_MCP_EXPOSE_PRIVATE_NOTES=1` — interne Notizen einblenden
+- `TIMETRACK_MCP_EXPOSE_RATES=1` — show hourly rates and revenue
+- `TIMETRACK_MCP_EXPOSE_PRIVATE_NOTES=1` — show internal notes
 
-Das Submenü **Einstellungen → Integrationen** zeigt außerdem den DB-Pfad und die kopierbare
-`.mcp.json`-Registrierung.
+The **Settings → Integrations** submenu also shows the DB path and the copyable
+`.mcp.json` registration.
 
-**Schreibzugriff (opt-in, standardmäßig aus).** Aktivierbar unter **Einstellungen →
-Integrationen → Schreibzugriff**. Sicherheitsmodell:
+**Write access (opt-in, off by default).** Enable under **Settings →
+Integrations → Write access**. Security model:
 
-- Der MCP-Server schreibt **nie** direkt in die DB. Schreib-Tools senden über einen lokalen
-  **Named Pipe / Unix-Socket** an die **laufende App**, die die Änderung durch ihre eigene
-  validierte Logik ausführt (Overlap-Prüfung, Cross-Midnight-Split usw.). Ist die App zu, oder
-  Schreiben aus, antworten die Tools mit einer klaren Fehlermeldung.
-- **Token:** Beim Aktivieren erzeugt die App ein Zufallstoken (`<userData>/mcp-write.token`,
-  mode `0600`), das je App-Start rotiert; jede Schreibanfrage muss es tragen.
-- **Bestätigung** je Schreibaktion wählbar: bei jeder Änderung nachfragen (Default), einmal pro
-  Sitzung, oder nicht nachfragen.
-- **Pre-Write-Backup** einmal je Sitzung vor der ersten Änderung; jede ausgeführte Aktion landet
-  im Append-only-**Audit-Log** `mcp-writes.log` (Token/interne Notizen werden nie protokolliert).
+- The MCP server **never** writes to the DB directly. Write tools send over a local
+  **named pipe / Unix socket** to the **running app**, which performs the change through its own
+  validated logic (overlap check, cross-midnight split, etc.). If the app is closed, or
+  writing is off, the tools respond with a clear error message.
+- **Token:** On enabling, the app generates a random token (`<userData>/mcp-write.token`,
+  mode `0600`) that rotates per app start; every write request must carry it.
+- **Confirmation** per write action is selectable: ask on every change (default), once per
+  session, or never ask.
+- **Pre-write backup** once per session before the first change; every executed action lands
+  in the append-only **audit log** `mcp-writes.log` (token/internal notes are never logged).
 
-Empfehlung: Schreib-Tools zuerst mit `preview: true` aufrufen, dann committen.
+Recommendation: call write tools with `preview: true` first, then commit.
 
-> **Hinweis zu `TIMETRACK_DB_PATH`:** Socket und Token liegen **neben der DB** der
-> laufenden App. `TIMETRACK_DB_PATH` (der Lese-Override) muss daher auf die **echte DB
-> der laufenden App** zeigen — sonst liest der Server aus der einen DB, während die
-> Schreib-Bridge die App an ihrer eigenen Stelle adressiert. Ohne Override greift auf
-> beiden Seiten der Standardpfad; nur im Dev-Modus (abweichendes `userData`) ist der
-> Override nötig.
+> **Note on `TIMETRACK_DB_PATH`:** Socket and token live **next to the DB** of the
+> running app. `TIMETRACK_DB_PATH` (the read override) must therefore point to the **real DB
+> of the running app** — otherwise the server reads from one DB while the write
+> bridge addresses the app at its own location. Without an override, the default path
+> applies on both sides; only in dev mode (a differing `userData`) is the
+> override needed.
 
 ## Releases
 
@@ -236,13 +235,13 @@ src/
     dateRanges.ts# Quick-filter range calculation (DST-safe)
     midnightSplit.ts # Cross-midnight entry split logic
     rate.ts      # German decimal <-> integer cent parsing
-    locales/     # de.ts + en.ts locale files (typsicher via TranslationKey)
+    locales/     # de.ts + en.ts locale files (type-safe via TranslationKey)
 scripts/
   generate-icons.mjs    # SVG -> tray PNGs (running/stopped, @1x/@2x)
   sync-icon.mjs         # resources/icon.png -> build/icon.png + multi-res .ico (prebuild hook)
-  generate-licenses.mjs # Scannt Produktions-Deps, schreibt resources/licenses.json (prebuild hook)
+  generate-licenses.mjs # Scans production deps, writes resources/licenses.json (prebuild hook)
 resources/
-  licenses.json  # Generierte Lizenzliste (95 Pakete, aktualisiert bei pnpm build)
+  licenses.json  # Generated license list (95 packages, updated on pnpm build)
 templates/
 ```
 
@@ -250,8 +249,8 @@ templates/
 
 The SQLite database lives at `%AppData%\TimeTrack\timetrack.db`. Schema (as of v1.11.1, schema_version 13):
 
-- `clients` — name, color, active flag, `rate_cent` (optional Stundensatz)
-- `projects` — client_id (FK), name, color, active flag, `rate_cent` (optional Stundensatz-Override)
+- `clients` — name, color, active flag, `rate_cent` (optional hourly rate)
+- `projects` — client_id (FK), name, color, active flag, `rate_cent` (optional hourly-rate override)
 - `entries` — client_id, description, started_at, stopped_at, heartbeat_at, `deleted_at` (soft-delete), `link_id` (cross-midnight pair UUID), `project_id` (nullable FK → projects)
 - `settings` — key/value store (incl. PDF template settings: logo path, sender, tax id, accent color, footer, round minutes)
 

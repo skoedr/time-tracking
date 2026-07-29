@@ -1,46 +1,46 @@
-# Datenschutz / Privacy
+# Privacy
 
-TimeTrack speichert alle Daten **ausschließlich lokal** auf deinem Gerät.
-Es gibt keine Cloud-Synchronisation, keine Konten und keinen eigenen Server.
+TimeTrack stores all data **exclusively locally** on your device.
+There is no cloud sync, no accounts, and no server of its own.
 
-## Wo liegen die Daten?
+## Where is the data?
 
-| Typ           | Pfad (Windows)                             | Pfad (macOS)                                                   |
+| Type          | Path (Windows)                             | Path (macOS)                                                  |
 | ------------- | ------------------------------------------ | -------------------------------------------------------------- |
-| Datenbank     | `%AppData%\time-tracking\timetrack.sqlite` | `~/Library/Application Support/time-tracking/timetrack.sqlite` |
-| Einstellungen | `%AppData%\time-tracking\timetrack.sqlite` | (selbe DB)                                                     |
-| Log-Dateien   | `%AppData%\time-tracking\logs\`            | `~/Library/Logs/time-tracking/`                                |
-| PDF-Exporte   | Frei wählbarer Speicherort                 | Frei wählbarer Speicherort                                     |
+| Database      | `%AppData%\time-tracking\timetrack.sqlite` | `~/Library/Application Support/time-tracking/timetrack.sqlite` |
+| Settings      | `%AppData%\time-tracking\timetrack.sqlite` | (same DB)                                                      |
+| Log files     | `%AppData%\time-tracking\logs\`            | `~/Library/Logs/time-tracking/`                                |
+| PDF exports   | Freely chosen location                     | Freely chosen location                                        |
 
-Du kannst die Datenbank jederzeit sichern oder löschen. Ein Backup-Export
-ist über _Einstellungen → Backup_ möglich.
+You can back up or delete the database at any time. A backup export
+is available via _Settings → Backup_.
 
-## Netzwerk-Kommunikation
+## Network communication
 
-TimeTrack stellt genau **einen** ausgehenden HTTPS-Request her:
+TimeTrack makes exactly **one** outbound HTTPS request:
 
 ```
 GET https://api.github.com/repos/skoedr/time-tracking/releases/latest
 ```
 
-Dieser Aufruf prüft beim App-Start, ob eine neue Version verfügbar ist
-(Auto-Updater via `electron-updater`). Er enthält keine Nutzer-Kennungen,
-keine Gerätedaten und keine Zeiteinträge. Er kann durch Deaktivierung des
-Auto-Updaters in den Einstellungen unterbunden werden.
+This call checks on app start whether a new version is available
+(auto-updater via `electron-updater`). It contains no user identifiers,
+no device data, and no time entries. It can be prevented by disabling
+the auto-updater in the settings.
 
-## Kein Tracking
+## No tracking
 
-- Kein Telemetrie-Dienst (z. B. Sentry, Mixpanel, Amplitude)
-- Kein Analytics (z. B. Google Analytics, Plausible)
-- Kein Crash-Reporter zu Drittanbietern
-- Keine Werbung, keine Monetarisierung über Nutzerdaten
+- No telemetry service (e.g. Sentry, Mixpanel, Amplitude)
+- No analytics (e.g. Google Analytics, Plausible)
+- No crash reporter to third parties
+- No advertising, no monetization via user data
 
-## Drittanbieter-Abhängigkeiten
+## Third-party dependencies
 
-Alle eingesetzten Open-Source-Bibliotheken und ihre Lizenzen sind in
-`resources/licenses.json` aufgeführt (erreichbar über _Hilfe → Lizenzen_).
-Keine dieser Bibliotheken stellt selbst Netzwerkverbindungen her.
+All open-source libraries used and their licenses are listed in
+`resources/licenses.json` (reachable via _Help → Licenses_).
+None of these libraries makes network connections itself.
 
-## Kontakt
+## Contact
 
-Fragen zum Datenschutz: robin.wald@hotmail.de
+Privacy questions: robin.wald@hotmail.de
