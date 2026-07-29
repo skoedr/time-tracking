@@ -638,6 +638,16 @@ export const de = {
   'settings.mcp.auditLogHint':
     'Jede ausgeführte Schreibaktion wird in mcp-writes.log protokolliert.',
   'settings.mcp.openAuditLog': 'Log-Ordner öffnen',
+  // v1.17 #132 — Teams-Presence spiegeln
+  'settings.presence.enable': 'Teams-Status spiegeln',
+  'settings.presence.enableHint':
+    'Setzt dich bei laufendem Timer in Teams auf Beschäftigt (rot) und hinterlegt eine Statusmeldung („🔴 Fokus …") — beim Stoppen wird beides entfernt. Ein manuell gesetzter Status hat Vorrang. Nur mit Arbeits-/Schulkonto; Fehler beeinflussen den Timer nie.',
+  'settings.presence.showClient': 'Kundennamen im Status anzeigen',
+  'settings.presence.showClientHint':
+    'Aus: nur „🔴 Fokus". An: „🔴 Fokus: Kunde — Projekt". Der Text ist für Kolleg:innen sichtbar.',
+  'settings.presence.reconnectHint':
+    'Für den Teams-Status fehlt noch die Berechtigung (Presence.ReadWrite) — einmal neu verbinden.',
+  'settings.presence.reconnect': 'Erneut verbinden',
   // v1.17 #133 — Hardware-Tasten (Stream Deck & Co.)
   'settings.controller.title': 'Hardware-Tasten',
   'settings.controller.enable': 'Hardware-Tasten erlauben',

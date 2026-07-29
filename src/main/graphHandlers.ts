@@ -41,8 +41,10 @@ function fail(error: unknown): IpcResult<never> {
   return { ok: false, error: error instanceof Error ? error.message : String(error) }
 }
 
-export function registerGraphHandlers(db: Database.Database): void {
-  const deps: GraphAccountDeps = {
+/** The one place these deps are assembled — shared with the presence
+ *  reconciler wiring in index.ts (#132). */
+export function graphAccountDepsFor(db: Database.Database): GraphAccountDeps {
+  return {
     getSetting: (key) => {
       const row = db.prepare(`SELECT value FROM settings WHERE key = ?`).get(key) as
         | { value: string }
@@ -55,6 +57,10 @@ export function registerGraphHandlers(db: Database.Database): void {
     store: { dir: tokenDirForDbPath(getDbPath()) },
     log: (m) => log.info(m)
   }
+}
+
+export function registerGraphHandlers(db: Database.Database): void {
+  const deps: GraphAccountDeps = graphAccountDepsFor(db)
 
   // Only one sign-in can be in flight; a second "connect" click replaces the
   // first rather than leaving two listeners and two browser tabs behind.

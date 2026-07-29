@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useT } from '../contexts/I18nContext'
+import { Toggle } from './Toggle'
 import type { AccountStatus } from '../../../main/graphAccount'
+
+/** Delegated scope required for presence mirroring (#132); must match shared/graphAuth. */
+const PRESENCE_SCOPE = 'Presence.ReadWrite'
 
 /**
  * "Connect a Microsoft account" (#130).
@@ -26,6 +30,8 @@ export function GraphAccountSection(): React.JSX.Element {
   const [clientIdSaved, setClientIdSaved] = useState(false)
   const [verifying, setVerifying] = useState(false)
   const [verifyMsg, setVerifyMsg] = useState<string | null>(null)
+  const [presenceEnabled, setPresenceEnabled] = useState(false)
+  const [presenceShowClient, setPresenceShowClient] = useState(false)
 
   const refresh = useCallback(async () => {
     const res = await window.api.graph.status()
@@ -37,9 +43,23 @@ export function GraphAccountSection(): React.JSX.Element {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- #130: dauerhaft — asynchroner IPC-Abruf des Verbindungsstatus beim Mount, kein dedizierter Store
     void refresh()
     void window.api.settings.getAll().then((res) => {
-      if (res.ok) setClientId(res.data.graph_client_id ?? '')
+      if (res.ok) {
+        setClientId(res.data.graph_client_id ?? '')
+        setPresenceEnabled(res.data.presence_enabled === '1')
+        setPresenceShowClient(res.data.presence_show_client === '1')
+      }
     })
   }, [refresh])
+
+  async function onPresenceEnabled(v: boolean): Promise<void> {
+    setPresenceEnabled(v)
+    await window.api.settings.set('presence_enabled', v ? '1' : '0')
+  }
+
+  async function onPresenceShowClient(v: boolean): Promise<void> {
+    setPresenceShowClient(v)
+    await window.api.settings.set('presence_show_client', v ? '1' : '0')
+  }
 
   async function onConnect(): Promise<void> {
     setBusy(true)
@@ -132,6 +152,62 @@ export function GraphAccountSection(): React.JSX.Element {
             <p className="text-xs" style={{ color: 'var(--text3)' }}>
               {t('settings.graph.personalAccountNote')}
             </p>
+          )}
+
+          {/* Teams presence mirroring (#132) — work/school accounts only. */}
+          {!status?.personalAccount && (
+            <div
+              className="flex flex-col gap-2 rounded-lg border p-3"
+              style={{ borderColor: 'var(--card-border)' }}
+            >
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-sm" style={{ color: 'var(--text)' }}>
+                    {t('settings.presence.enable')}
+                  </p>
+                  <p className="text-xs" style={{ color: 'var(--text3)' }}>
+                    {t('settings.presence.enableHint')}
+                  </p>
+                </div>
+                <Toggle checked={presenceEnabled} onChange={(v) => void onPresenceEnabled(v)} />
+              </div>
+              {presenceEnabled && (
+                <>
+                  {!status?.grantedScopes.some(
+                    (s) => s.toLowerCase() === PRESENCE_SCOPE.toLowerCase()
+                  ) && (
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="text-xs text-amber-300">
+                        {t('settings.presence.reconnectHint')}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => void onConnect()}
+                        disabled={busy}
+                        className="rounded-lg border px-3 py-1.5 text-xs font-medium hover:bg-white/10 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                        style={{ borderColor: 'var(--card-border)', color: 'var(--text)' }}
+                      >
+                        {busy ? t('settings.graph.connecting') : t('settings.presence.reconnect')}
+                      </button>
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-sm" style={{ color: 'var(--text)' }}>
+                        {t('settings.presence.showClient')}
+                      </p>
+                      <p className="text-xs" style={{ color: 'var(--text3)' }}>
+                        {t('settings.presence.showClientHint')}
+                      </p>
+                    </div>
+                    <Toggle
+                      checked={presenceShowClient}
+                      onChange={(v) => void onPresenceShowClient(v)}
+                    />
+                  </div>
+                </>
+              )}
+            </div>
           )}
 
           <div className="flex flex-wrap items-center gap-2">

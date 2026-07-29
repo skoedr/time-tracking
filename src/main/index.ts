@@ -28,6 +28,10 @@ import {
   type BridgeDeps
 } from './mcpBridge'
 import { initAutoUpdater } from './updater'
+import { readRunning } from './mcpBridgeCore'
+import { reconcilePresence, type PresenceDeps } from './graphPresence'
+import { graphAccountDepsFor } from './graphHandlers'
+import { effectiveClientId, getAccessToken, getStatus } from './graphAccount'
 import { applyMiniEnabled, destroyMini, pushMiniState, toggleMini } from './miniWindow'
 import {
   configureIdleWatcher,
@@ -354,6 +358,36 @@ function createWindow(): void {
   }
 }
 
+/**
+ * Teams presence mirroring (#132): poked from the `tray:update` choke point,
+ * which fires on every timer state change from every source (UI, tray, hotkey,
+ * mini-widget, idle handlers — and external writes via the renderer resync).
+ * Fire-and-forget by contract; the reconciler swallows and logs failures.
+ */
+function pokePresence(): void {
+  try {
+    const db = getDb()
+    const account = graphAccountDepsFor(db)
+    const deps: PresenceDeps = {
+      getSetting: account.getSetting,
+      getAccountStatus: () => {
+        const s = getStatus(account)
+        return {
+          connected: s.connected,
+          personalAccount: s.personalAccount,
+          grantedScopes: s.grantedScopes
+        }
+      },
+      getAccessToken: () => getAccessToken(account),
+      getClientId: () => effectiveClientId(account),
+      log: (m) => log.info(m)
+    }
+    void reconcilePresence(deps, readRunning(db))
+  } catch (err) {
+    log.warn('[presence] poke failed', err)
+  }
+}
+
 /** Dependencies handed to the MCP write bridge (all resolved lazily at call time). */
 function mcpBridgeDeps(): BridgeDeps {
   return {
@@ -533,7 +567,8 @@ app.whenReady().then(async () => {
         clearControllerToken()
         if (mcpBridgeDeps().getSetting('mcp_write_enabled') !== '1') stopMcpBridge()
       }
-    }
+    },
+    pokePresence
   })
   createWindow()
 
@@ -582,6 +617,7 @@ app.whenReady().then(async () => {
       pushMiniState({ running, label, startedAt })
       if (running) startIdleWatcher()
       else stopIdleWatcher()
+      pokePresence()
     }
   )
 

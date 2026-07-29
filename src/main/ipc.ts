@@ -50,6 +50,8 @@ export interface IpcHooks {
   setMiniHotkey(accelerator: string): boolean
   setMcpWriteEnabled(enabled: boolean): void
   setControllerEnabled(enabled: boolean): void
+  /** Re-run the presence reconciler (#132) after a relevant settings change. */
+  pokePresence(): void
 }
 
 function ok<T>(data: T): IpcResult<T> {
@@ -659,6 +661,14 @@ export function registerIpcHandlers(hooks: IpcHooks): void {
         hooks.setMcpWriteEnabled(value === '1')
       } else if (key === 'controller_enabled') {
         hooks.setControllerEnabled(value === '1')
+      } else if (
+        key === 'presence_enabled' ||
+        key === 'presence_show_client' ||
+        key === 'language'
+      ) {
+        // Toggling mirroring off clears our own status message; the language
+        // and privacy switches re-render it while a timer runs.
+        hooks.pokePresence()
       }
       return ok(undefined)
     } catch (e) {

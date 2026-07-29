@@ -123,6 +123,9 @@ describe('migration SQL execution', () => {
       { key: 'pdf_round_minutes', value: '0' },
       { key: 'pdf_sender_address', value: '' },
       { key: 'pdf_tax_id', value: '' },
+      // Migration 024 — Teams presence mirroring (v1.17 #132)
+      { key: 'presence_enabled', value: '0' },
+      { key: 'presence_show_client', value: '0' },
       // Migration 011 — Light/Dark/System theme (v1.8 #76)
       { key: 'theme_mode', value: 'system' },
       // Migration 020 — Outbound-Webhooks (v1.15 #134)
