@@ -195,7 +195,9 @@ function runningFace(label: KeyLabel, color: string | undefined, elapsedSec: num
       ? `<text x="72" y="58" font-family="${FONT}" font-size="19" font-weight="600" fill="#ffffff" text-anchor="middle">${escapeXml(label.lines[0] ?? '')}</text>`
       : '') +
     `<text x="72" y="104" font-family="${MONO}" font-size="34" font-weight="700" fill="#ffffff" text-anchor="middle" letter-spacing="-1">${formatElapsed(sec)}</text>` +
-    `<circle cx="72" cy="124" r="4.5" fill="#ffffff"><animate attributeName="opacity" values="1;0.35;1" dur="2s" repeatCount="indefinite"/></circle>`
+    // Frame-by-frame pulse (no SMIL on the deck): sampled at 1 fps by the
+    // render tick, a 4 s cosine breathes in four steps — 1 → 0.68 → 0.35 → 0.68.
+    `<circle cx="72" cy="124" r="4.5" fill="#ffffff" opacity="${(0.675 + 0.325 * Math.cos((2 * Math.PI * (sec % 4)) / 4)).toFixed(2)}"/>`
   )
 }
 
