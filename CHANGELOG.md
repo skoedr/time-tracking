@@ -5,7 +5,7 @@ All notable changes to TimeTrack are documented here.
 > **Language note:** Entries up to v1.15.1 are in German (historical record);
 > from v1.16.0 onward, entries are written in English.
 
-## [Unreleased]
+## [1.16.1] — 2026-07-29
 
 ### Added
 
