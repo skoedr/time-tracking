@@ -5,6 +5,27 @@ All notable changes to TimeTrack are documented here.
 > **Language note:** Entries up to v1.15.1 are in German (historical record);
 > from v1.16.0 onward, entries are written in English.
 
+## [1.17.0] — 2026-07-29
+
+### Added
+
+- **Hardware keys: a Stream Deck plugin (#133)** — One key = one timer target. Each key is configured with a client (and optionally one of its projects) and toggles the timer for exactly that target; the key face shows the live state. The plugin (in `streamdeck-plugin/`, TypeScript on the official Elgato SDK v2) talks to the app through the local bridge with its **own token scope**: key presses skip the confirmation dialog — the physical press *is* the confirmation — which is exactly why the MCP token cannot call the new controller operations and vice versa. Everything else from the guarded write path stays: opt-in in **Settings → Integrations → Hardware keys**, audit log, backups, webhooks. No Stream Deck needed to try it: the plugin works with Stream Deck Mobile's free tier.
+
+  The key faces carry the app's glass look (from a high-fidelity design handoff): elapsed time as `h:mm`, a minute ring that sweeps like a clock hand, and the client color normalized in OKLab so white text stays readable on any color you picked. Hardware taught us its rules along the way — the deck rasterizes static frames (no SVG animation, no `pathLength`), so the ring and pulse are animated frame-by-frame within the SDK's documented budget.
+
+  Platform decision, recorded on the issue: the endpoint is platform-neutral and every console is just an adapter. A Logi Actions adapter (MX Creative Console / Loupedeck) is tracked as #179; the Razer Stream Controller is out of scope — its platform is being sunset.
+
+- **Teams presence mirroring (#132)** — While a timer runs, Teams shows you as **Busy (red)** with a status message ("🔴 Fokus" — or, opt-in, with client and project name); both disappear when the timer stops. Opt-in under **Settings → Integrations** inside the Microsoft-account block, work/school accounts only (Microsoft's presence APIs do not support personal accounts). A manually set Teams status always wins, and the feature only ever clears messages it set itself. Presence failures never affect the timer — they are logged and retried on the next state change. The additional permission (`Presence.ReadWrite`) is only requested once you enable the feature: reconnect once, done.
+
+- **Subscribable calendar feed (#169)** — Stage 2 of the iCal story: a local `webcal://` feed serves the last 90 days of completed entries for calendar clients to poll — token-protected, `127.0.0.1` only, running only while the app runs. Enable it under **Settings → Integrations → Calendar feed**, copy the URL, subscribe. The token is persistent (calendar clients store the URL); regenerating it invalidates every existing subscription, and the settings say so before you do it.
+
+  **Known limitation, stated next to the toggle:** the new Outlook and Outlook on the web fetch subscriptions through the Microsoft cloud and cannot reach a local feed — use classic Outlook, Thunderbird, or Apple Calendar. The M365-native path (writing entries into the calendar via Graph) is tracked as #181.
+
+### Fixed
+
+- **External timer changes now show up in the app immediately** — The bridge has broadcast a change signal since the MCP write mode (#127), but nothing ever listened: a timer started from outside was invisible in the app and could not be stopped there. The renderer now resyncs on every external write, which keeps the app, tray, mini-widget and idle watcher consistent — for MCP writes and hardware keys alike.
+- **Projects are validated against their client on every write path** — `start_timer` via MCP accepted any `project_id` unvalidated; a project belonging to another client could be attached to an entry. The project↔client check is now enforced centrally (manual entries, updates, timer starts, hardware-key toggles).
+
 ## [1.16.1] — 2026-07-29
 
 ### Added
