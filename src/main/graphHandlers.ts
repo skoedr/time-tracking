@@ -24,6 +24,10 @@ import {
   type VerifyResult,
   type GraphAccountDeps
 } from './graphAccount'
+import { forgetDomain, learnDomain, listClientDomains, type ClientDomain } from './clientDomains'
+import { previewCalendarImport } from './graphImport'
+import type { CalendarRange } from './graphCalendar'
+import type { FilterOptions, MappedEvents } from '../shared/graphCalendar'
 
 function ok<T>(data: T): IpcResult<T> {
   return { ok: true, data }
@@ -96,5 +100,33 @@ export function registerGraphHandlers(db: Database.Database): void {
     } catch (e) {
       return fail(e)
     }
+  })
+
+  // ── Calendar import (#130b) ────────────────────────────────────────────────
+
+  ipcMain.handle(
+    'graph:calendarPreview',
+    async (_e, range: CalendarRange, filters?: FilterOptions): Promise<IpcResult<MappedEvents>> => {
+      try {
+        return ok(await previewCalendarImport(db, range, { account: deps, log: deps.log }, filters))
+      } catch (e) {
+        return fail(e)
+      }
+    }
+  )
+
+  ipcMain.handle('graph:listDomains', (): IpcResult<ClientDomain[]> => {
+    return listClientDomains(db)
+  })
+
+  ipcMain.handle(
+    'graph:learnDomain',
+    (_e, domain: string, clientId: number): IpcResult<ClientDomain> => {
+      return learnDomain(db, domain, clientId)
+    }
+  )
+
+  ipcMain.handle('graph:forgetDomain', (_e, domain: string): IpcResult<void> => {
+    return forgetDomain(db, domain)
   })
 }

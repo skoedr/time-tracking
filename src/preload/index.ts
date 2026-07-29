@@ -22,6 +22,9 @@ import type {
 } from '../shared/types'
 import type { CsvRequest } from '../main/csvExport'
 import type { AccountStatus, VerifyResult } from '../main/graphAccount'
+import type { ClientDomain } from '../main/clientDomains'
+import type { CalendarRange } from '../main/graphCalendar'
+import type { FilterOptions, MappedEvents } from '../shared/graphCalendar'
 import type { IcalRequest } from '../main/icalExport'
 
 // ── v1.8 #76: FOUC prevention ─────────────────────────────────────────────
@@ -248,7 +251,17 @@ const api = {
     connect: (): Promise<IpcResult<AccountStatus>> => ipcRenderer.invoke('graph:connect'),
     cancelConnect: (): Promise<IpcResult<void>> => ipcRenderer.invoke('graph:cancelConnect'),
     verify: (): Promise<IpcResult<VerifyResult>> => ipcRenderer.invoke('graph:verify'),
-    disconnect: (): Promise<IpcResult<AccountStatus>> => ipcRenderer.invoke('graph:disconnect')
+    disconnect: (): Promise<IpcResult<AccountStatus>> => ipcRenderer.invoke('graph:disconnect'),
+    calendarPreview: (
+      range: CalendarRange,
+      filters?: FilterOptions
+    ): Promise<IpcResult<MappedEvents>> =>
+      ipcRenderer.invoke('graph:calendarPreview', range, filters),
+    listDomains: (): Promise<IpcResult<ClientDomain[]>> => ipcRenderer.invoke('graph:listDomains'),
+    learnDomain: (domain: string, clientId: number): Promise<IpcResult<ClientDomain>> =>
+      ipcRenderer.invoke('graph:learnDomain', domain, clientId),
+    forgetDomain: (domain: string): Promise<IpcResult<void>> =>
+      ipcRenderer.invoke('graph:forgetDomain', domain)
   },
   // v1.5 PR B — auto-updater
   update: {

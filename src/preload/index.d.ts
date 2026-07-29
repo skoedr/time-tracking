@@ -21,6 +21,9 @@ import type {
   BudgetStatus
 } from '../shared/types'
 import type { AccountStatus, VerifyResult } from '../main/graphAccount'
+import type { ClientDomain } from '../main/clientDomains'
+import type { CalendarRange } from '../main/graphCalendar'
+import type { FilterOptions, MappedEvents } from '../shared/graphCalendar'
 
 declare global {
   interface Window {
@@ -198,6 +201,13 @@ declare global {
         cancelConnect(): Promise<IpcResult<void>>
         verify(): Promise<IpcResult<VerifyResult>>
         disconnect(): Promise<IpcResult<AccountStatus>>
+        calendarPreview(
+          range: CalendarRange,
+          filters?: FilterOptions
+        ): Promise<IpcResult<MappedEvents>>
+        listDomains(): Promise<IpcResult<ClientDomain[]>>
+        learnDomain(domain: string, clientId: number): Promise<IpcResult<ClientDomain>>
+        forgetDomain(domain: string): Promise<IpcResult<void>>
       }
       update: {
         getStatus(): Promise<IpcResult<UpdateStatus>>
