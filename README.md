@@ -223,7 +223,7 @@ src/
     index.d.ts   # TypeScript types for renderer
   renderer/src/
     views/       # TimerView, TodayView, CalendarView, ClientsView, SettingsView
-    components/  # Dialog, IdleModal, PdfExportModal, CalendarDrawer, EntryEditForm, Toast,
+    components/  # Dialog, IdleModal, CalendarDrawer, EntryEditForm, Toast,
                  # ConfirmDialog, ProjectFormModal, PdfMergeModal, UpdateBanner, OnboardingWizard, AboutDialog, ExportModal
     contexts/    # I18nContext (DE/EN translations, useT hook)
     hooks/       # useTimer logic hook
