@@ -157,9 +157,14 @@ function runningFace(label: KeyLabel, color: string | undefined, elapsedSec: num
   const top = scaleL(base, 1.18)
   const bot = scaleL(base, 0.62)
   const sec = Math.max(0, Math.floor(elapsedSec))
+  // The Stream Deck renderer rasterizes ONE static frame — SMIL never runs on
+  // the key (confirmed on hardware). The current progress is therefore baked
+  // into the attribute; the <animate> stays as progressive enhancement for
+  // renderers that do animate (it overrides the attribute while running).
+  const pct = ((sec % 60) / 60) * 100
   const ring =
     `<rect x="9" y="9" width="126" height="126" rx="19" fill="none" stroke="#ffffff" stroke-opacity="0.22" stroke-width="3"/>` +
-    `<rect x="9" y="9" width="126" height="126" rx="19" fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round" pathLength="100" transform="rotate(-90 72 72)">` +
+    `<rect x="9" y="9" width="126" height="126" rx="19" fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round" pathLength="100" stroke-dasharray="${pct.toFixed(1)} 100" transform="rotate(-90 72 72)">` +
     `<animate attributeName="stroke-dasharray" values="0 100;100 100" dur="60s" begin="-${sec % 60}s" repeatCount="indefinite"/></rect>`
   return (
     `<defs><linearGradient id="b" x1="0" y1="0" x2="0.35" y2="1">` +

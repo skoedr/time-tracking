@@ -73,7 +73,8 @@ export class ToggleTimer extends SingletonAction<ToggleSettings> {
       await ev.action.showAlert()
       return
     }
-    await ev.action.showOk()
+    // No showOk() overlay: the face itself flips state on the next line — the
+    // SDK's green checkmark would just cover the new design.
     await this.refreshAll()
   }
 
@@ -124,10 +125,13 @@ export class ToggleTimer extends SingletonAction<ToggleSettings> {
       (status.project_id ?? null) === (settings.projectId ?? null)
     if (active) {
       const elapsedSec = Math.max(0, (Date.now() - Date.parse(status.started_at)) / 1000)
-      const minute = Math.floor(elapsedSec / 60)
+      // The deck rasterizes a static frame, so the minute ring only moves when
+      // we re-render: a 5-second step advances it in 30° increments — 12 image
+      // transfers per minute, and only for the running key.
+      const ringStep = Math.floor(elapsedSec / 5)
       await this.setImageCached(
         key,
-        `running|${minute}|${target}`,
+        `running|${ringStep}|${target}`,
         // Lazy: the face is only built when the cache misses.
         () => keyImage({ state: 'running', label, color: settings.color, elapsedSec })
       )
