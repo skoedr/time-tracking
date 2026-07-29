@@ -23,6 +23,7 @@ import type {
 import type { AccountStatus, VerifyResult } from '../main/graphAccount'
 import type { ClientDomain } from '../main/clientDomains'
 import type { CalendarRange } from '../main/graphCalendar'
+import type { ImportEntryItem, ImportResult } from '../main/graphImport'
 import type { FilterOptions, MappedEvents } from '../shared/graphCalendar'
 
 declare global {
@@ -205,6 +206,7 @@ declare global {
           range: CalendarRange,
           filters?: FilterOptions
         ): Promise<IpcResult<MappedEvents>>
+        importEntries(items: ImportEntryItem[]): Promise<IpcResult<ImportResult>>
         listDomains(): Promise<IpcResult<ClientDomain[]>>
         learnDomain(domain: string, clientId: number): Promise<IpcResult<ClientDomain>>
         forgetDomain(domain: string): Promise<IpcResult<void>>

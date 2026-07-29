@@ -8,7 +8,12 @@ import type { GraphEvent } from '../shared/graphCalendar'
 import { saveTokens, type SecretBox } from './graphTokenStore'
 import type { GraphAccountDeps } from './graphAccount'
 import { GraphCalendarError, type CalendarRange } from './graphCalendar'
-import { importedEventIds, ownDomains, previewCalendarImport } from './graphImport'
+import {
+  importCalendarEntries,
+  importedEventIds,
+  ownDomains,
+  previewCalendarImport
+} from './graphImport'
 import { learnDomain } from './clientDomains'
 import { applyMigrations, loadSqlite, type DatabaseCtor } from '../test/sqlite'
 
@@ -207,6 +212,98 @@ describe('graphImport', () => {
       await expect(
         previewCalendarImport(db, RANGE, { account: accountDeps(), fetchFn })
       ).rejects.toThrow(GraphCalendarError)
+    })
+  })
+
+  describe('importCalendarEntries', () => {
+    const item = (
+      over: Partial<Parameters<typeof importCalendarEntries>[1][number]> = {}
+    ): Parameters<typeof importCalendarEntries>[1][number] => ({
+      graphEventId: 'evt-1',
+      description: 'Jour fixe',
+      startedAt: '2026-07-01T09:00:00.000Z',
+      stoppedAt: '2026-07-01T10:00:00.000Z',
+      clientId: 1,
+      ...over
+    })
+
+    it('creates an entry carrying the graph event id', () => {
+      const result = importCalendarEntries(db, [item()])
+      expect(result).toEqual({ created: 1, failed: [] })
+      const row = db
+        .prepare(`SELECT client_id, description, graph_event_id FROM entries`)
+        .get() as { client_id: number; description: string; graph_event_id: string }
+      expect(row).toEqual({ client_id: 1, description: 'Jour fixe', graph_event_id: 'evt-1' })
+    })
+
+    it('refuses a second import of the same event', () => {
+      importCalendarEntries(db, [item()])
+      const again = importCalendarEntries(db, [
+        item({ startedAt: '2026-07-02T09:00:00.000Z', stoppedAt: '2026-07-02T10:00:00.000Z' })
+      ])
+      expect(again.created).toBe(0)
+      expect(again.failed[0].error).toContain('bereits übernommen')
+    })
+
+    it('re-imports an event whose entry was soft-deleted — the anchor is released first', () => {
+      importCalendarEntries(db, [item()])
+      db.prepare(`UPDATE entries SET deleted_at = '2026-07-02T00:00:00Z'`).run()
+      const again = importCalendarEntries(db, [item()])
+      expect(again).toEqual({ created: 1, failed: [] })
+      const rows = db
+        .prepare(`SELECT graph_event_id, deleted_at FROM entries ORDER BY id`)
+        .all() as Array<{ graph_event_id: string | null; deleted_at: string | null }>
+      // The old row lost its anchor, the new one holds it.
+      expect(rows).toEqual([
+        { graph_event_id: null, deleted_at: '2026-07-02T00:00:00Z' },
+        { graph_event_id: 'evt-1', deleted_at: null }
+      ])
+    })
+
+    it('fails per event, not per batch — one overlap does not sink the rest', () => {
+      db.prepare(
+        `INSERT INTO entries (client_id, started_at, stopped_at)
+         VALUES (1, '2026-07-01T09:30:00.000Z', '2026-07-01T11:00:00.000Z')`
+      ).run()
+      const result = importCalendarEntries(db, [
+        item(), // overlaps the existing entry
+        item({
+          graphEventId: 'evt-2',
+          startedAt: '2026-07-02T09:00:00.000Z',
+          stoppedAt: '2026-07-02T10:00:00.000Z'
+        })
+      ])
+      expect(result.created).toBe(1)
+      expect(result.failed).toEqual([
+        { graphEventId: 'evt-1', error: expect.stringContaining('überlappt') }
+      ])
+    })
+
+    it('puts the event id on the first segment only when a meeting crosses midnight', () => {
+      // Built from local wall-clock time so the range crosses LOCAL midnight
+      // (the split boundary) no matter which timezone the test runs in.
+      const start = new Date(2026, 6, 1, 23, 0)
+      const stop = new Date(2026, 6, 2, 1, 0)
+      const result = importCalendarEntries(db, [
+        item({ startedAt: start.toISOString(), stoppedAt: stop.toISOString() })
+      ])
+      expect(result).toEqual({ created: 1, failed: [] })
+      const rows = db
+        .prepare(`SELECT graph_event_id, link_id FROM entries ORDER BY started_at`)
+        .all() as Array<{ graph_event_id: string | null; link_id: string | null }>
+      expect(rows).toHaveLength(2)
+      expect(rows[0].graph_event_id).toBe('evt-1')
+      expect(rows[1].graph_event_id).toBeNull()
+      expect(rows[0].link_id).toBe(rows[1].link_id)
+      expect(rows[0].link_id).not.toBeNull()
+      // And the dedupe still sees the event as imported.
+      expect(importedEventIds(db)).toEqual(new Set(['evt-1']))
+    })
+
+    it('reports validation failures with the manual-entry messages', () => {
+      const result = importCalendarEntries(db, [item({ clientId: 999 })])
+      expect(result.created).toBe(0)
+      expect(result.failed[0].error).toContain('Kunde existiert nicht')
     })
   })
 })

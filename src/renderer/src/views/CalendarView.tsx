@@ -18,6 +18,7 @@ import { localDateKey } from '../../../shared/dateRanges'
 import { useEntriesStore } from '../store/entriesStore'
 import { useTimer } from '../hooks/useTimer'
 import { CalendarDrawer } from '../components/CalendarDrawer'
+import { GraphImportModal } from '../components/GraphImportModal'
 import { useRounding } from '../contexts/RoundingContext'
 import { roundDuration } from '../../../shared/duration'
 
@@ -54,6 +55,7 @@ export default function CalendarView(): React.JSX.Element {
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [selectedDay, setSelectedDay] = useState<Date | null>(null)
   const [focusDay, setFocusDay] = useState<Date>(() => new Date())
+  const [importOpen, setImportOpen] = useState(false)
   const gridRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -184,6 +186,18 @@ export default function CalendarView(): React.JSX.Element {
         >
           {t('calendar.nav.today')}
         </button>
+        <button
+          type="button"
+          onClick={() => setImportOpen(true)}
+          className="ml-2 rounded-lg border px-3 py-1.5 text-sm font-medium backdrop-blur-xl hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+          style={{
+            background: 'var(--card-bg)',
+            borderColor: 'var(--card-border)',
+            color: 'var(--text)'
+          }}
+        >
+          {t('calendarImport.button')}
+        </button>
         {status === 'loading' && (
           <span className="ml-auto text-xs" style={{ color: 'var(--text3)' }}>
             {t('calendar.status.loading')}
@@ -267,6 +281,8 @@ export default function CalendarView(): React.JSX.Element {
         clients={clients}
         onClose={() => setSelectedDay(null)}
       />
+
+      <GraphImportModal open={importOpen} onClose={() => setImportOpen(false)} clients={clients} />
     </div>
   )
 }
