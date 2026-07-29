@@ -133,9 +133,52 @@ describe('clientDomains', () => {
     learnDomain(db, 'andere.de', 2)
     expect(domainMapping(db)).toEqual(
       new Map([
-        ['kunde.de', 1],
-        ['andere.de', 2]
+        ['kunde.de', { clientId: 1, projectId: null }],
+        ['andere.de', { clientId: 2, projectId: null }]
       ])
     )
+  })
+
+  // ── #176: domain → client+project ────────────────────────────────────────
+
+  describe('project mapping (#176)', () => {
+    beforeEach(() => {
+      db.prepare(`INSERT INTO projects (id, client_id, name) VALUES (7, 1, 'Endkunde A')`).run()
+      db.prepare(
+        `INSERT INTO projects (id, client_id, name) VALUES (8, 2, 'Fremdes Projekt')`
+      ).run()
+    })
+
+    it('learns a domain with a project', () => {
+      const result = learnDomain(db, 'endkunde.de', 1, 7)
+      expect(result.ok).toBe(true)
+      if (result.ok) expect(result.data).toMatchObject({ clientId: 1, projectId: 7 })
+      expect(domainMapping(db).get('endkunde.de')).toEqual({ clientId: 1, projectId: 7 })
+    })
+
+    it('rejects a project that belongs to another client — it would book time onto the wrong customer', () => {
+      const result = learnDomain(db, 'endkunde.de', 1, 8)
+      expect(result.ok).toBe(false)
+      if (!result.ok) expect(result.error).toContain('gehört nicht zu Kunde')
+    })
+
+    it('re-learning without a project clears the stored one', () => {
+      learnDomain(db, 'endkunde.de', 1, 7)
+      const updated = learnDomain(db, 'endkunde.de', 1)
+      expect(updated.ok).toBe(true)
+      if (updated.ok) expect(updated.data.projectId).toBeNull()
+    })
+
+    it('deleting the project keeps the client mapping (ON DELETE SET NULL)', () => {
+      learnDomain(db, 'endkunde.de', 1, 7)
+      db.prepare(`DELETE FROM projects WHERE id = 7`).run()
+      expect(domainMapping(db).get('endkunde.de')).toEqual({ clientId: 1, projectId: null })
+    })
+
+    it('deleting the client still removes the whole row', () => {
+      learnDomain(db, 'endkunde.de', 1, 7)
+      db.prepare(`DELETE FROM clients WHERE id = 1`).run()
+      expect(domainMapping(db).has('endkunde.de')).toBe(false)
+    })
   })
 })

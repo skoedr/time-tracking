@@ -5,6 +5,16 @@ All notable changes to TimeTrack are documented here.
 > **Language note:** Entries up to v1.15.1 are in German (historical record);
 > from v1.16.0 onward, entries are written in English.
 
+## [Unreleased]
+
+### Added
+
+- **Calendar import: domains can map to a client AND a project (#176)** — Found in a hands-on test right after v1.16.0: a meeting with an end customer's domain may be billed via a consulting client but belong to that client's **project** for the end customer. Domain → client alone could not express that, and the import dialog had no project selection at all — the project had to be set by hand on every imported entry.
+
+  The dialog now shows a project dropdown per row (only when the chosen client has active projects, same as the timer modal), pre-filled from the learned mapping, and the learn checkbox couples the currently selected **combination** to the domain. The project follows the same principle as the client: it is only pre-selected when all of a meeting's mapped domains agree on it — never guessed. A project from another client is rejected on both the learning and the import path, because it would book time onto the wrong customer.
+
+  Checkbox behavior, decided on #176: a **new** domain still defaults to ON (the #130 decision), but deviating from an **already-learned** mapping shows the checkbox default OFF — a one-off exception must not silently re-learn the rule. While the selection matches what is stored, no checkbox appears at all. Deleting a project keeps the client half of its mappings (`ON DELETE SET NULL`); deleting a client still removes them entirely.
+
 ## [1.16.0] — 2026-07-29
 
 ### Added

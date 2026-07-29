@@ -11,11 +11,14 @@
  */
 import type Database from 'better-sqlite3'
 import type { IpcResult } from '../shared/types'
+import type { DomainTarget } from '../shared/graphCalendar'
 
 export interface ClientDomain {
   id: number
   domain: string
   clientId: number
+  /** Optional project within that client (#176). Null = client only. */
+  projectId: number | null
   createdAt: string
 }
 
@@ -45,7 +48,7 @@ export function listClientDomains(db: Database.Database): IpcResult<ClientDomain
   try {
     const rows = db
       .prepare(
-        `SELECT id, domain, client_id AS clientId, created_at AS createdAt
+        `SELECT id, domain, client_id AS clientId, project_id AS projectId, created_at AS createdAt
          FROM client_domains ORDER BY domain ASC`
       )
       .all() as ClientDomain[]
@@ -56,25 +59,23 @@ export function listClientDomains(db: Database.Database): IpcResult<ClientDomain
 }
 
 /** The lookup table `resolveClient()` consumes. Internal — not an IPC payload. */
-export function domainMapping(db: Database.Database): Map<string, number> {
+export function domainMapping(db: Database.Database): Map<string, DomainTarget> {
   const rows = db
-    .prepare(`SELECT domain, client_id AS clientId FROM client_domains`)
-    .all() as Array<{
-    domain: string
-    clientId: number
-  }>
-  return new Map(rows.map((r) => [r.domain, r.clientId]))
+    .prepare(`SELECT domain, client_id AS clientId, project_id AS projectId FROM client_domains`)
+    .all() as Array<{ domain: string; clientId: number; projectId: number | null }>
+  return new Map(rows.map((r) => [r.domain, { clientId: r.clientId, projectId: r.projectId }]))
 }
 
 /**
- * Remember a domain for a client. Upsert: an existing row moves to the new
- * client instead of erroring, because that is what correcting a wrong mapping
- * looks like from the dialog.
+ * Remember a domain for a client, optionally with a project (#176). Upsert: an
+ * existing row moves to the new combination instead of erroring, because that
+ * is what correcting a wrong mapping looks like from the dialog.
  */
 export function learnDomain(
   db: Database.Database,
   rawDomain: string,
-  clientId: number
+  clientId: number,
+  projectId: number | null = null
 ): IpcResult<ClientDomain> {
   const domain = normalizeDomain(rawDomain)
   if (!domain) return fail(`'${rawDomain.trim()}' ist keine gültige Domain.`)
@@ -82,13 +83,23 @@ export function learnDomain(
   try {
     const client = db.prepare(`SELECT id FROM clients WHERE id = ?`).get(clientId)
     if (!client) return fail(`Kunde ${clientId} existiert nicht.`)
+    if (projectId !== null) {
+      // The project must belong to the client — a mapping pointing across
+      // clients would produce entries the overlap check charges to the wrong
+      // customer. Orphaned projects (client_id NULL) fail this on purpose.
+      const project = db
+        .prepare(`SELECT id FROM projects WHERE id = ? AND client_id = ?`)
+        .get(projectId, clientId)
+      if (!project) return fail(`Projekt ${projectId} gehört nicht zu Kunde ${clientId}.`)
+    }
     db.prepare(
-      `INSERT INTO client_domains (domain, client_id) VALUES (?, ?)
-       ON CONFLICT(domain) DO UPDATE SET client_id = excluded.client_id`
-    ).run(domain, clientId)
+      `INSERT INTO client_domains (domain, client_id, project_id) VALUES (?, ?, ?)
+       ON CONFLICT(domain) DO UPDATE
+         SET client_id = excluded.client_id, project_id = excluded.project_id`
+    ).run(domain, clientId, projectId)
     const row = db
       .prepare(
-        `SELECT id, domain, client_id AS clientId, created_at AS createdAt
+        `SELECT id, domain, client_id AS clientId, project_id AS projectId, created_at AS createdAt
          FROM client_domains WHERE domain = ?`
       )
       .get(domain) as ClientDomain

@@ -261,8 +261,12 @@ const api = {
     importEntries: (items: ImportEntryItem[]): Promise<IpcResult<ImportResult>> =>
       ipcRenderer.invoke('graph:importEntries', items),
     listDomains: (): Promise<IpcResult<ClientDomain[]>> => ipcRenderer.invoke('graph:listDomains'),
-    learnDomain: (domain: string, clientId: number): Promise<IpcResult<ClientDomain>> =>
-      ipcRenderer.invoke('graph:learnDomain', domain, clientId),
+    learnDomain: (
+      domain: string,
+      clientId: number,
+      projectId?: number | null
+    ): Promise<IpcResult<ClientDomain>> =>
+      ipcRenderer.invoke('graph:learnDomain', domain, clientId, projectId ?? null),
     forgetDomain: (domain: string): Promise<IpcResult<void>> =>
       ipcRenderer.invoke('graph:forgetDomain', domain)
   },

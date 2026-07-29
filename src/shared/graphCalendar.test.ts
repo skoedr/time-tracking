@@ -9,6 +9,7 @@ import {
   mapEvents,
   resolveClient,
   toIsoUtc,
+  type DomainTarget,
   type GraphEvent
 } from './graphCalendar'
 
@@ -42,9 +43,14 @@ function event(over: Partial<GraphEvent> = {}): GraphEvent {
   }
 }
 
-const MAPPING = new Map<string, number>([
-  ['kunde-x.de', 1],
-  ['kunde-y.de', 2]
+const target = (clientId: number, projectId: number | null = null): DomainTarget => ({
+  clientId,
+  projectId
+})
+
+const MAPPING = new Map<string, DomainTarget>([
+  ['kunde-x.de', target(1)],
+  ['kunde-y.de', target(2)]
 ])
 
 function map(
@@ -126,16 +132,21 @@ describe('externalDomains', () => {
 
 describe('resolveClient', () => {
   it('ordnet zu, wenn genau ein Kunde passt', () => {
-    expect(resolveClient(['kunde-x.de'], MAPPING)).toEqual({ clientId: 1, hint: 'matched' })
+    expect(resolveClient(['kunde-x.de'], MAPPING)).toEqual({
+      clientId: 1,
+      projectId: null,
+      hint: 'matched'
+    })
   })
 
   it('ordnet zu, wenn mehrere Domains auf DENSELBEN Kunden zeigen', () => {
     const m = new Map([
-      ['kunde-x.de', 1],
-      ['kunde-x.at', 1]
+      ['kunde-x.de', target(1)],
+      ['kunde-x.at', target(1)]
     ])
     expect(resolveClient(['kunde-x.de', 'kunde-x.at'], m)).toEqual({
       clientId: 1,
+      projectId: null,
       hint: 'matched'
     })
   })
@@ -145,6 +156,7 @@ describe('resolveClient', () => {
     // schlimmer als zu fragen.
     expect(resolveClient(['kunde-x.de', 'kunde-y.de'], MAPPING)).toEqual({
       clientId: null,
+      projectId: null,
       hint: 'ambiguous'
     })
   })
@@ -156,6 +168,37 @@ describe('resolveClient', () => {
 
   it('trifft auch bei abweichender Schreibweise', () => {
     expect(resolveClient(['KUNDE-X.DE'], MAPPING).clientId).toBe(1)
+  })
+
+  // #176 — das Projekt hängt an der Domain, folgt aber demselben Prinzip wie
+  // der Kunde: nur bei Einigkeit, nie geraten.
+  it('nimmt das Projekt aus dem Mapping mit', () => {
+    const m = new Map([['endkunde.de', target(1, 7)]])
+    expect(resolveClient(['endkunde.de'], m)).toEqual({
+      clientId: 1,
+      projectId: 7,
+      hint: 'matched'
+    })
+  })
+
+  it('lässt das Projekt leer, wenn die Domains desselben Kunden sich uneins sind', () => {
+    const m = new Map([
+      ['endkunde.de', target(1, 7)],
+      ['endkunde.at', target(1, 8)]
+    ])
+    expect(resolveClient(['endkunde.de', 'endkunde.at'], m)).toEqual({
+      clientId: 1,
+      projectId: null,
+      hint: 'matched'
+    })
+  })
+
+  it('lässt das Projekt leer, wenn eine Domain eines nennt und die andere keines', () => {
+    const m = new Map([
+      ['endkunde.de', target(1, 7)],
+      ['endkunde.at', target(1)]
+    ])
+    expect(resolveClient(['endkunde.de', 'endkunde.at'], m).projectId).toBeNull()
   })
 })
 
