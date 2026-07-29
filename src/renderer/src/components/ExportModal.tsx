@@ -10,8 +10,7 @@ import type { CsvFormat, ExportPrefs, ExportTab as Tab, GroupBy } from './export
 interface Props {
   open: boolean
   onClose: () => void
-  /** Pre-fills client + range when opened from a CalendarView quick-filter. */
-  prefilledClientId?: number
+  /** Pre-fills the range when opened from a quick-filter. */
   prefilledRange?: { fromIso: string; toIso: string }
 }
 
@@ -30,7 +29,7 @@ interface Props {
  * modal. Opened from the Export tab (its own tab since #153).
  */
 export function ExportModal(props: Props): React.JSX.Element {
-  const { open, onClose, prefilledClientId, prefilledRange } = props
+  const { open, onClose, prefilledRange } = props
   const t = useT()
   // Selectors (v1.13.2 PR 2): subscribe to the export_prefs key and the
   // loaded flag only — this modal's own writes no longer re-render every
@@ -48,7 +47,7 @@ export function ExportModal(props: Props): React.JSX.Element {
 
   const [tab, setTab] = useState<Tab>(initialPrefs.tab)
   const [clients, setClients] = useState<Client[]>([])
-  const [clientId, setClientId] = useState<number | null>(prefilledClientId ?? null)
+  const [clientId, setClientId] = useState<number | null>(null)
   const [projects, setProjects] = useState<Project[]>([])
   const [projectId, setProjectId] = useState<number | null>(null)
   const [fromIso, setFromIso] = useState(prefilledRange?.fromIso ?? '')
@@ -130,7 +129,7 @@ export function ExportModal(props: Props): React.JSX.Element {
     void window.api.clients.getAll().then((res) => {
       if (res.ok) {
         setClients(res.data)
-        if (!prefilledClientId && res.data.length === 1) {
+        if (res.data.length === 1) {
           setClientId(res.data[0].id)
         }
       } else {
@@ -138,13 +137,9 @@ export function ExportModal(props: Props): React.JSX.Element {
         setStatusMsg(t('export.status.clientsError', { error: res.error }))
       }
     })
-  }, [open, clients.length, prefilledClientId])
+  }, [open, clients.length])
 
-  // Sync prefill props if they change after mount (e.g. CalendarView quick-filters).
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- #142: dauerhaft — unerreichbar: CalendarView remountet per key; Prop hat zudem keinen Aufrufer
-    if (prefilledClientId != null) setClientId(prefilledClientId)
-  }, [prefilledClientId])
+  // Sync the prefilled range if it changes after mount (e.g. quick-filters).
   useEffect(() => {
     if (prefilledRange) {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- #142: dauerhaft — unerreichbar: CalendarView remountet per key statt neu zu rendern

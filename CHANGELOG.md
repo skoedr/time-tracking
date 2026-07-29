@@ -38,6 +38,8 @@ All notable changes to TimeTrack are documented here.
 
 - **`localDateKey` liegt jetzt in `shared/dateRanges.ts`** — Die Funktion lag lokal in `CalendarView`, wurde für die Zeitraum-Übergabe aber in beiden Ansichten gebraucht. Sie ist verschoben statt kopiert und hat fünf eigene Tests bekommen (Nullen-Auffüllung, Mitternacht, Jahreswechsel) — sie darf nicht durch `toISOString()` ersetzt werden, das östlich von Greenwich vor dem UTC-Versatz den Vortag meldet.
 
+- **Toten Export-Code entfernt (#164, #165)** — Das seit v1.5 durch `ExportModal` ersetzte `PdfExportModal.tsx` (325 Zeilen) hatte keinen Importeur mehr; es ist samt dem toten Alias-Export `export { ExportModal as PdfExportModal }` gelöscht. Zusätzlich fiel die nie übergebene Prop `prefilledClientId` aus `ExportModal` — kein Aufrufer setzte sie, ihr Effekt feuerte nie. Kein Verhaltenswechsel: Die Vorauswahl bei genau einem Kunden bleibt, sie hing nie an der Prop.
+
 ## [1.15.1] — 2026-07-27
 
 ### Fixed
