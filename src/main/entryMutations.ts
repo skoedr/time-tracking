@@ -104,6 +104,10 @@ export function validateManualEntry(
  * segment → plain insert (link_id stays NULL). Multiple segments → all rows
  * share a fresh UUID `link_id`. Returns the FIRST inserted row (matching the
  * user's input.started_at). Caller must have validated the full range first.
+ *
+ * `graph_event_id` (#130c) goes on the FIRST segment only: the column carries a
+ * unique index, so a midnight-split pair cannot both hold it — and one segment
+ * is enough for the dedupe, which only asks "does any live row carry this id".
  */
 export function insertEntrySegments(
   db: Db,
@@ -113,13 +117,14 @@ export function insertEntrySegments(
   reference = '',
   billable = 1,
   private_note = '',
-  project_id: number | null = null
+  project_id: number | null = null,
+  graph_event_id: string | null = null
 ): Entry {
   const linkId = segments.length > 1 ? randomUUID() : null
   const description = input.description.trim()
   const insertStmt = db.prepare(
-    `INSERT INTO entries (client_id, description, started_at, stopped_at, heartbeat_at, rounded_min, link_id, project_id, tags, reference, billable, private_note)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    `INSERT INTO entries (client_id, description, started_at, stopped_at, heartbeat_at, rounded_min, link_id, project_id, tags, reference, billable, private_note, graph_event_id)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   )
   const tx = db.transaction((): Entry => {
     let firstId = 0
@@ -138,7 +143,8 @@ export function insertEntrySegments(
         tags,
         reference,
         billable,
-        private_note
+        private_note,
+        firstId === 0 ? graph_event_id : null
       )
       if (firstId === 0) firstId = Number(info.lastInsertRowid)
     }

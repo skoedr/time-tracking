@@ -16,6 +16,8 @@ import type Database from 'better-sqlite3'
 import { getAccessToken, getStatus, type GraphAccountDeps } from './graphAccount'
 import { fetchCalendarView, GraphCalendarError, type CalendarRange } from './graphCalendar'
 import { domainMapping } from './clientDomains'
+import { insertEntrySegments, validateManualEntry } from './entryMutations'
+import { splitAtMidnight } from '../shared/midnightSplit'
 import { domainOf, mapEvents, type FilterOptions, type MappedEvents } from '../shared/graphCalendar'
 
 export interface PreviewDeps {
@@ -81,4 +83,78 @@ export async function previewCalendarImport(
     alreadyImported: importedEventIds(db),
     filters
   })
+}
+
+/** One confirmed draft from the dialog — times possibly reviewed, client chosen. */
+export interface ImportEntryItem {
+  graphEventId: string
+  description: string
+  startedAt: string
+  stoppedAt: string
+  clientId: number
+}
+
+export interface ImportResult {
+  created: number
+  /** Per-event failures, with the same messages the manual-entry form shows. */
+  failed: Array<{ graphEventId: string; error: string }>
+}
+
+/**
+ * Turn confirmed drafts into entries (#130c).
+ *
+ * Each event commits in its own transaction on purpose: calendars contain
+ * overlapping meetings, and the overlap validation would sink an all-or-nothing
+ * batch because of one double-booked slot. This way the user gets four entries
+ * and one explained failure instead of five failures.
+ *
+ * Soft-deleted entries holding the same event id give up their anchor first —
+ * they are the "imported this once, then deleted it" case, and without the
+ * release the unique index would refuse the re-import the preview just offered.
+ */
+export function importCalendarEntries(
+  db: Database.Database,
+  items: ImportEntryItem[]
+): ImportResult {
+  let created = 0
+  const failed: ImportResult['failed'] = []
+
+  for (const item of items) {
+    const graphEventId = item.graphEventId?.trim()
+    if (!graphEventId) {
+      failed.push({ graphEventId: item.graphEventId ?? '', error: 'Termin ohne Event-ID.' })
+      continue
+    }
+    const tx = db.transaction((): void => {
+      const dupe = db
+        .prepare(`SELECT id FROM entries WHERE graph_event_id = ? AND deleted_at IS NULL`)
+        .get(graphEventId)
+      if (dupe) throw new Error('Termin wurde bereits übernommen.')
+
+      db.prepare(
+        `UPDATE entries SET graph_event_id = NULL
+         WHERE graph_event_id = ? AND deleted_at IS NOT NULL`
+      ).run(graphEventId)
+
+      const input = {
+        client_id: item.clientId,
+        description: item.description ?? '',
+        started_at: item.startedAt,
+        stopped_at: item.stoppedAt
+      }
+      const err = validateManualEntry(db, input)
+      if (err) throw new Error(err)
+
+      const segments = splitAtMidnight(new Date(item.startedAt), new Date(item.stoppedAt))
+      insertEntrySegments(db, input, segments, '', '', 1, '', null, graphEventId)
+    })
+    try {
+      tx()
+      created++
+    } catch (e) {
+      failed.push({ graphEventId, error: e instanceof Error ? e.message : String(e) })
+    }
+  }
+
+  return { created, failed }
 }

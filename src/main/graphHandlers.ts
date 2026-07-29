@@ -25,7 +25,12 @@ import {
   type GraphAccountDeps
 } from './graphAccount'
 import { forgetDomain, learnDomain, listClientDomains, type ClientDomain } from './clientDomains'
-import { previewCalendarImport } from './graphImport'
+import {
+  importCalendarEntries,
+  previewCalendarImport,
+  type ImportEntryItem,
+  type ImportResult
+} from './graphImport'
 import type { CalendarRange } from './graphCalendar'
 import type { FilterOptions, MappedEvents } from '../shared/graphCalendar'
 
@@ -114,6 +119,14 @@ export function registerGraphHandlers(db: Database.Database): void {
       }
     }
   )
+
+  ipcMain.handle('graph:importEntries', (_e, items: ImportEntryItem[]): IpcResult<ImportResult> => {
+    try {
+      return ok(importCalendarEntries(db, items))
+    } catch (e) {
+      return fail(e)
+    }
+  })
 
   ipcMain.handle('graph:listDomains', (): IpcResult<ClientDomain[]> => {
     return listClientDomains(db)

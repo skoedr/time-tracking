@@ -24,6 +24,7 @@ import type { CsvRequest } from '../main/csvExport'
 import type { AccountStatus, VerifyResult } from '../main/graphAccount'
 import type { ClientDomain } from '../main/clientDomains'
 import type { CalendarRange } from '../main/graphCalendar'
+import type { ImportEntryItem, ImportResult } from '../main/graphImport'
 import type { FilterOptions, MappedEvents } from '../shared/graphCalendar'
 import type { IcalRequest } from '../main/icalExport'
 
@@ -257,6 +258,8 @@ const api = {
       filters?: FilterOptions
     ): Promise<IpcResult<MappedEvents>> =>
       ipcRenderer.invoke('graph:calendarPreview', range, filters),
+    importEntries: (items: ImportEntryItem[]): Promise<IpcResult<ImportResult>> =>
+      ipcRenderer.invoke('graph:importEntries', items),
     listDomains: (): Promise<IpcResult<ClientDomain[]>> => ipcRenderer.invoke('graph:listDomains'),
     learnDomain: (domain: string, clientId: number): Promise<IpcResult<ClientDomain>> =>
       ipcRenderer.invoke('graph:learnDomain', domain, clientId),
