@@ -133,6 +133,10 @@ const api = {
     undelete: (id: number): Promise<IpcResult<Entry>> => ipcRenderer.invoke('entries:undelete', id)
   },
   // Settings
+  icalFeed: {
+    url: (): Promise<IpcResult<string>> => ipcRenderer.invoke('icalFeed:url'),
+    regenerate: (): Promise<IpcResult<string>> => ipcRenderer.invoke('icalFeed:regenerate')
+  },
   settings: {
     getAll: (): Promise<IpcResult<Settings>> => ipcRenderer.invoke('settings:getAll'),
     set: (key: string, value: string): Promise<IpcResult<void>> =>

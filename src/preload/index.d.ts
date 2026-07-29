@@ -80,6 +80,10 @@ declare global {
         getAll(): Promise<IpcResult<Settings>>
         set(key: string, value: string): Promise<IpcResult<void>>
       }
+      icalFeed: {
+        url(): Promise<IpcResult<string>>
+        regenerate(): Promise<IpcResult<string>>
+      }
       backups: {
         list(): Promise<IpcResult<BackupInfo[]>>
         create(): Promise<IpcResult<string>>

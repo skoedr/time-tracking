@@ -213,6 +213,11 @@ export interface Settings {
   // names the client (default generic).
   presence_enabled?: string
   presence_show_client?: string
+  // v1.17 #169 — subscribable iCal feed (migration 025). Local-only webcal
+  // server; the token is persistent because subscribers store the URL.
+  ical_feed_enabled?: string
+  ical_feed_port?: string
+  ical_feed_token?: string
 }
 
 export interface CreateClientInput {

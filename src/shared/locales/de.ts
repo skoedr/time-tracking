@@ -653,6 +653,18 @@ export const de = {
   'settings.controller.enable': 'Hardware-Tasten erlauben',
   'settings.controller.enableHint':
     'Erlaubt Konsolen wie dem Stream Deck, Timer pro Kunde (und Projekt) zu starten und zu stoppen. Der Tastendruck gilt als Bestätigung; jede Aktion landet im Audit-Log. Nur bei laufender App.',
+  // v1.17 #169 — abonnierbarer iCal-Feed
+  'settings.icalFeed.title': 'Kalender-Feed (webcal)',
+  'settings.icalFeed.enable': 'Feed aktivieren',
+  'settings.icalFeed.enableHint':
+    'Stellt die Einträge der letzten 90 Tage als abonnierbaren Kalender bereit (nur auf diesem Rechner, nur bei laufender App). Die URL enthält den Zugriffs-Token. Hinweis: Das neue Outlook und Outlook im Web rufen Abos über die Microsoft-Cloud ab und können lokale Feeds nicht erreichen — nutzbar mit klassischem Outlook, Thunderbird oder Apple Kalender.',
+  'settings.icalFeed.copy': 'Kopieren',
+  'settings.icalFeed.copied': 'Kopiert!',
+  'settings.icalFeed.port': 'Port',
+  'settings.icalFeed.portPlaceholder': '27182',
+  'settings.icalFeed.regenerate': 'Token erneuern',
+  'settings.icalFeed.regenerateHint':
+    'Token erneuern macht alle bestehenden Abos ungültig — die URL muss danach in jedem Kalender neu eingetragen werden.',
   // v1.15 #134 — Outbound-Webhooks
   'settings.webhooks.section': 'Webhooks',
   'settings.webhooks.desc':
