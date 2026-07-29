@@ -134,8 +134,8 @@ export function registerGraphHandlers(db: Database.Database): void {
 
   ipcMain.handle(
     'graph:learnDomain',
-    (_e, domain: string, clientId: number): IpcResult<ClientDomain> => {
-      return learnDomain(db, domain, clientId)
+    (_e, domain: string, clientId: number, projectId?: number | null): IpcResult<ClientDomain> => {
+      return learnDomain(db, domain, clientId, projectId ?? null)
     }
   )
 

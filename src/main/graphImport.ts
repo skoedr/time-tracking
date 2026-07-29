@@ -92,6 +92,8 @@ export interface ImportEntryItem {
   startedAt: string
   stoppedAt: string
   clientId: number
+  /** Project within that client, or null (#176). */
+  projectId?: number | null
 }
 
 export interface ImportResult {
@@ -145,8 +147,18 @@ export function importCalendarEntries(
       const err = validateManualEntry(db, input)
       if (err) throw new Error(err)
 
+      const projectId = item.projectId ?? null
+      if (projectId !== null) {
+        // Same rule as learnDomain: a project from another client would book
+        // the time onto the wrong customer's budget.
+        const project = db
+          .prepare(`SELECT id FROM projects WHERE id = ? AND client_id = ?`)
+          .get(projectId, item.clientId)
+        if (!project) throw new Error('Projekt gehört nicht zum gewählten Kunden.')
+      }
+
       const segments = splitAtMidnight(new Date(item.startedAt), new Date(item.stoppedAt))
-      insertEntrySegments(db, input, segments, '', '', 1, '', null, graphEventId)
+      insertEntrySegments(db, input, segments, '', '', 1, '', projectId, graphEventId)
     })
     try {
       tx()

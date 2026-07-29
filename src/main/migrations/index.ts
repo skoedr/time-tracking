@@ -19,6 +19,7 @@ import { migration018 } from './018-v114-mcp-integration'
 import { migration019 } from './019-v114-mcp-write-confirm'
 import { migration020 } from './020-v115-webhooks'
 import { migration021 } from './021-v116-graph-import'
+import { migration022 } from './022-v117-domain-project'
 
 export interface Migration {
   /** Monotonically increasing integer. Never reused, never reordered. */
@@ -54,5 +55,6 @@ export const migrations: Migration[] = [
   migration018,
   migration019,
   migration020,
-  migration021
+  migration021,
+  migration022
 ].sort((a, b) => a.version - b.version)

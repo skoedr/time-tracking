@@ -192,6 +192,7 @@ describe('graphImport', () => {
         startedAt: '2026-07-01T09:00:00.000Z',
         stoppedAt: '2026-07-01T10:00:00.000Z',
         clientId: 1,
+        projectId: null,
         clientHint: 'matched',
         domains: ['kunde.de']
       })
@@ -204,6 +205,14 @@ describe('graphImport', () => {
       expect(result.skipped).toEqual([
         { graphEventId: 'evt-done', subject: 'Schon übernommen', reason: 'already-imported' }
       ])
+    })
+
+    it('carries the mapped project into the draft (#176)', async () => {
+      db.prepare(`INSERT INTO projects (id, client_id, name) VALUES (7, 1, 'Endkunde A')`).run()
+      learnDomain(db, 'kunde.de', 1, 7)
+      const fetchFn = (async () => pageResponse([event()])) as unknown as typeof fetch
+      const result = await previewCalendarImport(db, RANGE, { account: accountDeps(), fetchFn })
+      expect(result.drafts[0]).toMatchObject({ clientId: 1, projectId: 7, clientHint: 'matched' })
     })
 
     it('passes Graph failures through as user-facing calendar errors', async () => {
@@ -304,6 +313,22 @@ describe('graphImport', () => {
       const result = importCalendarEntries(db, [item({ clientId: 999 })])
       expect(result.created).toBe(0)
       expect(result.failed[0].error).toContain('Kunde existiert nicht')
+    })
+
+    it('writes the chosen project onto the entry (#176)', () => {
+      db.prepare(`INSERT INTO projects (id, client_id, name) VALUES (7, 1, 'Endkunde A')`).run()
+      const result = importCalendarEntries(db, [item({ projectId: 7 })])
+      expect(result).toEqual({ created: 1, failed: [] })
+      const row = db.prepare(`SELECT project_id FROM entries`).get() as { project_id: number }
+      expect(row.project_id).toBe(7)
+    })
+
+    it('rejects a project from another client instead of booking onto the wrong customer (#176)', () => {
+      db.prepare(`INSERT INTO clients (id, name) VALUES (2, 'Kunde Y')`).run()
+      db.prepare(`INSERT INTO projects (id, client_id, name) VALUES (8, 2, 'Fremd')`).run()
+      const result = importCalendarEntries(db, [item({ projectId: 8 })])
+      expect(result.created).toBe(0)
+      expect(result.failed[0].error).toContain('gehört nicht zum gewählten Kunden')
     })
   })
 })

@@ -35,6 +35,12 @@ export interface GraphEvent {
   responseStatus?: { response?: string | null } | null
 }
 
+/** Wohin eine gelernte Domain zeigt: Kunde, optional mit Projekt (#176). */
+export interface DomainTarget {
+  clientId: number
+  projectId: number | null
+}
+
 /** Ein Vorschlag für die Übernahme. Wird erst mit Bestätigung ein Eintrag. */
 export interface EntryDraft {
   /** Graph-Event-ID — Anker für das Dedupe. */
@@ -44,6 +50,8 @@ export interface EntryDraft {
   stoppedAt: string
   /** Aus der Domain abgeleitet, `null` wenn nichts oder mehreres passt. */
   clientId: number | null
+  /** Projekt aus dem Mapping — nur gesetzt, wenn die Domains sich einig sind (#176). */
+  projectId: number | null
   /** Domains der externen Teilnehmer, für die manuelle Zuordnung und das Lernen. */
   domains: string[]
   /** Warum kein Kunde zugeordnet wurde — die UI kann das erklären. */
@@ -143,25 +151,38 @@ export function externalDomains(event: GraphEvent, ownDomains: readonly string[]
 }
 
 /**
- * Kunde aus den Domains — nur wenn die Antwort eindeutig ist.
+ * Kunde (und ggf. Projekt) aus den Domains — nur wenn die Antwort eindeutig ist.
  *
  * Zeigen zwei Domains desselben Termins auf verschiedene Kunden, wird bewusst
  * NICHTS zugeordnet: Ein Meeting mit zwei Kunden ist eine echte Situation, und
  * einen davon zu raten wäre schlimmer als zu fragen.
+ *
+ * Dasselbe Prinzip eine Stufe tiefer (#176): Das Projekt kommt nur mit, wenn
+ * ALLE passenden Domains desselben Kunden dasselbe Projekt nennen. Uneinigkeit
+ * heißt Kunde ja, Projekt leer — nie geraten.
  */
 export function resolveClient(
   domains: readonly string[],
-  mapping: ReadonlyMap<string, number>
-): { clientId: number | null; hint: EntryDraft['clientHint'] } {
-  if (domains.length === 0) return { clientId: null, hint: 'no-domain' }
-  const matches = new Set<number>()
+  mapping: ReadonlyMap<string, DomainTarget>
+): { clientId: number | null; projectId: number | null; hint: EntryDraft['clientHint'] } {
+  if (domains.length === 0) return { clientId: null, projectId: null, hint: 'no-domain' }
+  const targets: DomainTarget[] = []
   for (const d of domains) {
-    const id = mapping.get(d.toLowerCase())
-    if (id !== undefined) matches.add(id)
+    const target = mapping.get(d.toLowerCase())
+    if (target !== undefined) targets.push(target)
   }
-  if (matches.size === 1) return { clientId: [...matches][0], hint: 'matched' }
-  if (matches.size === 0) return { clientId: null, hint: 'unknown-domain' }
-  return { clientId: null, hint: 'ambiguous' }
+  const clients = new Set(targets.map((t) => t.clientId))
+  if (clients.size === 1) {
+    const clientId = [...clients][0]
+    const projects = new Set(targets.map((t) => t.projectId))
+    return {
+      clientId,
+      projectId: projects.size === 1 ? [...projects][0] : null,
+      hint: 'matched'
+    }
+  }
+  if (clients.size === 0) return { clientId: null, projectId: null, hint: 'unknown-domain' }
+  return { clientId: null, projectId: null, hint: 'ambiguous' }
 }
 
 /**
@@ -204,7 +225,7 @@ export function mapEvents(
   events: readonly GraphEvent[],
   opts: {
     ownDomains: readonly string[]
-    mapping: ReadonlyMap<string, number>
+    mapping: ReadonlyMap<string, DomainTarget>
     alreadyImported: ReadonlySet<string>
     filters?: FilterOptions
   }
@@ -254,13 +275,14 @@ export function mapEvents(
     }
 
     const domains = externalDomains(event, opts.ownDomains)
-    const { clientId, hint } = resolveClient(domains, opts.mapping)
+    const { clientId, projectId, hint } = resolveClient(domains, opts.mapping)
     drafts.push({
       graphEventId: id,
       description: describeEvent(event),
       startedAt,
       stoppedAt,
       clientId,
+      projectId,
       domains,
       clientHint: hint
     })

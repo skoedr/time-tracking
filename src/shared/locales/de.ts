@@ -587,11 +587,13 @@ export const de = {
   'calendarImport.loading': 'Lade Termine …',
   'calendarImport.empty': 'Keine offenen Termine im Zeitraum.',
   'calendarImport.clientPlaceholder': 'Kunde wählen …',
+  'calendarImport.projectPlaceholder': 'Kein Projekt',
   'calendarImport.hint.noDomain': 'Keine externen Teilnehmer — Kunde bitte manuell wählen.',
   'calendarImport.hint.unknownDomain': 'Unbekannte Domain — Kunde bitte manuell wählen.',
   'calendarImport.hint.ambiguous':
     'Teilnehmer aus mehreren bekannten Kunden — Kunde bitte manuell wählen.',
   'calendarImport.learn': '{domain} künftig diesem Kunden zuordnen',
+  'calendarImport.learnWithProject': '{domain} künftig diesem Kunden und Projekt zuordnen',
   'calendarImport.import': 'Übernehmen ({count})',
   'calendarImport.importing': 'Übernehme …',
   'calendarImport.done': '{created} von {total} Terminen übernommen.',

@@ -208,7 +208,11 @@ declare global {
         ): Promise<IpcResult<MappedEvents>>
         importEntries(items: ImportEntryItem[]): Promise<IpcResult<ImportResult>>
         listDomains(): Promise<IpcResult<ClientDomain[]>>
-        learnDomain(domain: string, clientId: number): Promise<IpcResult<ClientDomain>>
+        learnDomain(
+          domain: string,
+          clientId: number,
+          projectId?: number | null
+        ): Promise<IpcResult<ClientDomain>>
         forgetDomain(domain: string): Promise<IpcResult<void>>
       }
       update: {

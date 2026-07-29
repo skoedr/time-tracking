@@ -2,8 +2,8 @@ import { useState } from 'react'
 import { useT } from '../contexts/I18nContext'
 import { useEntriesStore } from '../store/entriesStore'
 import { Dialog } from './Dialog'
-import type { Client } from '../../../shared/types'
-import type { EntryDraft, SkippedEvent } from '../../../shared/graphCalendar'
+import type { Client, Project } from '../../../shared/types'
+import type { DomainTarget, EntryDraft, SkippedEvent } from '../../../shared/graphCalendar'
 import type { TranslationKey } from '../../../shared/locales/de'
 
 interface Props {
@@ -22,12 +22,17 @@ interface Props {
  *
  * The learn checkbox defaults to ON by decision on #130 (2026-07-29): mappings
  * are only ever created here, visibly, never silently — but the common case
- * (the mapping is right) should not cost an extra click per meeting.
+ * (the mapping is right) should not cost an extra click per meeting. The
+ * counterpart decision on #176: deviating from an ALREADY-learned mapping shows
+ * the checkbox default OFF — a one-off exception must not silently re-learn
+ * the rule.
  */
 interface RowState {
   checked: boolean
   clientId: number | null
-  /** Domain → learn? Only domains that are not already mapped appear here. */
+  /** Project within that client (#176), or null. */
+  projectId: number | null
+  /** Domain → learn? Rendered only while the domain's stored mapping differs. */
   learn: Record<string, boolean>
 }
 
@@ -47,8 +52,37 @@ export function GraphImportModal({ open, onClose, clients }: Props): React.React
   const [rows, setRows] = useState<Map<string, RowState>>(new Map())
   const [failures, setFailures] = useState<Map<string, string>>(new Map())
   const [doneMsg, setDoneMsg] = useState<string | null>(null)
+  const [projects, setProjects] = useState<Project[]>([])
+  const [mapping, setMapping] = useState<Map<string, DomainTarget>>(new Map())
 
   const activeClients = clients.filter((c) => c.active)
+
+  function activeProjects(clientId: number | null): Project[] {
+    if (clientId === null) return []
+    return projects.filter((p) => p.client_id === clientId && p.active === 1)
+  }
+
+  /**
+   * The project a stored mapping suggests for this row under the given client:
+   * only when the row's mapped domains that point at that client agree on one.
+   */
+  function mappedProjectFor(draft: EntryDraft, clientId: number): number | null {
+    const projectIds = new Set(
+      draft.domains
+        .map((d) => mapping.get(d))
+        .filter((t): t is DomainTarget => t !== undefined && t.clientId === clientId)
+        .map((t) => t.projectId)
+    )
+    return projectIds.size === 1 ? [...projectIds][0] : null
+  }
+
+  /** Whether the learn checkbox for this domain is visible under the current selection. */
+  function learnVisible(domain: string, row: RowState): boolean {
+    if (row.clientId === null) return false
+    const stored = mapping.get(domain)
+    if (!stored) return true
+    return stored.clientId !== row.clientId || stored.projectId !== row.projectId
+  }
 
   function reset(): void {
     setPhase('idle')
@@ -58,6 +92,8 @@ export function GraphImportModal({ open, onClose, clients }: Props): React.React
     setRows(new Map())
     setFailures(new Map())
     setDoneMsg(null)
+    setProjects([])
+    setMapping(new Map())
   }
 
   function close(): void {
@@ -71,24 +107,34 @@ export function GraphImportModal({ open, onClose, clients }: Props): React.React
     setFailures(new Map())
     setDoneMsg(null)
     const range = dateRangeIso(fromDate, toDate)
-    const [previewRes, domainsRes] = await Promise.all([
+    const [previewRes, domainsRes, projectsRes] = await Promise.all([
       window.api.graph.calendarPreview(range),
-      window.api.graph.listDomains()
+      window.api.graph.listDomains(),
+      window.api.projects.getAll({})
     ])
     if (!previewRes.ok) {
       setPhase('idle')
       setError(previewRes.error)
       return
     }
-    const mapped = new Set(domainsRes.ok ? domainsRes.data.map((d) => d.domain) : [])
+    const stored = new Map<string, DomainTarget>(
+      domainsRes.ok
+        ? domainsRes.data.map((d) => [d.domain, { clientId: d.clientId, projectId: d.projectId }])
+        : []
+    )
     const next = new Map<string, RowState>()
     for (const draft of previewRes.data.drafts) {
       next.set(draft.graphEventId, {
         checked: draft.clientId !== null,
         clientId: draft.clientId,
-        learn: Object.fromEntries(draft.domains.filter((d) => !mapped.has(d)).map((d) => [d, true]))
+        projectId: draft.projectId,
+        // New domains default ON (#130 decision); already-mapped domains start
+        // OFF — their box only appears when the selection deviates (#176).
+        learn: Object.fromEntries(draft.domains.map((d) => [d, !stored.has(d)]))
       })
     }
+    setMapping(stored)
+    setProjects(projectsRes.ok ? projectsRes.data : [])
     setDrafts(previewRes.data.drafts)
     setSkipped(previewRes.data.skipped)
     setRows(next)
@@ -118,7 +164,9 @@ export function GraphImportModal({ open, onClose, clients }: Props): React.React
       const row = rows.get(draft.graphEventId)
       if (!row || row.clientId === null) continue
       for (const [domain, learn] of Object.entries(row.learn)) {
-        if (learn) await window.api.graph.learnDomain(domain, row.clientId)
+        if (learn && learnVisible(domain, row)) {
+          await window.api.graph.learnDomain(domain, row.clientId, row.projectId)
+        }
       }
     }
     const res = await window.api.graph.importEntries(
@@ -129,7 +177,8 @@ export function GraphImportModal({ open, onClose, clients }: Props): React.React
           description: d.description,
           startedAt: d.startedAt,
           stoppedAt: d.stoppedAt,
-          clientId: row?.clientId ?? 0
+          clientId: row?.clientId ?? 0,
+          projectId: row?.projectId ?? null
         }
       })
     )
@@ -231,29 +280,62 @@ export function GraphImportModal({ open, onClose, clients }: Props): React.React
                     {formatDraftRange(draft.startedAt, draft.stoppedAt)}
                   </div>
                 </div>
-                <select
-                  value={row.clientId ?? ''}
-                  disabled={phase === 'importing'}
-                  onChange={(e) => {
-                    const clientId = e.target.value ? Number(e.target.value) : null
-                    // Choosing a client is the intent to take the row.
-                    patchRow(draft.graphEventId, { clientId, checked: clientId !== null })
-                  }}
-                  aria-label={t('calendarImport.clientPlaceholder')}
-                  className="w-44 shrink-0 appearance-none rounded-lg border px-2.5 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-400"
-                  style={{
-                    background: 'var(--input-bg)',
-                    borderColor: 'var(--card-border)',
-                    color: 'var(--text)'
-                  }}
-                >
-                  <option value="">{t('calendarImport.clientPlaceholder')}</option>
-                  {activeClients.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
+                <div className="flex w-44 shrink-0 flex-col gap-1.5">
+                  <select
+                    value={row.clientId ?? ''}
+                    disabled={phase === 'importing'}
+                    onChange={(e) => {
+                      const clientId = e.target.value ? Number(e.target.value) : null
+                      // Choosing a client is the intent to take the row. The
+                      // project follows the stored mapping when it has one for
+                      // this client, otherwise it resets.
+                      patchRow(draft.graphEventId, {
+                        clientId,
+                        projectId: clientId === null ? null : mappedProjectFor(draft, clientId),
+                        checked: clientId !== null
+                      })
+                    }}
+                    aria-label={t('calendarImport.clientPlaceholder')}
+                    className="w-full appearance-none rounded-lg border px-2.5 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                    style={{
+                      background: 'var(--input-bg)',
+                      borderColor: 'var(--card-border)',
+                      color: 'var(--text)'
+                    }}
+                  >
+                    <option value="">{t('calendarImport.clientPlaceholder')}</option>
+                    {activeClients.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                  {activeProjects(row.clientId).length > 0 && (
+                    <select
+                      value={row.projectId ?? ''}
+                      disabled={phase === 'importing'}
+                      onChange={(e) =>
+                        patchRow(draft.graphEventId, {
+                          projectId: e.target.value ? Number(e.target.value) : null
+                        })
+                      }
+                      aria-label={t('calendarImport.projectPlaceholder')}
+                      className="w-full appearance-none rounded-lg border px-2.5 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                      style={{
+                        background: 'var(--input-bg)',
+                        borderColor: 'var(--card-border)',
+                        color: 'var(--text)'
+                      }}
+                    >
+                      <option value="">{t('calendarImport.projectPlaceholder')}</option>
+                      {activeProjects(row.clientId).map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.name}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
               </div>
 
               {row.clientId === null && hintKey && (
@@ -263,9 +345,12 @@ export function GraphImportModal({ open, onClose, clients }: Props): React.React
                 </p>
               )}
 
-              {/* Learn checkboxes — one per not-yet-mapped domain, default ON. */}
-              {row.clientId !== null &&
-                Object.keys(row.learn).map((domain) => (
+              {/* Learn checkboxes — new domains default ON, a deviation from a
+                  stored mapping shows the box default OFF (#176). Hidden while
+                  the selection matches what is already learned. */}
+              {Object.keys(row.learn)
+                .filter((domain) => learnVisible(domain, row))
+                .map((domain) => (
                   <label
                     key={domain}
                     className="flex items-center gap-2 text-xs"
@@ -282,7 +367,12 @@ export function GraphImportModal({ open, onClose, clients }: Props): React.React
                       }
                       className="h-3.5 w-3.5 accent-indigo-500"
                     />
-                    {t('calendarImport.learn', { domain })}
+                    {t(
+                      row.projectId !== null
+                        ? 'calendarImport.learnWithProject'
+                        : 'calendarImport.learn',
+                      { domain }
+                    )}
                   </label>
                 ))}
 
