@@ -150,6 +150,18 @@ function mainLines(lines: string[], fill: string): string {
     .join('')
 }
 
+// ── Minutenring ────────────────────────────────────────────────────────────
+
+/**
+ * Rounded square x/y 9, w/h 126, r 19 as an explicit path: starts at top
+ * center (72, 9), runs clockwise — like a clock hand.
+ */
+const RING_PATH =
+  'M 72 9 H 116 A 19 19 0 0 1 135 28 V 116 A 19 19 0 0 1 116 135 H 28 ' +
+  'A 19 19 0 0 1 9 116 V 28 A 19 19 0 0 1 28 9 H 72'
+/** Straights 44+88+88+88+44 = 352, plus 4 quarter arcs (2π·19) ≈ 471.4. */
+const RING_LENGTH = 352 + 2 * Math.PI * 19
+
 // ── Zustände ───────────────────────────────────────────────────────────────
 
 function runningFace(label: KeyLabel, color: string | undefined, elapsedSec: number): string {
@@ -157,15 +169,17 @@ function runningFace(label: KeyLabel, color: string | undefined, elapsedSec: num
   const top = scaleL(base, 1.18)
   const bot = scaleL(base, 0.62)
   const sec = Math.max(0, Math.floor(elapsedSec))
-  // The Stream Deck renderer rasterizes ONE static frame — SMIL never runs on
-  // the key (confirmed on hardware). The current progress is therefore baked
-  // into the attribute; the <animate> stays as progressive enhancement for
-  // renderers that do animate (it overrides the attribute while running).
-  const pct = ((sec % 60) / 60) * 100
+  // The Stream Deck renderer rasterizes ONE static frame and supports neither
+  // SMIL nor pathLength (confirmed on hardware: pathLength ignored ⇒ the dash
+  // pattern repeated ~4× around the real ~471-unit perimeter). The progress is
+  // therefore an explicit clockwise path starting at top center, dashed in
+  // REAL user units; re-rendering advances it.
+  const dash = ((sec % 60) / 60) * RING_LENGTH
   const ring =
     `<rect x="9" y="9" width="126" height="126" rx="19" fill="none" stroke="#ffffff" stroke-opacity="0.22" stroke-width="3"/>` +
-    `<rect x="9" y="9" width="126" height="126" rx="19" fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round" pathLength="100" stroke-dasharray="${pct.toFixed(1)} 100" transform="rotate(-90 72 72)">` +
-    `<animate attributeName="stroke-dasharray" values="0 100;100 100" dur="60s" begin="-${sec % 60}s" repeatCount="indefinite"/></rect>`
+    (dash > 0.5
+      ? `<path d="${RING_PATH}" fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round" stroke-dasharray="${dash.toFixed(1)} ${Math.ceil(RING_LENGTH)}"/>`
+      : '')
   return (
     `<defs><linearGradient id="b" x1="0" y1="0" x2="0.35" y2="1">` +
     `<stop offset="0" stop-color="${top}"/><stop offset="0.55" stop-color="${base}"/>` +
