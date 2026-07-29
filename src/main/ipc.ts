@@ -21,6 +21,7 @@ import { registerAnalyticsHandlers } from './analyticsHandlers'
 import { registerBudgetHandlers } from './budgetHandlers'
 import { registerTagHandlers } from './tagHandlers'
 import { registerGraphHandlers } from './graphHandlers'
+import { feedUrl, generateFeedToken } from './icalFeed'
 import { buildMcpRegistration, type McpRegistration } from './mcpLaunch'
 import type {
   Client,
@@ -52,6 +53,10 @@ export interface IpcHooks {
   setControllerEnabled(enabled: boolean): void
   /** Re-run the presence reconciler (#132) after a relevant settings change. */
   pokePresence(): void
+  /** Start/stop the local iCal feed server (#169). */
+  setIcalFeedEnabled(enabled: boolean): void
+  /** Restart the feed server after a port/token change (no-op when disabled). */
+  restartIcalFeed(): void
 }
 
 function ok<T>(data: T): IpcResult<T> {
@@ -669,8 +674,41 @@ export function registerIpcHandlers(hooks: IpcHooks): void {
         // Toggling mirroring off clears our own status message; the language
         // and privacy switches re-render it while a timer runs.
         hooks.pokePresence()
+      } else if (key === 'ical_feed_enabled') {
+        hooks.setIcalFeedEnabled(value === '1')
+      } else if (key === 'ical_feed_port') {
+        hooks.restartIcalFeed()
       }
       return ok(undefined)
+    } catch (e) {
+      return fail(e)
+    }
+  })
+
+  // ── iCal feed (#169) ───────────────────────────────────────────
+  const readSetting = (key: string): string | undefined =>
+    (
+      db.prepare(`SELECT value FROM settings WHERE key = ?`).get(key) as
+        | { value: string }
+        | undefined
+    )?.value
+
+  ipcMain.handle('icalFeed:url', (): IpcResult<string> => {
+    try {
+      return ok(feedUrl(readSetting))
+    } catch (e) {
+      return fail(e)
+    }
+  })
+
+  // Regenerating invalidates every stored subscription URL — the UI says so.
+  ipcMain.handle('icalFeed:regenerate', (): IpcResult<string> => {
+    try {
+      db.prepare(`INSERT OR REPLACE INTO settings (key, value) VALUES ('ical_feed_token', ?)`).run(
+        generateFeedToken()
+      )
+      hooks.restartIcalFeed()
+      return ok(feedUrl(readSetting))
     } catch (e) {
       return fail(e)
     }

@@ -11,6 +11,7 @@ import { Toggle } from '../components/Toggle'
 import { useUiPrefsStore } from '../store/uiPrefsStore'
 import TagManagementView from './TagManagementView'
 import { GraphAccountSection } from '../components/GraphAccountSection'
+import { IcalFeedSection } from '../components/IcalFeedSection'
 import {
   WEBHOOK_EVENTS,
   isValidWebhookUrl,
@@ -940,6 +941,16 @@ export default function SettingsView(): React.JSX.Element {
                   onChange={(v) => void update('controller_enabled', v ? '1' : '0')}
                 />
               </Row>
+            </Section>
+
+            {/* Subscribable iCal feed (v1.17 #169) */}
+            <Section title={t('settings.icalFeed.title')}>
+              <IcalFeedSection
+                enabled={settings.ical_feed_enabled === '1'}
+                port={settings.ical_feed_port ?? ''}
+                onEnabledChange={(v) => void update('ical_feed_enabled', v ? '1' : '0')}
+                onPortChange={(v) => void update('ical_feed_port', v)}
+              />
             </Section>
 
             {/* Outbound-Webhooks (v1.15 #134) — own contiguous block below MCP */}

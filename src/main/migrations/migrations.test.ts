@@ -102,6 +102,10 @@ describe('migration SQL execution', () => {
       // Migration 023 — hardware-key controller scope (v1.17 #133)
       { key: 'controller_enabled', value: '0' },
       { key: 'hotkey_toggle', value: 'Alt+Shift+S' },
+      // Migration 025 — subscribable iCal feed (v1.17 #169)
+      { key: 'ical_feed_enabled', value: '0' },
+      { key: 'ical_feed_port', value: '' },
+      { key: 'ical_feed_token', value: '' },
       { key: 'idle_threshold_minutes', value: '5' },
       { key: 'language', value: 'de' },
       // Migration 018 — MCP integration flags (v1.14 #128)

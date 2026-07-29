@@ -644,6 +644,18 @@ export const en: Record<TranslationKey, string> = {
   'settings.controller.enable': 'Allow hardware keys',
   'settings.controller.enableHint':
     'Lets consoles like the Stream Deck start and stop timers per client (and project). The key press counts as confirmation; every action is written to the audit log. Only while the app is running.',
+  // v1.17 #169 — subscribable iCal feed
+  'settings.icalFeed.title': 'Calendar feed (webcal)',
+  'settings.icalFeed.enable': 'Enable feed',
+  'settings.icalFeed.enableHint':
+    'Serves the last 90 days of entries as a subscribable calendar (this machine only, only while the app runs). The URL contains the access token.',
+  'settings.icalFeed.copy': 'Copy',
+  'settings.icalFeed.copied': 'Copied!',
+  'settings.icalFeed.port': 'Port',
+  'settings.icalFeed.portPlaceholder': '27182',
+  'settings.icalFeed.regenerate': 'Regenerate token',
+  'settings.icalFeed.regenerateHint':
+    'Regenerating the token invalidates all existing subscriptions — the URL must be re-added in every calendar afterwards.',
   // v1.15 #134 — Outbound webhooks
   'settings.webhooks.section': 'Webhooks',
   'settings.webhooks.desc':

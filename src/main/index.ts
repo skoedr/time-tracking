@@ -34,6 +34,13 @@ import { graphAccountDepsFor } from './graphHandlers'
 import { effectiveClientId, getAccessToken, getStatus } from './graphAccount'
 import { applyMiniEnabled, destroyMini, pushMiniState, toggleMini } from './miniWindow'
 import {
+  generateFeedToken,
+  restartFeedServer,
+  startFeedServer,
+  stopFeedServer,
+  type FeedDeps
+} from './icalFeed'
+import {
   configureIdleWatcher,
   setIdleThresholdMinutes,
   startIdleWatcher,
@@ -388,6 +395,25 @@ function pokePresence(): void {
   }
 }
 
+/** iCal feed (#169): deps + token bootstrap. */
+function icalFeedDeps(): FeedDeps {
+  return {
+    getDb,
+    getSetting: (key) => mcpBridgeDeps().getSetting(key),
+    log: (m) => log.info(m)
+  }
+}
+
+/** The token is persistent (subscribers store the URL) — mint it only once. */
+function ensureFeedToken(): void {
+  const current = icalFeedDeps().getSetting('ical_feed_token')
+  if (!current || current === '') {
+    getDb()
+      .prepare(`INSERT OR REPLACE INTO settings (key, value) VALUES ('ical_feed_token', ?)`)
+      .run(generateFeedToken())
+  }
+}
+
 /** Dependencies handed to the MCP write bridge (all resolved lazily at call time). */
 function mcpBridgeDeps(): BridgeDeps {
   return {
@@ -568,7 +594,20 @@ app.whenReady().then(async () => {
         if (mcpBridgeDeps().getSetting('mcp_write_enabled') !== '1') stopMcpBridge()
       }
     },
-    pokePresence
+    pokePresence,
+    setIcalFeedEnabled: (enabled) => {
+      if (enabled) {
+        ensureFeedToken()
+        startFeedServer(icalFeedDeps())
+      } else {
+        stopFeedServer()
+      }
+    },
+    restartIcalFeed: () => {
+      if (icalFeedDeps().getSetting('ical_feed_enabled') === '1') {
+        restartFeedServer(icalFeedDeps())
+      }
+    }
   })
   createWindow()
 
@@ -589,6 +628,12 @@ app.whenReady().then(async () => {
   if (writeOn) generateWriteToken()
   if (controllerOn) generateControllerToken()
   if (writeOn || controllerOn) startMcpBridge(mcpBridgeDeps())
+
+  // v1.17 #169 — local iCal feed, only while the app runs (like the bridge).
+  if (mcpBridgeDeps().getSetting('ical_feed_enabled') === '1') {
+    ensureFeedToken()
+    startFeedServer(icalFeedDeps())
+  }
 
   tray = new Tray(trayStoppedIcon)
   updateTray(false, '', 0)
@@ -656,6 +701,7 @@ app.on('will-quit', () => {
   stopIdleWatcher()
   destroyMini()
   stopMcpBridge()
+  stopFeedServer()
 })
 
 app.on('window-all-closed', () => {
