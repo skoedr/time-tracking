@@ -1,0 +1,166 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>TimeTrack — Toggle timer</title>
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+      body {
+        margin: 0;
+        padding: 10px 14px;
+        background: #2d2d2d;
+        color: #d8d8d8;
+        font-family: 'Segoe UI', Helvetica, Arial, sans-serif;
+        font-size: 13px;
+      }
+      .row {
+        display: flex;
+        align-items: center;
+        margin-bottom: 10px;
+      }
+      .row label {
+        width: 90px;
+        flex-shrink: 0;
+        color: #969696;
+      }
+      .row select {
+        flex: 1;
+        min-width: 0;
+        background: #3d3d3d;
+        color: #d8d8d8;
+        border: 1px solid #5a5a5a;
+        border-radius: 4px;
+        padding: 4px 6px;
+        font-size: 13px;
+      }
+      #hint {
+        color: #969696;
+        line-height: 1.4;
+      }
+      #hint.error {
+        color: #e0a030;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="row">
+      <label for="client">Client</label>
+      <select id="client" disabled></select>
+    </div>
+    <div class="row">
+      <label for="project">Project</label>
+      <select id="project" disabled></select>
+    </div>
+    <div id="hint">Connecting to TimeTrack …</div>
+
+    <script>
+      /**
+       * Plain property inspector (no bundled framework): registers against the
+       * Stream Deck app's websocket, asks the plugin backend for the client/
+       * project list (which the backend fetches from TimeTrack's local bridge)
+       * and persists {clientId, projectId, clientName, projectName, color}.
+       */
+      let ws = null
+      let ctx = ''
+      let actionUUID = ''
+      let settings = {}
+      let clients = []
+
+      const $client = document.getElementById('client')
+      const $project = document.getElementById('project')
+      const $hint = document.getElementById('hint')
+
+      window.connectElgatoStreamDeckSocket = function (port, uuid, registerEvent, info, actionInfo) {
+        ctx = uuid
+        const parsed = JSON.parse(actionInfo)
+        actionUUID = parsed.action
+        settings = parsed.payload.settings || {}
+        ws = new WebSocket('ws://127.0.0.1:' + port)
+        ws.onopen = () => {
+          ws.send(JSON.stringify({ event: registerEvent, uuid }))
+          send('sendToPlugin', { event: 'getTargets' })
+        }
+        ws.onmessage = (msg) => {
+          const data = JSON.parse(msg.data)
+          if (data.event === 'sendToPropertyInspector') onFromPlugin(data.payload || {})
+        }
+      }
+
+      function send(event, payload) {
+        ws.send(JSON.stringify({ event, action: actionUUID, context: ctx, payload }))
+      }
+
+      function onFromPlugin(payload) {
+        if (payload.event !== 'targets') return
+        clients = payload.clients || []
+        if (payload.unavailable) {
+          $hint.textContent =
+            'TimeTrack is not running or hardware keys are disabled (Settings → Integrations).'
+          $hint.className = 'error'
+          return
+        }
+        $hint.textContent = clients.length
+          ? 'Pick the client (and project) this key toggles.'
+          : 'No active clients in TimeTrack.'
+        $hint.className = ''
+        fillClients()
+      }
+
+      function fillClients() {
+        $client.innerHTML = '<option value="">— select —</option>'
+        for (const c of clients) {
+          const o = document.createElement('option')
+          o.value = String(c.id)
+          o.textContent = c.name
+          $client.appendChild(o)
+        }
+        $client.disabled = false
+        if (settings.clientId != null) $client.value = String(settings.clientId)
+        fillProjects()
+      }
+
+      function fillProjects() {
+        const c = clients.find((x) => String(x.id) === $client.value)
+        $project.innerHTML = '<option value="">(no project)</option>'
+        for (const p of (c && c.projects) || []) {
+          const o = document.createElement('option')
+          o.value = String(p.id)
+          o.textContent = p.name
+          $project.appendChild(o)
+        }
+        $project.disabled = !c
+        if (
+          settings.projectId != null &&
+          c &&
+          c.projects.some((p) => String(p.id) === String(settings.projectId))
+        ) {
+          $project.value = String(settings.projectId)
+        }
+      }
+
+      function persist() {
+        const c = clients.find((x) => String(x.id) === $client.value)
+        const p = c && c.projects.find((x) => String(x.id) === $project.value)
+        settings = c
+          ? {
+              clientId: c.id,
+              projectId: p ? p.id : null,
+              clientName: c.name,
+              projectName: p ? p.name : '',
+              color: c.color || ''
+            }
+          : {}
+        send('setSettings', settings)
+      }
+
+      $client.addEventListener('change', () => {
+        settings.projectId = null
+        fillProjects()
+        persist()
+      })
+      $project.addEventListener('change', persist)
+    </script>
+  </body>
+</html>

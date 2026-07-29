@@ -52,6 +52,7 @@ declare global {
       onHotkeyToggle(callback: () => void): () => void
       onTrayQuickStart(callback: (clientId: number) => void): () => void
       onTrayStop(callback: () => void): () => void
+      onDataChanged(callback: () => void): () => void
       onIdleDetected(
         callback: (data: { idleSince: string; idleSeconds: number }) => void
       ): () => void

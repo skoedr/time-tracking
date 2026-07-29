@@ -9,3 +9,7 @@ tsconfig.*.json
 # geprüft (#144). Prettier hängt eine abschließende Newline an, die der
 # Generator nicht schreibt — das Gate wäre danach dauerhaft rot.
 resources/licenses.json
+
+# Standalone Stream Deck plugin project (#133) — own toolchain; the bundled
+# bin/ output must stay byte-identical to its build.
+streamdeck-plugin/

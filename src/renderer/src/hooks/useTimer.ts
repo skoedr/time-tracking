@@ -53,6 +53,7 @@ const globalQuickStartRef: { current: (clientId: number, projectId?: number | nu
   current: () => {}
 }
 const globalStopRef: { current: () => void } = { current: () => {} }
+const globalResyncRef: { current: () => void } = { current: () => {} }
 let listenersInstalled = false
 
 function installGlobalListenersOnce(
@@ -63,6 +64,7 @@ function installGlobalListenersOnce(
   window.api.onHotkeyToggle(() => globalToggleRef.current())
   window.api.onTrayQuickStart((clientId) => globalQuickStartRef.current(clientId))
   window.api.onTrayStop(() => globalStopRef.current())
+  window.api.onDataChanged(() => globalResyncRef.current())
   window.api.onIdleDetected((data) => {
     if (useTimerStore.getState().runningEntry) {
       setIdleEvent(data)
@@ -318,6 +320,37 @@ export function useTimer(): UseTimerResult {
     dismissIdle()
   }, [dismissIdle])
 
+  // External writes (#133): the MCP bridge / hardware keys mutate the DB in
+  // the main process and broadcast 'data:changed' — the renderer, which owns
+  // the timer state machine, resyncs its running entry from the DB and pushes
+  // the result to tray + mini-widget over the existing 'tray:update' path.
+  const resyncFromExternal = useCallback(async () => {
+    const res = await window.api.entries.getRunning()
+    if (!res.ok) return
+    const entry = res.data
+    const current = useTimerStore.getState().runningEntry
+    if (entry) {
+      if (current && current.id === entry.id) return
+      setRunningEntry(entry)
+      setSelectedClientId(entry.client_id)
+      setSelectedProjectId(entry.project_id ?? null)
+      setDescription(entry.description)
+      setElapsedSeconds(Math.floor((Date.now() - new Date(entry.started_at).getTime()) / 1000))
+      const clientName =
+        useTimerStore.getState().clients.find((c) => c.id === entry.client_id)?.name ?? ''
+      await pushTrayUpdate(true, clientName)
+    } else {
+      if (current) {
+        setRunningEntry(null)
+        setDescription('')
+      }
+      // Refresh the tray today-total either way — an external write may have
+      // added or edited entries without touching the running timer.
+      await pushTrayUpdate(false, '')
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- store setters are stable (zustand)
+  }, [])
+
   // Keep refs current so listeners always call the latest fn
   // eslint-disable-next-line react-hooks/immutability -- #157: dauerhaft — modulweite Singletons, damit die IPC-Listener nur einmal registriert werden und trotzdem die neueste Closure treffen; der Compiler ist bewusst nicht aktiviert (Messung im Issue)
   globalToggleRef.current = runningEntry ? stop : start
@@ -325,6 +358,8 @@ export function useTimer(): UseTimerResult {
   globalQuickStartRef.current = startWithClient
   // eslint-disable-next-line react-hooks/immutability -- #157: dauerhaft — modulweite Singletons, damit die IPC-Listener nur einmal registriert werden und trotzdem die neueste Closure treffen; der Compiler ist bewusst nicht aktiviert (Messung im Issue)
   globalStopRef.current = stop
+  // eslint-disable-next-line react-hooks/immutability -- #157: dauerhaft — modulweite Singletons, damit die IPC-Listener nur einmal registriert werden und trotzdem die neueste Closure treffen; der Compiler ist bewusst nicht aktiviert (Messung im Issue)
+  globalResyncRef.current = () => void resyncFromExternal()
 
   return {
     clients,

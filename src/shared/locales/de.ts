@@ -638,6 +638,11 @@ export const de = {
   'settings.mcp.auditLogHint':
     'Jede ausgeführte Schreibaktion wird in mcp-writes.log protokolliert.',
   'settings.mcp.openAuditLog': 'Log-Ordner öffnen',
+  // v1.17 #133 — Hardware-Tasten (Stream Deck & Co.)
+  'settings.controller.title': 'Hardware-Tasten',
+  'settings.controller.enable': 'Hardware-Tasten erlauben',
+  'settings.controller.enableHint':
+    'Erlaubt Konsolen wie dem Stream Deck, Timer pro Kunde (und Projekt) zu starten und zu stoppen. Der Tastendruck gilt als Bestätigung; jede Aktion landet im Audit-Log. Nur bei laufender App.',
   // v1.15 #134 — Outbound-Webhooks
   'settings.webhooks.section': 'Webhooks',
   'settings.webhooks.desc':

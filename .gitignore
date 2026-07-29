@@ -26,3 +26,8 @@ templates/*.png
 # Worktree-Kopien paralleler Agenten (nicht einchecken; der Rest von .claude/
 # bleibt bewusst trackbar).
 .claude/worktrees/
+
+# Stream Deck plugin (#133): generated bundle + packed installer stay out;
+# sources and manifest are tracked.
+streamdeck-plugin/com.timetrack.streamdeck.sdPlugin/bin/
+streamdeck-plugin/*.streamDeckPlugin

@@ -24,7 +24,7 @@ import { auditWrite } from './mcpAudit'
 import { handleRequest, type BridgeCtx, type BridgeRequest } from './mcpBridgeCore'
 import { emitWebhooks, eventForWriteOp } from './webhooks'
 import { logWebhookDelivery } from './webhookLog'
-import { socketPathForDir, tokenPathForDir } from '../mcp/socketPath'
+import { socketPathForDir, tokenPathForDir, controllerTokenPathForDir } from '../mcp/socketPath'
 
 export interface BridgeDeps {
   getDb: () => Database.Database
@@ -49,42 +49,58 @@ function endpointDir(): string {
 function tokenPath(): string {
   return tokenPathForDir(endpointDir())
 }
+function controllerTokenPath(): string {
+  return controllerTokenPathForDir(endpointDir())
+}
 function sockPath(): string {
   return socketPathForDir(endpointDir())
 }
 
-/** Generate + persist a fresh write token (mode 0600). Returns it. */
-export function generateWriteToken(): string {
+function generateTokenFile(path: string): string {
   const token = randomBytes(32).toString('hex')
-  writeFileSync(tokenPath(), token, { mode: 0o600 })
+  writeFileSync(path, token, { mode: 0o600 })
   try {
-    chmodSync(tokenPath(), 0o600)
+    chmodSync(path, 0o600)
   } catch {
     // chmod is a no-op / unsupported on Windows — the token still isn't shared.
   }
   return token
 }
 
-/** Ensure a token exists (used on startup when write mode is already on). */
-export function ensureWriteToken(): void {
-  if (!existsSync(tokenPath())) generateWriteToken()
-}
-
-/** Delete the token file (on disable). */
-export function clearWriteToken(): void {
+function clearTokenFile(path: string): void {
   try {
-    if (existsSync(tokenPath())) unlinkSync(tokenPath())
+    if (existsSync(path)) unlinkSync(path)
   } catch {
     // ignore
   }
 }
 
-function readToken(): string | null {
+function readTokenFile(path: string): string | null {
   try {
-    return existsSync(tokenPath()) ? readFileSync(tokenPath(), 'utf8').trim() : null
+    return existsSync(path) ? readFileSync(path, 'utf8').trim() : null
   } catch {
     return null
   }
+}
+
+/** Generate + persist a fresh write token (mode 0600). Returns it. */
+export function generateWriteToken(): string {
+  return generateTokenFile(tokenPath())
+}
+
+/** Delete the token file (on disable). */
+export function clearWriteToken(): void {
+  clearTokenFile(tokenPath())
+}
+
+/** Mint a fresh controller token (#133; per app run / on enable, like the write token). */
+export function generateControllerToken(): string {
+  return generateTokenFile(controllerTokenPath())
+}
+
+/** Delete the controller token file (on disable). */
+export function clearControllerToken(): void {
+  clearTokenFile(controllerTokenPath())
 }
 
 function confirmMode(): 'per-write' | 'session' | 'silent' {
@@ -136,8 +152,10 @@ async function ensureBackup(): Promise<void> {
 function buildCtx(): BridgeCtx {
   return {
     db: deps!.getDb(),
-    token: readToken(),
+    token: readTokenFile(tokenPath()),
     isWriteEnabled: () => deps!.getSetting('mcp_write_enabled') === '1',
+    controllerToken: readTokenFile(controllerTokenPath()),
+    isControllerEnabled: () => deps!.getSetting('controller_enabled') === '1',
     confirm,
     ensureBackup,
     audit: auditWrite,
@@ -196,13 +214,13 @@ function writeLine(conn: net.Socket, obj: unknown): void {
   }
 }
 
-/** Start the bridge. Idempotent. Call only on the primary instance. */
+/** Start the bridge. Idempotent. Call only on the primary instance.
+ *  Token files are managed by the callers (index.ts) per enabled scope. */
 export function startMcpBridge(d: BridgeDeps): void {
   if (server) return
   deps = d
   sessionApproved = false
   backupDone = false
-  ensureWriteToken()
 
   const p = sockPath()
   if (process.platform !== 'win32' && existsSync(p)) {

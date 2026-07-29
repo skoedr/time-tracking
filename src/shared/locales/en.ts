@@ -629,6 +629,11 @@ export const en: Record<TranslationKey, string> = {
   'settings.mcp.auditLog': 'Audit log',
   'settings.mcp.auditLogHint': 'Every executed write action is logged to mcp-writes.log.',
   'settings.mcp.openAuditLog': 'Open log folder',
+  // v1.17 #133 — hardware keys (Stream Deck & co.)
+  'settings.controller.title': 'Hardware keys',
+  'settings.controller.enable': 'Allow hardware keys',
+  'settings.controller.enableHint':
+    'Lets consoles like the Stream Deck start and stop timers per client (and project). The key press counts as confirmation; every action is written to the audit log. Only while the app is running.',
   // v1.15 #134 — Outbound webhooks
   'settings.webhooks.section': 'Webhooks',
   'settings.webhooks.desc':

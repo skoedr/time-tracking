@@ -929,6 +929,19 @@ export default function SettingsView(): React.JSX.Element {
               )}
             </Section>
 
+            {/* Hardware keys (v1.17 #133) — controller scope of the local bridge */}
+            <Section title={t('settings.controller.title')}>
+              <Row
+                label={t('settings.controller.enable')}
+                hint={t('settings.controller.enableHint')}
+              >
+                <Toggle
+                  checked={settings.controller_enabled === '1'}
+                  onChange={(v) => void update('controller_enabled', v ? '1' : '0')}
+                />
+              </Row>
+            </Section>
+
             {/* Outbound-Webhooks (v1.15 #134) — own contiguous block below MCP */}
             <WebhooksSection initialRaw={settings.webhook_targets} logsPath={paths.logs} />
           </>

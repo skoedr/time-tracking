@@ -87,6 +87,13 @@ const api = {
     ipcRenderer.on('timer:tray-stop', handler)
     return () => ipcRenderer.removeListener('timer:tray-stop', handler)
   },
+  // External writes (MCP bridge / hardware keys, #133): main broadcasts after
+  // committing a mutation the renderer didn't initiate — resync timer state.
+  onDataChanged: (callback: () => void): (() => void) => {
+    const handler = (): void => callback()
+    ipcRenderer.on('data:changed', handler)
+    return () => ipcRenderer.removeListener('data:changed', handler)
+  },
   onIdleDetected: (
     callback: (data: { idleSince: string; idleSeconds: number }) => void
   ): (() => void) => {

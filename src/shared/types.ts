@@ -204,6 +204,10 @@ export interface Settings {
   // that block third-party apps. Empty/absent means "use the bundled one".
   // The tokens themselves are NOT here — see main/graphTokenStore.ts.
   graph_client_id?: string
+  // v1.17 #133 — Hardware-key controller scope (Stream Deck & co.), seeded by
+  // migration 023. Gates the controller ops on the local write bridge; the
+  // controller token file is separate from the MCP write token.
+  controller_enabled?: string
 }
 
 export interface CreateClientInput {

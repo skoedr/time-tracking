@@ -49,6 +49,7 @@ export interface IpcHooks {
   setMiniEnabled(enabled: boolean): void
   setMiniHotkey(accelerator: string): boolean
   setMcpWriteEnabled(enabled: boolean): void
+  setControllerEnabled(enabled: boolean): void
 }
 
 function ok<T>(data: T): IpcResult<T> {
@@ -656,6 +657,8 @@ export function registerIpcHandlers(hooks: IpcHooks): void {
         if (!okHotkey) return fail(`Hotkey "${value}" konnte nicht registriert werden`)
       } else if (key === 'mcp_write_enabled') {
         hooks.setMcpWriteEnabled(value === '1')
+      } else if (key === 'controller_enabled') {
+        hooks.setControllerEnabled(value === '1')
       }
       return ok(undefined)
     } catch (e) {
