@@ -648,7 +648,7 @@ export const en: Record<TranslationKey, string> = {
   'settings.icalFeed.title': 'Calendar feed (webcal)',
   'settings.icalFeed.enable': 'Enable feed',
   'settings.icalFeed.enableHint':
-    'Serves the last 90 days of entries as a subscribable calendar (this machine only, only while the app runs). The URL contains the access token.',
+    'Serves the last 90 days of entries as a subscribable calendar (this machine only, only while the app runs). The URL contains the access token. Note: the new Outlook and Outlook on the web fetch subscriptions through the Microsoft cloud and cannot reach local feeds — use classic Outlook, Thunderbird, or Apple Calendar.',
   'settings.icalFeed.copy': 'Copy',
   'settings.icalFeed.copied': 'Copied!',
   'settings.icalFeed.port': 'Port',

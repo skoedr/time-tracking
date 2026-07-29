@@ -657,7 +657,7 @@ export const de = {
   'settings.icalFeed.title': 'Kalender-Feed (webcal)',
   'settings.icalFeed.enable': 'Feed aktivieren',
   'settings.icalFeed.enableHint':
-    'Stellt die Einträge der letzten 90 Tage als abonnierbaren Kalender bereit (nur auf diesem Rechner, nur bei laufender App). Die URL enthält den Zugriffs-Token.',
+    'Stellt die Einträge der letzten 90 Tage als abonnierbaren Kalender bereit (nur auf diesem Rechner, nur bei laufender App). Die URL enthält den Zugriffs-Token. Hinweis: Das neue Outlook und Outlook im Web rufen Abos über die Microsoft-Cloud ab und können lokale Feeds nicht erreichen — nutzbar mit klassischem Outlook, Thunderbird oder Apple Kalender.',
   'settings.icalFeed.copy': 'Kopieren',
   'settings.icalFeed.copied': 'Kopiert!',
   'settings.icalFeed.port': 'Port',
