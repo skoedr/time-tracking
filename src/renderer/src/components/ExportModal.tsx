@@ -26,8 +26,8 @@ interface Props {
  * Shared state: client, fromIso, toIso — so switching tabs keeps the
  * selection. Tab-specific options appear in-place.
  *
- * Replaces PdfExportModal. CalendarView is updated to import this component
- * under the same prop-contract, so existing prefill flows keep working.
+ * Replaced the former PdfExportModal in v1.5; it is the app's only export
+ * modal. Opened from the Export tab (its own tab since #153).
  */
 export function ExportModal(props: Props): React.JSX.Element {
   const { open, onClose, prefilledClientId, prefilledRange } = props
@@ -620,10 +620,3 @@ export function ExportModal(props: Props): React.JSX.Element {
     </Dialog>
   )
 }
-
-/**
- * Re-export under the old name for backward-compatibility with any other
- * import sites that might appear in future PRs. CalendarView is updated
- * directly below.
- */
-export { ExportModal as PdfExportModal }
