@@ -65,6 +65,13 @@ export const DEFAULT_CLIENT_ID = '734cb982-f7b7-4dbf-91b1-cf95470bcd2a'
  */
 export const CALENDAR_SCOPES = ['offline_access', 'openid', 'profile', 'Calendars.Read'] as const
 
+/**
+ * Delegated scope for Teams presence mirroring (#132). Requested only when the
+ * feature is enabled — scopes stay minimal per feature, so enabling presence
+ * on an existing connection requires reconnecting once for the extra consent.
+ */
+export const PRESENCE_SCOPE = 'Presence.ReadWrite'
+
 export function authorityBase(tenant: GraphTenant): string {
   return `https://login.microsoftonline.com/${encodeURIComponent(tenant)}`
 }

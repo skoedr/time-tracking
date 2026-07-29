@@ -12,10 +12,12 @@
  * forgetting to persist that one locks the user out hours later.
  */
 import {
+  CALENDAR_SCOPES,
   DEFAULT_CLIENT_ID,
   GraphAuthError,
   isPersonalAccount,
-  needsRefresh
+  needsRefresh,
+  PRESENCE_SCOPE
 } from '../shared/graphAuth'
 import type { AccountInfo, StoredTokens } from '../shared/graphAuth'
 import { refreshTokens } from './graphAuth'
@@ -69,7 +71,14 @@ export function effectiveClientId(deps: GraphAccountDeps): string {
 }
 
 function configOf(deps: GraphAccountDeps): GraphAuthConfig {
-  return { clientId: effectiveClientId(deps) }
+  // Scopes follow the enabled features (#132): the presence scope is only
+  // requested once mirroring is switched on, so a calendar-only user never
+  // consents to more than the import needs.
+  const scopes =
+    deps.getSetting('presence_enabled') === '1'
+      ? [...CALENDAR_SCOPES, PRESENCE_SCOPE]
+      : [...CALENDAR_SCOPES]
+  return { clientId: effectiveClientId(deps), scopes }
 }
 
 export function getStatus(deps: GraphAccountDeps): AccountStatus {

@@ -629,6 +629,16 @@ export const en: Record<TranslationKey, string> = {
   'settings.mcp.auditLog': 'Audit log',
   'settings.mcp.auditLogHint': 'Every executed write action is logged to mcp-writes.log.',
   'settings.mcp.openAuditLog': 'Open log folder',
+  // v1.17 #132 — Teams presence mirroring
+  'settings.presence.enable': 'Mirror Teams status',
+  'settings.presence.enableHint':
+    'Sets you to Busy (red) in Teams while a timer runs and adds a status message ("🔴 Focus …") — both are removed on stop. A manually set status takes precedence. Work/school accounts only; failures never affect the timer.',
+  'settings.presence.showClient': 'Show client name in the status',
+  'settings.presence.showClientHint':
+    'Off: just "🔴 Focus". On: "🔴 Focus: client — project". The text is visible to colleagues.',
+  'settings.presence.reconnectHint':
+    'The Teams status still needs its permission (Presence.ReadWrite) — reconnect once.',
+  'settings.presence.reconnect': 'Reconnect',
   // v1.17 #133 — hardware keys (Stream Deck & co.)
   'settings.controller.title': 'Hardware keys',
   'settings.controller.enable': 'Allow hardware keys',

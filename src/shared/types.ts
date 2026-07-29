@@ -208,6 +208,11 @@ export interface Settings {
   // migration 023. Gates the controller ops on the local write bridge; the
   // controller token file is separate from the MCP write token.
   controller_enabled?: string
+  // v1.17 #132 — Teams presence mirroring (migration 024). Work/school
+  // accounts only; presence_show_client gates whether the status message
+  // names the client (default generic).
+  presence_enabled?: string
+  presence_show_client?: string
 }
 
 export interface CreateClientInput {

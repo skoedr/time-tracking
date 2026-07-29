@@ -283,7 +283,7 @@ function planOp(db: Db, op: WriteOp, args: Record<string, unknown>): Plan | { er
 
 // ── controller scope (#133) ─────────────────────────────────────────────────
 
-interface RunningStatus {
+export interface RunningStatus {
   id: number
   client_id: number
   project_id: number | null
@@ -293,8 +293,9 @@ interface RunningStatus {
   project_name: string | null
 }
 
-/** Current running timer with client/project names, or null. */
-function readRunning(db: Db): RunningStatus | null {
+/** Current running timer with client/project names, or null.
+ *  Exported for the presence reconciler (#132), which needs the same shape. */
+export function readRunning(db: Db): RunningStatus | null {
   const row = db
     .prepare(
       `SELECT e.id, e.client_id, e.project_id, e.description, e.started_at,
