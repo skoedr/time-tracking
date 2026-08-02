@@ -350,6 +350,16 @@ export default function SettingsView(): React.JSX.Element {
                 <option value="en">{t('settings.language.en')}</option>
               </select>
             </Row>
+            <Row label={t('settings.general.weekStart')} hint={t('settings.general.weekStartHint')}>
+              <SegmentedPicker
+                options={[
+                  { value: 'monday', label: t('settings.general.weekStartMonday') },
+                  { value: 'sunday', label: t('settings.general.weekStartSunday') }
+                ]}
+                value={settings.week_start === 'sunday' ? 'sunday' : 'monday'}
+                onChange={(v) => void update('week_start', v)}
+              />
+            </Row>
             <Row label={t('settings.general.onboarding')}>
               <button
                 type="button"

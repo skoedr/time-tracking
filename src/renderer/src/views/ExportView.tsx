@@ -4,6 +4,7 @@ import type { TranslationKey } from '../../../shared/locales/de'
 import { ExportModal } from '../components/ExportModal'
 import { PdfMergeModal } from '../components/PdfMergeModal'
 import { getQuickRange, localDateKey, type QuickRangeKind } from '../../../shared/dateRanges'
+import { useWeekStart } from '../hooks/useWeekStart'
 
 /**
  * Export view (#153).
@@ -27,16 +28,22 @@ import { getQuickRange, localDateKey, type QuickRangeKind } from '../../../share
  */
 export default function ExportView(): React.JSX.Element {
   const t = useT()
+  const weekStart = useWeekStart()
 
   // Range hand-off to ExportModal. `null` = closed; a range = open with that
   // range prefilled.
   const [pdfRange, setPdfRange] = useState<{ fromIso: string; toIso: string } | null>(null)
   const [mergeOpen, setMergeOpen] = useState(false)
 
-  const onQuickRange = useCallback((kind: QuickRangeKind) => {
-    const range = getQuickRange(kind, new Date())
-    setPdfRange({ fromIso: localDateKey(range.from), toIso: localDateKey(range.to) })
-  }, [])
+  // "Diese/Letzte Woche" follows the week_start setting (#188) — otherwise the
+  // quick filter would hand over a different week than the week total shows.
+  const onQuickRange = useCallback(
+    (kind: QuickRangeKind) => {
+      const range = getQuickRange(kind, new Date(), weekStart)
+      setPdfRange({ fromIso: localDateKey(range.from), toIso: localDateKey(range.to) })
+    },
+    [weekStart]
+  )
 
   return (
     <div className="mx-auto flex w-full max-w-[920px] flex-col gap-4">

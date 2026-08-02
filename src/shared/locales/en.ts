@@ -449,6 +449,11 @@ export const en: Record<TranslationKey, string> = {
   'settings.general.showProjectNumber': 'Show project number',
   'settings.general.showProjectNumberHint':
     'Display the external project number in square brackets after the project name, if set.',
+  'settings.general.weekStart': 'Week starts on',
+  'settings.general.weekStartHint':
+    'Applies to the week total (Today, tray, Stream Deck), the export quick filters and the calendar grid. The KW axis in Auswertung stays Monday-based per ISO 8601.',
+  'settings.general.weekStartMonday': 'Monday',
+  'settings.general.weekStartSunday': 'Sunday',
   'settings.general.company': 'Company (for exports)',
   'settings.general.companyPlaceholder': 'e.g. My Company Ltd.',
   'settings.section.timer': 'Timer',

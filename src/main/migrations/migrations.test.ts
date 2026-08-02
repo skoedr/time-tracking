@@ -133,7 +133,9 @@ describe('migration SQL execution', () => {
       // Migration 011 — Light/Dark/System theme (v1.8 #76)
       { key: 'theme_mode', value: 'system' },
       // Migration 020 — Outbound-Webhooks (v1.15 #134)
-      { key: 'webhook_targets', value: '[]' }
+      { key: 'webhook_targets', value: '[]' },
+      // #188 — one default for every installation, old and new.
+      { key: 'week_start', value: 'monday' }
       // rounding_mode and rounding_minutes removed by Migration 014
     ])
   })

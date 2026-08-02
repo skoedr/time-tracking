@@ -181,6 +181,11 @@ export interface Settings {
   onboarding_completed: string
   // v1.8 #76 — Theme mode: 'light' | 'dark' | 'system'.
   theme_mode: string
+  // v1.18 #188 — Where the week begins: 'monday' (default) | 'sunday'.
+  // Drives the week total (Heute card, tray, Stream Deck dial, MCP dashboard),
+  // the export quick filters and the calendar grid. NOT the KW axis in
+  // Auswertung — the calendar week is ISO 8601, i.e. always Monday.
+  week_start?: string
   // v1.11 #94 — Show external project number in square brackets.
   // '0' (default) = hidden, '1' = shown.
   show_project_number?: string

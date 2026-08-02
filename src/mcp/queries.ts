@@ -14,6 +14,7 @@
  * `rate = project.rate ?? client.rate` precedence.
  */
 import { deserializeTags } from '../shared/tags'
+import { parseWeekStart, weekStartModifiers, WEEK_START_SETTING_KEY } from '../shared/weekStart'
 import type { PrivacyConfig } from './privacy'
 
 // ── Minimal driver interface (better-sqlite3 compatible) ───────────────────
@@ -383,11 +384,15 @@ export function getDashboard(db: SqliteDb, privacy: PrivacyConfig, nowMs: number
     )
     .get() as { seconds: number }
 
+  // Week window per the `week_start` setting (#188) — the same expression the
+  // app's dashboard reads, so the MCP dashboard cannot answer a different week
+  // than the window shows.
+  const weekStart = parseWeekStart(getSetting(db, WEEK_START_SETTING_KEY))
   const week = db
     .prepare(
       `SELECT COALESCE(SUM(${SECS}), 0) AS seconds FROM entries
        WHERE deleted_at IS NULL
-         AND (DATE(started_at,'localtime') >= DATE('now','localtime','weekday 0','-7 days')
+         AND (DATE(started_at,'localtime') >= DATE('now','localtime',${weekStartModifiers(weekStart)})
               OR stopped_at IS NULL)`
     )
     .get() as { seconds: number }
