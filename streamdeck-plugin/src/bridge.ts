@@ -127,6 +127,37 @@ export async function getTimerStatus(): Promise<RunningTimer | null | 'unavailab
   return (res.data as { running: RunningTimer | null }).running
 }
 
+/**
+ * One round trip for everything the dial's ambient face needs (#186): the
+ * running timer plus the two totals the app's "Heute" page shows. Both come
+ * from one read so they can never describe different moments.
+ */
+export interface Summary {
+  running: RunningTimer | null
+  /** Raw seconds. */
+  today_seconds: number
+  week_seconds: number
+  /**
+   * Rounding step the app applies before showing a duration; 0 = off.
+   * Optional: an app older than #186's fix does not send these fields — see
+   * `displayTotals()` for the fallback.
+   */
+  round_minutes?: number
+  /**
+   * What the app's "Heute" page puts on screen: raw, rounded up to
+   * `round_minutes`. The dial shows these — rendering the raw seconds made it
+   * disagree with the app by up to one rounding step (6:24 vs. 6:30).
+   */
+  today_display_seconds?: number
+  week_display_seconds?: number
+}
+
+export async function getSummary(): Promise<Summary | 'unavailable'> {
+  const res = await sendRequest('get_summary')
+  if (!res.ok) return 'unavailable'
+  return res.data as Summary
+}
+
 export async function listTargets(): Promise<TargetClient[] | null> {
   const res = await sendRequest('list_targets')
   if (!res.ok) return null

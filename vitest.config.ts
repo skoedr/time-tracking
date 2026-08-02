@@ -23,6 +23,18 @@ export default defineConfig({
         }
       },
       {
+        // The Stream Deck plugin is its own package (own node_modules, own
+        // tsconfig, not part of the app build), but its pure modules — dial
+        // model, touch-strip faces, layout contract — are testable here and
+        // would otherwise have no suite at all.
+        extends: true,
+        test: {
+          name: 'streamdeck',
+          environment: 'node',
+          include: ['streamdeck-plugin/src/**/*.test.ts']
+        }
+      },
+      {
         extends: true,
         test: {
           name: 'jsdom',

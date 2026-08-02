@@ -340,6 +340,98 @@ describe('handleRequest — controller scope', () => {
     }
   })
 
+  it('get_summary: running timer plus today/week totals in one answer (#186)', async () => {
+    const { ctx } = makeCtx(db)
+    const idle = await handleRequest(ctx, ctl('get_summary'))
+    expect(idle.ok).toBe(true)
+    if (idle.ok) {
+      expect(idle.data).toEqual({
+        running: null,
+        today_seconds: 0,
+        week_seconds: 0,
+        round_minutes: 0,
+        today_display_seconds: 0,
+        week_display_seconds: 0
+      })
+    }
+
+    // One closed 30-minute entry today, then a running one.
+    const now = Date.now()
+    db.prepare(
+      `INSERT INTO entries (client_id, description, started_at, stopped_at, billable)
+       VALUES (1, 'closed', ?, ?, 1)`
+    ).run(new Date(now - 3_600_000).toISOString(), new Date(now - 1_800_000).toISOString())
+    await handleRequest(ctx, ctl('toggle_timer', { client_id: 1, project_id: 10 }))
+
+    const busy = await handleRequest(ctx, ctl('get_summary'))
+    expect(busy.ok).toBe(true)
+    if (busy.ok) {
+      const data = busy.data as {
+        running: { client_id: number } | null
+        today_seconds: number
+        week_seconds: number
+      }
+      expect(data.running).toMatchObject({ client_id: 1, project_id: 10 })
+      // 30 min closed; the running entry adds ~0 s so far.
+      expect(data.today_seconds).toBeGreaterThanOrEqual(1800)
+      expect(data.today_seconds).toBeLessThan(1830)
+      expect(data.week_seconds).toBeGreaterThanOrEqual(data.today_seconds)
+    }
+  })
+
+  it('get_summary rounds the display seconds exactly like the app page', async () => {
+    // 6:24 of work at a 15-minute step is 6:30 on screen — the mismatch the
+    // dial showed on its first hardware run.
+    db.prepare(
+      `INSERT OR REPLACE INTO settings (key, value) VALUES ('pdf_round_minutes','15')`
+    ).run()
+    const started = new Date(Date.now() - (6 * 3600 + 24 * 60) * 1000).toISOString()
+    db.prepare(
+      `INSERT INTO entries (client_id, description, started_at, stopped_at, billable)
+       VALUES (1, 'x', ?, ?, 1)`
+    ).run(started, new Date().toISOString())
+
+    const { ctx } = makeCtx(db)
+    const res = await handleRequest(ctx, ctl('get_summary'))
+    expect(res.ok).toBe(true)
+    if (!res.ok) return
+    const data = res.data as {
+      today_seconds: number
+      today_display_seconds: number
+      week_display_seconds: number
+      round_minutes: number
+    }
+    expect(data.round_minutes).toBe(15)
+    expect(data.today_seconds).toBeGreaterThanOrEqual(6 * 3600 + 24 * 60)
+    expect(data.today_seconds).toBeLessThan(6 * 3600 + 25 * 60)
+    expect(data.today_display_seconds).toBe(6 * 3600 + 30 * 60)
+    expect(data.week_display_seconds).toBe(6 * 3600 + 30 * 60)
+  })
+
+  it('get_summary passes the raw seconds through when rounding is off', async () => {
+    const started = new Date(Date.now() - 3_600_000).toISOString()
+    db.prepare(
+      `INSERT INTO entries (client_id, description, started_at, stopped_at, billable)
+       VALUES (1, 'x', ?, ?, 1)`
+    ).run(started, new Date().toISOString())
+
+    const { ctx } = makeCtx(db)
+    const res = await handleRequest(ctx, ctl('get_summary'))
+    expect(res.ok).toBe(true)
+    if (!res.ok) return
+    const data = res.data as { today_seconds: number; today_display_seconds: number }
+    expect(data.today_display_seconds).toBe(data.today_seconds)
+  })
+
+  it('get_summary is read-only — no backup, no audit, no broadcast', async () => {
+    const { ctx, spies } = makeCtx(db)
+    await handleRequest(ctx, ctl('get_summary'))
+    expect(spies.backupCalls).toBe(0)
+    expect(spies.auditCalls).toBe(0)
+    expect(spies.changeCalls).toBe(0)
+    expect(countEntries(db)).toBe(0)
+  })
+
   it('toggle: start → stop on the same target', async () => {
     const { ctx, spies } = makeCtx(db)
     const start = await handleRequest(ctx, ctl('toggle_timer', { client_id: 1, project_id: 10 }))

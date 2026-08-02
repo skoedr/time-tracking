@@ -23,6 +23,7 @@ import { registerTagHandlers } from './tagHandlers'
 import { registerGraphHandlers } from './graphHandlers'
 import { feedUrl, generateFeedToken } from './icalFeed'
 import { buildMcpRegistration, type McpRegistration } from './mcpLaunch'
+import { readTotals } from './dashboardTotals'
 import type {
   Client,
   Entry,
@@ -537,43 +538,9 @@ export function registerIpcHandlers(hooks: IpcHooks): void {
   ipcMain.handle('dashboard:summary', (): IpcResult<DashboardSummary> => {
     try {
       const tx = db.transaction((): DashboardSummary => {
-        const today = db
-          .prepare(
-            `SELECT COALESCE(SUM(
-               CASE
-                 WHEN stopped_at IS NULL
-                   THEN CAST(strftime('%s', 'now') AS INTEGER) - CAST(strftime('%s', started_at) AS INTEGER)
-                 ELSE CAST(strftime('%s', stopped_at) AS INTEGER) - CAST(strftime('%s', started_at) AS INTEGER)
-               END
-             ), 0) AS seconds
-             FROM entries
-             WHERE deleted_at IS NULL
-               AND (DATE(started_at, 'localtime') = DATE('now', 'localtime')
-                    OR stopped_at IS NULL)`
-          )
-          .get() as { seconds: number }
-
-        // ISO week — Monday as first day. SQLite's strftime('%w') returns
-        // 0=Sunday, so we shift to start the window from the most recent
-        // Monday at local midnight.
-        const week = db
-          .prepare(
-            `SELECT COALESCE(SUM(
-               CASE
-                 WHEN stopped_at IS NULL
-                   THEN CAST(strftime('%s', 'now') AS INTEGER) - CAST(strftime('%s', started_at) AS INTEGER)
-                 ELSE CAST(strftime('%s', stopped_at) AS INTEGER) - CAST(strftime('%s', started_at) AS INTEGER)
-               END
-             ), 0) AS seconds
-             FROM entries
-             WHERE deleted_at IS NULL
-               AND (
-                 DATE(started_at, 'localtime')
-                   >= DATE('now', 'localtime', 'weekday 0', '-7 days')
-                 OR stopped_at IS NULL
-               )`
-          )
-          .get() as { seconds: number }
+        // Today/week come from readTotals() so the stat cards, the tray and
+        // the Stream Deck dial can never drift apart (#186).
+        const totals = readTotals(db)
 
         const recentEntries = db
           .prepare(
@@ -615,8 +582,8 @@ export function registerIpcHandlers(hooks: IpcHooks): void {
         }>
 
         return {
-          todaySeconds: Math.max(0, Math.floor(today.seconds ?? 0)),
-          weekSeconds: Math.max(0, Math.floor(week.seconds ?? 0)),
+          todaySeconds: totals.today_seconds,
+          weekSeconds: totals.week_seconds,
           recentEntries,
           topClients30d: topClients30d.map((r) => ({
             ...r,

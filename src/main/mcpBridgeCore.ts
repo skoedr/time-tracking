@@ -23,6 +23,8 @@ import type {
   CreateEntryInput
 } from '../shared/types'
 import type { McpAuditEntry } from './mcpAudit'
+import { readRoundMinutes, readTotals } from './dashboardTotals'
+import { roundDuration } from '../shared/duration'
 
 type Db = Database.Database
 
@@ -41,7 +43,12 @@ export type WriteOp = (typeof WRITE_OPS)[number]
  * confirmation, but an AI agent must never get that shortcut), and the
  * controller token cannot call the MCP write ops.
  */
-export const CONTROLLER_OPS = ['toggle_timer', 'get_timer_status', 'list_targets'] as const
+export const CONTROLLER_OPS = [
+  'toggle_timer',
+  'get_timer_status',
+  'list_targets',
+  'get_summary'
+] as const
 export type ControllerOp = (typeof CONTROLLER_OPS)[number]
 
 export interface BridgeRequest {
@@ -332,6 +339,30 @@ async function handleControllerRequest(
 
   if (op === 'get_timer_status') {
     return { ok: true, data: { running: readRunning(db) } }
+  }
+
+  // get_summary — everything the Stream Deck dial polls for its ambient face
+  // (#186) in ONE round trip: the running timer plus the two totals the app's
+  // "Heute" page shows. Superset of get_timer_status; that op stays for the
+  // key action, which does not need the totals.
+  //
+  // Raw *and* display seconds: the page shows the rounded value
+  // (`pdf_round_minutes`, ceiling), so a surface that renders the raw number
+  // disagrees with the app by up to one rounding step. Rounding here rather
+  // than in the plugin keeps the rule in one place.
+  if (op === 'get_summary') {
+    const totals = readTotals(db)
+    const round_minutes = readRoundMinutes(db)
+    return {
+      ok: true,
+      data: {
+        running: readRunning(db),
+        ...totals,
+        round_minutes,
+        today_display_seconds: roundDuration(totals.today_seconds, round_minutes),
+        week_display_seconds: roundDuration(totals.week_seconds, round_minutes)
+      }
+    }
   }
 
   if (op === 'list_targets') {
