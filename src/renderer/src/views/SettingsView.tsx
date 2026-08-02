@@ -951,6 +951,25 @@ export default function SettingsView(): React.JSX.Element {
                   onChange={(v) => void update('controller_enabled', v ? '1' : '0')}
                 />
               </Row>
+              {/* #192: the switch alone does nothing until the plugin is
+                  installed, and nothing in the app said where it comes from.
+                  The release ships an installable .streamDeckPlugin. */}
+              <Row
+                label={t('settings.controller.plugin')}
+                hint={t('settings.controller.pluginHint')}
+              >
+                <button
+                  type="button"
+                  onClick={() =>
+                    void window.api.shell.openExternal(
+                      'https://github.com/skoedr/time-tracking/releases/latest'
+                    )
+                  }
+                  className={btnSecondaryClass}
+                >
+                  {t('settings.controller.pluginButton')}
+                </button>
+              </Row>
             </Section>
 
             {/* Subscribable iCal feed (v1.17 #169) */}

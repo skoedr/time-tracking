@@ -649,6 +649,10 @@ export const en: Record<TranslationKey, string> = {
   'settings.controller.enable': 'Allow hardware keys',
   'settings.controller.enableHint':
     'Lets consoles like the Stream Deck start and stop timers per client (and project). The key press counts as confirmation; every action is written to the audit log. Only while the app is running.',
+  'settings.controller.plugin': 'Stream Deck plugin',
+  'settings.controller.pluginHint':
+    'The keys and the dial need the TimeTrack plugin inside the Stream Deck app. Every release ships it as "com.timetrack.streamdeck.streamDeckPlugin" — download, double-click, done. It is deliberately not inside the installer: the Stream Deck app manages its own plugins.',
+  'settings.controller.pluginButton': 'Open downloads',
   // v1.17 #169 — subscribable iCal feed
   'settings.icalFeed.title': 'Calendar feed (webcal)',
   'settings.icalFeed.enable': 'Enable feed',

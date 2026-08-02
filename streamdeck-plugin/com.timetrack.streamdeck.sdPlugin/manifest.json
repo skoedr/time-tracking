@@ -17,26 +17,40 @@
     "MinimumVersion": "7.1"
   },
   "OS": [
-    { "Platform": "windows", "MinimumVersion": "10" },
-    { "Platform": "mac", "MinimumVersion": "10.15" }
+    {
+      "Platform": "windows",
+      "MinimumVersion": "10"
+    },
+    {
+      "Platform": "mac",
+      "MinimumVersion": "10.15"
+    }
   ],
   "Actions": [
     {
       "UUID": "com.timetrack.streamdeck.toggle",
       "Name": "Toggle timer",
       "Tooltip": "Toggle the TimeTrack timer for a client (and project).",
-      "Icon": "imgs/toggle",
+      "Icon": "imgs/action",
       "PropertyInspectorPath": "ui/toggle-timer.html",
-      "Controllers": ["Keypad"],
+      "Controllers": [
+        "Keypad"
+      ],
       "UserTitleEnabled": false,
-      "States": [{ "Image": "imgs/toggle" }]
+      "States": [
+        {
+          "Image": "imgs/toggle"
+        }
+      ]
     },
     {
       "UUID": "com.timetrack.streamdeck.dial",
       "Name": "Timer dial",
       "Tooltip": "Turn to pick a client or project, press to start or stop the timer.",
-      "Icon": "imgs/toggle",
-      "Controllers": ["Encoder"],
+      "Icon": "imgs/action",
+      "Controllers": [
+        "Encoder"
+      ],
       "Encoder": {
         "layout": "layouts/dial.json",
         "TriggerDescription": {
@@ -47,7 +61,11 @@
         }
       },
       "UserTitleEnabled": false,
-      "States": [{ "Image": "imgs/toggle" }]
+      "States": [
+        {
+          "Image": "imgs/toggle"
+        }
+      ]
     }
   ]
 }

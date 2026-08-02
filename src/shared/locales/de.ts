@@ -658,6 +658,10 @@ export const de = {
   'settings.controller.enable': 'Hardware-Tasten erlauben',
   'settings.controller.enableHint':
     'Erlaubt Konsolen wie dem Stream Deck, Timer pro Kunde (und Projekt) zu starten und zu stoppen. Der Tastendruck gilt als Bestätigung; jede Aktion landet im Audit-Log. Nur bei laufender App.',
+  'settings.controller.plugin': 'Stream-Deck-Plugin',
+  'settings.controller.pluginHint':
+    'Die Tasten und das Drehrad brauchen das TimeTrack-Plugin in der Stream-Deck-App. Es liegt jedem Release als Datei „com.timetrack.streamdeck.streamDeckPlugin" bei — herunterladen, doppelklicken, fertig. Es steckt bewusst nicht im Installer: die Stream-Deck-App verwaltet ihre Plugins selbst.',
+  'settings.controller.pluginButton': 'Zum Download',
   // v1.17 #169 — abonnierbarer iCal-Feed
   'settings.icalFeed.title': 'Kalender-Feed (webcal)',
   'settings.icalFeed.enable': 'Feed aktivieren',

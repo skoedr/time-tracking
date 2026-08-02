@@ -287,7 +287,7 @@ function offlineFace(): string {
     `<stop offset="0" stop-color="#20222c"/><stop offset="1" stop-color="#0f1116"/></linearGradient></defs>` +
     SHELL('url(#b)') +
     HAIRLINE(0.07) +
-    // Clock glyph from imgs/plugin.svg, desaturated.
+    // Clock glyph from icons-src/plugin.svg, desaturated.
     `<circle cx="30" cy="50" r="13" fill="none" stroke="#4a5270" stroke-width="2.5"/>` +
     `<line x1="30" y1="43" x2="30" y2="51" stroke="#4a5270" stroke-width="2.5" stroke-linecap="round"/>` +
     `<line x1="30" y1="51" x2="35" y2="54" stroke="#4a5270" stroke-width="2.5" stroke-linecap="round"/>` +
