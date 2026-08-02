@@ -67,3 +67,27 @@ jobs:
       # Electron, which is how the cached poison above came to exist.
       - name: Test
         run: pnpm test
+
+      # #190: The Stream Deck plugin is its own package (own lockfile, own
+      # toolchain) and is NOT part of the app build. Its pure modules already
+      # run inside `pnpm test` as the `streamdeck` Vitest project — but nothing
+      # checked that the plugin still compiles or bundles. That gap matters
+      # more than usual here: a plugin crash leaves no trace (Elgato logs only
+      # "Plugin connected"; stdout goes nowhere), so a broken build would first
+      # show up as a key that silently does nothing.
+      #
+      # Order matters: the plugin's tsconfig also typechecks its test files,
+      # which import `vitest` — that resolves upwards into the root
+      # node_modules installed above. Do not move these steps before the root
+      # install.
+      - name: Stream Deck plugin — install
+        working-directory: streamdeck-plugin
+        run: pnpm install --frozen-lockfile --ignore-workspace
+
+      - name: Stream Deck plugin — typecheck
+        working-directory: streamdeck-plugin
+        run: pnpm typecheck
+
+      - name: Stream Deck plugin — build
+        working-directory: streamdeck-plugin
+        run: pnpm build
