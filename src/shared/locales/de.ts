@@ -454,6 +454,11 @@ export const de = {
   'settings.general.showProjectNumber': 'Projektnummer anzeigen',
   'settings.general.showProjectNumberHint':
     'Externe Projektnummer in eckigen Klammern hinter dem Projektnamen anzeigen, falls vergeben.',
+  'settings.general.weekStart': 'Woche beginnt am',
+  'settings.general.weekStartHint':
+    'Gilt für die Wochensumme (Heute, Tray, Stream Deck), die Schnellfilter im Export und das Kalenderraster. Die KW-Achse in der Auswertung bleibt nach ISO 8601 immer montags.',
+  'settings.general.weekStartMonday': 'Montag',
+  'settings.general.weekStartSunday': 'Sonntag',
   'settings.general.company': 'Firma (für Exporte)',
   'settings.general.companyPlaceholder': 'z. B. Meine Firma GmbH',
   'settings.section.timer': 'Timer',

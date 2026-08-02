@@ -9,6 +9,12 @@
  * is then true by construction instead of by assertion.
  */
 import type Database from 'better-sqlite3'
+import {
+  parseWeekStart,
+  weekStartModifiers,
+  WEEK_START_SETTING_KEY,
+  type WeekStart
+} from '../shared/weekStart'
 
 type Db = Database.Database
 
@@ -20,15 +26,21 @@ const SECONDS = `CASE
      END`
 
 /**
- * Start of the week window, carried over verbatim from the IPC handler.
- *
- * NB: `weekday 0` advances to the *coming* Sunday, so minus seven days lands
- * on the most recent Sunday — the window therefore starts on SUNDAY, despite
- * the "ISO week — Monday as first day" comment that used to sit above it.
- * Kept unchanged on purpose: correcting it would move a number the app has
- * shown since v1.2, which is a product decision, not a refactor.
+ * Start of the week window, per the `week_start` setting (#188). Monday by
+ * default — see `src/shared/weekStart.ts` for why, and for why the modifier
+ * order is `'-6 days', 'weekday N'` and not the other way round.
  */
-const WEEK_START = `DATE('now', 'localtime', 'weekday 0', '-7 days')`
+function weekStartExpr(db: Db): string {
+  return `DATE('now', 'localtime', ${weekStartModifiers(readWeekStart(db))})`
+}
+
+/** The configured week start; absent or unreadable ⇒ the default (Monday). */
+export function readWeekStart(db: Db): WeekStart {
+  const row = db.prepare(`SELECT value FROM settings WHERE key = ?`).get(WEEK_START_SETTING_KEY) as
+    | { value: string }
+    | undefined
+  return parseWeekStart(row?.value)
+}
 
 export interface DayWeekTotals {
   today_seconds: number
@@ -73,7 +85,7 @@ export function readTotals(db: Db): DayWeekTotals {
       `SELECT COALESCE(SUM(${SECONDS}), 0) AS seconds
          FROM entries
         WHERE deleted_at IS NULL
-          AND (DATE(started_at, 'localtime') >= ${WEEK_START}
+          AND (DATE(started_at, 'localtime') >= ${weekStartExpr(db)}
                OR stopped_at IS NULL)`
     )
     .get() as { seconds: number }

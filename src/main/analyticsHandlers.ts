@@ -200,7 +200,12 @@ export function buildAnalyticsSummary(
 
       // Map to labeled array; fill gaps for weeks with no entries
       const weekMap = new Map(weekRows.map((r) => [r.week_start, r]))
-      // Build a list of 12 Monday dates going backwards from anchor end
+      // Build a list of 12 Monday dates going backwards from anchor end.
+      //
+      // Deliberately NOT following the `week_start` setting (#188): these bars
+      // are labelled `KW##`, and ISO 8601 defines the calendar week as
+      // Monday-based. A Sunday-anchored bucket under a `KW` label would be a
+      // wrong number, not a preference.
       const anchorDate = new Date(year, month - 1, daysInMonth)
       // Find the Monday of the anchor-end's week
       const anchorDow = anchorDate.getDay() // 0=Sun..6=Sat

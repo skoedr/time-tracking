@@ -15,6 +15,8 @@ import type { Entry } from '../../../shared/types'
 import type { Client, Project } from '../../../shared/types'
 import { useProjectsStore } from '../store/projectsStore'
 import { localDateKey } from '../../../shared/dateRanges'
+import { weekStartsOn, type WeekStart } from '../../../shared/weekStart'
+import { useWeekStart } from '../hooks/useWeekStart'
 import { useEntriesStore } from '../store/entriesStore'
 import { useTimer } from '../hooks/useTimer'
 import { CalendarDrawer } from '../components/CalendarDrawer'
@@ -36,6 +38,7 @@ export default function CalendarView(): React.JSX.Element {
   const t = useT()
   const { clients } = useTimer()
   const { roundMinutes } = useRounding()
+  const weekStart = useWeekStart()
   const version = useEntriesStore((s) => s.version)
   const projectsVersion = useProjectsStore((s) => s.version)
 
@@ -95,7 +98,7 @@ export default function CalendarView(): React.JSX.Element {
   }, [entries])
 
   // Build the visible grid (Mon-anchored weeks covering the whole month).
-  const weeks = useMemo(() => buildMonthWeeks(cursor), [cursor])
+  const weeks = useMemo(() => buildMonthWeeks(cursor, weekStart), [cursor, weekStart])
 
   const onPrev = useCallback(() => setCursor((d) => addMonths(d, -1)), [])
   const onNext = useCallback(() => setCursor((d) => addMonths(d, 1)), [])
@@ -437,10 +440,12 @@ function DayBars({
 
 // --- helpers ---
 
-function buildMonthWeeks(cursor: Date): WeekData[] {
-  // Mon-anchored weeks covering the visible month.
-  const start = startOfWeek(startOfMonth(cursor), { weekStartsOn: 1 })
-  const end = endOfWeek(endOfMonth(cursor), { weekStartsOn: 1 })
+function buildMonthWeeks(cursor: Date, week: WeekStart): WeekData[] {
+  // Weeks covering the visible month, anchored per the week_start setting
+  // (#188) so the grid breaks where the week total does.
+  const opts = { weekStartsOn: weekStartsOn(week) } as const
+  const start = startOfWeek(startOfMonth(cursor), opts)
+  const end = endOfWeek(endOfMonth(cursor), opts)
   const weeks: WeekData[] = []
   let d = start
   while (d <= end) {

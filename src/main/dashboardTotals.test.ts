@@ -10,7 +10,8 @@
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest'
 import type Database from 'better-sqlite3'
 import { applyMigrations, loadSqlite, type DatabaseCtor } from '../test/sqlite'
-import { readRoundMinutes, readTotals } from './dashboardTotals'
+import { readRoundMinutes, readTotals, readWeekStart } from './dashboardTotals'
+import { weekStartModifiers } from '../shared/weekStart'
 import { getDashboard, type SqliteDb } from '../mcp/queries'
 
 let DatabaseImpl: DatabaseCtor
@@ -21,6 +22,16 @@ beforeAll(async () => {
 
 function iso(msFromNow: number): string {
   return new Date(Date.now() + msFromNow).toISOString()
+}
+
+/**
+ * ISO timestamp for 12:00 **local** on a `YYYY-MM-DD` day. The queries compare
+ * `DATE(started_at,'localtime')`, so building the instant from local parts is
+ * what keeps the test honest in any timezone.
+ */
+function atLocalNoon(dayKey: string): string {
+  const [y, m, d] = dayKey.split('-').map(Number)
+  return new Date(y, m - 1, d, 12, 0, 0, 0).toISOString()
 }
 
 /** Local-midnight-safe: a date N days back at 10:00 local time. */
@@ -127,22 +138,80 @@ describe('readTotals', () => {
     expect(readRoundMinutes(db)).toBe(0)
   })
 
-  it('agrees with getDashboard() — the second copy of the same definition', () => {
-    addClosed(db, daysAgoAt10(0).toISOString(), 45)
-    addClosed(db, daysAgoAt10(2).toISOString(), 90)
-    addClosed(db, daysAgoAt10(20).toISOString(), 30)
+  it('readWeekStart: Monday unless the setting says sunday', () => {
+    expect(readWeekStart(db)).toBe('monday')
+    db.prepare(`INSERT OR REPLACE INTO settings (key, value) VALUES ('week_start','sunday')`).run()
+    expect(readWeekStart(db)).toBe('sunday')
     db.prepare(
-      `INSERT INTO entries (client_id, description, started_at, billable)
-       VALUES (1, 'running', ?, 1)`
-    ).run(iso(-120_000))
-
-    const mine = readTotals(db)
-    const theirs = getDashboard(
-      db as unknown as SqliteDb,
-      { exposeRates: false, exposePrivateNotes: false },
-      Date.now()
-    )
-    expect(mine.today_seconds).toBe(theirs.today_seconds)
-    expect(mine.week_seconds).toBe(theirs.week_seconds)
+      `INSERT OR REPLACE INTO settings (key, value) VALUES ('week_start','nonsense')`
+    ).run()
+    expect(readWeekStart(db)).toBe('monday')
   })
+
+  // The two settings pick different start days, so a fixed calendar date would
+  // only exercise one of them depending on when the suite runs. Instead: ask
+  // SQLite where the window starts for the configured setting, then place one
+  // entry exactly ON that day and one exactly the day BEFORE. That is
+  // deterministic on every weekday, which is the whole point — the bug this
+  // replaces was invisible on six days out of seven.
+  for (const week of ['monday', 'sunday'] as const) {
+    it(`week window follows the setting — ${week}`, () => {
+      db.prepare(`INSERT OR REPLACE INTO settings (key, value) VALUES ('week_start', ?)`).run(week)
+      const start = (
+        db.prepare(`SELECT DATE('now','localtime',${weekStartModifiers(week)}) AS d`).get() as {
+          d: string
+        }
+      ).d
+      const before = (db.prepare(`SELECT DATE(?, '-1 day') AS d`).get(start) as { d: string }).d
+
+      addClosed(db, atLocalNoon(start), 30)
+      addClosed(db, atLocalNoon(before), 60)
+
+      // Only the entry inside the window counts; the day before is out.
+      expect(readTotals(db).week_seconds).toBe(30 * 60)
+    })
+  }
+
+  it('the two settings disagree exactly on the days between them', () => {
+    // An entry on the most recent Sunday: inside a Sunday-anchored week
+    // always, inside a Monday-anchored week only when that Sunday is today.
+    const sunday = (
+      db.prepare(`SELECT DATE('now','localtime','-6 days','weekday 0') AS d`).get() as { d: string }
+    ).d
+    const todayIsSunday =
+      (db.prepare(`SELECT DATE('now','localtime') AS d`).get() as { d: string }).d === sunday
+    addClosed(db, atLocalNoon(sunday), 45)
+
+    db.prepare(`INSERT OR REPLACE INTO settings (key, value) VALUES ('week_start','sunday')`).run()
+    expect(readTotals(db).week_seconds).toBe(45 * 60)
+
+    db.prepare(`INSERT OR REPLACE INTO settings (key, value) VALUES ('week_start','monday')`).run()
+    expect(readTotals(db).week_seconds).toBe(todayIsSunday ? 45 * 60 : 0)
+  })
+
+  // Under BOTH settings: the MCP dashboard is the second copy of this
+  // definition, and a setting that reaches only one of them would be worse
+  // than no setting at all.
+  for (const week of ['monday', 'sunday'] as const) {
+    it(`agrees with getDashboard() — ${week}`, () => {
+      db.prepare(`INSERT OR REPLACE INTO settings (key, value) VALUES ('week_start', ?)`).run(week)
+      addClosed(db, daysAgoAt10(0).toISOString(), 45)
+      addClosed(db, daysAgoAt10(2).toISOString(), 90)
+      addClosed(db, daysAgoAt10(5).toISOString(), 75)
+      addClosed(db, daysAgoAt10(20).toISOString(), 30)
+      db.prepare(
+        `INSERT INTO entries (client_id, description, started_at, billable)
+         VALUES (1, 'running', ?, 1)`
+      ).run(iso(-120_000))
+
+      const mine = readTotals(db)
+      const theirs = getDashboard(
+        db as unknown as SqliteDb,
+        { exposeRates: false, exposePrivateNotes: false },
+        Date.now()
+      )
+      expect(mine.today_seconds).toBe(theirs.today_seconds)
+      expect(mine.week_seconds).toBe(theirs.week_seconds)
+    })
+  }
 })

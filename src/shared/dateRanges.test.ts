@@ -121,3 +121,45 @@ describe('localDateKey', () => {
     expect(localDateKey(local(2025, 12, 31, 23, 59))).toBe('2025-12-31')
   })
 })
+
+describe('getQuickRange — week_start setting (#188)', () => {
+  it('defaults to Monday when no week start is passed', () => {
+    // 2026-04-24 is a Friday. Same expectation as the tests above, stated
+    // explicitly so the default cannot be changed unnoticed.
+    const r = getQuickRange('thisWeek', local(2026, 4, 24))
+    expect(dayKey(r.from)).toBe('2026-04-20') // Mon
+    expect(dayKey(r.to)).toBe('2026-04-26') // Sun
+  })
+
+  it('thisWeek anchors to Sunday when configured that way', () => {
+    const r = getQuickRange('thisWeek', local(2026, 4, 24), 'sunday')
+    expect(dayKey(r.from)).toBe('2026-04-19') // Sun
+    expect(dayKey(r.to)).toBe('2026-04-25') // Sat
+    expect(r.from.getHours()).toBe(0)
+    expect(r.to.getMilliseconds()).toBe(999)
+  })
+
+  it('on the boundary day itself the week starts that day', () => {
+    // 2026-04-19 is a Sunday.
+    const r = getQuickRange('thisWeek', local(2026, 4, 19), 'sunday')
+    expect(dayKey(r.from)).toBe('2026-04-19')
+    expect(dayKey(r.to)).toBe('2026-04-25')
+  })
+
+  it('lastWeek shifts by exactly seven days under both settings', () => {
+    const mon = getQuickRange('lastWeek', local(2026, 4, 24), 'monday')
+    expect(dayKey(mon.from)).toBe('2026-04-13')
+    expect(dayKey(mon.to)).toBe('2026-04-19')
+
+    const sun = getQuickRange('lastWeek', local(2026, 4, 24), 'sunday')
+    expect(dayKey(sun.from)).toBe('2026-04-12')
+    expect(dayKey(sun.to)).toBe('2026-04-18')
+  })
+
+  it('month ranges ignore the setting', () => {
+    const a = getQuickRange('thisMonth', local(2026, 4, 24), 'monday')
+    const b = getQuickRange('thisMonth', local(2026, 4, 24), 'sunday')
+    expect(dayKey(a.from)).toBe(dayKey(b.from))
+    expect(dayKey(a.to)).toBe(dayKey(b.to))
+  })
+})

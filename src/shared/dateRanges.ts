@@ -1,12 +1,13 @@
 import { endOfMonth, endOfWeek, startOfMonth, startOfWeek, subMonths, subWeeks } from 'date-fns'
+import { DEFAULT_WEEK_START, weekStartsOn, type WeekStart } from './weekStart'
 
 /**
  * Quick-filter ranges for the calendar / PDF export hero path (#21).
  *
  * Returned `from` is the inclusive start (00:00:00.000 local) and `to` is
  * the inclusive end (23:59:59.999 local). DST-safe because date-fns
- * normalises to local wall-clock and we anchor weeks to Monday for the
- * de-DE locale.
+ * normalises to local wall-clock. The week anchor follows the `week_start`
+ * setting (#188); callers that do not pass one get the default.
  */
 export type QuickRangeKind = 'thisWeek' | 'lastWeek' | 'thisMonth' | 'lastMonth'
 
@@ -15,15 +16,18 @@ export interface DateRange {
   to: Date
 }
 
-const WEEK_OPTS = { weekStartsOn: 1 } as const // Monday
-
-export function getQuickRange(kind: QuickRangeKind, now: Date): DateRange {
+export function getQuickRange(
+  kind: QuickRangeKind,
+  now: Date,
+  week: WeekStart = DEFAULT_WEEK_START
+): DateRange {
+  const opts = { weekStartsOn: weekStartsOn(week) } as const
   switch (kind) {
     case 'thisWeek':
-      return { from: startOfWeek(now, WEEK_OPTS), to: endOfWeek(now, WEEK_OPTS) }
+      return { from: startOfWeek(now, opts), to: endOfWeek(now, opts) }
     case 'lastWeek': {
       const ref = subWeeks(now, 1)
-      return { from: startOfWeek(ref, WEEK_OPTS), to: endOfWeek(ref, WEEK_OPTS) }
+      return { from: startOfWeek(ref, opts), to: endOfWeek(ref, opts) }
     }
     case 'thisMonth':
       return { from: startOfMonth(now), to: endOfMonth(now) }
