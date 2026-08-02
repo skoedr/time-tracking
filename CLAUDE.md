@@ -12,7 +12,13 @@ und **kein** Kommando meldet einen Fehler. Der Marker lügt.
 
 - Tests laufen mit `pnpm test`. Das startet Vitest über `scripts/run-vitest.mjs` auf der
   Electron-Binary im Node-Modus — dieselbe Lösung wie beim MCP-Server
-  (`src/main/mcpLaunch.ts`). Ein grüner Lauf ist **596 passed, 0 skipped**.
+  (`src/main/mcpLaunch.ts`). Ein grüner Lauf ist **0 skipped** über alle Vitest-Projekte.
+- Hier steht bewusst **keine absolute Testzahl** mehr. Sie war ein Proxy für die
+  Bedingung und veraltete mit jedem PR (zuletzt „596" gegen tatsächlich 969) — eine
+  falsche Zahl liest sich wie ein Defekt und lädt zum „Reparieren" ein. Was die Zahl
+  nebenbei absicherte — eine still schrumpfende Suite —, prüft jetzt
+  `src/test/vitestProjects.test.ts`: jede `*.test.ts(x)` im Repo muss von einem
+  Vitest-Projekt eingeschlossen sein, und jedes Projekt muss noch etwas finden.
 - `pnpm exec vitest` direkt aufzurufen kann nicht funktionieren und scheitert mit einer
   Anleitung. Das ist kein Umgebungsproblem, das du „reparieren" sollst.
 - Dreistellige Skip-Zahlen bedeuten kaputte Umgebung, nie „grün". Melde das, statt

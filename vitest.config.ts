@@ -19,7 +19,14 @@ export default defineConfig({
         test: {
           name: 'node',
           environment: 'node',
-          include: ['src/main/**/*.test.ts', 'src/shared/**/*.test.ts', 'src/mcp/**/*.test.ts']
+          include: [
+            'src/main/**/*.test.ts',
+            'src/shared/**/*.test.ts',
+            'src/mcp/**/*.test.ts',
+            // src/test holds the shared test bootstrap and the meta-test that
+            // checks these very patterns still cover every test file.
+            'src/test/**/*.test.ts'
+          ]
         }
       },
       {
