@@ -105,6 +105,12 @@ jobs:
       # `pack` refuses to package a manifest that would not install (icons must
       # be PNG, layouts must resolve). Running validate first makes that failure
       # say what is wrong instead of just aborting the pack.
+      #
+      # Both steps run with pinned validation rules (--no-update-check, see
+      # package.json). A release must not fail because Elgato published a rule
+      # change while the job was running; the same commands ran green on the PR
+      # that produced this commit. `pnpm run validate:rules` is where new rules
+      # are picked up, deliberately.
       - name: Validate manifest
         working-directory: streamdeck-plugin
         run: pnpm run validate

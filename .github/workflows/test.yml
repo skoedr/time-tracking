@@ -91,3 +91,31 @@ jobs:
       - name: Stream Deck plugin — build
         working-directory: streamdeck-plugin
         run: pnpm build
+
+      # #192 follow-up: the release job packs the plugin, but release.yml only
+      # triggers on tags — so until now the artifact path was first exercised
+      # while cutting a release, which is the worst moment to discover that the
+      # manifest does not validate. Producing the package here proves it on
+      # every PR instead.
+      #
+      # Both commands carry --no-update-check (see package.json): the CLI
+      # otherwise fetches its validation rules at run time, which would let a
+      # server-side rule change turn an unrelated PR red. The pinned CLI plus
+      # pinned rules make this reproducible; `pnpm run validate:rules` is the
+      # deliberate check for whether Elgato changed anything.
+      - name: Stream Deck plugin — validate manifest
+        working-directory: streamdeck-plugin
+        run: pnpm run validate
+
+      - name: Stream Deck plugin — pack
+        working-directory: streamdeck-plugin
+        run: pnpm run pack
+
+      # Side benefit worth the five lines: the packed plugin of any PR can be
+      # downloaded from the run and installed on real hardware before merging.
+      - name: Upload packed plugin
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: timetrack-streamdeck-plugin-${{ github.sha }}
+          path: streamdeck-plugin/dist/*.streamDeckPlugin
+          if-no-files-found: error
