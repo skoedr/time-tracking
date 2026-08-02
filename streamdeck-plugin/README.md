@@ -58,6 +58,20 @@ pnpm run validate     # what CI runs before packing — manifest + icon rules
 pnpm run pack         # dist/com.timetrack.streamdeck.streamDeckPlugin
 ```
 
+Both run with `--no-update-check`: the Elgato CLI otherwise fetches its
+validation rules at run time, which would let a server-side rule change turn an
+unrelated PR red. The CLI is pinned in the lockfile, so the rules move only
+when the dependency is bumped on purpose. To ask whether Elgato changed
+anything:
+
+```
+pnpm run validate:rules
+```
+
+Every PR builds, validates and packs the plugin (`test.yml`), and the packed
+file is attached to the run — so a plugin change can be installed on real
+hardware before it is merged.
+
 `pnpm run pack`, not `pnpm pack` — the latter is pnpm's own npm-tarball command
 and shadows the script.
 

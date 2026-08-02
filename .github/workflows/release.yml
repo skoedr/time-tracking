@@ -69,12 +69,18 @@ jobs:
   # willing to build and link a plugin themselves — the feature shipped, the
   # function did not.
   #
-  # Its own job on Linux: the package is platform-neutral (JS + manifest + PNGs)
-  # and has nothing to do with the Electron build, so it neither slows the two
+  # Its own job, because the package is platform-neutral (JS + manifest + PNGs)
+  # and has nothing to do with the Electron build — it neither slows the two
   # installer jobs down nor fails with them.
+  #
+  # windows-latest, not ubuntu, although the work is OS-agnostic: `test.yml`
+  # packs on Windows for every PR, so that is the environment with evidence
+  # behind it. Shipping from an environment no gate exercises would be a claim
+  # rather than a verification. (The archive itself is portable either way — a
+  # plain ZIP with POSIX separators, checked on a Windows-packed file.)
   pack-streamdeck:
     needs: prepare
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     permissions:
       contents: read
     steps:
@@ -105,6 +111,12 @@ jobs:
       # `pack` refuses to package a manifest that would not install (icons must
       # be PNG, layouts must resolve). Running validate first makes that failure
       # say what is wrong instead of just aborting the pack.
+      #
+      # Both steps run with pinned validation rules (--no-update-check, see
+      # package.json). A release must not fail because Elgato published a rule
+      # change while the job was running; the same commands ran green on the PR
+      # that produced this commit. `pnpm run validate:rules` is where new rules
+      # are picked up, deliberately.
       - name: Validate manifest
         working-directory: streamdeck-plugin
         run: pnpm run validate
