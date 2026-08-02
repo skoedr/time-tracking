@@ -75,6 +75,13 @@ hardware before it is merged.
 `pnpm run pack`, not `pnpm pack` — the latter is pnpm's own npm-tarball command
 and shadows the script.
 
+**`pnpm typecheck` needs the repo root installed first.** This tsconfig also
+covers `src/**/*.test.ts`, and those import `vitest`, which is a dependency of
+the root package (the tests run there, as the `streamdeck` Vitest project).
+Without `pnpm install` at the root, the typecheck fails on module resolution
+rather than on a type error. Build, validate and pack are self-contained and do
+not need it — which is why the release job runs only those (#196).
+
 For iterating on the plugin, link the directory instead of installing a package:
 
 ```
