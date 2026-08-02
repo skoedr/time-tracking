@@ -5,11 +5,33 @@ All notable changes to TimeTrack are documented here.
 > **Language note:** Entries up to v1.15.1 are in German (historical record);
 > from v1.16.0 onward, entries are written in English.
 
+## [1.18.0] — 2026-08-02
+
+### Added
+
+- **The timer dial for Stream Deck + (#186)** — One dial reaches every timer target, with nothing to configure. Idle, it shows the two numbers from the app's _Heute_ page — hours today and this week — plus the entry a press would start, so a press is never blind. Turning walks the projects and the clients that have none; a short press starts that target, or stops it if it is the one running. A long press starts the same **client without a project**, which is why clients that have projects never appear on their own: the list stays as short as the things you actually book on. While a timer runs, the strip shows client, project and elapsed time with the minute ring and the pulse from the key faces.
+
+  The numbers come from the same function the app's page uses, including its rounding — an earlier version rendered the raw seconds and read 6:24 against the app's 6:30.
+
+- **The Stream Deck plugin now ships with the release (#192)** — Hardware keys have existed since v1.17, but only as source: using them meant cloning the repo and building the plugin yourself. Every release now carries **`com.timetrack.streamdeck.streamDeckPlugin`** — download, double-click, done. **Settings → Integrations → Hardware keys** links to it. It stays out of the app installer on purpose: the Stream Deck app manages its own plugin directory.
+
+  Why it took this long is worth recording: Elgato's `validate` rejects manifest icons that are not PNG, and the plugin's were SVG. It could never be packed — and nothing said so, because nobody had run `validate`. The icons are now generated from the SVG sources, and both validating and packing run on every pull request instead of first at release time.
+
+### Changed
+
+- **The week starts on Monday, and is now a setting (#188)** — TimeTrack disagreed with itself: the week total counted from Sunday, while the export quick filters, the calendar grid and the KW chart already counted from Monday. **Settings → General → Week starts on** now decides for the week total (page, tray, Stream Deck, MCP), the quick filters and the calendar grid, and it defaults to Monday for every installation.
+
+  **Your week total will therefore change once.** Set it back to Sunday if you prefer the old count. The KW axis in Auswertung stays Monday-based whichever you pick — ISO 8601 defines the calendar week that way, so a Sunday-anchored `KW32` would be a wrong number rather than a preference.
+
+### Fixed
+
+- **The week total counted eight days on Sundays** — The window was computed as "advance to the coming Sunday, then step back seven days", which is right on six days out of seven. On the boundary day itself the first step does nothing, so the second lands a full week early. Every Sunday, the week total silently included the Sunday before it as well.
+
 ## [1.17.0] — 2026-07-29
 
 ### Added
 
-- **Hardware keys: a Stream Deck plugin (#133)** — One key = one timer target. Each key is configured with a client (and optionally one of its projects) and toggles the timer for exactly that target; the key face shows the live state. The plugin (in `streamdeck-plugin/`, TypeScript on the official Elgato SDK v2) talks to the app through the local bridge with its **own token scope**: key presses skip the confirmation dialog — the physical press *is* the confirmation — which is exactly why the MCP token cannot call the new controller operations and vice versa. Everything else from the guarded write path stays: opt-in in **Settings → Integrations → Hardware keys**, audit log, backups, webhooks. No Stream Deck needed to try it: the plugin works with Stream Deck Mobile's free tier.
+- **Hardware keys: a Stream Deck plugin (#133)** — One key = one timer target. Each key is configured with a client (and optionally one of its projects) and toggles the timer for exactly that target; the key face shows the live state. The plugin (in `streamdeck-plugin/`, TypeScript on the official Elgato SDK v2) talks to the app through the local bridge with its **own token scope**: key presses skip the confirmation dialog — the physical press _is_ the confirmation — which is exactly why the MCP token cannot call the new controller operations and vice versa. Everything else from the guarded write path stays: opt-in in **Settings → Integrations → Hardware keys**, audit log, backups, webhooks. No Stream Deck needed to try it: the plugin works with Stream Deck Mobile's free tier.
 
   The key faces carry the app's glass look (from a high-fidelity design handoff): elapsed time as `h:mm`, a minute ring that sweeps like a clock hand, and the client color normalized in OKLab so white text stays readable on any color you picked. Hardware taught us its rules along the way — the deck rasterizes static frames (no SVG animation, no `pathLength`), so the ring and pulse are animated frame-by-frame within the SDK's documented budget.
 
