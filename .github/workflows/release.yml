@@ -100,10 +100,18 @@ jobs:
         working-directory: streamdeck-plugin
         run: pnpm install --frozen-lockfile --ignore-workspace
 
-      - name: Typecheck
-        working-directory: streamdeck-plugin
-        run: pnpm typecheck
-
+      # No typecheck here, on purpose (#196). The plugin's tsconfig also covers
+      # its test files, which import `vitest` — and vitest is a dependency of
+      # the ROOT package, not of the plugin. `test.yml` installs the root first
+      # and typechecks there on every pull request, which is the environment
+      # where the check means something. This job has no root install, so
+      # running it here fails on module resolution, not on a type error: that
+      # is what broke the v1.18.0 release run.
+      #
+      # This job's purpose is to produce the artifact. Verification belongs to
+      # the gate that every commit passes before it reaches main — and `pack`
+      # still validates the manifest below, which is the part that can only
+      # fail here.
       - name: Build bundle
         working-directory: streamdeck-plugin
         run: pnpm build
