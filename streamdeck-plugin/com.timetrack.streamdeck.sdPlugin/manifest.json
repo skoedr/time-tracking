@@ -2,9 +2,9 @@
   "$schema": "https://schemas.elgato.com/streamdeck/plugins/manifest.json",
   "UUID": "com.timetrack.streamdeck",
   "Name": "TimeTrack",
-  "Version": "0.1.0.0",
+  "Version": "0.2.0.0",
   "Author": "wald-it",
-  "Description": "Start and stop TimeTrack timers per client and project with one key. Requires the TimeTrack app with hardware keys enabled (Settings → Integrations).",
+  "Description": "Start and stop TimeTrack timers per client and project — with a key, or with the Stream Deck + dial. Requires the TimeTrack app with hardware keys enabled (Settings → Integrations).",
   "Category": "TimeTrack",
   "CategoryIcon": "imgs/plugin",
   "Icon": "imgs/plugin",
@@ -27,6 +27,25 @@
       "Tooltip": "Toggle the TimeTrack timer for a client (and project).",
       "Icon": "imgs/toggle",
       "PropertyInspectorPath": "ui/toggle-timer.html",
+      "Controllers": ["Keypad"],
+      "UserTitleEnabled": false,
+      "States": [{ "Image": "imgs/toggle" }]
+    },
+    {
+      "UUID": "com.timetrack.streamdeck.dial",
+      "Name": "Timer dial",
+      "Tooltip": "Turn to pick a client or project, press to start or stop the timer.",
+      "Icon": "imgs/toggle",
+      "Controllers": ["Encoder"],
+      "Encoder": {
+        "layout": "layouts/dial.json",
+        "TriggerDescription": {
+          "Rotate": "Pick a client or project",
+          "Push": "short: start / stop · long: client without project",
+          "Touch": "Start / stop",
+          "LongTouch": "Client without project"
+        }
+      },
       "UserTitleEnabled": false,
       "States": [{ "Image": "imgs/toggle" }]
     }

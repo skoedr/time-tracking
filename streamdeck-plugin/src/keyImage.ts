@@ -74,8 +74,8 @@ export function normalizeKeyColor(hex?: string): string {
   return oklabToHex([0.65, a * k, b * k])
 }
 
-/** Lightness skalieren, Hue/Chroma behalten. */
-function scaleL(hex: string, f: number): string {
+/** Lightness skalieren, Hue/Chroma behalten. Geteilt mit dialImage.ts (#186). */
+export function scaleL(hex: string, f: number): string {
   const [L, a, b] = rgbToOklab(hexToRgb(hex))
   return oklabToHex([Math.max(0.05, Math.min(0.92, L * f)), a, b])
 }
@@ -84,8 +84,8 @@ function scaleL(hex: string, f: number): string {
 // Im Key-SVG ist keine Font eingebettet — daher nur systemsichere Stacks.
 // Inter (App-Font) ist hier NICHT verfügbar.
 
-const FONT = 'Segoe UI, Helvetica, Arial, sans-serif'
-const MONO = 'Consolas, Menlo, monospace'
+export const FONT = 'Segoe UI, Helvetica, Arial, sans-serif'
+export const MONO = 'Consolas, Menlo, monospace'
 
 // ── Bausteine ──────────────────────────────────────────────────────────────
 
@@ -96,7 +96,7 @@ const SHELL = (fill: string): string =>
 const HAIRLINE = (opacity = 0.14): string =>
   `<rect x="5.5" y="5.5" width="133" height="133" rx="20.5" fill="none" stroke="#ffffff" stroke-opacity="${opacity}"/>`
 
-function escapeXml(s: string): string {
+export function escapeXml(s: string): string {
   return s
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
