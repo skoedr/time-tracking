@@ -7,12 +7,14 @@
   "scripts": {
     "build": "node build.mjs",
     "typecheck": "tsc --noEmit",
-    "pack": "streamdeck pack com.timetrack.streamdeck.sdPlugin"
+    "validate": "streamdeck validate com.timetrack.streamdeck.sdPlugin",
+    "pack": "streamdeck pack com.timetrack.streamdeck.sdPlugin --output dist --force"
   },
   "dependencies": {
     "@elgato/streamdeck": "^2.1.0"
   },
   "devDependencies": {
+    "@elgato/cli": "^1.7.4",
     "@elgato/utils": "^0.4.5",
     "@types/node": "^24.0.0",
     "esbuild": "^0.25.0",

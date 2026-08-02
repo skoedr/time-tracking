@@ -33,31 +33,59 @@ The plugin talks to the running TimeTrack app through the local control bridge
 it never touches the database. Enable the scope in TimeTrack under
 **Settings → Integrations → Hardware keys**.
 
-## Build
+## Install (users)
+
+Every TimeTrack release ships the plugin as
+**`com.timetrack.streamdeck.streamDeckPlugin`** — download it from the
+[latest release](https://github.com/skoedr/time-tracking/releases/latest),
+double-click, done. It is deliberately *not* inside the app installer: the
+Stream Deck app manages its own plugin directory, and an installer writing
+there behind its back is how you get a plugin the app does not know about.
+
+Then enable the scope in TimeTrack under **Settings → Integrations → Hardware
+keys**. Requires Stream Deck app ≥ 7.1 (Windows 10+/macOS 10.15+). No physical
+device needed to try the keys: the Stream Deck Mobile app (free tier, 6 keys)
+acts as the key surface while the plugin runs in the desktop app. The dial
+needs a Stream Deck + (wheel and touch strip).
+
+## Build and pack (development)
 
 ```
 pnpm install --ignore-workspace
 pnpm typecheck
-pnpm build        # bundles src/ into com.timetrack.streamdeck.sdPlugin/bin/
+pnpm build            # bundles src/ into com.timetrack.streamdeck.sdPlugin/bin/
+pnpm run validate     # what CI runs before packing — manifest + icon rules
+pnpm run pack         # dist/com.timetrack.streamdeck.streamDeckPlugin
 ```
 
-## Install for development (no marketplace, no review)
+`pnpm run pack`, not `pnpm pack` — the latter is pnpm's own npm-tarball command
+and shadows the script.
 
-Link the `.sdPlugin` directory into the Stream Deck app once:
-
-```
-npx @elgato/cli link com.timetrack.streamdeck.sdPlugin
-```
-
-…or pack a double-click installer:
+For iterating on the plugin, link the directory instead of installing a package:
 
 ```
-npx @elgato/cli pack com.timetrack.streamdeck.sdPlugin
+pnpm exec streamdeck link com.timetrack.streamdeck.sdPlugin
 ```
 
-Requires Stream Deck app ≥ 7.1 (Windows 10+/macOS 10.15+). No physical Stream
-Deck needed for testing: the Stream Deck Mobile app (free tier, 6 keys) acts as
-the key surface while the plugin runs in the desktop app.
+> **Careful when you have both.** A linked directory and an installed package
+> share the UUID `com.timetrack.streamdeck`. Installing the packed file while a
+> link exists replaces the link — the Stream Deck app then runs the packaged
+> copy, and edits in this repo stop having any effect while everything still
+> looks fine. Remove one before using the other.
+
+## Icons
+
+The manifest icons are **PNG**, generated from the SVGs in `icons-src/` by
+`node scripts/streamdeck-icons.mjs` (repo root, uses the app's `sharp`) and
+committed. Two rules learned from `streamdeck validate`:
+
+- Manifest icons must be `.png`. SVG is fine for the *runtime* faces the plugin
+  draws (`setImage`/`setFeedback`), but a manifest pointing at an SVG fails
+  validation and the plugin cannot be packed — which is why it went unshipped
+  until #192.
+- The SVGs live outside `com.timetrack.streamdeck.sdPlugin/` on purpose. With
+  `plugin.svg` and `plugin.png` side by side, the manifest path `imgs/plugin`
+  is ambiguous and the app resolves it to the SVG.
 
 ## Architecture notes
 

@@ -228,7 +228,7 @@ function unsetFace(): string {
     `<stop offset="0" stop-color="#1c2036"/><stop offset="1" stop-color="#0d1020"/></linearGradient></defs>` +
     SHELL('url(#b)') +
     `<rect x="9" y="9" width="126" height="126" rx="19" fill="none" stroke="#ffffff" stroke-opacity="0.20" stroke-width="2" stroke-dasharray="7 7"/>` +
-    // Uhr-Glyph — Geometrie aus imgs/plugin.svg, im App-Akzent.
+    // Uhr-Glyph — Geometrie aus icons-src/plugin.svg, im App-Akzent.
     `<circle cx="72" cy="52" r="17" fill="none" stroke="#5b4ef0" stroke-width="2.5"/>` +
     `<line x1="72" y1="43" x2="72" y2="53" stroke="#5b4ef0" stroke-width="2.5" stroke-linecap="round"/>` +
     `<line x1="72" y1="53" x2="79" y2="57" stroke="#5b4ef0" stroke-width="2.5" stroke-linecap="round"/>` +
