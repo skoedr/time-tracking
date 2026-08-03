@@ -30,6 +30,9 @@ win:
   target:
     - nsis
 nsis:
+  # #198 — cooperative release of the app binary held by bundled MCP servers,
+  # ahead of the built-in app-running check. See build/installer.nsh.
+  include: build/installer.nsh
   oneClick: false
   perMachine: false
   allowToChangeInstallationDirectory: true

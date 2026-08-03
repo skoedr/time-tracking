@@ -16,6 +16,7 @@ import log from 'electron-log/main'
 import pkg from 'electron-updater'
 const { autoUpdater } = pkg
 import type { IpcResult, UpdateStatus } from '../shared/types'
+import { clearShutdown, releaseHolders, type Holder } from '../mcp/holders'
 
 export type { UpdateStatus }
 
@@ -45,7 +46,26 @@ function broadcast(status: UpdateStatus): void {
  * In dev mode (no packaged app) this is a no-op except for IPC handler
  * registration — `autoUpdater.checkForUpdates()` would error otherwise.
  */
-export function initAutoUpdater(opts: { isDev: boolean }): void {
+/**
+ * Message for holders that ignored the shutdown request (#198).
+ *
+ * It has to name the actual blocker, because the installer's own wording sends
+ * the user looking for a window that does not exist: an MCP server is a
+ * child of the AI client, has no window and no tray icon, and carries the app's
+ * own executable name under a foreign parent process.
+ */
+export function blockedByHoldersMessage(remaining: Holder[]): string {
+  const list = remaining.map((h) => `PID ${h.pid}`).join(', ')
+  return (
+    `Das Update kann nicht installiert werden: ${remaining.length} MCP-Server ` +
+    `(${list}) benutzt noch die TimeTrack-Programmdatei und hat auf die ` +
+    'Aufforderung zum Beenden nicht reagiert. Diese Prozesse haben kein Fenster — ' +
+    'sie gehören zu einem laufenden AI-Client (Einstellungen → Integrationen). ' +
+    'Beende den AI-Client und versuche es erneut.'
+  )
+}
+
+export function initAutoUpdater(opts: { isDev: boolean; getEndpointDir?: () => string }): void {
   // Wire up logger from PR A so updater events land in main.log.
   autoUpdater.logger = log
   autoUpdater.autoDownload = true
@@ -108,13 +128,38 @@ export function initAutoUpdater(opts: { isDev: boolean }): void {
     }
   })
 
-  ipcMain.handle('update:install', (): IpcResult<void> => {
+  ipcMain.handle('update:install', async (): Promise<IpcResult<void>> => {
     try {
+      // #198 — hand over a directory the installer can actually replace.
+      //
+      // Every MCP server runs the installed binary in Node mode, so it locks
+      // TimeTrack.exe. On this path the installer's own check does not help:
+      // it skips entirely when its parent process is TimeTrack.exe, which is
+      // exactly what quitAndInstall makes it (see the CHECK_APP_RUNNING guard
+      // in electron-builder's allowOnlyOneInstallerInstance.nsh).
+      const dir = opts.getEndpointDir?.()
+      if (dir) {
+        const outcome = await releaseHolders(dir)
+        if (!outcome.ok) {
+          const message = blockedByHoldersMessage(outcome.remaining)
+          log.warn(`[updater] update aborted, ${outcome.remaining.length} MCP holder(s) left`)
+          broadcast({ status: 'error', message })
+          return fail(message)
+        }
+        if (outcome.before.length > 0) {
+          log.info(`[updater] released ${outcome.before.length} MCP holder(s) before install`)
+        }
+      }
+
       // quitAndInstall(isSilent=false, isForceRunAfter=true)
       // — shows the NSIS installer UI, then re-launches TimeTrack.
       autoUpdater.quitAndInstall(false, true)
       return ok(undefined)
     } catch (err) {
+      // Never leave a shutdown request behind on a failed install — every MCP
+      // server started afterwards would exit the moment it saw it.
+      const dir = opts.getEndpointDir?.()
+      if (dir) clearShutdown(dir)
       return fail((err as Error).message)
     }
   })

@@ -33,6 +33,8 @@ import {
   type SqliteDb
 } from './queries'
 import { sendWrite } from './writeClient'
+import { userDataDir } from './socketPath'
+import { registerHolder, unregisterHolder, watchForShutdown } from './holders'
 
 /**
  * Open the DB fresh per call and close it afterwards. TimeTrack uses WAL, so a
@@ -372,12 +374,55 @@ export function buildServer(): McpServer {
   return server
 }
 
+/**
+ * Register as a holder of the app binary and exit cleanly when the app asks
+ * (#198). This process runs the *installed* binary in Node mode, so as long as
+ * it lives the Windows installer cannot replace `TimeTrack.exe` — and the app
+ * cannot simply close us, because our lifecycle belongs to the MCP client.
+ * See src/mcp/holders.ts for why this is a file handshake and not the bridge.
+ */
+function joinUpdateHandshake(server: McpServer): void {
+  let dir: string
+  try {
+    dir = userDataDir()
+  } catch {
+    return // no resolvable userData — nothing to coordinate with
+  }
+  const startedAt = Date.now()
+  registerHolder(dir, {
+    pid: process.pid,
+    exe: process.execPath,
+    entry: process.argv[1] ?? '',
+    startedAt
+  })
+
+  const stopWatch = watchForShutdown(dir, startedAt, () => {
+    process.stderr.write('[timetrack-mcp] TimeTrack installiert ein Update — Server wird beendet\n')
+    void Promise.resolve(server.close())
+      .catch(() => undefined)
+      .finally(() => {
+        unregisterHolder(dir, process.pid)
+        process.exit(0)
+      })
+  })
+
+  // Synchronous on purpose: 'exit' handlers cannot await.
+  process.on('exit', () => {
+    stopWatch()
+    unregisterHolder(dir, process.pid)
+  })
+  for (const sig of ['SIGINT', 'SIGTERM'] as const) {
+    process.on(sig, () => process.exit(0))
+  }
+}
+
 async function main(): Promise<void> {
   // Fail fast with a clear message if the DB is missing, before wiring stdio.
   const dbPath = resolveDbPath()
   const server = buildServer()
   const transport = new StdioServerTransport()
   await server.connect(transport)
+  joinUpdateHandshake(server)
   // stderr is safe for logs; stdout is the MCP protocol channel.
   process.stderr.write(`[timetrack-mcp] read-only server bereit (DB: ${dbPath})\n`)
 }

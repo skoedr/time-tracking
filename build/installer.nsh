@@ -1,0 +1,77 @@
+; #198 — release the app binary before the installer tries to replace it.
+;
+; A bundled MCP server runs the *installed* binary in Node mode
+; (src/main/mcpLaunch.ts), so it holds TimeTrack.exe open. It is a child of an
+; AI client, has no window and no tray icon, and it carries the app's own
+; executable name under a foreign parent process. That combination is what
+; produces "TimeTrack cannot be closed" with nothing for the user to close.
+;
+; electron-builder's own check cannot be relied on here. It has two branches,
+; and which one runs is decided by IS_POWERSHELL_AVAILABLE — a probe that
+; reported "unavailable" on a machine where PowerShell plainly works (measured
+; 2026-08-03). On that branch FIND_PROCESS/KILL_PROCESS fall back to
+; tasklist/taskkill by image name, and the first attempt is a WM_CLOSE that a
+; windowless process ignores by definition.
+;
+; So we ask before anyone kills anything. src/mcp/holders.ts defines a
+; plain-file handshake every MCP server watches: a shutdown request under
+; <userData>/mcp-holders makes it close its transport and exit on its own,
+; which the client sees as a clean end rather than a crash. Writing that
+; request here gives the manually started installer the same cooperative path
+; the in-app updater takes (src/main/updater.ts), and only then do we fall
+; through to the built-in check for anything that did not react.
+;
+; Verified 2026-08-03: silent install over three live MCP servers, all three
+; withdrew their own registration and the install completed untouched.
+
+; Defining customCheckAppRunning makes electron-builder skip the block in
+; allowOnlyOneInstallerInstance.nsh that provides these two — and
+; _CHECK_APP_RUNNING, which we still delegate to, needs both. Without them the
+; build fails with `Invalid command: "${GetProcessInfo}"`.
+!include "getProcessInfo.nsh"
+Var pid
+
+Var TTHolderDir
+
+!macro TIMETRACK_HOLDER_DIR
+  ; Default userData location. A custom TIMETRACK_DB_PATH moves the handshake
+  ; with it; the installer cannot know about that, and for those installs this
+  ; step is simply a no-op and the built-in check below still applies.
+  StrCpy $TTHolderDir "$APPDATA\time-tracking\mcp-holders"
+!macroend
+
+!macro customCheckAppRunning
+  ; _CHECK_APP_RUNNING reads $IsPowerShellAvailable, so it still has to be set —
+  ; we just do not gate our own work on it, for the reason given above.
+  !insertmacro IS_POWERSHELL_AVAILABLE
+  !insertmacro TIMETRACK_HOLDER_DIR
+
+  ; Are any MCP servers registered? No registration means nothing to coordinate.
+  nsExec::ExecToStack `"$PowerShellPath" -NoProfile -C "@(Get-ChildItem -LiteralPath '$TTHolderDir' -Filter *.json -ErrorAction SilentlyContinue).Count"`
+  Pop $0
+  Pop $1
+
+  ${if} $0 == 0
+  ${andIf} $1 != "0"
+    DetailPrint "Fordere laufende MCP-Server zum Beenden auf..."
+    ; Write the request, then wait for the registrations to disappear — each
+    ; server removes its own file on the way out. No literal double quote in
+    ; this command line: it would have to survive NSIS, CreateProcess and
+    ; PowerShell's parser, so [char]34 sidesteps the question. Stale files from
+    ; a crashed process only cost us the wait; the app side prunes them by
+    ; liveness, so they can never block an install.
+    nsExec::Exec `"$PowerShellPath" -NoProfile -C "$$q=[char]34; $$d='$TTHolderDir'; New-Item -ItemType Directory -Force -Path $$d | Out-Null; Set-Content -LiteralPath (Join-Path $$d '.shutdown') -Value ('{' + $$q + 'requestedAt' + $$q + ':' + [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds() + '}') -Encoding utf8; $$dl=(Get-Date).AddSeconds(8); while ((Get-Date) -lt $$dl -and @(Get-ChildItem -LiteralPath $$d -Filter *.json -ErrorAction SilentlyContinue).Count -gt 0) { Start-Sleep -Milliseconds 200 }"`
+    Pop $0
+  ${endIf}
+
+  ; Built-in check, for the app window and anything that ignored the request.
+  !insertmacro _CHECK_APP_RUNNING
+!macroend
+
+!macro customInstall
+  ; Withdraw the request. Left lying around it would make every MCP server
+  ; started afterwards exit the moment it saw it.
+  !insertmacro TIMETRACK_HOLDER_DIR
+  nsExec::Exec `"$PowerShellPath" -NoProfile -C "Remove-Item -LiteralPath (Join-Path '$TTHolderDir' '.shutdown') -Force -ErrorAction SilentlyContinue"`
+  Pop $0
+!macroend

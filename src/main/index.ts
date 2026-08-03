@@ -10,13 +10,13 @@ import {
   type MenuItemConstructorOptions
 } from 'electron'
 import log from 'electron-log/main'
-import { join } from 'path'
+import { dirname, join } from 'path'
 import { writeFileSync } from 'fs'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import trayRunningIcon from '../../resources/tray-running.png?asset'
 import trayStoppedIcon from '../../resources/tray-stopped.png?asset'
-import { getDb, recoverZombieEntries, MigrationError } from './db'
+import { getDb, getDbPath, recoverZombieEntries, MigrationError } from './db'
 import { registerIpcHandlers } from './ipc'
 import {
   startMcpBridge,
@@ -613,7 +613,10 @@ app.whenReady().then(async () => {
 
   // v1.5 PR B — init auto-updater after the main window exists so events
   // can be broadcast to the renderer immediately.
-  initAutoUpdater({ isDev: is.dev })
+  // getEndpointDir anchors the MCP holder registry (#198) on the directory the
+  // DB actually lives in — the same anchor mcpBridge.ts uses, so a custom
+  // TIMETRACK_DB_PATH keeps app and MCP servers pointing at one place.
+  initAutoUpdater({ isDev: is.dev, getEndpointDir: () => dirname(getDbPath()) })
 
   refreshActiveClients()
   configureIdleWatcher({ getWindow: () => mainWindow })
