@@ -52,8 +52,12 @@ load this binary. `pnpm test` solves this by starting Vitest via
 rebuild before the test run; `pnpm dev` and the package builds keep
 working.
 
-A green run is therefore **596 passed, 0 skipped**. If you instead see a
-three-digit skip count, the environment is broken — not the code.
+A green run is therefore **0 skipped** across all Vitest projects. If you
+instead see a three-digit skip count, the environment is broken — not the code.
+There is deliberately no absolute test count here — it goes stale with every
+PR and then reads like a defect; a silently shrinking suite is instead guarded
+by `src/test/vitestProjects.test.ts`, which fails when a `*.test.ts(x)` file is
+not covered by any Vitest project.
 
 **If tests fail with `ERR_DLOPEN_FAILED` / `NODE_MODULE_VERSION`:**
 
