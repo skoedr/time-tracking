@@ -123,6 +123,14 @@ separately installed Node required.
 > `ELECTRON_RUN_AS_NODE=1` runs the Electron binary as plain Node — same ABI
 > as the bundled module, without a second binary copy in the installer.
 
+> **Updates while MCP servers are running (#198):** Because each server runs the
+> installed binary, it holds `TimeTrack.exe` open — which would block the Windows
+> installer. Servers therefore register under `<userData>/mcp-holders/` and exit
+> on their own when an update is about to install; the AI client sees a clean
+> shutdown, not a crash, and simply restarts the server afterwards. If a server
+> does not react, the update refuses to install and names the blocking
+> processes — close the AI client and retry.
+
 **From the checkout (development):**
 
 ```bash
