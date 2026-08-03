@@ -17,6 +17,7 @@ import icon from '../../resources/icon.png?asset'
 import trayRunningIcon from '../../resources/tray-running.png?asset'
 import trayStoppedIcon from '../../resources/tray-stopped.png?asset'
 import { getDb, getDbPath, recoverZombieEntries, MigrationError } from './db'
+import { clearShutdown } from '../mcp/holders'
 import { registerIpcHandlers } from './ipc'
 import {
   startMcpBridge,
@@ -610,6 +611,11 @@ app.whenReady().then(async () => {
     }
   })
   createWindow()
+
+  // #198 — a .shutdown request survives a cancelled or mid-copy-failed
+  // installer (customInstall never ran) and would sit there forever. The app
+  // starting is proof that no install is in progress, so clear it here.
+  clearShutdown(dirname(getDbPath()))
 
   // v1.5 PR B — init auto-updater after the main window exists so events
   // can be broadcast to the renderer immediately.

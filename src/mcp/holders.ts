@@ -93,11 +93,19 @@ export function unregisterHolder(dir: string, pid: number): void {
 }
 
 /**
+ * How far in the future a request timestamp may lie before it is ignored.
+ * A forward-dated request (clock was ahead when written, corrected since)
+ * would otherwise satisfy `at >= startedAt` for every server started from
+ * then on — one stale file as a standing kill switch.
+ */
+export const MAX_FUTURE_SKEW_MS = 60_000
+
+/**
  * Read a pending shutdown request, or null. A request only applies to servers
  * that were already running when it was written — otherwise a server started
  * while the file still lies around would exit immediately.
  */
-export function pendingShutdownAt(dir: string): number | null {
+export function pendingShutdownAt(dir: string, now: () => number = Date.now): number | null {
   try {
     // Strip a UTF-8 BOM before parsing. The installer writes this file with
     // Windows PowerShell's Set-Content -Encoding utf8, which emits one, and
@@ -105,7 +113,8 @@ export function pendingShutdownAt(dir: string): number | null {
     // into "no request" (measured 2026-08-03).
     const raw = readFileSync(shutdownPathForDir(dir), 'utf8').replace(/^\uFEFF/, '')
     const at = Number(JSON.parse(raw).requestedAt)
-    return Number.isFinite(at) ? at : null
+    if (!Number.isFinite(at)) return null
+    return at > now() + MAX_FUTURE_SKEW_MS ? null : at
   } catch {
     return null
   }
@@ -156,7 +165,11 @@ export function readHolders(dir: string, alive: (pid: number) => boolean = isAli
     } catch {
       continue
     }
-    if (typeof h?.pid !== 'number') continue
+    // Holder files are plain JSON anyone running as the user can write. A pid
+    // of 0 probes the whole process group (always "alive"), negative pids
+    // probe process groups too — either would be an immortal holder that
+    // blocks every future update. Only accept real, positive pids.
+    if (!Number.isInteger(h?.pid) || h.pid <= 0) continue
     if (alive(h.pid)) {
       out.push(h)
     } else {

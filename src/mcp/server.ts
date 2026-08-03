@@ -398,6 +398,13 @@ function joinUpdateHandshake(server: McpServer): void {
 
   const stopWatch = watchForShutdown(dir, startedAt, () => {
     process.stderr.write('[timetrack-mcp] TimeTrack installiert ein Update — Server wird beendet\n')
+    // If close() never settles (wedged transport), exit anyway — the update
+    // is waiting on this process, and staying alive means blocking it.
+    const forceExit = setTimeout(() => {
+      unregisterHolder(dir, process.pid)
+      process.exit(0)
+    }, 2000)
+    forceExit.unref?.()
     void Promise.resolve(server.close())
       .catch(() => undefined)
       .finally(() => {

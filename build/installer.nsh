@@ -47,9 +47,21 @@ Var TTHolderDir
   !insertmacro TIMETRACK_HOLDER_DIR
 
   ; Are any MCP servers registered? No registration means nothing to coordinate.
-  nsExec::ExecToStack `"$PowerShellPath" -NoProfile -C "@(Get-ChildItem -LiteralPath '$TTHolderDir' -Filter *.json -ErrorAction SilentlyContinue).Count"`
+  ; [Console]::Write on purpose: nsExec::ExecToStack captures the trailing
+  ; newline that PowerShell's default output appends, so a count of zero
+  ; arrives as "0\r\n" and a `!= "0"` comparison would ALWAYS enter the
+  ; block — writing a shutdown request on every install, MCP integration or
+  ; not. Console::Write emits the bare digits and nothing else.
+  nsExec::ExecToStack `"$PowerShellPath" -NoProfile -C "[Console]::Write(@(Get-ChildItem -LiteralPath '$TTHolderDir' -Filter *.json -ErrorAction SilentlyContinue).Count)"`
   Pop $0
   Pop $1
+
+  ${if} $0 != 0
+    ; PowerShell itself failed (execution policy, AppLocker). The handshake is
+    ; skipped and only the built-in check below runs — say so instead of
+    ; silently reproducing the original #198 symptom.
+    DetailPrint "MCP-Handshake uebersprungen (PowerShell-Aufruf fehlgeschlagen)"
+  ${endIf}
 
   ${if} $0 == 0
   ${andIf} $1 != "0"

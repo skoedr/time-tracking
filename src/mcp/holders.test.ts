@@ -7,10 +7,13 @@
  * the user to close a window that does not exist.
  */
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { mkdtempSync, rmSync, existsSync, writeFileSync, mkdirSync, readdirSync } from 'fs'
+import { mkdtempSync, rmSync, existsSync, writeFileSync, mkdirSync, readdirSync, readFileSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
 import {
+  HOLDER_DIRNAME,
+  SHUTDOWN_FILENAME,
+  MAX_FUTURE_SKEW_MS,
   holderDirForDir,
   shutdownPathForDir,
   isAlive,
@@ -210,5 +213,64 @@ describe('releaseHolders', () => {
       sleep: async () => unregisterHolder(dir, 11)
     })
     expect(pendingShutdownAt(dir)).not.toBeNull()
+  })
+})
+
+describe('hostile or damaged registry input', () => {
+  it('skips holder files whose pid could probe a process group', () => {
+    // pid 0 and negative pids make kill(pid, 0) probe process GROUPS, which
+    // always answers "alive" — such a file would block every future update.
+    mkdirSync(holderDirForDir(dir), { recursive: true })
+    writeFileSync(join(holderDirForDir(dir), 'zero.json'), '{"pid":0}', 'utf8')
+    writeFileSync(join(holderDirForDir(dir), 'neg.json'), '{"pid":-5}', 'utf8')
+    writeFileSync(join(holderDirForDir(dir), 'frac.json'), '{"pid":1.5}', 'utf8')
+    writeFileSync(join(holderDirForDir(dir), 'str.json'), '{"pid":"7"}', 'utf8')
+    expect(readHolders(dir, () => true)).toEqual([])
+  })
+
+  it('registerHolder reports failure instead of throwing', () => {
+    // a file sits where the holder directory should be — mkdir cannot win
+    writeFileSync(holderDirForDir(dir), 'in the way', 'utf8')
+    expect(registerHolder(dir, holder(1))).toBe(false)
+  })
+})
+
+describe('shutdown request — hostile or damaged input', () => {
+  it('ignores valid JSON without a usable requestedAt', () => {
+    mkdirSync(holderDirForDir(dir), { recursive: true })
+    for (const raw of ['{}', '{"requestedAt":"soon"}']) {
+      writeFileSync(shutdownPathForDir(dir), raw, 'utf8')
+      expect(pendingShutdownAt(dir)).toBeNull()
+    }
+  })
+
+  it('ignores a forward-dated request — a stale file must not become a standing kill switch', () => {
+    requestShutdown(dir, 200_000)
+    expect(pendingShutdownAt(dir, () => 100_000)).toBeNull()
+    // within the skew allowance the request still counts
+    expect(pendingShutdownAt(dir, () => 200_000 - MAX_FUTURE_SKEW_MS)).toBe(200_000)
+  })
+
+  it('fires when the request timestamp equals startedAt — same-millisecond clocks are real', async () => {
+    requestShutdown(dir, 5000)
+    let n = 0
+    const stop = watchForShutdown(dir, 5000, () => n++, 5)
+    await new Promise((r) => setTimeout(r, 60))
+    stop()
+    expect(n).toBe(1)
+  })
+})
+
+describe('installer script stays in sync', () => {
+  it('build/installer.nsh uses the same names and keys as this module', () => {
+    // The NSIS side cannot import these constants; a rename here would turn
+    // the installer handshake into a silent no-op that just waits out its
+    // deadline. This assertion makes the rename break the build instead.
+    const nsh = readFileSync(join(__dirname, '..', '..', 'build', 'installer.nsh'), 'utf8')
+    expect(nsh).toContain(HOLDER_DIRNAME)
+    expect(nsh).toContain(SHUTDOWN_FILENAME)
+    expect(nsh).toContain('requestedAt')
+    // the userData dirname follows package.json "name", not productName
+    expect(nsh).toContain('time-tracking')
   })
 })
