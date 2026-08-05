@@ -5,6 +5,18 @@ All notable changes to TimeTrack are documented here.
 > **Language note:** Entries up to v1.15.1 are in German (historical record);
 > from v1.16.0 onward, entries are written in English.
 
+## [Unreleased]
+
+### Fixed
+
+- **Updates no longer stall on TimeTrack's own MCP server (#198)** — With the MCP integration set up, installing an update could fail with _"TimeTrack cannot be closed. Please close it manually and click Retry"_ — an instruction nobody could follow, because the app **was** closed. The blocker was a windowless child process: an MCP server runs the installed binary in Node mode (that is how it shares the app's native SQLite ABI), so it holds `TimeTrack.exe` open. It belongs to an AI client, has no window and no tray icon, and carries the app's own executable name under a foreign parent process — from the outside there is nothing to see and nothing to close.
+
+  Both update paths now ask before anyone kills anything. Every MCP server registers itself under `<userData>/mcp-holders` and watches for a shutdown request; on one it closes its transport and exits by itself, which its client sees as a clean end rather than a crash. The in-app updater writes that request before handing over to the installer and **refuses to hand over at all** while anything is still holding on — naming the surviving processes instead of walking into an install that must fail. The Windows installer writes the same request before its own app-running check, so a manually started update gets the same cooperative path.
+
+  Two things this uncovered are worth recording. The in-app update path had **no** app-running check to begin with: electron-builder's NSIS skips it entirely when the installer's parent process is the app itself, which is exactly what `quitAndInstall` makes it — the app is trusted to have exited, and its MCP children were never covered by that assumption. And killing would not have been a fix anyway: whoever kills a process whose lifecycle belongs to a client is racing that client's restart. In a measured run the race was decided by 22 milliseconds.
+
+  Not fixed here: why electron-builder's own check failed in the original report. Its process detection has two branches, and the probe that chooses between them reports "PowerShell unavailable" on a machine where PowerShell demonstrably works, which drops it onto a fallback whose first attempt is a window message that a windowless process cannot receive. Tracked as #199. The handshake deliberately does not depend on that probe.
+
 ## [1.18.0] — 2026-08-02
 
 ### Added

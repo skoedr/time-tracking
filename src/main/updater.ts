@@ -16,6 +16,7 @@ import log from 'electron-log/main'
 import pkg from 'electron-updater'
 const { autoUpdater } = pkg
 import type { IpcResult, UpdateStatus } from '../shared/types'
+import { clearShutdown, releaseHolders, type Holder, type ReleaseOutcome } from '../mcp/holders'
 
 export type { UpdateStatus }
 
@@ -40,12 +41,80 @@ function broadcast(status: UpdateStatus): void {
 }
 
 /**
+ * Message for holders that ignored the shutdown request (#198).
+ *
+ * It has to name the actual blocker, because the installer's own wording sends
+ * the user looking for a window that does not exist: an MCP server is a
+ * child of the AI client, has no window and no tray icon, and carries the app's
+ * own executable name under a foreign parent process.
+ */
+export function blockedByHoldersMessage(remaining: Holder[]): string {
+  const list = remaining.map((h) => `PID ${h.pid}`).join(', ')
+  const [uses, reacted] = remaining.length === 1 ? ['benutzt', 'hat'] : ['benutzen', 'haben']
+  return (
+    `Das Update kann nicht installiert werden: ${remaining.length} MCP-Server ` +
+    `(${list}) ${uses} noch die TimeTrack-Programmdatei und ${reacted} auf die ` +
+    'Aufforderung zum Beenden nicht reagiert. Diese Prozesse haben kein Fenster — ' +
+    'sie gehören zu einem laufenden AI-Client (Einstellungen → Integrationen). ' +
+    'Beende den AI-Client und versuche es erneut.'
+  )
+}
+
+/**
+ * The install decision (#198), separated from the IPC wiring so its three
+ * branches are testable: refuse while holders remain, release-then-install,
+ * and clear the shutdown request when the install throws. All dependencies
+ * are explicit — the one production caller below passes the real ones.
+ */
+export async function performUpdateInstall(deps: {
+  getEndpointDir: (() => string) | undefined
+  release: (dir: string) => Promise<ReleaseOutcome>
+  clear: (dir: string) => void
+  quitAndInstall: () => void
+  notify: (status: UpdateStatus) => void
+  logWarn: (msg: string) => void
+  logInfo: (msg: string) => void
+}): Promise<IpcResult<void>> {
+  try {
+    // #198 — hand over a directory the installer can actually replace.
+    //
+    // Every MCP server runs the installed binary in Node mode, so it locks
+    // TimeTrack.exe. On this path the installer's own check does not help:
+    // it skips entirely when its parent process is TimeTrack.exe, which is
+    // exactly what quitAndInstall makes it (see the CHECK_APP_RUNNING guard
+    // in electron-builder's allowOnlyOneInstallerInstance.nsh).
+    const dir = deps.getEndpointDir?.()
+    if (dir) {
+      const outcome = await deps.release(dir)
+      if (!outcome.ok) {
+        const message = blockedByHoldersMessage(outcome.remaining)
+        deps.logWarn(`[updater] update aborted, ${outcome.remaining.length} MCP holder(s) left`)
+        deps.notify({ status: 'error', message })
+        return fail(message)
+      }
+      if (outcome.before.length > 0) {
+        deps.logInfo(`[updater] released ${outcome.before.length} MCP holder(s) before install`)
+      }
+    }
+
+    deps.quitAndInstall()
+    return ok(undefined)
+  } catch (err) {
+    // Never leave a shutdown request behind on a failed install — every MCP
+    // server started afterwards would exit the moment it saw it.
+    const dir = deps.getEndpointDir?.()
+    if (dir) deps.clear(dir)
+    return fail((err as Error).message)
+  }
+}
+
+/**
  * Initialize the updater. Must be called after `app.whenReady()`.
  *
  * In dev mode (no packaged app) this is a no-op except for IPC handler
  * registration — `autoUpdater.checkForUpdates()` would error otherwise.
  */
-export function initAutoUpdater(opts: { isDev: boolean }): void {
+export function initAutoUpdater(opts: { isDev: boolean; getEndpointDir?: () => string }): void {
   // Wire up logger from PR A so updater events land in main.log.
   autoUpdater.logger = log
   autoUpdater.autoDownload = true
@@ -108,16 +177,21 @@ export function initAutoUpdater(opts: { isDev: boolean }): void {
     }
   })
 
-  ipcMain.handle('update:install', (): IpcResult<void> => {
-    try {
-      // quitAndInstall(isSilent=false, isForceRunAfter=true)
-      // — shows the NSIS installer UI, then re-launches TimeTrack.
-      autoUpdater.quitAndInstall(false, true)
-      return ok(undefined)
-    } catch (err) {
-      return fail((err as Error).message)
-    }
-  })
+  ipcMain.handle(
+    'update:install',
+    (): Promise<IpcResult<void>> =>
+      performUpdateInstall({
+        getEndpointDir: opts.getEndpointDir,
+        release: releaseHolders,
+        clear: clearShutdown,
+        // quitAndInstall(isSilent=false, isForceRunAfter=true)
+        // — shows the NSIS installer UI, then re-launches TimeTrack.
+        quitAndInstall: () => autoUpdater.quitAndInstall(false, true),
+        notify: broadcast,
+        logWarn: (m) => log.warn(m),
+        logInfo: (m) => log.info(m)
+      })
+  )
 
   // ── Initial silent check ──────────────────────────────────
   // Don't surface errors here — offline app starts shouldn't show a banner.

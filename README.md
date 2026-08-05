@@ -123,6 +123,16 @@ separately installed Node required.
 > `ELECTRON_RUN_AS_NODE=1` runs the Electron binary as plain Node — same ABI
 > as the bundled module, without a second binary copy in the installer.
 
+> **Updates while MCP servers are running (#198):** Because each server runs the
+> installed binary, it holds `TimeTrack.exe` open — which would block the Windows
+> installer. Servers therefore register under `<userData>/mcp-holders/` and exit
+> on their own when an update is about to install; the AI client sees a clean
+> shutdown, not a crash, and simply restarts the server afterwards. If a server
+> does not react, the **in-app updater** refuses to install and names the
+> blocking processes — close the AI client and retry. A **manually started
+> installer** writes the same shutdown request and waits briefly for the servers
+> to exit, then falls back to the standard app-running check.
+
 **From the checkout (development):**
 
 ```bash
@@ -217,6 +227,13 @@ src/
     updater.ts   # electron-updater bridge + IPC handlers (auto-update)
     csvExport.ts # CSV export builder
     migrations/  # Versioned schema migrations + runner (001..013)
+  mcp/           # Bundled MCP server (started by the AI client, see "MCP Integration")
+    server.ts    # Entry point: tool definitions, stdio transport, update handshake
+    holders.ts   # Holder registry + cooperative shutdown before updates (#198)
+    queries.ts   # Pure read-only query layer behind the read tools
+    privacy.ts   # Privacy gates (rates / private notes hidden by default)
+    writeClient.ts # Sends write tools over the local bridge to the running app
+    db.ts        # Read-only SQLite open; dbPath.ts / socketPath.ts resolve shared paths
   preload/
     index.ts     # Context Bridge (window.api)
     index.d.ts   # TypeScript types for renderer
