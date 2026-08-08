@@ -50,5 +50,5 @@ nsis:
 npmRebuild: false
 publish:
   provider: github
-  owner: skoedr
+  owner: wald-it
   repo: time-tracking
