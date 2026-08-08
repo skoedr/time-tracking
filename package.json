@@ -5,13 +5,13 @@
   "main": "./out/main/index.js",
   "author": "skoedr",
   "license": "MIT",
-  "homepage": "https://github.com/skoedr/time-tracking",
+  "homepage": "https://github.com/wald-it/time-tracking",
   "repository": {
     "type": "git",
-    "url": "https://github.com/skoedr/time-tracking.git"
+    "url": "https://github.com/wald-it/time-tracking.git"
   },
   "bugs": {
-    "url": "https://github.com/skoedr/time-tracking/issues"
+    "url": "https://github.com/wald-it/time-tracking/issues"
   },
   "scripts": {
     "format": "prettier --write .",

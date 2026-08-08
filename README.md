@@ -37,7 +37,7 @@ A personal Windows desktop time-tracking app for freelancers. Lightweight Toggl 
   (Device Code Flow, no server, Office E1 + personal accounts).
 - Pomodoro mode (#23) — conditionally deferred to v1.8 based on user demand.
 
-Full roadmap: [ROADMAP.md](ROADMAP.md) · Issues: [github.com/skoedr/time-tracking/issues](https://github.com/skoedr/time-tracking/issues)
+Full roadmap: [ROADMAP.md](ROADMAP.md) · Issues: [github.com/wald-it/time-tracking/issues](https://github.com/wald-it/time-tracking/issues)
 
 ## Tech Stack
 
@@ -192,9 +192,9 @@ ABI via `@electron/rebuild`, packages an NSIS installer, and publishes a GitHub
 Release with the `.exe`, `.blockmap`, and `latest.yml` attached.
 
 - Download the latest installer:
-  [github.com/skoedr/time-tracking/releases/latest](https://github.com/skoedr/time-tracking/releases/latest)
+  [github.com/wald-it/time-tracking/releases/latest](https://github.com/wald-it/time-tracking/releases/latest)
 - Roadmap and per-version planning: see [ROADMAP.md](ROADMAP.md) and the
-  [open issues](https://github.com/skoedr/time-tracking/issues) grouped by `v1.x` labels.
+  [open issues](https://github.com/wald-it/time-tracking/issues) grouped by `v1.x` labels.
 
 To cut a new release locally:
 
