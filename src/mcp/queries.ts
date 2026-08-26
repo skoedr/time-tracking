@@ -154,11 +154,15 @@ export function durationSeconds(
 }
 
 /**
- * Build a `LIKE` pattern for a case-insensitive substring match. Escapes the
- * LIKE wildcards so user input never acts as a pattern of its own.
+ * Case-insensitive substring match for the lookup filters, done in JS because
+ * SQLite's built-in LIKE folds ASCII only and would miss umlaut pairs like
+ * MÜLLER/müller. An absent filter matches everything; a NULL field matches
+ * only an absent filter. Filter input is always literal — no wildcards.
  */
-function likeContains(value: string): string {
-  return `%${value.replace(/[\\%_]/g, (ch) => `\\${ch}`)}%`
+function matchesFilter(field: string | null, filter: string | undefined): boolean {
+  if (!filter) return true
+  if (field == null) return false
+  return field.toLowerCase().includes(filter.toLowerCase())
 }
 
 function shapeClient(row: ClientRow, privacy: PrivacyConfig): McpClient {
@@ -227,22 +231,13 @@ export function listClients(
   privacy: PrivacyConfig,
   opts: ListClientsOptions = {}
 ): McpClient[] {
-  const filters: string[] = []
-  const params: unknown[] = []
-  if (!opts.includeArchived) filters.push('active = 1')
-  if (opts.name) {
-    filters.push(`name LIKE ? ESCAPE '\\'`)
-    params.push(likeContains(opts.name))
-  }
-  if (opts.contactPerson) {
-    filters.push(`contact_person LIKE ? ESCAPE '\\'`)
-    params.push(likeContains(opts.contactPerson))
-  }
-  const where = filters.length ? `WHERE ${filters.join(' AND ')}` : ''
-  const rows = db
-    .prepare(`SELECT * FROM clients ${where} ORDER BY name ASC`)
-    .all(...params) as ClientRow[]
-  return rows.map((r) => shapeClient(r, privacy))
+  const where = opts.includeArchived ? '' : 'WHERE active = 1'
+  const rows = db.prepare(`SELECT * FROM clients ${where} ORDER BY name ASC`).all() as ClientRow[]
+  return rows
+    .filter(
+      (r) => matchesFilter(r.name, opts.name) && matchesFilter(r.contact_person, opts.contactPerson)
+    )
+    .map((r) => shapeClient(r, privacy))
 }
 
 export interface ListProjectsOptions {
@@ -284,18 +279,16 @@ export function listProjects(
     params.push(opts.clientId)
   }
   if (!opts.includeArchived) filters.push(`p.status != 'archived'`)
-  if (opts.name) {
-    filters.push(`p.name LIKE ? ESCAPE '\\'`)
-    params.push(likeContains(opts.name))
-  }
-  if (opts.externalProjectNumber) {
-    filters.push(`p.external_project_number LIKE ? ESCAPE '\\'`)
-    params.push(likeContains(opts.externalProjectNumber))
-  }
   const where = filters.length ? `WHERE ${filters.join(' AND ')}` : ''
   const order = `ORDER BY CASE WHEN p.status = 'active' THEN 0 WHEN p.status = 'paused' THEN 1 ELSE 2 END, p.name`
   const rows = db.prepare(`${base} ${where} ${order}`).all(...params) as ProjectRow[]
-  return rows.map((r) => shapeProject(r, privacy))
+  return rows
+    .filter(
+      (r) =>
+        matchesFilter(r.name, opts.name) &&
+        matchesFilter(r.external_project_number, opts.externalProjectNumber)
+    )
+    .map((r) => shapeProject(r, privacy))
 }
 
 export interface ListEntriesOptions {
@@ -374,8 +367,11 @@ export function listEntries(
     params.push(`%,${opts.tag.toLowerCase()},%`)
   }
 
-  // No LIMIT in SQL: count and total_seconds must cover the full match, so a
-  // capped entries array can never silently shrink the reported totals.
+  // One scan, no SQL LIMIT: count and total_seconds must cover the full match
+  // (a capped entries array must never silently shrink the totals) AND stay
+  // the exact sum of the per-entry duration_seconds a consumer sees — a SQL
+  // aggregate would truncate the timestamps' milliseconds differently. Only
+  // the returned slice pays the shaping cost; summary-only shapes nothing.
   const rows = db
     .prepare(
       `SELECT * FROM entries WHERE ${filters.join(' AND ')}
@@ -383,11 +379,17 @@ export function listEntries(
     )
     .all(...params) as EntryRow[]
 
-  const all = rows.map((r) => shapeEntry(r, privacy, nowMs))
-  const total_seconds = all.reduce((sum, e) => sum + e.duration_seconds, 0)
-  if (opts.summaryOnly) return { count: all.length, total_seconds }
+  const total_seconds = rows.reduce(
+    (sum, r) => sum + durationSeconds(r.started_at, r.stopped_at ?? null, nowMs),
+    0
+  )
+  if (opts.summaryOnly) return { count: rows.length, total_seconds }
   const limit = Math.min(Math.max(1, opts.limit ?? 1000), 10000)
-  return { count: all.length, total_seconds, entries: all.slice(0, limit) }
+  return {
+    count: rows.length,
+    total_seconds,
+    entries: rows.slice(0, limit).map((r) => shapeEntry(r, privacy, nowMs))
+  }
 }
 
 export function getRunningTimer(

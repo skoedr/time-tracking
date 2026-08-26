@@ -240,10 +240,23 @@ describe('query layer', () => {
     expect(listClients(sdb, HIDE, { name: 'nix' })).toHaveLength(0)
   })
 
-  it('listClients treats LIKE wildcards in filters as literals (#205)', () => {
-    // No client name contains a literal '%' — an unescaped one would match all.
+  it('listClients treats wildcard characters in filters as literals (#205)', () => {
+    // No client name contains a literal '%' — a filter passed through to SQL
+    // LIKE unescaped would match everything.
     expect(listClients(sdb, HIDE, { name: '%' })).toHaveLength(0)
     expect(listClients(sdb, HIDE, { name: '_' })).toHaveLength(0)
+  })
+
+  it('list filters match umlauts case-insensitively (#205)', () => {
+    // SQLite's LIKE folds ASCII only — the filters must not inherit that.
+    db.prepare(
+      `INSERT INTO clients (id, name, color, active, rate_cent, vat_id, contact_person)
+       VALUES (3, 'MÜLLER GmbH', '#555555', 1, 0, NULL, 'Jürgen Ößterreicher')`
+    ).run()
+    expect(listClients(sdb, HIDE, { name: 'müller' }).map((c) => c.name)).toEqual(['MÜLLER GmbH'])
+    expect(listClients(sdb, HIDE, { contactPerson: 'ößt' }).map((c) => c.name)).toEqual([
+      'MÜLLER GmbH'
+    ])
   })
 
   it('listProjects filters by name and external project number (#205)', () => {
