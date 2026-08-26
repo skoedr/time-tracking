@@ -369,9 +369,11 @@ export function listEntries(
 
   // One scan, no SQL LIMIT: count and total_seconds must cover the full match
   // (a capped entries array must never silently shrink the totals) AND stay
-  // the exact sum of the per-entry duration_seconds a consumer sees — a SQL
-  // aggregate would truncate the timestamps' milliseconds differently. Only
-  // the returned slice pays the shaping cost; summary-only shapes nothing.
+  // the exact sum of the per-entry duration_seconds a consumer sees — a
+  // strftime('%s') aggregate truncates each timestamp's milliseconds and can
+  // drift from that sum (a millisecond-exact julianday expression would be
+  // needed should personal-scale DBs ever outgrow this scan). Only the
+  // returned slice pays the shaping cost; summary-only shapes nothing.
   const rows = db
     .prepare(
       `SELECT * FROM entries WHERE ${filters.join(' AND ')}
