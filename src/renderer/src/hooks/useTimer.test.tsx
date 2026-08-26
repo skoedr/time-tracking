@@ -1,0 +1,453 @@
+/**
+ * Characterization tests for useTimer (#167): timer start/stop and the idle
+ * transitions. Written against the current implementation to pin observable
+ * behavior — they are a safety net for future refactors, not a spec for new
+ * behavior.
+ *
+ * The hook is built around module-level singletons (`initRan`,
+ * `listenersInstalled`, the global listener refs — see #157): state that
+ * survives unmounts by design. Each test therefore gets a fresh module
+ * registry via `vi.resetModules()` + dynamic import, so init runs and the
+ * IPC listeners register against that test's own `window.api` mock. Only
+ * source modules re-evaluate; React itself is externalized and stays a
+ * single instance.
+ */
+import { describe, it, expect, afterEach, vi } from 'vitest'
+import { act, cleanup, waitFor, renderHook, type RenderHookResult } from '@testing-library/react'
+import type { Client, Entry } from '../../../shared/types'
+import type { UseTimerResult } from './useTimer'
+
+// `globals` is off in vitest.config.ts, so Testing Library's auto-cleanup
+// afterEach is never registered — unmount explicitly.
+afterEach(() => {
+  cleanup()
+  vi.useRealTimers()
+})
+
+function makeClient(over: Partial<Client> = {}): Client {
+  return {
+    id: 1,
+    name: 'Acme',
+    color: '#6366f1',
+    active: 1,
+    rate_cent: 0,
+    created_at: '2026-01-01T00:00:00.000Z',
+    ...over
+  }
+}
+
+function makeEntry(over: Partial<Entry> = {}): Entry {
+  return {
+    id: 1,
+    client_id: 1,
+    description: '',
+    started_at: '2026-08-26T08:00:00.000Z',
+    stopped_at: null,
+    heartbeat_at: null,
+    rounded_min: null,
+    deleted_at: null,
+    created_at: '2026-08-26T08:00:00.000Z',
+    link_id: null,
+    tags: '',
+    reference: '',
+    billable: 1,
+    private_note: '',
+    project_id: null,
+    ...over
+  }
+}
+
+interface Listeners {
+  hotkeyToggle?: () => void
+  trayQuickStart?: (clientId: number) => void
+  trayStop?: () => void
+  dataChanged?: () => void
+  idleDetected?: (data: { idleSince: string; idleSeconds: number }) => void
+}
+
+interface ApiMock {
+  listeners: Listeners
+  start: ReturnType<typeof vi.fn>
+  stop: ReturnType<typeof vi.fn>
+  update: ReturnType<typeof vi.fn>
+  heartbeat: ReturnType<typeof vi.fn>
+  trayUpdate: ReturnType<typeof vi.fn>
+  idleDismiss: ReturnType<typeof vi.fn>
+}
+
+interface StartPayload {
+  client_id: number
+  project_id?: number | null
+  description: string
+  started_at: string
+}
+
+interface UpdatePayload {
+  id: number
+  client_id: number
+  description: string
+  started_at: string
+  stopped_at: string
+}
+
+function mockApi(opts: { clients?: Client[]; running?: Entry | null } = {}): ApiMock {
+  let nextId = 100
+  const listeners: Listeners = {}
+  const start = vi.fn(async (payload: StartPayload) => ({
+    ok: true as const,
+    data: makeEntry({
+      id: nextId++,
+      client_id: payload.client_id,
+      project_id: payload.project_id ?? null,
+      description: payload.description,
+      started_at: payload.started_at
+    })
+  }))
+  const stop = vi.fn(async (id: number) => ({
+    ok: true as const,
+    data: makeEntry({ id, stopped_at: new Date().toISOString() })
+  }))
+  const update = vi.fn(async (payload: UpdatePayload) => ({
+    ok: true as const,
+    data: makeEntry(payload)
+  }))
+  const heartbeat = vi.fn(async () => ({ ok: true as const, data: undefined }))
+  const trayUpdate = vi.fn()
+  const idleDismiss = vi.fn()
+  const api = {
+    clients: {
+      getAll: async () => ({ ok: true as const, data: opts.clients ?? [makeClient()] })
+    },
+    entries: {
+      getRunning: async () => ({ ok: true as const, data: opts.running ?? null }),
+      start,
+      stop,
+      update,
+      heartbeat
+    },
+    dashboard: {
+      todayTotal: async () => ({ ok: true as const, data: 0 })
+    },
+    tray: { update: trayUpdate },
+    idle: { dismiss: idleDismiss },
+    onHotkeyToggle: (cb: () => void) => {
+      listeners.hotkeyToggle = cb
+    },
+    onTrayQuickStart: (cb: (clientId: number) => void) => {
+      listeners.trayQuickStart = cb
+    },
+    onTrayStop: (cb: () => void) => {
+      listeners.trayStop = cb
+    },
+    onDataChanged: (cb: () => void) => {
+      listeners.dataChanged = cb
+    },
+    onIdleDetected: (cb: (data: { idleSince: string; idleSeconds: number }) => void) => {
+      listeners.idleDetected = cb
+    }
+  }
+  ;(window as unknown as { api: typeof api }).api = api
+  return { listeners, start, stop, update, heartbeat, trayUpdate, idleDismiss }
+}
+
+type Hook = RenderHookResult<UseTimerResult, unknown>
+
+/**
+ * Fresh module instance + fresh api mock, rendered and settled. Init always
+ * ends in a tray push (running or not), so that is the "init done" signal.
+ */
+async function setup(opts: { clients?: Client[]; running?: Entry | null } = {}): Promise<{
+  api: ApiMock
+  hook: Hook
+}> {
+  vi.resetModules()
+  const api = mockApi(opts)
+  const { useTimer } = await import('./useTimer')
+  const hook = renderHook(() => useTimer())
+  await waitFor(() => expect(api.trayUpdate).toHaveBeenCalled())
+  return { api, hook }
+}
+
+async function startTimer(hook: Hook): Promise<Entry> {
+  await act(async () => {
+    await hook.result.current.start()
+  })
+  const entry = hook.result.current.runningEntry
+  if (!entry) throw new Error('start() did not produce a running entry')
+  return entry
+}
+
+const IDLE = { idleSince: '2026-08-26T09:30:00.000Z', idleSeconds: 300 }
+
+describe('useTimer — start/stop', () => {
+  it('adopts a running entry from the DB on launch', async () => {
+    const running = makeEntry({
+      id: 7,
+      client_id: 1,
+      description: 'ongoing work',
+      started_at: new Date(Date.now() - 90_000).toISOString()
+    })
+    const { api, hook } = await setup({ running })
+
+    await waitFor(() => expect(hook.result.current.runningEntry?.id).toBe(7))
+    expect(hook.result.current.selectedClientId).toBe(1)
+    expect(hook.result.current.description).toBe('ongoing work')
+    expect(hook.result.current.elapsedSeconds).toBeGreaterThanOrEqual(90)
+    expect(api.trayUpdate).toHaveBeenCalledWith(true, 'Acme', 0, running.started_at)
+  })
+
+  it('start() uses the selected client and pushes the running state to the tray', async () => {
+    const clients = [makeClient({ id: 1, name: 'Acme' }), makeClient({ id: 2, name: 'Beta' })]
+    const { api, hook } = await setup({ clients })
+
+    act(() => hook.result.current.setSelectedClientId(2))
+    await startTimer(hook)
+
+    expect(api.start).toHaveBeenCalledWith({
+      client_id: 2,
+      project_id: undefined,
+      description: '',
+      started_at: expect.any(String)
+    })
+    expect(hook.result.current.runningEntry?.client_id).toBe(2)
+    expect(api.trayUpdate).toHaveBeenLastCalledWith(
+      true,
+      'Beta',
+      0,
+      hook.result.current.runningEntry?.started_at
+    )
+  })
+
+  it('start() without a selection falls back to the first ACTIVE client', async () => {
+    const clients = [
+      makeClient({ id: 1, name: 'Archived', active: 0 }),
+      makeClient({ id: 2, name: 'Beta' })
+    ]
+    const { api, hook } = await setup({ clients })
+
+    await startTimer(hook)
+
+    expect(api.start).toHaveBeenCalledWith(expect.objectContaining({ client_id: 2 }))
+    expect(hook.result.current.selectedClientId).toBe(2)
+  })
+
+  it('start() with no active client at all is a silent no-op', async () => {
+    const clients = [makeClient({ id: 1, active: 0 })]
+    const { api, hook } = await setup({ clients })
+
+    await act(async () => {
+      await hook.result.current.start()
+    })
+
+    expect(api.start).not.toHaveBeenCalled()
+    expect(hook.result.current.runningEntry).toBeNull()
+  })
+
+  it('stop() clears the running state and pushes the idle tray', async () => {
+    const { api, hook } = await setup()
+    act(() => hook.result.current.setDescription('work'))
+    const entry = await startTimer(hook)
+
+    await act(async () => {
+      await hook.result.current.stop()
+    })
+
+    expect(api.stop).toHaveBeenCalledWith(entry.id)
+    expect(hook.result.current.runningEntry).toBeNull()
+    expect(hook.result.current.description).toBe('')
+    expect(api.trayUpdate).toHaveBeenLastCalledWith(false, '', 0, null)
+  })
+
+  it('stop() after a run without description opens the quick-note prompt', async () => {
+    const { hook } = await setup()
+    const entry = await startTimer(hook)
+
+    await act(async () => {
+      await hook.result.current.stop()
+    })
+
+    expect(hook.result.current.quickNoteEntry?.id).toBe(entry.id)
+  })
+
+  it('stop() after a described run does NOT open the quick-note prompt', async () => {
+    const { hook } = await setup()
+    act(() => hook.result.current.setDescription('work'))
+    await startTimer(hook)
+
+    await act(async () => {
+      await hook.result.current.stop()
+    })
+
+    expect(hook.result.current.quickNoteEntry).toBeNull()
+  })
+
+  it('the global hotkey toggles: starts when idle, stops when running', async () => {
+    const { api, hook } = await setup()
+
+    // The IPC listener fires the async start/stop without awaiting it; the
+    // async act drains the whole chain so no state update escapes the test
+    // (an escaped one wedges React's act queue for every later render).
+    await act(async () => {
+      api.listeners.hotkeyToggle?.()
+    })
+    expect(hook.result.current.runningEntry).not.toBeNull()
+
+    await act(async () => {
+      api.listeners.hotkeyToggle?.()
+    })
+    expect(hook.result.current.runningEntry).toBeNull()
+    expect(api.start).toHaveBeenCalledTimes(1)
+    expect(api.stop).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('useTimer — elapsed clock', () => {
+  // NOTE: fake timers go on AFTER setup() — the dynamic import inside setup
+  // runs through vitest's module runner, which needs real timers to resolve.
+  it('elapsedSeconds follows the clock while running and resets on stop', async () => {
+    const { hook } = await setup()
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-08-26T10:00:00.000Z'))
+
+    await startTimer(hook)
+    expect(hook.result.current.elapsedSeconds).toBe(0)
+
+    act(() => {
+      vi.advanceTimersByTime(3000)
+    })
+    expect(hook.result.current.elapsedSeconds).toBe(3)
+
+    await act(async () => {
+      await hook.result.current.stop()
+    })
+    expect(hook.result.current.elapsedSeconds).toBe(0)
+  })
+
+  it('heartbeats the running entry every 30 seconds', async () => {
+    const { api, hook } = await setup()
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-08-26T10:00:00.000Z'))
+
+    const entry = await startTimer(hook)
+    expect(api.heartbeat).not.toHaveBeenCalled()
+
+    act(() => {
+      vi.advanceTimersByTime(30_000)
+    })
+    expect(api.heartbeat).toHaveBeenCalledTimes(1)
+    expect(api.heartbeat).toHaveBeenCalledWith(entry.id)
+  })
+})
+
+describe('useTimer — idle transitions', () => {
+  it('an idle signal while running surfaces the idle event', async () => {
+    const { api, hook } = await setup()
+    await startTimer(hook)
+
+    act(() => api.listeners.idleDetected?.(IDLE))
+
+    expect(hook.result.current.idleEvent).toEqual(IDLE)
+    expect(api.idleDismiss).not.toHaveBeenCalled()
+  })
+
+  it('an idle signal with no timer running is dismissed without surfacing', async () => {
+    const { api, hook } = await setup()
+
+    act(() => api.listeners.idleDetected?.(IDLE))
+
+    expect(hook.result.current.idleEvent).toBeNull()
+    expect(api.idleDismiss).toHaveBeenCalledTimes(1)
+  })
+
+  it('idleKeep() dismisses the event and keeps the timer running', async () => {
+    const { api, hook } = await setup()
+    const entry = await startTimer(hook)
+    act(() => api.listeners.idleDetected?.(IDLE))
+
+    act(() => hook.result.current.idleKeep())
+
+    expect(hook.result.current.idleEvent).toBeNull()
+    expect(api.idleDismiss).toHaveBeenCalledTimes(1)
+    expect(hook.result.current.runningEntry?.id).toBe(entry.id)
+    expect(api.update).not.toHaveBeenCalled()
+  })
+
+  it('idleStopAtIdle() ends the entry at idleSince, not at now', async () => {
+    const { api, hook } = await setup()
+    const entry = await startTimer(hook)
+    act(() => api.listeners.idleDetected?.(IDLE))
+
+    await act(async () => {
+      await hook.result.current.idleStopAtIdle()
+    })
+
+    expect(api.update).toHaveBeenCalledWith({
+      id: entry.id,
+      client_id: entry.client_id,
+      description: entry.description,
+      started_at: entry.started_at,
+      stopped_at: IDLE.idleSince
+    })
+    expect(hook.result.current.runningEntry).toBeNull()
+    expect(hook.result.current.idleEvent).toBeNull()
+    expect(api.idleDismiss).toHaveBeenCalledTimes(1)
+    expect(api.trayUpdate).toHaveBeenLastCalledWith(false, '', 0, null)
+  })
+
+  it('idleMarkPause() stops at idleSince and books a Pause block up to now', async () => {
+    const { api, hook } = await setup()
+    const entry = await startTimer(hook)
+    act(() => api.listeners.idleDetected?.(IDLE))
+
+    // Pin only Date (after setup — module-runner trap, see the clock tests)
+    // so "up to now" is an exact timestamp, not any-string. Deliberately
+    // different from idleSince: a pauseEnd regression to it must go red.
+    const NOW = new Date('2026-08-26T09:41:00.000Z')
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(NOW)
+
+    await act(async () => {
+      await hook.result.current.idleMarkPause()
+    })
+
+    // 1. The running entry is closed at the moment idleness began.
+    expect(api.update).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        id: entry.id,
+        stopped_at: IDLE.idleSince
+      })
+    )
+    // 2. A "Pause" entry covers idleSince → now (created running, then closed).
+    expect(api.start).toHaveBeenLastCalledWith({
+      client_id: entry.client_id,
+      description: 'Pause',
+      started_at: IDLE.idleSince
+    })
+    expect(api.update).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        description: 'Pause',
+        started_at: IDLE.idleSince,
+        stopped_at: NOW.toISOString()
+      })
+    )
+    expect(hook.result.current.runningEntry).toBeNull()
+    expect(hook.result.current.idleEvent).toBeNull()
+    expect(api.idleDismiss).toHaveBeenCalledTimes(1)
+  })
+
+  it('a manual stop() with a pending idle event dismisses it', async () => {
+    const { api, hook } = await setup()
+    await startTimer(hook)
+    act(() => api.listeners.idleDetected?.(IDLE))
+    expect(hook.result.current.idleEvent).toEqual(IDLE)
+
+    await act(async () => {
+      await hook.result.current.stop()
+    })
+
+    expect(hook.result.current.idleEvent).toBeNull()
+    expect(api.idleDismiss).toHaveBeenCalledTimes(1)
+  })
+})
