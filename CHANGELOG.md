@@ -7,6 +7,12 @@ All notable changes to TimeTrack are documented here.
 
 ## [Unreleased]
 
+### Changed
+
+- **MCP tool outputs: consistent totals and targeted lookups (#205)** — An eval run of the MCP server surfaced places where a consumer works incorrectly or awkwardly without anything crashing. The core trap: `list_entries.total_seconds` is the unrounded wall-clock sum, while `get_analytics.total_seconds` rounds each entry like the PDF export — two different answers to "how much time?", with nothing saying which one is canonical. Both tool descriptions now spell out the difference and point billing questions to `get_analytics`; the `get_analytics` description also names the response field as it actually appears (`rounding_minutes`, not the internal setting name `pdf_round_minutes`).
+
+  Three more gaps closed: `by_project` rows now carry the project's `client_id`, so same-named projects across clients no longer have to be told apart by name. `list_clients` and `list_projects` accept substring filters (`name`, `contact_person`, `external_project_number`) instead of forcing a full list scan for every lookup. And `list_entries` now reports `count` and `total_seconds` over **all** matches even when the `entries` array is capped by `limit` — previously a capped list silently shrank the totals with it — plus a `summary_only` mode that skips the entries entirely when only the totals are wanted. `get_analytics` additionally reports `distinct_client_count`, and its breakdowns are guaranteed sorted by `seconds` descending.
+
 ### Fixed
 
 - **Updates no longer stall on TimeTrack's own MCP server (#198)** — With the MCP integration set up, installing an update could fail with _"TimeTrack cannot be closed. Please close it manually and click Retry"_ — an instruction nobody could follow, because the app **was** closed. The blocker was a windowless child process: an MCP server runs the installed binary in Node mode (that is how it shares the app's native SQLite ABI), so it holds `TimeTrack.exe` open. It belongs to an AI client, has no window and no tray icon, and carries the app's own executable name under a foreign parent process — from the outside there is nothing to see and nothing to close.

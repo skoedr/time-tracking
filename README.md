@@ -92,9 +92,11 @@ TimeTrack ships an **[MCP](https://modelcontextprotocol.io) server** so that
 tools like **Claude Code** can use your local time tracking — e.g. "sum up my
 hours for client X in June by project" or "log the meeting I forgot".
 
-**Read tools** (the server opens the SQLite DB **strictly read-only**): `list_clients`,
-`list_projects`, `list_entries` (month or date range, filter by client/project/tag),
-`get_running_timer`, `get_dashboard`, `get_analytics` (monthly hours, optionally revenue).
+**Read tools** (the server opens the SQLite DB **strictly read-only**): `list_clients`
+(filter by name/contact person), `list_projects` (filter by client, name, external
+project number), `list_entries` (month or date range, filter by client/project/tag,
+summary-only mode), `get_running_timer`, `get_dashboard`, `get_analytics` (monthly
+hours rounded like the PDF export, optionally revenue).
 
 **Write tools** (opt-in, see below): `create_manual_entry`, `update_entry_fields`,
 `start_timer`, `stop_running_timer` — each with `preview: true` for a preview without a commit.

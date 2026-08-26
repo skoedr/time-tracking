@@ -43,9 +43,11 @@ function seed(db: Database.Database): void {
 
   // Projects: active + archived for client 1.
   db.prepare(
-    `INSERT INTO projects (id, client_id, name, color, rate_cent, active, status, budget_minutes)
-     VALUES (10, 1, 'Website', '#333333', 15000, 1, 'active', 600),
-            (11, 1, 'Altprojekt', '#444444', NULL, 0, 'archived', NULL)`
+    `INSERT INTO projects
+       (id, client_id, name, color, rate_cent, active, status, budget_minutes,
+        external_project_number)
+     VALUES (10, 1, 'Website', '#333333', 15000, 1, 'active', 600, 'EXT-42'),
+            (11, 1, 'Altprojekt', '#444444', NULL, 0, 'archived', NULL, NULL)`
   ).run()
 
   // Entries in June 2026: two completed (client 1), one non-billable, one
@@ -183,10 +185,10 @@ describe('query layer', () => {
     const res = listEntries(sdb, HIDE, { year: 2026, month: 6 }, now)
     // 100, 101, 103 — NOT the soft-deleted 102
     expect(res.count).toBe(3)
-    expect(res.entries.map((e) => e.id).sort()).toEqual([100, 101, 103])
+    expect(res.entries!.map((e) => e.id).sort()).toEqual([100, 101, 103])
     // 3600 + 1800 + 1800(running) = 7200
     expect(res.total_seconds).toBe(7200)
-    const running = res.entries.find((e) => e.id === 103)!
+    const running = res.entries!.find((e) => e.id === 103)!
     expect(running.running).toBe(true)
     expect(running.stopped_at).toBeNull()
   })
@@ -194,20 +196,75 @@ describe('query layer', () => {
   it('listEntries hides private_note by default, exposes when enabled', () => {
     const now = Date.now()
     const hidden = listEntries(sdb, HIDE, { year: 2026, month: 6 }, now)
-    expect(hidden.entries.find((e) => e.id === 100)?.private_note).toBeUndefined()
+    expect(hidden.entries!.find((e) => e.id === 100)?.private_note).toBeUndefined()
     const shown = listEntries(sdb, SHOW, { year: 2026, month: 6 }, now)
-    expect(shown.entries.find((e) => e.id === 100)?.private_note).toBe('geheim')
+    expect(shown.entries!.find((e) => e.id === 100)?.private_note).toBe('geheim')
   })
 
   it('listEntries filters by tag (exact match)', () => {
     const res = listEntries(sdb, HIDE, { year: 2026, month: 6, tag: 'bug' }, Date.now())
-    expect(res.entries.map((e) => e.id)).toEqual([100])
-    expect(res.entries[0].tags).toEqual(['bug', 'ux'])
+    expect(res.entries!.map((e) => e.id)).toEqual([100])
+    expect(res.entries![0].tags).toEqual(['bug', 'ux'])
   })
 
   it('listEntries filters by project', () => {
     const res = listEntries(sdb, HIDE, { year: 2026, month: 6, projectId: 10 }, Date.now())
-    expect(res.entries.map((e) => e.id)).toEqual([100])
+    expect(res.entries!.map((e) => e.id)).toEqual([100])
+  })
+
+  it('listEntries caps entries at limit but counts the full match (#205)', () => {
+    const now = Date.parse('2026-06-13T09:30:00.000Z')
+    const res = listEntries(sdb, HIDE, { year: 2026, month: 6, limit: 1 }, now)
+    // Only the earliest entry is returned…
+    expect(res.entries!.map((e) => e.id)).toEqual([100])
+    // …but the totals still cover all three matches.
+    expect(res.count).toBe(3)
+    expect(res.total_seconds).toBe(7200)
+  })
+
+  it('listEntries summary_only returns totals without entries (#205)', () => {
+    const now = Date.parse('2026-06-13T09:30:00.000Z')
+    const res = listEntries(sdb, HIDE, { year: 2026, month: 6, summaryOnly: true }, now)
+    expect(res.entries).toBeUndefined()
+    expect(res.count).toBe(3)
+    expect(res.total_seconds).toBe(7200)
+  })
+
+  it('listClients filters by name and contact person (#205)', () => {
+    // Substring, case-insensitive; archived clients need include_archived.
+    expect(listClients(sdb, HIDE, { name: 'acm' }).map((c) => c.name)).toEqual(['Acme'])
+    expect(
+      listClients(sdb, HIDE, { name: 'zet', includeArchived: true }).map((c) => c.name)
+    ).toEqual(['Zeta'])
+    expect(listClients(sdb, HIDE, { contactPerson: 'alice' }).map((c) => c.name)).toEqual(['Acme'])
+    expect(listClients(sdb, HIDE, { name: 'nix' })).toHaveLength(0)
+  })
+
+  it('listClients treats wildcard characters in filters as literals (#205)', () => {
+    // No client name contains a literal '%' — a filter passed through to SQL
+    // LIKE unescaped would match everything.
+    expect(listClients(sdb, HIDE, { name: '%' })).toHaveLength(0)
+    expect(listClients(sdb, HIDE, { name: '_' })).toHaveLength(0)
+  })
+
+  it('list filters match umlauts case-insensitively (#205)', () => {
+    // SQLite's LIKE folds ASCII only — the filters must not inherit that.
+    db.prepare(
+      `INSERT INTO clients (id, name, color, active, rate_cent, vat_id, contact_person)
+       VALUES (3, 'MÜLLER GmbH', '#555555', 1, 0, NULL, 'Jürgen Ößterreicher')`
+    ).run()
+    expect(listClients(sdb, HIDE, { name: 'müller' }).map((c) => c.name)).toEqual(['MÜLLER GmbH'])
+    expect(listClients(sdb, HIDE, { contactPerson: 'ößt' }).map((c) => c.name)).toEqual([
+      'MÜLLER GmbH'
+    ])
+  })
+
+  it('listProjects filters by name and external project number (#205)', () => {
+    expect(listProjects(sdb, HIDE, { name: 'web' }).map((p) => p.id)).toEqual([10])
+    expect(listProjects(sdb, HIDE, { externalProjectNumber: 'ext-4' }).map((p) => p.id)).toEqual([
+      10
+    ])
+    expect(listProjects(sdb, HIDE, { name: 'nix' })).toHaveLength(0)
   })
 
   it('getRunningTimer returns the open entry', () => {
@@ -221,8 +278,39 @@ describe('query layer', () => {
     // completed billable: 100 (3600). 101 non-billable (1800). 103 running excluded.
     expect(a.total_seconds).toBe(5400) // 3600 + 1800
     expect(a.billable_seconds).toBe(3600)
+    expect(a.rounding_minutes).toBe(0)
     expect(a.revenue_cent).toBeUndefined()
     expect(a.by_client.every((c) => c.revenue_cent === undefined)).toBe(true)
+  })
+
+  it('getAnalytics carries client_id in by_project and counts distinct clients (#205)', () => {
+    const a = getAnalytics(sdb, HIDE, 2026, 6)
+    expect(a.distinct_client_count).toBe(1)
+    // Sorted by seconds descending; the project row carries its client.
+    expect(a.by_project).toEqual([
+      { project_id: 10, client_id: 1, name: 'Website', seconds: 3600 },
+      { project_id: null, client_id: null, name: '(kein Projekt)', seconds: 1800 }
+    ])
+    expect(a.by_client.map((c) => c.seconds)).toEqual([5400])
+  })
+
+  it('getAnalytics rounds per entry while listEntries stays raw (#205)', () => {
+    db.prepare(`UPDATE settings SET value = '15' WHERE key = 'pdf_round_minutes'`).run()
+    // 10 completed minutes → rounded up to one 15-minute step.
+    db.prepare(
+      `INSERT INTO entries (id, client_id, project_id, description, started_at, stopped_at,
+                            tags, reference, billable, private_note)
+       VALUES (104, 1, 10, 'Kurz', '2026-06-14T09:00:00.000Z', '2026-06-14T09:10:00.000Z',
+               '', '', 1, '')`
+    ).run()
+    const a = getAnalytics(sdb, HIDE, 2026, 6)
+    expect(a.rounding_minutes).toBe(15)
+    // 60min + 30min + 15min(rounded from 10) = 105min
+    expect(a.total_seconds).toBe(6300)
+    // list_entries reports the unrounded wall-clock sum for the same window.
+    const raw = listEntries(sdb, HIDE, { year: 2026, month: 6, summaryOnly: true }, 0)
+    // 3600 + 1800 + 600; the running entry contributes 0 at nowMs 0.
+    expect(raw.total_seconds).toBe(6000)
   })
 
   it('getAnalytics exposes revenue when rates enabled', () => {
