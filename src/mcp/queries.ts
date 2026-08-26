@@ -153,6 +153,14 @@ export function durationSeconds(
   return Math.max(0, Math.floor((end - start) / 1000))
 }
 
+/**
+ * Build a `LIKE` pattern for a case-insensitive substring match. Escapes the
+ * LIKE wildcards so user input never acts as a pattern of its own.
+ */
+function likeContains(value: string): string {
+  return `%${value.replace(/[\\%_]/g, (ch) => `\\${ch}`)}%`
+}
+
 function shapeClient(row: ClientRow, privacy: PrivacyConfig): McpClient {
   const out: McpClient = {
     id: row.id,
@@ -208,6 +216,10 @@ function shapeEntry(row: EntryRow, privacy: PrivacyConfig, nowMs: number): McpEn
 
 export interface ListClientsOptions {
   includeArchived?: boolean
+  /** Case-insensitive substring match on the client name. */
+  name?: string
+  /** Case-insensitive substring match on the contact person. */
+  contactPerson?: string
 }
 
 export function listClients(
@@ -215,14 +227,31 @@ export function listClients(
   privacy: PrivacyConfig,
   opts: ListClientsOptions = {}
 ): McpClient[] {
-  const where = opts.includeArchived ? '' : 'WHERE active = 1'
-  const rows = db.prepare(`SELECT * FROM clients ${where} ORDER BY name ASC`).all() as ClientRow[]
+  const filters: string[] = []
+  const params: unknown[] = []
+  if (!opts.includeArchived) filters.push('active = 1')
+  if (opts.name) {
+    filters.push(`name LIKE ? ESCAPE '\\'`)
+    params.push(likeContains(opts.name))
+  }
+  if (opts.contactPerson) {
+    filters.push(`contact_person LIKE ? ESCAPE '\\'`)
+    params.push(likeContains(opts.contactPerson))
+  }
+  const where = filters.length ? `WHERE ${filters.join(' AND ')}` : ''
+  const rows = db
+    .prepare(`SELECT * FROM clients ${where} ORDER BY name ASC`)
+    .all(...params) as ClientRow[]
   return rows.map((r) => shapeClient(r, privacy))
 }
 
 export interface ListProjectsOptions {
   clientId?: number | null
   includeArchived?: boolean
+  /** Case-insensitive substring match on the project name. */
+  name?: string
+  /** Case-insensitive substring match on the external project number. */
+  externalProjectNumber?: string
 }
 
 export function listProjects(
@@ -255,6 +284,14 @@ export function listProjects(
     params.push(opts.clientId)
   }
   if (!opts.includeArchived) filters.push(`p.status != 'archived'`)
+  if (opts.name) {
+    filters.push(`p.name LIKE ? ESCAPE '\\'`)
+    params.push(likeContains(opts.name))
+  }
+  if (opts.externalProjectNumber) {
+    filters.push(`p.external_project_number LIKE ? ESCAPE '\\'`)
+    params.push(likeContains(opts.externalProjectNumber))
+  }
   const where = filters.length ? `WHERE ${filters.join(' AND ')}` : ''
   const order = `ORDER BY CASE WHEN p.status = 'active' THEN 0 WHEN p.status = 'paused' THEN 1 ELSE 2 END, p.name`
   const rows = db.prepare(`${base} ${where} ${order}`).all(...params) as ProjectRow[]
@@ -272,14 +309,22 @@ export interface ListEntriesOptions {
   clientId?: number
   projectId?: number
   tag?: string
-  /** Hard cap on rows returned (default 1000). */
+  /** Hard cap on rows returned (default 1000). Never caps count/total_seconds. */
   limit?: number
+  /** Return only count + total_seconds, no entries array. */
+  summaryOnly?: boolean
 }
 
 export interface ListEntriesResult {
-  entries: McpEntry[]
+  /** Number of ALL matching entries (not capped by `limit`). */
   count: number
+  /**
+   * Unrounded wall-clock sum over ALL matching entries, running ones measured
+   * to `now`. For billing-grade rounded totals use `getAnalytics` instead.
+   */
   total_seconds: number
+  /** Capped at `limit`; absent in summary-only mode. */
+  entries?: McpEntry[]
 }
 
 /** Resolve month → [startISO, endISO) UTC window, matching entries:getByMonth. */
@@ -329,17 +374,20 @@ export function listEntries(
     params.push(`%,${opts.tag.toLowerCase()},%`)
   }
 
-  const limit = Math.min(Math.max(1, opts.limit ?? 1000), 10000)
+  // No LIMIT in SQL: count and total_seconds must cover the full match, so a
+  // capped entries array can never silently shrink the reported totals.
   const rows = db
     .prepare(
       `SELECT * FROM entries WHERE ${filters.join(' AND ')}
-       ORDER BY started_at ASC LIMIT ${limit}`
+       ORDER BY started_at ASC`
     )
     .all(...params) as EntryRow[]
 
-  const entries = rows.map((r) => shapeEntry(r, privacy, nowMs))
-  const total_seconds = entries.reduce((sum, e) => sum + e.duration_seconds, 0)
-  return { entries, count: entries.length, total_seconds }
+  const all = rows.map((r) => shapeEntry(r, privacy, nowMs))
+  const total_seconds = all.reduce((sum, e) => sum + e.duration_seconds, 0)
+  if (opts.summaryOnly) return { count: all.length, total_seconds }
+  const limit = Math.min(Math.max(1, opts.limit ?? 1000), 10000)
+  return { count: all.length, total_seconds, entries: all.slice(0, limit) }
 }
 
 export function getRunningTimer(
@@ -441,9 +489,17 @@ export function getDashboard(db: SqliteDb, privacy: PrivacyConfig, nowMs: number
 export interface McpAnalytics {
   year: number
   month: number
+  /**
+   * Rounded per entry to the `rounding_minutes` step — the canonical
+   * billing/PDF number. May exceed the raw sum from `listEntries`.
+   */
   total_seconds: number
   billable_seconds: number
+  /** Rounding step in minutes (app setting `pdf_round_minutes`); 0 = unrounded. */
   rounding_minutes: number
+  /** Number of clients with recorded time in this month. */
+  distinct_client_count: number
+  /** Sorted by seconds descending, name as tiebreaker. */
   by_client: Array<{
     client_id: number
     name: string
@@ -451,8 +507,11 @@ export interface McpAnalytics {
     seconds: number
     revenue_cent?: number
   }>
+  /** Sorted by seconds descending, name as tiebreaker. */
   by_project: Array<{
     project_id: number | null
+    /** The project's client; null for "(kein Projekt)" or client-less projects. */
+    client_id: number | null
     name: string
     seconds: number
     revenue_cent?: number
@@ -512,7 +571,7 @@ export function getAnalytics(
           AND strftime('%Y-%m', e.started_at, 'localtime') = ?
         GROUP BY c.id
         HAVING seconds > 0
-        ORDER BY seconds DESC`
+        ORDER BY seconds DESC, c.name ASC`
     )
     .all(monthKey) as Array<{
     client_id: number
@@ -525,6 +584,7 @@ export function getAnalytics(
   const byProject = db
     .prepare(
       `SELECT e.project_id AS project_id,
+              pr.client_id AS client_id,
               COALESCE(pr.name, '(kein Projekt)') AS name,
               COALESCE(SUM(${ENTRY_SEC}), 0) AS seconds,
               COALESCE(SUM(CASE WHEN e.billable = 1 THEN ${REVENUE} ELSE 0 END), 0) AS revenue_cent
@@ -536,10 +596,11 @@ export function getAnalytics(
           AND strftime('%Y-%m', e.started_at, 'localtime') = ?
         GROUP BY e.project_id
         HAVING seconds > 0
-        ORDER BY seconds DESC`
+        ORDER BY seconds DESC, name ASC`
     )
     .all(monthKey) as Array<{
     project_id: number | null
+    client_id: number | null
     name: string
     seconds: number
     revenue_cent: number
@@ -551,6 +612,7 @@ export function getAnalytics(
     total_seconds: Math.max(0, Math.floor(totals.total_sec ?? 0)),
     billable_seconds: Math.max(0, Math.floor(totals.billable_sec ?? 0)),
     rounding_minutes: roundStep,
+    distinct_client_count: byClient.length,
     by_client: byClient.map((r) => ({
       client_id: r.client_id,
       name: r.name,
@@ -560,6 +622,7 @@ export function getAnalytics(
     })),
     by_project: byProject.map((r) => ({
       project_id: r.project_id ?? null,
+      client_id: r.client_id ?? null,
       name: r.name,
       seconds: Math.max(0, Math.floor(r.seconds ?? 0)),
       ...(privacy.exposeRates ? { revenue_cent: Math.round(r.revenue_cent ?? 0) } : {})

@@ -87,15 +87,23 @@ export function buildServer(): McpServer {
       title: 'Kunden auflisten',
       description:
         'Alle Kunden (Name, Farbe, USt-ID, Ansprechpartner). Standardmäßig nur aktive; ' +
-        'include_archived=true zeigt auch archivierte. Stundensätze nur, wenn freigeschaltet.',
+        'include_archived=true zeigt auch archivierte. Für gezielte Lookups nach name oder ' +
+        'contact_person filtern (Teilstring, Groß-/Kleinschreibung egal). ' +
+        'Stundensätze nur, wenn freigeschaltet.',
       inputSchema: {
-        include_archived: z.boolean().optional().describe('Auch archivierte Kunden einschließen')
+        include_archived: z.boolean().optional().describe('Auch archivierte Kunden einschließen'),
+        name: z.string().optional().describe('Nach Namen filtern (Teilstring)'),
+        contact_person: z.string().optional().describe('Nach Ansprechpartner filtern (Teilstring)')
       }
     },
-    async ({ include_archived }) => {
+    async ({ include_archived, name, contact_person }) => {
       try {
         const clients = withDb((db, privacy) =>
-          listClients(db, privacy, { includeArchived: include_archived })
+          listClients(db, privacy, {
+            includeArchived: include_archived,
+            name,
+            contactPerson: contact_person
+          })
         )
         return jsonResult({ count: clients.length, clients })
       } catch (e) {
@@ -110,7 +118,9 @@ export function buildServer(): McpServer {
       title: 'Projekte auflisten',
       description:
         'Projekte inkl. Status, Budget, verbrauchten Minuten und Eintragszahl. ' +
-        'Optional nach Kunde gefiltert (client_id, oder null für Projekte ohne Kunde).',
+        'Optional nach Kunde gefiltert (client_id, oder null für Projekte ohne Kunde). ' +
+        'Für gezielte Lookups nach name oder external_project_number filtern ' +
+        '(Teilstring, Groß-/Kleinschreibung egal).',
       inputSchema: {
         client_id: z
           .number()
@@ -118,15 +128,22 @@ export function buildServer(): McpServer {
           .nullable()
           .optional()
           .describe('Nach Kunde filtern; null = Projekte ohne Kunde'),
-        include_archived: z.boolean().optional().describe('Auch archivierte Projekte einschließen')
+        include_archived: z.boolean().optional().describe('Auch archivierte Projekte einschließen'),
+        name: z.string().optional().describe('Nach Projektnamen filtern (Teilstring)'),
+        external_project_number: z
+          .string()
+          .optional()
+          .describe('Nach externer Projektnummer filtern (Teilstring)')
       }
     },
-    async ({ client_id, include_archived }) => {
+    async ({ client_id, include_archived, name, external_project_number }) => {
       try {
         const projects = withDb((db, privacy) =>
           listProjects(db, privacy, {
             clientId: client_id === undefined ? undefined : client_id,
-            includeArchived: include_archived
+            includeArchived: include_archived,
+            name,
+            externalProjectNumber: external_project_number
           })
         )
         return jsonResult({ count: projects.length, projects })
@@ -143,7 +160,10 @@ export function buildServer(): McpServer {
       description:
         'Zeiteinträge in einem Zeitraum — entweder per year+month oder per from/to ' +
         '(ISO-Zeitstempel, from inklusive, to exklusiv). Zusätzliche Filter: client_id, ' +
-        'project_id, tag. Liefert die Einträge samt Gesamtzahl und Gesamtdauer in Sekunden.',
+        'project_id, tag. count und total_seconds decken immer ALLE Treffer ab, auch wenn ' +
+        'entries durch limit gekürzt ist; summary_only=true liefert nur count + total_seconds. ' +
+        'total_seconds ist die UNGERUNDETE Ist-Summe (laufende Einträge bis jetzt) — für ' +
+        'gerundete Abrechnungszahlen (PDF-Logik) get_analytics verwenden.',
       inputSchema: {
         year: z.number().int().optional().describe('Jahr (mit month kombinieren)'),
         month: z.number().int().min(1).max(12).optional().describe('Monat 1–12 (mit year)'),
@@ -152,7 +172,14 @@ export function buildServer(): McpServer {
         client_id: z.number().int().optional().describe('Nach Kunde filtern'),
         project_id: z.number().int().optional().describe('Nach Projekt filtern'),
         tag: z.string().optional().describe('Nach exaktem Tag filtern'),
-        limit: z.number().int().min(1).max(10000).optional().describe('Max. Anzahl (Default 1000)')
+        limit: z
+          .number()
+          .int()
+          .min(1)
+          .max(10000)
+          .optional()
+          .describe('Max. Anzahl zurückgegebener entries (Default 1000)'),
+        summary_only: z.boolean().optional().describe('Nur count + total_seconds, keine entries')
       }
     },
     async (args) => {
@@ -169,7 +196,8 @@ export function buildServer(): McpServer {
               clientId: args.client_id,
               projectId: args.project_id,
               tag: args.tag,
-              limit: args.limit
+              limit: args.limit,
+              summaryOnly: args.summary_only
             },
             Date.now()
           )
@@ -222,9 +250,12 @@ export function buildServer(): McpServer {
     {
       title: 'Monatsauswertung',
       description:
-        'Monatliche Auswertung: Gesamt-/abrechenbare Stunden sowie Aufschlüsselung nach Kunde ' +
-        'und Projekt. Rundung folgt der PDF-Einstellung (pdf_round_minutes). Umsätze nur, wenn ' +
-        'Stundensätze freigeschaltet sind.',
+        'Monatliche Auswertung: Gesamt-/abrechenbare Sekunden, distinct_client_count sowie ' +
+        'Aufschlüsselung by_client und by_project (je mit client_id, sortiert nach seconds ' +
+        'absteigend). Sekundenwerte sind pro Eintrag auf das App-Rundungsintervall gerundet ' +
+        '(Response-Feld rounding_minutes, 0 = ungerundet) und damit die KANONISCHEN Zahlen für ' +
+        'Abrechnung/PDF — sie können von der ungerundeten Summe aus list_entries abweichen. ' +
+        'Umsätze nur, wenn Stundensätze freigeschaltet sind.',
       inputSchema: {
         year: z.number().int().describe('Jahr, z. B. 2026'),
         month: z.number().int().min(1).max(12).describe('Monat 1–12')
