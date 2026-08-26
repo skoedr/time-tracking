@@ -23,6 +23,12 @@ All notable changes to TimeTrack are documented here.
 
   Not fixed here: why electron-builder's own check failed in the original report. Its process detection has two branches, and the probe that chooses between them reports "PowerShell unavailable" on a machine where PowerShell demonstrably works, which drops it onto a fallback whose first attempt is a window message that a windowless process cannot receive. Tracked as #199. The handshake deliberately does not depend on that probe.
 
+- **The MCP update handshake no longer trusts the wall clock or a pid alone (#201)** — Follow-up to #198, addressing the weakness cluster its pre-landing adversarial review identified. The shutdown request now carries a **nonce**, and a server exits when the nonce it saw at startup _changes_ — instead of comparing the request timestamp against its own start time. A backward clock step between server start and update no longer makes running servers ignore the request (which blocked the update while the message blamed the AI client), and a stale forward-dated request file is no longer a standing kill switch that needed a skew clamp: under nonce gating it is simply the baseline. `requestedAt` is still written for servers of v1.18 and earlier, which gate on it.
+
+  Liveness of a pid is no longer identity. Before the updater counts a registration as a blocker, it compares the live process's image path against the registered binary — one WMI query on Windows, which also answers for elevated processes, exactly the case where the liveness probe degrades to "alive" and a reused pid used to become a permanent holder. A registration whose pid was reused by an unrelated process after a hard kill is pruned instead of blocking every future update.
+
+  Smaller holes closed along the way: when an AI client respawns its server mid-update, the app re-issues the request with a fresh nonce so the newcomer is asked too, and the refusal message now says when a survivor was started during the update instead of blaming it for ignoring a request it never received. The installer hands the holder path to PowerShell through the environment instead of splicing it into a quoted literal (a profile path containing `'` broke the parse), and the server polls the request file asynchronously, so a userData directory on a dead network share no longer wedges its event loop. The updater status tests now exercise the real transition function instead of a hand-maintained mirror of it.
+
 ## [1.18.0] — 2026-08-02
 
 ### Added

@@ -40,6 +40,41 @@ function broadcast(status: UpdateStatus): void {
   }
 }
 
+/** Lifecycle events the updater reacts to, normalized for reduceUpdateStatus. */
+export type UpdaterEvent =
+  | { type: 'checking' }
+  | { type: 'available'; version: string }
+  | { type: 'progress'; percent: number }
+  | { type: 'downloaded'; version: string }
+  | { type: 'not-available'; checkedAt: string }
+  | { type: 'error'; message: string }
+
+/**
+ * The status transition for one updater lifecycle event. Pure on purpose:
+ * the event handlers in initAutoUpdater only wire electron-updater events
+ * into this function, so the transitions are testable without booting
+ * electron-updater (updater.test.ts).
+ */
+export function reduceUpdateStatus(prev: UpdateStatus, event: UpdaterEvent): UpdateStatus {
+  switch (event.type) {
+    case 'checking':
+      return { status: 'checking' }
+    case 'available':
+      return { status: 'available', version: event.version }
+    case 'progress': {
+      const version =
+        prev.status === 'available' || prev.status === 'downloading' ? prev.version : ''
+      return { status: 'downloading', version, progress: Math.round(event.percent) }
+    }
+    case 'downloaded':
+      return { status: 'ready', version: event.version }
+    case 'not-available':
+      return { status: 'not-available', checkedAt: event.checkedAt }
+    case 'error':
+      return { status: 'error', message: event.message }
+  }
+}
+
 /**
  * Message for holders that ignored the shutdown request (#198).
  *
@@ -47,17 +82,30 @@ function broadcast(status: UpdateStatus): void {
  * the user looking for a window that does not exist: an MCP server is a
  * child of the AI client, has no window and no tray icon, and carries the app's
  * own executable name under a foreign parent process.
+ *
+ * A holder registered after the request went out was started mid-update —
+ * typically the AI client respawning its server. releaseHolders re-asks such
+ * newcomers (#201), but one that still remains should not be blamed for
+ * ignoring a request that predates it.
  */
-export function blockedByHoldersMessage(remaining: Holder[]): string {
+export function blockedByHoldersMessage(
+  remaining: Holder[],
+  requestedAt: number | null = null
+): string {
   const list = remaining.map((h) => `PID ${h.pid}`).join(', ')
   const [uses, reacted] = remaining.length === 1 ? ['benutzt', 'hat'] : ['benutzen', 'haben']
-  return (
+  const base =
     `Das Update kann nicht installiert werden: ${remaining.length} MCP-Server ` +
     `(${list}) ${uses} noch die TimeTrack-Programmdatei und ${reacted} auf die ` +
     'Aufforderung zum Beenden nicht reagiert. Diese Prozesse haben kein Fenster — ' +
     'sie gehören zu einem laufenden AI-Client (Einstellungen → Integrationen). ' +
     'Beende den AI-Client und versuche es erneut.'
-  )
+  const startedMidUpdate = requestedAt !== null && remaining.some((h) => h.startedAt >= requestedAt)
+  return startedMidUpdate
+    ? base +
+        ' Mindestens einer dieser Server wurde erst während des Updates gestartet — ' +
+        'solange der AI-Client läuft, startet er beendete Server automatisch neu.'
+    : base
 }
 
 /**
@@ -86,8 +134,16 @@ export async function performUpdateInstall(deps: {
     const dir = deps.getEndpointDir?.()
     if (dir) {
       const outcome = await deps.release(dir)
+      if (outcome.stale.length > 0) {
+        // #201 — pid reused by an unrelated process; the registration was
+        // pruned and never counted. Worth a line: it means a server was
+        // hard-killed at some point and left its file behind.
+        deps.logInfo(
+          `[updater] pruned ${outcome.stale.length} stale MCP registration(s) (pid reuse)`
+        )
+      }
       if (!outcome.ok) {
-        const message = blockedByHoldersMessage(outcome.remaining)
+        const message = blockedByHoldersMessage(outcome.remaining, outcome.requestedAt)
         deps.logWarn(`[updater] update aborted, ${outcome.remaining.length} MCP holder(s) left`)
         deps.notify({ status: 'error', message })
         return fail(message)
@@ -121,32 +177,28 @@ export function initAutoUpdater(opts: { isDev: boolean; getEndpointDir?: () => s
   autoUpdater.autoInstallOnAppQuit = false // we surface a button instead
 
   autoUpdater.on('checking-for-update', () => {
-    broadcast({ status: 'checking' })
+    broadcast(reduceUpdateStatus(lastStatus, { type: 'checking' }))
   })
 
   autoUpdater.on('update-available', (info: { version: string }) => {
-    broadcast({ status: 'available', version: info.version })
+    broadcast(reduceUpdateStatus(lastStatus, { type: 'available', version: info.version }))
   })
 
   autoUpdater.on('update-not-available', (info: { version: string }) => {
     lastCheckIso = new Date().toISOString()
-    broadcast({ status: 'not-available', checkedAt: lastCheckIso })
+    broadcast(reduceUpdateStatus(lastStatus, { type: 'not-available', checkedAt: lastCheckIso }))
     log.info(`No update available (current: ${info.version})`)
   })
 
   autoUpdater.on(
     'download-progress',
     (p: { percent: number; transferred: number; total: number }) => {
-      const version =
-        lastStatus.status === 'available' || lastStatus.status === 'downloading'
-          ? lastStatus.version
-          : ''
-      broadcast({ status: 'downloading', version, progress: Math.round(p.percent) })
+      broadcast(reduceUpdateStatus(lastStatus, { type: 'progress', percent: p.percent }))
     }
   )
 
   autoUpdater.on('update-downloaded', (info: { version: string }) => {
-    broadcast({ status: 'ready', version: info.version })
+    broadcast(reduceUpdateStatus(lastStatus, { type: 'downloaded', version: info.version }))
   })
 
   autoUpdater.on('error', (err: Error) => {
@@ -156,7 +208,7 @@ export function initAutoUpdater(opts: { isDev: boolean; getEndpointDir?: () => s
       broadcast({ status: 'idle' })
       return
     }
-    broadcast({ status: 'error', message: err.message })
+    broadcast(reduceUpdateStatus(lastStatus, { type: 'error', message: err.message }))
   })
 
   // ── IPC handlers ───────────────────────────────────────────

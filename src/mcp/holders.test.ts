@@ -1,30 +1,39 @@
 /**
- * #198 — holder registry and cooperative shutdown.
+ * #198/#201 — holder registry and cooperative shutdown.
  *
  * The behaviour that matters is the refusal: releaseHolders() must report
  * failure while anything still holds the install directory, because the caller
  * hands over to an installer that would otherwise fail with a message telling
  * the user to close a window that does not exist.
  */
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { mkdtempSync, rmSync, existsSync, writeFileSync, mkdirSync, readdirSync, readFileSync } from 'fs'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import {
+  mkdtempSync,
+  rmSync,
+  existsSync,
+  writeFileSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync
+} from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
 import {
   HOLDER_DIRNAME,
   SHUTDOWN_FILENAME,
-  MAX_FUTURE_SKEW_MS,
   holderDirForDir,
   shutdownPathForDir,
   isAlive,
   registerHolder,
   unregisterHolder,
-  pendingShutdownAt,
+  parseShutdownRequest,
+  pendingShutdownRequest,
   watchForShutdown,
   readHolders,
   requestShutdown,
   clearShutdown,
   releaseHolders,
+  sameExecutable,
   type Holder
 } from './holders'
 
@@ -103,46 +112,100 @@ describe('registry', () => {
 
 describe('shutdown request', () => {
   it('is readable once written and gone once cleared', () => {
-    expect(pendingShutdownAt(dir)).toBeNull()
-    requestShutdown(dir, 5000)
-    expect(pendingShutdownAt(dir)).toBe(5000)
+    expect(pendingShutdownRequest(dir)).toBeNull()
+    const nonce = requestShutdown(dir, 5000)
+    expect(pendingShutdownRequest(dir)).toEqual({ nonce })
     clearShutdown(dir)
-    expect(pendingShutdownAt(dir)).toBeNull()
+    expect(pendingShutdownRequest(dir)).toBeNull()
+  })
+
+  it('every request carries a fresh nonce — that change is what servers gate on', () => {
+    const first = requestShutdown(dir, 5000)
+    const second = requestShutdown(dir, 5000)
+    expect(first).not.toBe(second)
+    expect(pendingShutdownRequest(dir)).toEqual({ nonce: second })
+  })
+
+  it('still writes requestedAt — servers of v1.18 and earlier gate on it', () => {
+    requestShutdown(dir, 5000)
+    const raw = JSON.parse(readFileSync(shutdownPathForDir(dir), 'utf8')) as {
+      requestedAt: number
+    }
+    expect(raw.requestedAt).toBe(5000)
   })
 
   it('reads a request written with a UTF-8 BOM — the installer writes one', () => {
     mkdirSync(holderDirForDir(dir), { recursive: true })
-    writeFileSync(shutdownPathForDir(dir), '\uFEFF{"requestedAt":7000}', 'utf8')
-    expect(pendingShutdownAt(dir)).toBe(7000)
+    writeFileSync(shutdownPathForDir(dir), '\uFEFF{"requestedAt":7000,"nonce":"abc"}', 'utf8')
+    expect(pendingShutdownRequest(dir)).toEqual({ nonce: 'abc' })
   })
 
   it('ignores a request that is not JSON at all', () => {
     mkdirSync(holderDirForDir(dir), { recursive: true })
     writeFileSync(shutdownPathForDir(dir), 'garbage', 'utf8')
-    expect(pendingShutdownAt(dir)).toBeNull()
+    expect(pendingShutdownRequest(dir)).toBeNull()
   })
 
-  it('only applies to servers that were already running', async () => {
-    requestShutdown(dir, 5000)
+  it('ignores valid JSON without a usable nonce or requestedAt', () => {
+    for (const raw of ['{}', '{"requestedAt":"soon"}', '{"nonce":42}', '{"nonce":""}']) {
+      expect(parseShutdownRequest(raw)).toBeNull()
+    }
+  })
+
+  it('accepts a legacy request without a nonce — the raw content is its identity', () => {
+    // A ≤ v1.18 writer (e.g. an old installer run over a newer install) only
+    // writes requestedAt. Each write still has to read as a distinct request.
+    const a = parseShutdownRequest('{"requestedAt":7000}')
+    const b = parseShutdownRequest('{"requestedAt":7001}')
+    expect(a).not.toBeNull()
+    expect(b).not.toBeNull()
+    expect(a!.nonce).not.toBe(b!.nonce)
+  })
+})
+
+describe('watchForShutdown', () => {
+  it('fires on a nonce change, not on the request already present at startup', async () => {
     const fired: string[] = []
-    // started before the request — must exit
-    const stopOld = watchForShutdown(dir, 4000, () => fired.push('old'), 5)
-    // started after the request — must NOT exit, or every server launched
-    // during a cancelled update would die on sight
-    const stopNew = watchForShutdown(dir, 6000, () => fired.push('new'), 5)
-    await new Promise((r) => setTimeout(r, 60))
+    // started before any request — baseline null, must react to the first one
+    const stopOld = watchForShutdown(dir, null, () => fired.push('old'), 5)
+    const nonce1 = requestShutdown(dir, 5000)
+    await vi.waitFor(() => expect(fired).toEqual(['old']))
+
+    // started while nonce1 lies on disk — nonce1 is its baseline. A watcher
+    // with a null baseline started right after acts as the sentinel: once it
+    // has fired on nonce1, 'new' has been polling nonce1 too and stayed quiet.
+    const stopNew = watchForShutdown(dir, nonce1, () => fired.push('new'), 5)
+    const stopSentinel = watchForShutdown(dir, null, () => fired.push('sentinel'), 5)
+    await vi.waitFor(() => expect(fired).toContain('sentinel'))
+    expect(fired).not.toContain('new')
+
+    // a re-issued request (fresh nonce) is a change — now 'new' must exit too
+    requestShutdown(dir, 6000)
+    await vi.waitFor(() => expect(fired).toContain('new'))
     stopOld()
     stopNew()
-    expect(fired).toEqual(['old'])
+    stopSentinel()
   })
 
   it('stops watching once it has fired', async () => {
     requestShutdown(dir, 5000)
     let n = 0
-    const stop = watchForShutdown(dir, 1000, () => n++, 5)
-    await new Promise((r) => setTimeout(r, 60))
+    const stop = watchForShutdown(dir, null, () => n++, 5)
+    await vi.waitFor(() => expect(n).toBe(1))
+    // a second request must not re-fire a watcher that already shut down
+    requestShutdown(dir, 6000)
+    await new Promise((r) => setTimeout(r, 40))
     stop()
     expect(n).toBe(1)
+  })
+
+  it('a stopped watcher never fires', async () => {
+    let n = 0
+    const stop = watchForShutdown(dir, null, () => n++, 5)
+    stop()
+    requestShutdown(dir, 5000)
+    await new Promise((r) => setTimeout(r, 30))
+    expect(n).toBe(0)
   })
 })
 
@@ -151,10 +214,13 @@ describe('releaseHolders', () => {
   // The pids below are fictional, so liveness has to be supplied — otherwise
   // every holder reads as dead and the refusal we care about never happens.
   const allAlive = (): boolean => true
+  // Fictional pids have no real process image either; null means "no way to
+  // ask on this platform", which keeps the pre-#201 liveness-only behaviour.
+  const noImages = async (): Promise<null> => null
 
   it('does nothing and costs nothing when no MCP server is registered', async () => {
-    const r = await releaseHolders(dir, { sleep: noSleep, alive: allAlive })
-    expect(r).toEqual({ ok: true, before: [], remaining: [] })
+    const r = await releaseHolders(dir, { sleep: noSleep, alive: allAlive, queryImages: noImages })
+    expect(r).toEqual({ ok: true, before: [], remaining: [], stale: [], requestedAt: null })
     // no request written — a later server must not find one lying around
     expect(existsSync(shutdownPathForDir(dir))).toBe(false)
   })
@@ -166,6 +232,7 @@ describe('releaseHolders', () => {
     const r = await releaseHolders(dir, {
       pollMs: 1,
       alive: allAlive,
+      queryImages: noImages,
       sleep: async () => {
         // stand in for the servers reacting to the request
         if (++ticks === 1) unregisterHolder(dir, 11)
@@ -186,6 +253,7 @@ describe('releaseHolders', () => {
       pollMs: 10,
       sleep: noSleep,
       alive: allAlive,
+      queryImages: noImages,
       now: () => (t += 20)
     })
     expect(r.ok).toBe(false)
@@ -200,9 +268,10 @@ describe('releaseHolders', () => {
       pollMs: 10,
       sleep: noSleep,
       alive: allAlive,
+      queryImages: noImages,
       now: () => (t += 20)
     })
-    expect(pendingShutdownAt(dir)).toBeNull()
+    expect(pendingShutdownRequest(dir)).toBeNull()
   })
 
   it('leaves the request in place on success — the servers are on their way out', async () => {
@@ -210,9 +279,121 @@ describe('releaseHolders', () => {
     await releaseHolders(dir, {
       pollMs: 1,
       alive: allAlive,
+      queryImages: noImages,
       sleep: async () => unregisterHolder(dir, 11)
     })
-    expect(pendingShutdownAt(dir)).not.toBeNull()
+    expect(pendingShutdownRequest(dir)).not.toBeNull()
+  })
+
+  it('re-issues the request when a new pid appears mid-poll (#201)', async () => {
+    // A client may respawn its server the moment the first one exits. The
+    // respawn read the current nonce at startup — only a FRESH nonce reaches it.
+    registerHolder(dir, holder(11))
+    const nonces: string[] = []
+    let ticks = 0
+    const r = await releaseHolders(dir, {
+      pollMs: 1,
+      alive: allAlive,
+      queryImages: noImages,
+      sleep: async () => {
+        ticks++
+        if (ticks === 1) {
+          nonces.push(pendingShutdownRequest(dir)!.nonce)
+          registerHolder(dir, holder(22)) // the respawned server registers
+        }
+        if (ticks === 2) {
+          nonces.push(pendingShutdownRequest(dir)!.nonce)
+          unregisterHolder(dir, 11)
+          unregisterHolder(dir, 22)
+        }
+      }
+    })
+    expect(r.ok).toBe(true)
+    expect(nonces).toHaveLength(2)
+    expect(nonces[0]).not.toBe(nonces[1])
+  })
+})
+
+describe('holder identity (#201)', () => {
+  const noSleep = (): Promise<void> => Promise.resolve()
+  const allAlive = (): boolean => true
+
+  it('prunes a registration whose pid was reused by another binary', async () => {
+    // Client hard-killed its server → no 'exit' event → the file stayed. The
+    // OS reused the pid for an unrelated long-lived process; liveness alone
+    // would let that process block every update for as long as it runs.
+    registerHolder(dir, holder(11))
+    registerHolder(dir, holder(12))
+    const r = await releaseHolders(dir, {
+      pollMs: 1,
+      alive: allAlive,
+      queryImages: async () =>
+        new Map<number, string | null>([
+          [11, 'C:\\Windows\\System32\\svchost.exe'],
+          [12, 'C:\\App\\TimeTrack.exe']
+        ]),
+      sleep: async () => unregisterHolder(dir, 12)
+    })
+    expect(r.ok).toBe(true)
+    expect(r.stale.map((h) => h.pid)).toEqual([11])
+    expect(r.before.map((h) => h.pid)).toEqual([12])
+    // the stale registration is pruned from disk, not just skipped
+    expect(existsSync(join(holderDirForDir(dir), '11.json'))).toBe(false)
+  })
+
+  it('an unreadable image is not our server — same-user processes are readable', async () => {
+    // EPERM-alive plus unreadable image is the reused-into-elevated case that
+    // used to be a permanent holder.
+    registerHolder(dir, holder(11))
+    const r = await releaseHolders(dir, {
+      sleep: noSleep,
+      alive: allAlive,
+      queryImages: async () => new Map<number, string | null>([[11, null]])
+    })
+    expect(r.ok).toBe(true)
+    expect(r.stale.map((h) => h.pid)).toEqual([11])
+    // nothing real was asked to shut down, so no request was written
+    expect(r.requestedAt).toBeNull()
+    expect(existsSync(shutdownPathForDir(dir))).toBe(false)
+  })
+
+  it('a pid missing from the image query is dead, not stale', async () => {
+    registerHolder(dir, holder(11))
+    const r = await releaseHolders(dir, {
+      sleep: noSleep,
+      alive: allAlive,
+      queryImages: async () => new Map<number, string | null>()
+    })
+    expect(r).toEqual({ ok: true, before: [], remaining: [], stale: [], requestedAt: null })
+    expect(existsSync(join(holderDirForDir(dir), '11.json'))).toBe(false)
+  })
+
+  it('falls back to liveness alone when images cannot be queried', async () => {
+    registerHolder(dir, holder(11))
+    let t = 0
+    const r = await releaseHolders(dir, {
+      timeoutMs: 50,
+      pollMs: 10,
+      sleep: noSleep,
+      alive: allAlive,
+      queryImages: async () => null,
+      now: () => (t += 20)
+    })
+    // blocking on an unverifiable holder is the safe direction: better a
+    // refused update than a binary yanked from under a live server
+    expect(r.ok).toBe(false)
+    expect(r.remaining.map((h) => h.pid)).toEqual([11])
+  })
+
+  it('sameExecutable compares Windows paths case-insensitively', () => {
+    if (process.platform === 'win32') {
+      expect(sameExecutable('C:\\App\\TimeTrack.exe', 'c:\\app\\timetrack.EXE')).toBe(true)
+      expect(sameExecutable('C:/App/TimeTrack.exe', 'C:\\App\\TimeTrack.exe')).toBe(true)
+      expect(sameExecutable('C:\\App\\TimeTrack.exe', 'C:\\Other\\TimeTrack.exe')).toBe(false)
+    } else {
+      expect(sameExecutable('/opt/app/timetrack', '/opt/app/timetrack')).toBe(true)
+      expect(sameExecutable('/opt/app/timetrack', '/opt/app/TimeTrack')).toBe(false)
+    }
   })
 })
 
@@ -235,32 +416,6 @@ describe('hostile or damaged registry input', () => {
   })
 })
 
-describe('shutdown request — hostile or damaged input', () => {
-  it('ignores valid JSON without a usable requestedAt', () => {
-    mkdirSync(holderDirForDir(dir), { recursive: true })
-    for (const raw of ['{}', '{"requestedAt":"soon"}']) {
-      writeFileSync(shutdownPathForDir(dir), raw, 'utf8')
-      expect(pendingShutdownAt(dir)).toBeNull()
-    }
-  })
-
-  it('ignores a forward-dated request — a stale file must not become a standing kill switch', () => {
-    requestShutdown(dir, 200_000)
-    expect(pendingShutdownAt(dir, () => 100_000)).toBeNull()
-    // within the skew allowance the request still counts
-    expect(pendingShutdownAt(dir, () => 200_000 - MAX_FUTURE_SKEW_MS)).toBe(200_000)
-  })
-
-  it('fires when the request timestamp equals startedAt — same-millisecond clocks are real', async () => {
-    requestShutdown(dir, 5000)
-    let n = 0
-    const stop = watchForShutdown(dir, 5000, () => n++, 5)
-    await new Promise((r) => setTimeout(r, 60))
-    stop()
-    expect(n).toBe(1)
-  })
-})
-
 describe('installer script stays in sync', () => {
   it('build/installer.nsh uses the same names and keys as this module', () => {
     // The NSIS side cannot import these constants; a rename here would turn
@@ -270,6 +425,8 @@ describe('installer script stays in sync', () => {
     expect(nsh).toContain(HOLDER_DIRNAME)
     expect(nsh).toContain(SHUTDOWN_FILENAME)
     expect(nsh).toContain('requestedAt')
+    // #201 — the request the installer writes must carry the nonce gate too
+    expect(nsh).toContain('nonce')
     // the userData dirname follows package.json "name", not productName
     expect(nsh).toContain('time-tracking')
   })
