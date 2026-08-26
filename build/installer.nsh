@@ -38,6 +38,11 @@ Var TTHolderDir
   ; with it; the installer cannot know about that, and for those installs this
   ; step is simply a no-op and the built-in check below still applies.
   StrCpy $TTHolderDir "$APPDATA\time-tracking\mcp-holders"
+  ; #201 — hand the path to PowerShell through the environment instead of
+  ; splicing it into a single-quoted literal: a profile path containing a
+  ; quote (C:\Users\O'Brien\...) would end that literal early. nsExec children
+  ; inherit the installer's environment, so $env:TT_HOLDER_DIR just works.
+  System::Call 'Kernel32::SetEnvironmentVariable(t "TT_HOLDER_DIR", t "$TTHolderDir")'
 !macroend
 
 !macro customCheckAppRunning
@@ -52,7 +57,7 @@ Var TTHolderDir
   ; arrives as "0\r\n" and a `!= "0"` comparison would ALWAYS enter the
   ; block — writing a shutdown request on every install, MCP integration or
   ; not. Console::Write emits the bare digits and nothing else.
-  nsExec::ExecToStack `"$PowerShellPath" -NoProfile -C "[Console]::Write(@(Get-ChildItem -LiteralPath '$TTHolderDir' -Filter *.json -ErrorAction SilentlyContinue).Count)"`
+  nsExec::ExecToStack `"$PowerShellPath" -NoProfile -C "[Console]::Write(@(Get-ChildItem -LiteralPath $$env:TT_HOLDER_DIR -Filter *.json -ErrorAction SilentlyContinue).Count)"`
   Pop $0
   Pop $1
 
@@ -72,7 +77,13 @@ Var TTHolderDir
     ; PowerShell's parser, so [char]34 sidesteps the question. Stale files from
     ; a crashed process only cost us the wait; the app side prunes them by
     ; liveness, so they can never block an install.
-    nsExec::Exec `"$PowerShellPath" -NoProfile -C "$$q=[char]34; $$d='$TTHolderDir'; New-Item -ItemType Directory -Force -Path $$d | Out-Null; Set-Content -LiteralPath (Join-Path $$d '.shutdown') -Value ('{' + $$q + 'requestedAt' + $$q + ':' + [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds() + '}') -Encoding utf8; $$dl=(Get-Date).AddSeconds(8); while ((Get-Date) -lt $$dl -and @(Get-ChildItem -LiteralPath $$d -Filter *.json -ErrorAction SilentlyContinue).Count -gt 0) { Start-Sleep -Milliseconds 200 }"`
+    ;
+    ; The request carries both gates (#201): `nonce` for current servers, which
+    ; exit when the nonce they saw at startup changes, and `requestedAt` for
+    ; servers of v1.18 and earlier, which compare it against their start time —
+    ; exactly the servers this installer meets during the first update after
+    ; the change.
+    nsExec::Exec `"$PowerShellPath" -NoProfile -C "$$q=[char]34; $$d=$$env:TT_HOLDER_DIR; New-Item -ItemType Directory -Force -Path $$d | Out-Null; Set-Content -LiteralPath (Join-Path $$d '.shutdown') -Value ('{' + $$q + 'requestedAt' + $$q + ':' + [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds() + ',' + $$q + 'nonce' + $$q + ':' + $$q + [guid]::NewGuid().ToString() + $$q + '}') -Encoding utf8; $$dl=(Get-Date).AddSeconds(8); while ((Get-Date) -lt $$dl -and @(Get-ChildItem -LiteralPath $$d -Filter *.json -ErrorAction SilentlyContinue).Count -gt 0) { Start-Sleep -Milliseconds 200 }"`
     Pop $0
   ${endIf}
 
@@ -84,6 +95,6 @@ Var TTHolderDir
   ; Withdraw the request. Left lying around it would make every MCP server
   ; started afterwards exit the moment it saw it.
   !insertmacro TIMETRACK_HOLDER_DIR
-  nsExec::Exec `"$PowerShellPath" -NoProfile -C "Remove-Item -LiteralPath (Join-Path '$TTHolderDir' '.shutdown') -Force -ErrorAction SilentlyContinue"`
+  nsExec::Exec `"$PowerShellPath" -NoProfile -C "Remove-Item -LiteralPath (Join-Path $$env:TT_HOLDER_DIR '.shutdown') -Force -ErrorAction SilentlyContinue"`
   Pop $0
 !macroend

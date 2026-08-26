@@ -34,7 +34,12 @@ import {
 } from './queries'
 import { sendWrite } from './writeClient'
 import { userDataDir } from './socketPath'
-import { registerHolder, unregisterHolder, watchForShutdown } from './holders'
+import {
+  pendingShutdownRequest,
+  registerHolder,
+  unregisterHolder,
+  watchForShutdown
+} from './holders'
 
 /**
  * Open the DB fresh per call and close it afterwards. TimeTrack uses WAL, so a
@@ -419,15 +424,19 @@ function joinUpdateHandshake(server: McpServer): void {
   } catch {
     return // no resolvable userData — nothing to coordinate with
   }
-  const startedAt = Date.now()
+  // #201 — a request already on disk was aimed at servers that existed before
+  // us; its nonce is our baseline and we exit only when the nonce CHANGES.
+  // This replaces the old wall-clock gate (requestedAt >= startedAt), which
+  // depended on the machine clock not stepping between server start and update.
+  const baselineNonce = pendingShutdownRequest(dir)?.nonce ?? null
   registerHolder(dir, {
     pid: process.pid,
     exe: process.execPath,
     entry: process.argv[1] ?? '',
-    startedAt
+    startedAt: Date.now()
   })
 
-  const stopWatch = watchForShutdown(dir, startedAt, () => {
+  const stopWatch = watchForShutdown(dir, baselineNonce, () => {
     process.stderr.write('[timetrack-mcp] TimeTrack installiert ein Update — Server wird beendet\n')
     // If close() never settles (wedged transport), exit anyway — the update
     // is waiting on this process, and staying alive means blocking it.
