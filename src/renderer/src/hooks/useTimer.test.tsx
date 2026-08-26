@@ -399,6 +399,13 @@ describe('useTimer — idle transitions', () => {
     const entry = await startTimer(hook)
     act(() => api.listeners.idleDetected?.(IDLE))
 
+    // Pin only Date (after setup — module-runner trap, see the clock tests)
+    // so "up to now" is an exact timestamp, not any-string. Deliberately
+    // different from idleSince: a pauseEnd regression to it must go red.
+    const NOW = new Date('2026-08-26T09:41:00.000Z')
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(NOW)
+
     await act(async () => {
       await hook.result.current.idleMarkPause()
     })
@@ -422,7 +429,7 @@ describe('useTimer — idle transitions', () => {
       expect.objectContaining({
         description: 'Pause',
         started_at: IDLE.idleSince,
-        stopped_at: expect.any(String)
+        stopped_at: NOW.toISOString()
       })
     )
     expect(hook.result.current.runningEntry).toBeNull()
