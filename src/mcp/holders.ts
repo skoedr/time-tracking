@@ -137,8 +137,11 @@ export function parseShutdownRequest(raw: string): ShutdownRequest | null {
     return { nonce: parsed.nonce }
   }
   // Legacy writer (≤ v1.18): no nonce field. Only accept what that writer
-  // actually produced — a finite requestedAt — so garbage stays "no request".
-  if (Number.isFinite(Number(parsed?.requestedAt))) {
+  // actually produced — a JSON number — so garbage stays "no request".
+  // Number(...) would be too lax here: it turns null, false, "" and arrays
+  // into finite numbers, and a malformed file appearing after startup would
+  // then read as a fresh request and shut servers down.
+  if (typeof parsed?.requestedAt === 'number' && Number.isFinite(parsed.requestedAt)) {
     return { nonce: text }
   }
   return null
@@ -220,6 +223,14 @@ export function readHolders(dir: string, alive: (pid: number) => boolean = isAli
     // probe process groups too — either would be an immortal holder that
     // blocks every future update. Only accept real, positive pids.
     if (!Number.isInteger(h?.pid) || h.pid <= 0) continue
+    // The remaining fields are consumed downstream (sameExecutable, the
+    // blocked-message) under their declared types; a damaged file must not
+    // turn into a TypeError that aborts the whole release. Normalize instead
+    // of rejecting: an empty exe simply never matches an image, so identity
+    // verification demotes the entry rather than the update crashing.
+    if (typeof h.exe !== 'string') h.exe = ''
+    if (typeof h.entry !== 'string') h.entry = ''
+    if (typeof h.startedAt !== 'number' || !Number.isFinite(h.startedAt)) h.startedAt = 0
     if (alive(h.pid)) {
       out.push(h)
     } else {
@@ -385,6 +396,8 @@ export async function releaseHolders(
   opts: {
     timeoutMs?: number
     pollMs?: number
+    /** Minimum time a mid-update newcomer gets to react to its re-issued request. */
+    reissueGraceMs?: number
     sleep?: (ms: number) => Promise<void>
     now?: () => number
     alive?: (pid: number) => boolean
@@ -393,6 +406,7 @@ export async function releaseHolders(
 ): Promise<ReleaseOutcome> {
   const timeoutMs = opts.timeoutMs ?? 5000
   const pollMs = opts.pollMs ?? 200
+  const reissueGraceMs = opts.reissueGraceMs ?? 2000
   const sleep = opts.sleep ?? ((ms: number) => new Promise((r) => setTimeout(r, ms)))
   const now = opts.now ?? Date.now
   const alive = opts.alive ?? isAlive
@@ -429,7 +443,13 @@ export async function releaseHolders(
   const requestedAt = now()
   requestShutdown(dir, requestedAt)
   const asked = new Set(before.map((h) => h.pid))
-  const deadline = requestedAt + timeoutMs
+  // A newcomer observed near the deadline still deserves a chance to see its
+  // re-issued nonce — its watcher polls every 400 ms, and a request written on
+  // the final poll would otherwise be cleared before anyone could read it.
+  // Each re-issue therefore guarantees reissueGraceMs of runway, under a hard
+  // cap so an endlessly respawning client cannot pin the updater forever.
+  const hardCap = requestedAt + timeoutMs * 2
+  let deadline = requestedAt + timeoutMs
   let remaining = readHolders(dir, alive)
   while (remaining.length > 0 && now() < deadline) {
     await sleep(pollMs)
@@ -438,6 +458,7 @@ export async function releaseHolders(
     if (fresh.length > 0) {
       requestShutdown(dir, now())
       for (const h of fresh) asked.add(h.pid)
+      deadline = Math.min(Math.max(deadline, now() + reissueGraceMs), hardCap)
     }
   }
   if (remaining.length > 0) clearShutdown(dir)

@@ -147,7 +147,19 @@ describe('shutdown request', () => {
   })
 
   it('ignores valid JSON without a usable nonce or requestedAt', () => {
-    for (const raw of ['{}', '{"requestedAt":"soon"}', '{"nonce":42}', '{"nonce":""}']) {
+    // The last four look numeric to Number(...) — null, false, "" and [5]
+    // all coerce to finite numbers, but the legacy writer only ever emitted a
+    // JSON number, and anything else must not read as a request.
+    for (const raw of [
+      '{}',
+      '{"requestedAt":"soon"}',
+      '{"nonce":42}',
+      '{"nonce":""}',
+      '{"requestedAt":null}',
+      '{"requestedAt":false}',
+      '{"requestedAt":""}',
+      '{"requestedAt":[5]}'
+    ]) {
       expect(parseShutdownRequest(raw)).toBeNull()
     }
   })
@@ -312,6 +324,58 @@ describe('releaseHolders', () => {
     expect(nonces).toHaveLength(2)
     expect(nonces[0]).not.toBe(nonces[1])
   })
+
+  it('extends the deadline for a respawn seen near it — its request must be readable (#201)', async () => {
+    // Without the grace period, a nonce written on the final poll is cleared
+    // on the very next loop check, before the newcomer's 400 ms watcher can
+    // ever read it — and the newcomer is blamed for not reacting.
+    registerHolder(dir, holder(11))
+    let t = 0
+    const r = await releaseHolders(dir, {
+      timeoutMs: 50,
+      pollMs: 10,
+      reissueGraceMs: 100,
+      alive: allAlive,
+      queryImages: noImages,
+      now: () => t,
+      sleep: async () => {
+        if (t === 0) {
+          // final poll: the old server exits, its respawn registers past the deadline
+          t = 55
+          unregisterHolder(dir, 11)
+          registerHolder(dir, holder(22))
+        } else {
+          // within the grace period the respawn reacts to the fresh nonce
+          t += 10
+          unregisterHolder(dir, 22)
+        }
+      }
+    })
+    expect(r.ok).toBe(true)
+    expect(r.remaining).toEqual([])
+  })
+
+  it('caps the grace extension — an endlessly respawning client cannot pin the updater', async () => {
+    registerHolder(dir, holder(11))
+    let t = 0
+    let next = 100
+    const r = await releaseHolders(dir, {
+      timeoutMs: 50,
+      pollMs: 10,
+      reissueGraceMs: 100,
+      alive: allAlive,
+      queryImages: noImages,
+      now: () => t,
+      sleep: async () => {
+        t += 30
+        registerHolder(dir, holder(++next)) // a fresh pid on every poll
+      }
+    })
+    expect(r.ok).toBe(false)
+    expect(r.remaining.map((h) => h.pid)).toContain(11)
+    // the loop ended at the hard cap (2 × timeoutMs), not with the respawns
+    expect(t).toBeLessThanOrEqual(50 * 2 + 30)
+  })
 })
 
 describe('holder identity (#201)', () => {
@@ -413,6 +477,30 @@ describe('hostile or damaged registry input', () => {
     // a file sits where the holder directory should be — mkdir cannot win
     writeFileSync(holderDirForDir(dir), 'in the way', 'utf8')
     expect(registerHolder(dir, holder(1))).toBe(false)
+  })
+
+  it('normalizes damaged holder fields to their declared types', () => {
+    mkdirSync(holderDirForDir(dir), { recursive: true })
+    writeFileSync(
+      join(holderDirForDir(dir), '9.json'),
+      '{"pid":9,"exe":42,"startedAt":"soon"}',
+      'utf8'
+    )
+    expect(readHolders(dir, () => true)).toEqual([{ pid: 9, exe: '', entry: '', startedAt: 0 }])
+  })
+
+  it('a damaged holder file without exe demotes to stale instead of crashing the release', async () => {
+    // Before normalization, sameExecutable received undefined and threw a
+    // TypeError that aborted the whole update (reproduced live).
+    mkdirSync(holderDirForDir(dir), { recursive: true })
+    writeFileSync(join(holderDirForDir(dir), '11.json'), '{"pid":11}', 'utf8')
+    const r = await releaseHolders(dir, {
+      sleep: () => Promise.resolve(),
+      alive: () => true,
+      queryImages: async () => new Map<number, string | null>([[11, 'C:\\Somewhere\\other.exe']])
+    })
+    expect(r.ok).toBe(true)
+    expect(r.stale.map((h) => h.pid)).toEqual([11])
   })
 })
 
