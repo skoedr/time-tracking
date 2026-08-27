@@ -18,6 +18,7 @@ import trayRunningIcon from '../../resources/tray-running.png?asset'
 import trayStoppedIcon from '../../resources/tray-stopped.png?asset'
 import { getDb, getDbPath, recoverZombieEntries, MigrationError } from './db'
 import { clearShutdown, pruneDeadHolders } from '../mcp/holders'
+import { APP_ID, repairInstallLocation } from './installLocation'
 import { registerIpcHandlers } from './ipc'
 import {
   startMcpBridge,
@@ -622,6 +623,20 @@ app.whenReady().then(async () => {
   // predecessors when they start too, but that only helps machines where
   // servers keep starting; this covers the app running without them.
   pruneDeadHolders(dirname(getDbPath()))
+
+  // #200 — repair the value the installer reads to tell an upgrade from a
+  // fresh install. Left empty it offers a directory page that looks like an
+  // ordinary first install but uninstalls the existing one when a different
+  // path is chosen; that cost one installation on 2026-08-03.
+  //
+  // Packaged Windows builds only: in dev the exe is electron.exe under
+  // node_modules and there is no installation to describe. Fire-and-forget,
+  // because two reg.exe reads have no business sitting in front of the window.
+  if (process.platform === 'win32' && app.isPackaged) {
+    void repairInstallLocation(dirname(app.getPath('exe')), APP_ID, console).catch((err) =>
+      log.warn('[install-location] check failed:', err)
+    )
+  }
 
   // v1.5 PR B — init auto-updater after the main window exists so events
   // can be broadcast to the renderer immediately.
