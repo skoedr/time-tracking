@@ -521,19 +521,63 @@ describe('pruning stale registrations (#209)', () => {
     expect(readHolders(dir, () => true).map((h) => h.pid)).toEqual([1, 2])
   })
 
-  it('does not delete files it cannot read as a holder', () => {
-    // A corrupt file is not proof that its process is gone, and the name is
-    // not proof either. Deleting it would be guessing; leave it and let the
-    // reader keep skipping it.
+  it('recovers the pid from the filename when the content is unreadable', () => {
+    // A truncated registration (crash during a pre-rename write, or any build
+    // before that fix) parses as nothing. Skipping it forever would leave the
+    // installer's *.json count permanently above zero — the exact condition
+    // pruning exists to clear.
     mkdirSync(holderDirForDir(dir), { recursive: true })
-    writeFileSync(join(holderDirForDir(dir), '7.json'), 'not json at all', 'utf8')
-    registerHolder(dir, holder(8))
+    writeFileSync(join(holderDirForDir(dir), '7.json'), '{"pid":7,"exe":"C:\\\\App', 'utf8')
     expect(pruneDeadHolders(dir, () => false)).toBe(1)
+    expect(readdirSync(holderDirForDir(dir)).filter((n) => n.endsWith('.json'))).toEqual([])
+  })
+
+  it('keeps an unreadable registration whose pid is still alive', () => {
+    // Recovering the pid from the name must not become licence to delete a
+    // live server's registration — that would drop it from the blocker list
+    // and let an update hand over while it still holds the binary (#198).
+    mkdirSync(holderDirForDir(dir), { recursive: true })
+    writeFileSync(join(holderDirForDir(dir), '7.json'), 'truncated', 'utf8')
+    expect(pruneDeadHolders(dir, (pid) => pid === 7)).toBe(0)
     expect(readdirSync(holderDirForDir(dir)).filter((n) => n.endsWith('.json'))).toEqual(['7.json'])
+  })
+
+  it('leaves a file alone when neither content nor name yields a pid', () => {
+    // No pid to probe, so no basis for deleting. Explicit policy, not an
+    // oversight: these are not files we wrote.
+    mkdirSync(holderDirForDir(dir), { recursive: true })
+    for (const n of ['bad.json', '0.json', '-1.json', 'x7.json'])
+      writeFileSync(join(holderDirForDir(dir), n), 'not json at all', 'utf8')
+    expect(pruneDeadHolders(dir, () => false)).toBe(0)
+    expect(
+      readdirSync(holderDirForDir(dir))
+        .filter((n) => n.endsWith('.json'))
+        .sort()
+    ).toEqual(['-1.json', '0.json', 'bad.json', 'x7.json'])
   })
 
   it('is a no-op when the directory was never created', () => {
     expect(pruneDeadHolders(join(dir, 'nope'), () => false)).toBe(0)
+  })
+
+  it('registers through a rename, leaving nothing half-written behind', () => {
+    // The temp name must not end in .json: build/installer.nsh counts *.json
+    // to decide whether to run the handshake, and a stray temp file must not
+    // read as a registration.
+    expect(registerHolder(dir, holder(4242))).toBe(true)
+    const left = readdirSync(holderDirForDir(dir)).sort()
+    expect(left).toEqual(['4242.json'])
+    expect(readHolders(dir, () => true).map((h) => h.pid)).toEqual([4242])
+  })
+
+  it('re-registering the same pid replaces the file rather than failing', () => {
+    // rename must overwrite on Windows too — a server restarting under a
+    // reused pid would otherwise keep a stale registration.
+    registerHolder(dir, holder(4242, 1000))
+    expect(registerHolder(dir, holder(4242, 2000))).toBe(true)
+    expect(readHolders(dir, () => true)).toEqual([
+      { pid: 4242, exe: 'C:\\App\\TimeTrack.exe', entry: 'C:\\App\\server.js', startedAt: 2000 }
+    ])
   })
 
   it('agrees with readHolders about what counts as a holder', () => {

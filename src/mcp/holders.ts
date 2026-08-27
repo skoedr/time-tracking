@@ -35,7 +35,15 @@
  */
 import { execFile } from 'child_process'
 import { randomUUID } from 'crypto'
-import { mkdirSync, readdirSync, readFileSync, readlinkSync, rmSync, writeFileSync } from 'fs'
+import {
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  readlinkSync,
+  renameSync,
+  rmSync,
+  writeFileSync
+} from 'fs'
 import { readFile } from 'fs/promises'
 import { join } from 'path'
 import { promisify } from 'util'
@@ -98,13 +106,32 @@ export function isAlive(pid: number, kill: (p: number, s: number) => void = proc
 
 // ── MCP-server side ───────────────────────────────────────────────────────
 
-/** Announce this process as a holder. Best-effort: never fail the server. */
+/**
+ * Announce this process as a holder. Best-effort: never fail the server.
+ *
+ * Written to a temporary name and renamed into place (#209 review). Writing
+ * straight to `<pid>.json` means a crash mid-write leaves a truncated file
+ * that no reader can parse and no pruner would touch — permanently inflating
+ * the count `build/installer.nsh` uses to decide whether to run the handshake
+ * at all. rename is atomic and replaces an existing file on Windows too, so a
+ * reader never observes a half-written registration.
+ *
+ * The temporary name deliberately does not end in `.json`: the installer
+ * counts `*.json`, and a stray temp file must not look like a registration.
+ */
 export function registerHolder(dir: string, holder: Holder): boolean {
+  const tmp = join(holderDirForDir(dir), `.${holder.pid}.tmp`)
   try {
     mkdirSync(holderDirForDir(dir), { recursive: true })
-    writeFileSync(holderFile(dir, holder.pid), JSON.stringify(holder), 'utf8')
+    writeFileSync(tmp, JSON.stringify(holder), 'utf8')
+    renameSync(tmp, holderFile(dir, holder.pid))
     return true
   } catch {
+    try {
+      rmSync(tmp, { force: true })
+    } catch {
+      // nothing more to do — a leftover temp file is counted by no one
+    }
     return false
   }
 }
@@ -202,6 +229,22 @@ export function watchForShutdown(
 // ── App side ──────────────────────────────────────────────────────────────
 
 /**
+ * The pid a registration filename encodes, or null when the name is not one
+ * we wrote. Used only to recover from an unreadable file — see the note in
+ * pruneDeadHolders.
+ *
+ * Strict on purpose: exactly digits plus `.json`, and the same positive-pid
+ * rule the content path applies, so a foreign file called `0.json` or
+ * `-1.json` cannot become an immortal holder by the back door.
+ */
+function pidFromFilename(name: string): number | null {
+  const m = /^(\d+)\.json$/.exec(name)
+  if (!m) return null
+  const pid = Number(m[1])
+  return Number.isInteger(pid) && pid > 0 ? pid : null
+}
+
+/**
  * One registration file, or null when it is not a usable holder.
  *
  * Shared by readHolders() and pruneDeadHolders() so the two can never disagree
@@ -285,10 +328,18 @@ export function pruneDeadHolders(dir: string, alive: (pid: number) => boolean = 
   }
   let removed = 0
   for (const name of names) {
-    const h = readHolderFile(dir, name)
-    if (!h) continue
-    if (!alive(h.pid)) {
-      unregisterHolder(dir, h.pid)
+    // A file we cannot parse is not automatically litter, but its NAME still
+    // carries the pid (#209 review). Without this fallback a truncated
+    // registration — from a crash during the pre-rename write, or from any
+    // build before that fix — survives every prune, and the installer's count
+    // never returns to zero, which is the whole point of pruning.
+    //
+    // Liveness still decides. Recovering the pid does not license deleting a
+    // live server's registration; it only makes a dead one reachable.
+    const pid = readHolderFile(dir, name)?.pid ?? pidFromFilename(name)
+    if (pid === null) continue
+    if (!alive(pid)) {
+      unregisterHolder(dir, pid)
       removed++
     }
   }
