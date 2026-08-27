@@ -7,7 +7,7 @@
  * refused wherever the app cannot be sure: a fabricated or wrongly-deleted
  * record is worse than a missing one, because the installer acts on it.
  */
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'fs'
 import { join } from 'path'
 import {
@@ -23,24 +23,7 @@ import {
 } from './installLocation'
 
 const PER_USER = 'C:\\Users\\robin\\AppData\\Local\\Programs\\TimeTrack'
-const PROGRAM_FILES = 'C:\\Program Files\\TimeTrack'
-
-// looksPerMachine() reads the Windows per-machine roots out of the
-// environment. On macOS and Linux those variables simply do not exist, so
-// without pinning them the per-machine guard can never fire and the test that
-// asserts a refusal quietly asserts nothing — it returns 'repair' instead.
-//
-// Found the expensive way: the PR gate runs on windows-latest only, so this
-// stayed green through review and first failed in the release workflow's macOS
-// job, after the tag had been pushed (#217).
-beforeEach(() => {
-  vi.stubEnv('ProgramFiles', 'C:\\Program Files')
-  vi.stubEnv('ProgramFiles(x86)', 'C:\\Program Files (x86)')
-  vi.stubEnv('ProgramW6432', 'C:\\Program Files')
-})
-afterEach(() => {
-  vi.unstubAllEnvs()
-})
+const PROGRAM_FILES = `${process.env.ProgramFiles ?? 'C:\\Program Files'}\\TimeTrack`
 
 const set = (value: string): RegValue => ({ state: 'set', value })
 const absent: RegValue = { state: 'absent' }
