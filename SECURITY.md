@@ -15,7 +15,7 @@ Only the latest minor release receives security fixes.
 
 ### Option 1 — GitHub Private Security Advisory (bevorzugt)
 
-1. Gehe zu https://github.com/skoedr/time-tracking/security/advisories/new
+1. Gehe zu https://github.com/wald-it/time-tracking/security/advisories/new
 2. Beschreibe die Schwachstelle mit reproduzierbaren Schritten.
 3. Du erhältst innerhalb von **5 Werktagen** eine erste Rückmeldung.
 

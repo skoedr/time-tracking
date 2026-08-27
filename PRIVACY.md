@@ -20,7 +20,7 @@ is available via _Settings → Backup_.
 TimeTrack makes exactly **one** outbound HTTPS request:
 
 ```
-GET https://api.github.com/repos/skoedr/time-tracking/releases/latest
+GET https://api.github.com/repos/wald-it/time-tracking/releases/latest
 ```
 
 This call checks on app start whether a new version is available
