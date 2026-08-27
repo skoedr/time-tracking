@@ -35,7 +35,15 @@
  */
 import { execFile } from 'child_process'
 import { randomUUID } from 'crypto'
-import { mkdirSync, readdirSync, readFileSync, readlinkSync, rmSync, writeFileSync } from 'fs'
+import {
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  readlinkSync,
+  renameSync,
+  rmSync,
+  writeFileSync
+} from 'fs'
 import { readFile } from 'fs/promises'
 import { join } from 'path'
 import { promisify } from 'util'
@@ -98,13 +106,32 @@ export function isAlive(pid: number, kill: (p: number, s: number) => void = proc
 
 // ── MCP-server side ───────────────────────────────────────────────────────
 
-/** Announce this process as a holder. Best-effort: never fail the server. */
+/**
+ * Announce this process as a holder. Best-effort: never fail the server.
+ *
+ * Written to a temporary name and renamed into place (#209 review). Writing
+ * straight to `<pid>.json` means a crash mid-write leaves a truncated file
+ * that no reader can parse and no pruner would touch — permanently inflating
+ * the count `build/installer.nsh` uses to decide whether to run the handshake
+ * at all. rename is atomic and replaces an existing file on Windows too, so a
+ * reader never observes a half-written registration.
+ *
+ * The temporary name deliberately does not end in `.json`: the installer
+ * counts `*.json`, and a stray temp file must not look like a registration.
+ */
 export function registerHolder(dir: string, holder: Holder): boolean {
+  const tmp = join(holderDirForDir(dir), `.${holder.pid}.tmp`)
   try {
     mkdirSync(holderDirForDir(dir), { recursive: true })
-    writeFileSync(holderFile(dir, holder.pid), JSON.stringify(holder), 'utf8')
+    writeFileSync(tmp, JSON.stringify(holder), 'utf8')
+    renameSync(tmp, holderFile(dir, holder.pid))
     return true
   } catch {
+    try {
+      rmSync(tmp, { force: true })
+    } catch {
+      // nothing more to do — a leftover temp file is counted by no one
+    }
     return false
   }
 }
@@ -201,6 +228,53 @@ export function watchForShutdown(
 
 // ── App side ──────────────────────────────────────────────────────────────
 
+/**
+ * The pid a registration filename encodes, or null when the name is not one
+ * we wrote. Used only to recover from an unreadable file — see the note in
+ * pruneDeadHolders.
+ *
+ * Strict on purpose: exactly digits plus `.json`, and the same positive-pid
+ * rule the content path applies, so a foreign file called `0.json` or
+ * `-1.json` cannot become an immortal holder by the back door.
+ */
+function pidFromFilename(name: string): number | null {
+  const m = /^(\d+)\.json$/.exec(name)
+  if (!m) return null
+  const pid = Number(m[1])
+  return Number.isInteger(pid) && pid > 0 ? pid : null
+}
+
+/**
+ * One registration file, or null when it is not a usable holder.
+ *
+ * Shared by readHolders() and pruneDeadHolders() so the two can never disagree
+ * about what counts as a holder — a file the reader rejects but the pruner
+ * deletes (or vice versa) would be a quiet way to lose a live registration.
+ */
+function readHolderFile(dir: string, name: string): Holder | null {
+  if (!name.endsWith('.json')) return null
+  let h: Holder
+  try {
+    h = JSON.parse(readFileSync(join(holderDirForDir(dir), name), 'utf8')) as Holder
+  } catch {
+    return null
+  }
+  // Holder files are plain JSON anyone running as the user can write. A pid
+  // of 0 probes the whole process group (always "alive"), negative pids
+  // probe process groups too — either would be an immortal holder that
+  // blocks every future update. Only accept real, positive pids.
+  if (!Number.isInteger(h?.pid) || h.pid <= 0) return null
+  // The remaining fields are consumed downstream (sameExecutable, the
+  // blocked-message) under their declared types; a damaged file must not
+  // turn into a TypeError that aborts the whole release. Normalize instead
+  // of rejecting: an empty exe simply never matches an image, so identity
+  // verification demotes the entry rather than the update crashing.
+  if (typeof h.exe !== 'string') h.exe = ''
+  if (typeof h.entry !== 'string') h.entry = ''
+  if (typeof h.startedAt !== 'number' || !Number.isFinite(h.startedAt)) h.startedAt = 0
+  return h
+}
+
 /** Live holders, dead registrations pruned from disk as we go. */
 export function readHolders(dir: string, alive: (pid: number) => boolean = isAlive): Holder[] {
   let names: string[]
@@ -211,26 +285,8 @@ export function readHolders(dir: string, alive: (pid: number) => boolean = isAli
   }
   const out: Holder[] = []
   for (const name of names) {
-    if (!name.endsWith('.json')) continue
-    let h: Holder
-    try {
-      h = JSON.parse(readFileSync(join(holderDirForDir(dir), name), 'utf8')) as Holder
-    } catch {
-      continue
-    }
-    // Holder files are plain JSON anyone running as the user can write. A pid
-    // of 0 probes the whole process group (always "alive"), negative pids
-    // probe process groups too — either would be an immortal holder that
-    // blocks every future update. Only accept real, positive pids.
-    if (!Number.isInteger(h?.pid) || h.pid <= 0) continue
-    // The remaining fields are consumed downstream (sameExecutable, the
-    // blocked-message) under their declared types; a damaged file must not
-    // turn into a TypeError that aborts the whole release. Normalize instead
-    // of rejecting: an empty exe simply never matches an image, so identity
-    // verification demotes the entry rather than the update crashing.
-    if (typeof h.exe !== 'string') h.exe = ''
-    if (typeof h.entry !== 'string') h.entry = ''
-    if (typeof h.startedAt !== 'number' || !Number.isFinite(h.startedAt)) h.startedAt = 0
+    const h = readHolderFile(dir, name)
+    if (!h) continue
     if (alive(h.pid)) {
       out.push(h)
     } else {
@@ -238,6 +294,56 @@ export function readHolders(dir: string, alive: (pid: number) => boolean = isAli
     }
   }
   return out
+}
+
+/**
+ * Drop registrations whose process is gone. Returns how many were removed.
+ *
+ * readHolders() has always pruned as it reads, and unregisterHolder() leans on
+ * that ("a stale file is harmless"). The gap #209 closed is that readHolders()
+ * is only reached from the update path, and updates are rare next to server
+ * starts — so every server that was killed rather than asked to exit (client
+ * restart, hard kill, crash) left its file lying there until the next update.
+ * Measured before the fix: 65 registrations, 56 of them dead, the oldest three
+ * weeks old.
+ *
+ * Why that is more than untidiness: build/installer.nsh decides whether to run
+ * the shutdown handshake at all by COUNTING *.json in this directory, with no
+ * liveness check of its own — it runs before the app, so it has none to use.
+ * Once a machine had ever run a server that count was permanently non-zero, so
+ * the guard that exists to skip the handshake on installs with no MCP
+ * integration never fired again, and the wait loop that follows polled for a
+ * count of zero it could never reach — burning its full 8-second deadline on
+ * every install.
+ *
+ * Best-effort by contract: callers are startup paths that must not fail
+ * because a directory was unreadable.
+ */
+export function pruneDeadHolders(dir: string, alive: (pid: number) => boolean = isAlive): number {
+  let names: string[]
+  try {
+    names = readdirSync(holderDirForDir(dir))
+  } catch {
+    return 0
+  }
+  let removed = 0
+  for (const name of names) {
+    // A file we cannot parse is not automatically litter, but its NAME still
+    // carries the pid (#209 review). Without this fallback a truncated
+    // registration — from a crash during the pre-rename write, or from any
+    // build before that fix — survives every prune, and the installer's count
+    // never returns to zero, which is the whole point of pruning.
+    //
+    // Liveness still decides. Recovering the pid does not license deleting a
+    // live server's registration; it only makes a dead one reachable.
+    const pid = readHolderFile(dir, name)?.pid ?? pidFromFilename(name)
+    if (pid === null) continue
+    if (!alive(pid)) {
+      unregisterHolder(dir, pid)
+      removed++
+    }
+  }
+  return removed
 }
 
 /**

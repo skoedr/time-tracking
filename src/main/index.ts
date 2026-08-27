@@ -17,7 +17,7 @@ import icon from '../../resources/icon.png?asset'
 import trayRunningIcon from '../../resources/tray-running.png?asset'
 import trayStoppedIcon from '../../resources/tray-stopped.png?asset'
 import { getDb, getDbPath, recoverZombieEntries, MigrationError } from './db'
-import { clearShutdown } from '../mcp/holders'
+import { clearShutdown, pruneDeadHolders } from '../mcp/holders'
 import { APP_ID, repairInstallLocation } from './installLocation'
 import { registerIpcHandlers } from './ipc'
 import {
@@ -617,6 +617,12 @@ app.whenReady().then(async () => {
   // installer (customInstall never ran) and would sit there forever. The app
   // starting is proof that no install is in progress, so clear it here.
   clearShutdown(dirname(getDbPath()))
+
+  // #209 — same anchor, same reasoning: no install is in progress, so any
+  // registration whose process is gone is simply litter. Servers prune their
+  // predecessors when they start too, but that only helps machines where
+  // servers keep starting; this covers the app running without them.
+  pruneDeadHolders(dirname(getDbPath()))
 
   // #200 — repair the value the installer reads to tell an upgrade from a
   // fresh install. Left empty it offers a directory page that looks like an
