@@ -18,7 +18,7 @@ import trayRunningIcon from '../../resources/tray-running.png?asset'
 import trayStoppedIcon from '../../resources/tray-stopped.png?asset'
 import { getDb, getDbPath, recoverZombieEntries, MigrationError } from './db'
 import { clearShutdown } from '../mcp/holders'
-import { repairInstallLocation } from './installLocation'
+import { APP_ID, repairInstallLocation } from './installLocation'
 import { registerIpcHandlers } from './ipc'
 import {
   startMcpBridge,
@@ -627,8 +627,8 @@ app.whenReady().then(async () => {
   // node_modules and there is no installation to describe. Fire-and-forget,
   // because two reg.exe reads have no business sitting in front of the window.
   if (process.platform === 'win32' && app.isPackaged) {
-    void repairInstallLocation(dirname(app.getPath('exe')), 'com.timetrack.app', console).catch(
-      (err) => log.warn('[install-location] check failed:', err)
+    void repairInstallLocation(dirname(app.getPath('exe')), APP_ID, console).catch((err) =>
+      log.warn('[install-location] check failed:', err)
     )
   }
 
