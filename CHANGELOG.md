@@ -29,6 +29,10 @@ All notable changes to TimeTrack are documented here.
 
   Smaller holes closed along the way: when an AI client respawns its server mid-update, the app re-issues the request with a fresh nonce so the newcomer is asked too, and the refusal message now says when a survivor was started during the update instead of blaming it for ignoring a request it never received. The installer hands the holder path to PowerShell through the environment instead of splicing it into a quoted literal (a profile path containing `'` broke the parse), and the server polls the request file asynchronously, so a userData directory on a dead network share no longer wedges its event loop. The updater status tests now exercise the real transition function instead of a hand-maintained mirror of it.
 
+- **Links and the privacy statement point at the new repository home (#210)** — The move to the `wald-it` organisation (#203) repointed the update feed and most links, but four live references stayed on the old owner. Three were links that GitHub's transfer redirect kept working — the in-app button to the releases page, the security-advisory address, the Discussions link. The fourth mattered more: `PRIVACY.md` does not link to the update endpoint, it *names* it, and since the transfer it named a URL that new builds no longer call. A privacy statement is the one document where “the redirect handles it” is not an answer, so it now states the endpoint the app actually queries.
+
+  Historical references in the changelog, the roadmap and old issue links deliberately stay as they are — they are a record of what was true then, and the redirect covers them.
+
 ## [1.18.0] — 2026-08-02
 
 ### Added

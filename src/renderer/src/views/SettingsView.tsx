@@ -962,7 +962,7 @@ export default function SettingsView(): React.JSX.Element {
                   type="button"
                   onClick={() =>
                     void window.api.shell.openExternal(
-                      'https://github.com/skoedr/time-tracking/releases/latest'
+                      'https://github.com/wald-it/time-tracking/releases/latest'
                     )
                   }
                   className={btnSecondaryClass}
