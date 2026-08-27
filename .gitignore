@@ -31,3 +31,12 @@ templates/*.png
 # sources and manifest are tracked.
 streamdeck-plugin/com.timetrack.streamdeck.sdPlugin/bin/
 streamdeck-plugin/*.streamDeckPlugin
+
+# sentry-native crash-handler scratch directory (a UUID .run.lock file).
+# This project has no Sentry dependency at any level — nothing in package.json
+# and nothing in the installed tree — so it can never be a legitimate artifact
+# here. It is written by an external process that happened to run with the repo
+# as its working directory; the Elgato Stream Deck software on this machine
+# ships sentry-native 0.13.1, which makes the plugin toolchain the likely
+# source. Ignored so it stops showing up as untracked noise in every status.
+.sentry-native/
