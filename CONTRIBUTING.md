@@ -20,7 +20,7 @@ Please report violations to `robin.wald@hotmail.de`.
 - **Feature:** Use the [feature request template](./.github/ISSUE_TEMPLATE/feature_request.yml).
   Describe the problem first, then the proposed solution.
 - **Question / discussion:** Please use
-  [GitHub Discussions](https://github.com/skoedr/time-tracking/discussions)
+  [GitHub Discussions](https://github.com/wald-it/time-tracking/discussions)
   instead of an issue.
 - **Security vulnerability:** **No** public issue. See [SECURITY.md](./SECURITY.md).
 

@@ -63,12 +63,12 @@ export function AboutDialog({ open, onClose, version }: Props): React.JSX.Elemen
             </p>
           </div>
           <a
-            href="https://github.com/skoedr/time-tracking"
+            href="https://github.com/wald-it/time-tracking"
             target="_blank"
             rel="noreferrer"
             onClick={(e) => {
               e.preventDefault()
-              void window.api.shell.openExternal('https://github.com/skoedr/time-tracking')
+              void window.api.shell.openExternal('https://github.com/wald-it/time-tracking')
             }}
             className="text-xs text-indigo-400 hover:text-indigo-300 underline"
           >
