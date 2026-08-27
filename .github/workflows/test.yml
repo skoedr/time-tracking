@@ -6,8 +6,24 @@ on:
   pull_request:
 
 jobs:
+  # #217 — the suite runs on both platforms the release builds for.
+  #
+  # Until v1.19.0 this gate was windows-latest only, while release.yml runs the
+  # same `pnpm test` on windows AND macos. That made the release workflow the
+  # first place a platform-dependent test could fail — and it fails there after
+  # the tag is pushed, with publish-release needing every build job, so one unit
+  # test discards a finished release. It happened twice: #196 (v1.18.0) and
+  # again cutting v1.19.0, where a test read `process.env.ProgramFiles` and
+  # inverted on macOS because that variable does not exist there.
+  #
+  # fail-fast is off on purpose: when a change breaks one platform, the useful
+  # information is whether the other one survived it.
   test:
-    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
     permissions:
       contents: read
     steps:
@@ -41,7 +57,14 @@ jobs:
       # walks only the production dependency graph and writes deterministic
       # output (no timestamps, no absolute paths, locale-stable sort), so this
       # gate is reproducible on the windows-latest runner it authors on.
+      #
+      # Windows only, and not merely by tradition (#217): the script walks the
+      # production dependency graph, which contains platform-specific optional
+      # packages (@esbuild/win32-x64 against @esbuild/darwin-arm64). On macOS
+      # the regenerated file would legitimately differ from the committed one
+      # and this gate would fail on every PR for no defect at all.
       - name: Verify bundled licenses.json is in sync
+        if: runner.os == 'Windows'
         shell: bash
         run: |
           set -euo pipefail
@@ -57,7 +80,12 @@ jobs:
       # #143: ESLint als CI-Gate. --max-warnings bewusst offen gelassen, solange
       # die verbleibenden Warnungen react-hooks-Hinweise sind; Fehler lassen den
       # Job ohnehin scheitern.
+      #
+      # Windows only (#217): ESLint reads the same sources on either platform,
+      # so a second run buys nothing but runner minutes. Typecheck and test
+      # above DO run on both — those are the ones that can disagree.
       - name: Lint
+        if: runner.os == 'Windows'
         run: pnpm lint
 
       # #151: `pnpm test` runs Vitest on the Electron binary in Node mode, so it
@@ -80,15 +108,24 @@ jobs:
       # which import `vitest` — that resolves upwards into the root
       # node_modules installed above. Do not move these steps before the root
       # install.
+      #
+      # All five plugin steps are Windows only (#217). release.yml packs the
+      # plugin on windows-latest deliberately — "that is the environment with
+      # evidence behind it" — so gating it on the same platform keeps the gate
+      # and the release in step. Running them on macOS too would prove a path
+      # no release ever takes.
       - name: Stream Deck plugin — install
+        if: runner.os == 'Windows'
         working-directory: streamdeck-plugin
         run: pnpm install --frozen-lockfile --ignore-workspace
 
       - name: Stream Deck plugin — typecheck
+        if: runner.os == 'Windows'
         working-directory: streamdeck-plugin
         run: pnpm typecheck
 
       - name: Stream Deck plugin — build
+        if: runner.os == 'Windows'
         working-directory: streamdeck-plugin
         run: pnpm build
 
@@ -104,16 +141,19 @@ jobs:
       # pinned rules make this reproducible; `pnpm run validate:rules` is the
       # deliberate check for whether Elgato changed anything.
       - name: Stream Deck plugin — validate manifest
+        if: runner.os == 'Windows'
         working-directory: streamdeck-plugin
         run: pnpm run validate
 
       - name: Stream Deck plugin — pack
+        if: runner.os == 'Windows'
         working-directory: streamdeck-plugin
         run: pnpm run pack
 
       # Side benefit worth the five lines: the packed plugin of any PR can be
       # downloaded from the run and installed on real hardware before merging.
       - name: Upload packed plugin
+        if: runner.os == 'Windows'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: timetrack-streamdeck-plugin-${{ github.sha }}
