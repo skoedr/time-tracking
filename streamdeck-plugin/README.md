@@ -37,7 +37,7 @@ it never touches the database. Enable the scope in TimeTrack under
 
 Every TimeTrack release ships the plugin as
 **`com.timetrack.streamdeck.streamDeckPlugin`** — download it from the
-[latest release](https://github.com/skoedr/time-tracking/releases/latest),
+[latest release](https://github.com/wald-it/time-tracking/releases/latest),
 double-click, done. It is deliberately *not* inside the app installer: the
 Stream Deck app manages its own plugin directory, and an installer writing
 there behind its back is how you get a plugin the app does not know about.
