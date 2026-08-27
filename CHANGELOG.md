@@ -29,6 +29,12 @@ All notable changes to TimeTrack are documented here.
 
   Smaller holes closed along the way: when an AI client respawns its server mid-update, the app re-issues the request with a fresh nonce so the newcomer is asked too, and the refusal message now says when a survivor was started during the update instead of blaming it for ignoring a request it never received. The installer hands the holder path to PowerShell through the environment instead of splicing it into a quoted literal (a profile path containing `'` broke the parse), and the server polls the request file asynchronously, so a userData directory on a dead network share no longer wedges its event loop. The updater status tests now exercise the real transition function instead of a hand-maintained mirror of it.
 
+- **Dead MCP registrations no longer pile up, and the installer's own guard works again (#209)** — Every bundled MCP server registers itself in a directory the updater reads. A server that is *asked* to exit withdraws its registration; one that is killed instead — an AI client restarting, a hard kill, a crash — left its file behind. The registry did have pruning, but only the update path ever reached it, and updates are rare next to server starts. Measured before the fix on the maintainer machine: 65 registrations, 56 of them belonging to processes that had exited, the oldest three weeks old.
+
+  The visible cost was carried by the Windows installer. It decides whether to run the shutdown handshake at all by counting those files, and it runs before the app, so it has no way to check whether any of them are alive. Once a machine had ever run a server that count was permanently non-zero — so the guard built to skip the handshake on installs with no MCP integration never fired again, and the wait that follows it polled for a count of zero it could never reach, spending its full eight-second deadline on every single install.
+
+  Servers now clear out their dead predecessors when they register, and the app does the same on start. The pruning logic itself is unchanged — this is about calling it somewhere that happens often.
+
 ## [1.18.0] — 2026-08-02
 
 ### Added

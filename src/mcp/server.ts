@@ -36,6 +36,7 @@ import { sendWrite } from './writeClient'
 import { userDataDir } from './socketPath'
 import {
   pendingShutdownRequest,
+  pruneDeadHolders,
   registerHolder,
   unregisterHolder,
   watchForShutdown
@@ -429,6 +430,12 @@ function joinUpdateHandshake(server: McpServer): void {
   // This replaces the old wall-clock gate (requestedAt >= startedAt), which
   // depended on the machine clock not stepping between server start and update.
   const baselineNonce = pendingShutdownRequest(dir)?.nonce ?? null
+  // #209 — clear out predecessors that were killed rather than asked to exit
+  // before adding ourselves. A server start is the moment those are most
+  // likely to be present (an AI client restarting its servers is exactly how
+  // they are produced), and it happens far more often than an update, which
+  // used to be the only thing that pruned.
+  pruneDeadHolders(dir)
   registerHolder(dir, {
     pid: process.pid,
     exe: process.execPath,

@@ -30,6 +30,7 @@ import {
   pendingShutdownRequest,
   watchForShutdown,
   readHolders,
+  pruneDeadHolders,
   requestShutdown,
   clearShutdown,
   releaseHolders,
@@ -501,6 +502,87 @@ describe('hostile or damaged registry input', () => {
     })
     expect(r.ok).toBe(true)
     expect(r.stale.map((h) => h.pid)).toEqual([11])
+  })
+})
+
+describe('pruning stale registrations (#209)', () => {
+  it('removes registrations whose process is gone and reports how many', () => {
+    registerHolder(dir, holder(1))
+    registerHolder(dir, holder(2))
+    registerHolder(dir, holder(3))
+    expect(pruneDeadHolders(dir, (pid) => pid === 2)).toBe(2)
+    expect(readdirSync(holderDirForDir(dir)).filter((n) => n.endsWith('.json'))).toEqual(['2.json'])
+  })
+
+  it('leaves a live registry untouched', () => {
+    registerHolder(dir, holder(1))
+    registerHolder(dir, holder(2))
+    expect(pruneDeadHolders(dir, () => true)).toBe(0)
+    expect(readHolders(dir, () => true).map((h) => h.pid)).toEqual([1, 2])
+  })
+
+  it('does not delete files it cannot read as a holder', () => {
+    // A corrupt file is not proof that its process is gone, and the name is
+    // not proof either. Deleting it would be guessing; leave it and let the
+    // reader keep skipping it.
+    mkdirSync(holderDirForDir(dir), { recursive: true })
+    writeFileSync(join(holderDirForDir(dir), '7.json'), 'not json at all', 'utf8')
+    registerHolder(dir, holder(8))
+    expect(pruneDeadHolders(dir, () => false)).toBe(1)
+    expect(readdirSync(holderDirForDir(dir)).filter((n) => n.endsWith('.json'))).toEqual(['7.json'])
+  })
+
+  it('is a no-op when the directory was never created', () => {
+    expect(pruneDeadHolders(join(dir, 'nope'), () => false)).toBe(0)
+  })
+
+  it('agrees with readHolders about what counts as a holder', () => {
+    // Both go through readHolderFile. If they ever disagreed, the pruner could
+    // delete a registration the reader still honours — a live server silently
+    // dropped from the blocker list, which is the failure #201 spent its whole
+    // review budget on.
+    mkdirSync(holderDirForDir(dir), { recursive: true })
+    for (const [name, body] of [
+      ['0.json', JSON.stringify({ pid: 0 })],
+      ['-1.json', JSON.stringify({ pid: -1 })],
+      ['bad.json', 'not json'],
+      ['9.json', JSON.stringify({ pid: 9 })]
+    ] as const) {
+      writeFileSync(join(holderDirForDir(dir), name), body, 'utf8')
+    }
+    // Nothing is alive, so every file the pruner recognises must go — and what
+    // survives must be exactly what the reader also refuses to recognise.
+    pruneDeadHolders(dir, () => false)
+    const left = readdirSync(holderDirForDir(dir))
+      .filter((n) => n.endsWith('.json'))
+      .sort()
+    expect(left).toEqual(['-1.json', '0.json', 'bad.json'])
+    expect(readHolders(dir, () => true)).toEqual([])
+  })
+})
+
+describe('pruning is wired into both startup paths (#209)', () => {
+  // Source assertions, on purpose. The pruning itself is covered above; what
+  // these two pin is the WIRING, and neither call site is reachable from a
+  // test: joinUpdateHandshake is private to server.ts and starts a watcher
+  // plus process-exit handlers, and index.ts is the Electron entry point.
+  //
+  // Without them the fix is deletable with every test still green — the
+  // registry would quietly go back to growing forever and the only symptom
+  // would be an installer that waits out a deadline nobody watches. Same
+  // reasoning as the installer.nsh guard below: assert the thing you cannot
+  // import, and be honest that it is a text match. It catches removal and
+  // rename; it does not prove the call runs.
+  it('the MCP server prunes predecessors when it registers', () => {
+    const src = readFileSync(join(__dirname, 'server.ts'), 'utf8')
+    expect(src).toContain('pruneDeadHolders')
+    const handshake = src.slice(src.indexOf('function joinUpdateHandshake'))
+    expect(handshake.slice(0, handshake.indexOf('registerHolder('))).toContain('pruneDeadHolders(')
+  })
+
+  it('the app prunes on start', () => {
+    const src = readFileSync(join(__dirname, '..', 'main', 'index.ts'), 'utf8')
+    expect(src).toContain('pruneDeadHolders(')
   })
 })
 
