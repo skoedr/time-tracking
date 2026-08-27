@@ -385,11 +385,21 @@ describe('handleRequest — controller scope', () => {
     db.prepare(
       `INSERT OR REPLACE INTO settings (key, value) VALUES ('pdf_round_minutes','15')`
     ).run()
-    const started = new Date(Date.now() - (6 * 3600 + 24 * 60) * 1000).toISOString()
+    // Built forwards from local midnight, not backwards from now (#213).
+    // `now - 6h24m` lands on *yesterday* before 06:24 local, and the
+    // DATE(started_at,'localtime') = DATE('now','localtime') filter then drops
+    // the entry entirely — today_seconds came out 0 and CI went red whenever
+    // it ran early in the UTC morning. The entry is closed, so its duration is
+    // stopped_at - started_at and never consults SQLite's clock; only the day
+    // it falls on matters, and both ends are inside today by construction.
+    const midnight = new Date()
+    midnight.setHours(0, 0, 0, 0)
+    const started = midnight.toISOString()
+    const stopped = new Date(midnight.getTime() + (6 * 3600 + 24 * 60) * 1000).toISOString()
     db.prepare(
       `INSERT INTO entries (client_id, description, started_at, stopped_at, billable)
        VALUES (1, 'x', ?, ?, 1)`
-    ).run(started, new Date().toISOString())
+    ).run(started, stopped)
 
     const { ctx } = makeCtx(db)
     const res = await handleRequest(ctx, ctl('get_summary'))
@@ -402,8 +412,9 @@ describe('handleRequest — controller scope', () => {
       round_minutes: number
     }
     expect(data.round_minutes).toBe(15)
-    expect(data.today_seconds).toBeGreaterThanOrEqual(6 * 3600 + 24 * 60)
-    expect(data.today_seconds).toBeLessThan(6 * 3600 + 25 * 60)
+    // Exact now that the fixture is exact — the old range only existed to
+    // absorb the drift of measuring against `now` (#213).
+    expect(data.today_seconds).toBe(6 * 3600 + 24 * 60)
     expect(data.today_display_seconds).toBe(6 * 3600 + 30 * 60)
     expect(data.week_display_seconds).toBe(6 * 3600 + 30 * 60)
   })

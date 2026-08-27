@@ -34,6 +34,19 @@ function atLocalNoon(dayKey: string): string {
   return new Date(y, m - 1, d, 12, 0, 0, 0).toISOString()
 }
 
+/**
+ * Seconds elapsed today, by the same wall clock SQLite reads. Used to phrase
+ * assertions in terms of what the current hour permits instead of a constant
+ * that only holds later in the day (#213). Faking the clock would not help
+ * here: a running entry is measured with `strftime('%s','now')` inside SQLite,
+ * which `vi.setSystemTime()` does not move.
+ */
+function secondsSinceLocalMidnight(): number {
+  const midnight = new Date()
+  midnight.setHours(0, 0, 0, 0)
+  return Math.floor((Date.now() - midnight.getTime()) / 1000)
+}
+
 /** Local-midnight-safe: a date N days back at 10:00 local time. */
 function daysAgoAt10(days: number): Date {
   const d = new Date()
@@ -93,7 +106,15 @@ describe('readTotals', () => {
     ).run(yesterdayEvening.toISOString())
     // `OR stopped_at IS NULL` puts it in today's window even though it started
     // yesterday — the app, the tray and the dial all show it that way.
-    expect(readTotals(db).today_seconds).toBeGreaterThan(8 * 3600)
+    //
+    // Measured against what the clock allows rather than a fixed 8h (#213):
+    // the entry has been running since 22:00 yesterday, so its total must
+    // exceed everything today alone could have contributed. That is precisely
+    // the property under test — the pre-midnight portion is counted — and it
+    // holds at every hour. The old `> 8 * 3600` silently assumed the suite ran
+    // after 06:00 local, so CI went red whenever it started early in the UTC
+    // morning while every local run stayed green.
+    expect(readTotals(db).today_seconds).toBeGreaterThan(secondsSinceLocalMidnight() + 3600)
   })
 
   it('excludes deleted entries and entries older than the week window', () => {

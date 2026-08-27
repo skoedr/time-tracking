@@ -29,6 +29,8 @@ All notable changes to TimeTrack are documented here.
 
   Smaller holes closed along the way: when an AI client respawns its server mid-update, the app re-issues the request with a fresh nonce so the newcomer is asked too, and the refusal message now says when a survivor was started during the update instead of blaming it for ignoring a request it never received. The installer hands the holder path to PowerShell through the environment instead of splicing it into a quoted literal (a profile path containing `'` broke the parse), and the server polls the request file asynchronously, so a userData directory on a dead network share no longer wedges its event loop. The updater status tests now exercise the real transition function instead of a hand-maintained mirror of it.
 
+- **Two tests no longer depend on what time of day they run (#213)** — Internal only, but it cost a release triage a false alarm: the suite was green all day locally and red in CI whenever a run started early in the UTC morning. Both tests built their fixture backwards from `now` and then asserted a fixed number, which quietly assumed the clock was past a certain hour — an entry “6h24m ago” lands on *yesterday* before 06:24 and drops out of today's window entirely. Freezing the clock would not have helped: a running entry is measured with SQLite's own `now`, which `vi.setSystemTime()` does not move. The assertions are now phrased in terms of what the current hour actually permits, and the closed-entry fixture is built forwards from local midnight. No production behaviour changed.
+
 ## [1.18.0] — 2026-08-02
 
 ### Added
