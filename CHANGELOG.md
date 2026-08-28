@@ -5,6 +5,14 @@ All notable changes to TimeTrack are documented here.
 > **Language note:** Entries up to v1.15.1 are in German (historical record);
 > from v1.16.0 onward, entries are written in English.
 
+## [Unreleased]
+
+### Changed
+
+- **The MCP write tools now state their field limits** — `create_manual_entry` and `update_entry_fields` cap `description` at 500 characters and `private_note` at 1000, but nothing said so. The only way to find a limit was to exceed it, and the rejection arrives after the call, naming a field the caller had no reason to think was constrained. Both parameter descriptions now carry the limit, so a client can stay inside it instead of discovering it by failing.
+
+  `start_timer` also takes a `description` and deliberately does **not** get the note. That path does not run the length check at all, so stating a limit there would document a promise the code never makes — a wrong assurance is worse than a missing one, because someone relies on it.
+
 ## [1.19.0] — 2026-08-27
 
 ### Changed
