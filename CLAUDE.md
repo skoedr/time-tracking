@@ -34,3 +34,16 @@ und **kein** Kommando meldet einen Fehler. Der Marker lügt.
 Hintergrund und Fehlersuche: CONTRIBUTING.md → „Tests und die native SQLite-ABI"
 ([#151](https://github.com/skoedr/time-tracking/issues/151)).
 
+## Owner-Karte (Zeiger)
+
+Die Architektur-/Owner-Karte dieses Repos lebt zentral im Brain-Vault:
+`E:/Development/_obsidian/cc-obsidian-brain/projects/timetrack/timetrack-architektur.md`
+(Obsidian: `[[timetrack-architektur]]`).
+
+**Pflege-Pflicht:** Bei jedem Merge, der Struktur, Datenfluss oder Betriebswege
+ändert, wird die Karte dort im selben Zug nachgezogen. Die Sektion
+„Fallen & Invarianten" ist kuratiert — nur mit Owner-Zeichnung ändern.
+
+Die Technik-Doku bleibt im Repo (README.md, DESIGN.md, CONTRIBUTING.md); die
+Karte ist die Owner-Sicht darüber, kein Ersatz.
+
