@@ -2,7 +2,9 @@
 
 Deferred items from plan reviews. Items here have explicit decisions — they are NOT forgotten, they are scheduled.
 
-## Open Issues
+## Delivered (this section was headed "Open Issues")
+
+*State checked 2026-08-31: **#87, #93 and #94 are all `CLOSED/COMPLETED`** — the heading claimed otherwise. The items are kept rather than deleted because the scope paragraphs below are now the only surviving record of what was decided: the `~/.gstack/projects/time-tracking/…` CEO- and test-plan files they cite were removed together with the gstack suite on 2026-08-28 and are gone. What those plans held beyond these paragraphs is **not reconstructible**; what actually shipped is in [CHANGELOG.md](./CHANGELOG.md) under v1.10 and v1.11. Recorded rather than quietly dropped, because this file opens by promising that its items carry explicit decisions.*
 
 - **#87 — UI centering across views** (Optional polish) — Basiszentrierung implementiert in v1.8.1 (`max-w-4xl mx-auto` auf SettingsView-Wrapper). Optional: pixelgenaue Werte via `max-w-[740px]` / `max-w-[600px]` statt Tailwind-Tokens für Today/Timer/Calendar/Clients. → v2.0 candidate.
 
@@ -11,6 +13,8 @@ Deferred items from plan reviews. Items here have explicit decisions — they ar
 - **#94 — Stammdaten-Erweiterung Kunden + Projekte** — **In v1.11 Scope.** CEO-Plan: `~/.gstack/projects/time-tracking/ceo-plans/2026-04-30-v1.11-stammdaten.md`. Test-Plan: `~/.gstack/projects/time-tracking/robin-main-eng-review-test-plan-20260430-165752.md`. **Phase 1 — Stammdaten-Core:** Migration 013, Client-Felder (Adresse 1-4, VAT, Kontakt, E-Mail), Projekt-Felder (ext. Nr, Datum, Budget-Minuten, Status active/paused/archived), ClientFormModal + ProjectFormModal, PDF Empfängerblock (konditionell), Budget-Mini-Bar in QuickStart, Status-Badge auf Projekt-Card, Budget-Warn-Toast beim Timer-Start. **Phase 2 (eigener PR):** Analytics Burndown + billing_type-Migration (#93-follow-up). PR-Sequenz: PR1/3 DB+Types+IPC, PR2/3 UI+PDF, PR3/3 Budget-UX.
 
 ### Deferred from #79 /autoplan Final Gate (v1.9.5)
+
+*#96 below is `CLOSED/COMPLETED` as well (checked 2026-08-31); only **T1** has no issue and no recorded state.*
 
 - **T1 — UNC-Pfad-Support für Backup-Pfad** (Medium effort) — Wenn `backup_path` ein UNC-Pfad (z.B. `\\nas01\backups`) ist, soll eine explizite Fehlermeldung erscheinen wenn der Pfad nicht erreichbar ist, statt silent fail. `mkdirSync` auf UNC unter Windows benötigt gesondertes Handling. → v1.10
 

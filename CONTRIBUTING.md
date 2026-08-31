@@ -24,6 +24,16 @@ Please report violations to `robin.wald@hotmail.de`.
   instead of an issue.
 - **Security vulnerability:** **No** public issue. See [SECURITY.md](./SECURITY.md).
 
+### How issues are tracked
+
+**Deliberately: not by milestone, and not by version label** (decision 2026-08-31). Both structures exist and both were abandoned — milestones after v1.9, the `v1.1`–`v1.5` labels after v1.5 — while the app is at v1.19. They order nothing today, and reviving them would be a new discipline rather than a return to an old one. At single-digit open issues, an ordering layer costs more upkeep than the overview it buys.
+
+So: an open issue carries a type label (`bug`, `enhancement`) where one applies and nothing else. What is planned lives in [ROADMAP.md](./ROADMAP.md); what was deferred with a reason lives in [TODOS.md](./TODOS.md).
+
+This is written down so the gap reads as a decision rather than as neglect — the next person to look will otherwise find "nine open issues, no milestones" and treat it as a defect.
+
+**Revisit when either becomes true** (observable conditions, not a date): the open-issue count passes roughly 25, or more than one person works the tracker. Both break the assumption this rests on — that one maintainer holds the whole list in his head.
+
 ## Local development
 
 Requirements: **Node.js 20+**, **pnpm 10+**, Windows or macOS.

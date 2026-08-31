@@ -170,7 +170,7 @@ About dialog showed "MIT". Repaired in one commit + history rewrite:
 
 ---
 
-## v1.6 — OSS Readiness 🎯 next stage
+## v1.6 — OSS Readiness ✅ shipped v1.6.0–v1.6.1 (2026-04-26)
 
 **Theme:** Turn "my repo happens to be on GitHub" into "a repo that another
 freelancer can clone, understand, and contribute to".
@@ -228,7 +228,7 @@ A test freelancer with a Lexware PDF can reproduce it in under 30 s.
 
 ---
 
-## v1.8 — Daily-Use Polish
+## v1.8 — Daily-Use Polish ✅ shipped v1.8.0–v1.8.1 (2026-04-27)
 
 **Theme:** What hurts after 4–6 weeks of self-use + the first OSS feedback.
 The exact order is determined by issues — this list is the
@@ -253,7 +253,7 @@ starting point, not dogma.
 
 ---
 
-## v1.9 — Projects & Data Portability
+## v1.9 — Projects & Data Portability ✅ shipped v1.9.0 (2026-04-29)
 
 **Theme:** The two biggest architecture decisions before v2.0: a real project hierarchy
 and clean machine migration.
@@ -279,7 +279,7 @@ without data loss. Projects per client are bookable.
 
 ---
 
-## v1.10 — Reporting & Quick Start 2.0
+## v1.10 — Reporting & Quick Start 2.0 ✅ shipped v1.10.0 (2026-04-30)
 
 **Theme:** More insight into your own data, faster timer start at project level + an architecture sketch for v2.0.
 
@@ -323,7 +323,7 @@ client and the PDF shows a complete recipient block.
 
 ---
 
-## v1.12 — Consistency Release
+## v1.12 — Consistency Release ✅ shipped v1.12.0–v1.12.5 (2026-05-04)
 
 📂 [Plan](.github/plan-v1.12.md)
 
